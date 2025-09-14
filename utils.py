@@ -38,10 +38,10 @@ def geocode_city(city: str) -> Optional[Tuple[float, float]]:
     try:
         # Ajouter "France" pour améliorer la précision
         location = geolocator.geocode(f"{city}, France")
-        if location and hasattr(location, 'latitude') and hasattr(location, 'longitude'):
+        if location and location.latitude is not None and location.longitude is not None:
             return (float(location.latitude), float(location.longitude))
         return None
-    except (GeocoderTimedOut, GeocoderServiceError):
+    except (GeocoderTimedOut, GeocoderServiceError, Exception):
         return None
 
 # Données mock pour les tests
@@ -110,12 +110,18 @@ def get_supabase_client():
         from supabase import create_client, Client
         
         url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_ANON_KEY")
+        key = os.getenv("SUPABASE_KEY")  # Utiliser SUPABASE_KEY au lieu de SUPABASE_ANON_KEY
         
         if url and key:
-            return create_client(url, key)
+            # Valider l'URL avant de créer le client
+            if url.startswith("https://") and ".supabase.co" in url:
+                return create_client(url, key)
+            else:
+                print(f"⚠️ URL Supabase invalide: {url}")
+                return None
         return None
-    except ImportError:
+    except Exception as e:
+        print(f"⚠️ Erreur lors de l'initialisation Supabase: {e}")
         return None
 
 def search_coaches_mock(specialty: Optional[str] = None, 
