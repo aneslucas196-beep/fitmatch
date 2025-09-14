@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}{{ coach.full_name }} - Coach Fitness{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div class="p-8">
+        <div class="flex items-center mb-6">
+            <div class="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+                {{ coach.full_name[0].upper() }}
+            </div>
+            <div class="ml-4">
+                <h1 class="text-3xl font-bold text-gray-900">{{ coach.full_name }}</h1>
+                <p class="text-gray-600">📍 {{ coach.city }}</p>
+                {% if coach.instagram_url %}
+                <a href="{{ coach.instagram_url }}" target="_blank" class="text-pink-600 hover:text-pink-800 mt-1 inline-block">
+                    📷 Instagram
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if coach.specialties %}
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-3">Spécialités</h2>
+            <div class="flex flex-wrap gap-2">
+                {% for specialty in coach.specialties %}
+                <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                    {{ specialty }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if coach.bio %}
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-3">À propos</h2>
+            <p class="text-gray-700 leading-relaxed">{{ coach.bio }}</p>
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {% if coach.price_from %}
+            <div class="bg-green-50 p-4 rounded-lg">
+                <h3 class="font-semibold text-green-800 mb-2">💰 Tarifs</h3>
+                <p class="text-green-700">À partir de {{ coach.price_from }}€</p>
+            </div>
+            {% endif %}
+            
+            {% if coach.radius_km %}
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <h3 class="font-semibold text-blue-800 mb-2">📍 Zone d'intervention</h3>
+                <p class="text-blue-700">{{ coach.radius_km }} km autour de {{ coach.city }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if transformations %}
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-4">Transformations réalisées</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% for transformation in transformations %}
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold mb-2">{{ transformation.title }}</h3>
+                    {% if transformation.description %}
+                    <p class="text-gray-700 text-sm mb-3">{{ transformation.description }}</p>
+                    {% endif %}
+                    <div class="text-sm text-gray-600">
+                        {% if transformation.duration_weeks %}
+                        ⏱️ {{ transformation.duration_weeks }} semaines
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="border-t pt-6">
+            <div class="flex space-x-4">
+                <button class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition duration-200">
+                    Contacter ce coach
+                </button>
+                <a href="javascript:history.back()" class="bg-gray-200 text-gray-800 px-6 py-3 rounded-md hover:bg-gray-300 transition duration-200">
+                    Retour
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
