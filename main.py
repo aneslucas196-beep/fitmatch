@@ -40,23 +40,68 @@ supabase_anon = get_supabase_anon_client()
 # Helper functions pour l'authentification
 def get_current_user(session_token: Optional[str] = Cookie(None)):
     """Récupère l'utilisateur connecté via le token de session."""
+    # Validation des prérequis
     if not session_token or not supabase_anon:
+        return None
+    
+    # Validation du format du token
+    if not isinstance(session_token, str) or len(session_token.strip()) < 20:
+        print("❌ Token de session invalide (format)")
         return None
     
     try:
         # Créer un client authentifié avec le token utilisateur
         user_supabase = get_supabase_client_for_user(session_token)
-        if user_supabase:
-            user_response = user_supabase.auth.get_user()
-            if user_response and user_response.user:
-                profile = get_user_profile(user_supabase, user_response.user.id)
-                if profile:
-                    profile["_access_token"] = session_token  # Garder le token pour les futures requêtes
-                    return profile
+        if not user_supabase:
+            print("❌ Impossible de créer le client authentifié")
+            return None
+            
+        # Utiliser l'API Supabase v2 avec access_token
+        user_response = user_supabase.auth.get_user()
+        if not user_response or not user_response.user:
+            print("❌ Token de session expiré ou invalide")
+            return None
+            
+        profile = get_user_profile(user_supabase, user_response.user.id)
+        if profile:
+            profile["_access_token"] = session_token  # Garder le token pour les futures requêtes
+            print(f"✅ Utilisateur authentifié: {profile.get('email', 'N/A')}")
+            return profile
+        else:
+            # Profil non trouvé - créer automatiquement lors de la première connexion
+            print(f"⚠️ Profil manquant pour {user_response.user.email}, création automatique")
+            return create_profile_on_first_login(user_supabase, user_response.user, session_token)
+            
     except Exception as e:
-        print(f"Erreur authentification: {e}")
-    
-    return None
+        print(f"❌ Erreur authentification: {e}")
+        return None
+
+def create_profile_on_first_login(user_supabase, user, access_token: str):
+    """Crée automatiquement un profil lors de la première connexion (cas confirmation email)."""
+    try:
+        # Récupérer les métadonnées utilisateur depuis Supabase auth
+        user_metadata = getattr(user, 'user_metadata', {})
+        
+        profile_data = {
+            "id": user.id,
+            "role": "client",  # Toujours client par défaut pour sécurité
+            "full_name": user_metadata.get("full_name", "Utilisateur"),
+            "email": getattr(user, 'email', None)
+        }
+        
+        # Créer le profil avec le client authentifié (respecte RLS)
+        response = user_supabase.table("profiles").insert(profile_data).execute()
+        
+        if response.data:
+            profile = response.data[0]
+            profile["_access_token"] = access_token
+            print(f"✅ Profil créé automatiquement lors de la première connexion pour {user.email}")
+            return profile
+        
+        return None
+    except Exception as e:
+        print(f"❌ Erreur création profil automatique: {e}")
+        return None
 
 def require_auth(user = Depends(get_current_user)):
     """Middleware pour routes nécessitant une authentification."""
@@ -103,32 +148,7 @@ async def search_coaches(
         "radius_km": radius_km
     })
 
-@app.get("/coach/{coach_id}", response_class=HTMLResponse)
-async def coach_profile(request: Request, coach_id: str):
-    """Affichage du profil d'un coach."""
-    
-    # Récupérer le coach
-    if supabase_anon:
-        coach = get_coach_by_id_supabase(supabase_anon, coach_id)
-        transformations = get_transformations_by_coach_supabase(supabase_anon, coach_id)
-    else:
-        # Convertir en int pour les données mock si nécessaire
-        try:
-            coach_id_int = int(coach_id)
-            coach = get_coach_by_id_mock(coach_id_int)
-            transformations = get_transformations_by_coach_mock(coach_id_int)
-        except ValueError:
-            coach = None
-            transformations = []
-    
-    if not coach:
-        raise HTTPException(status_code=404, detail="Coach non trouvé")
-    
-    return templates.TemplateResponse("coach.html", {
-        "request": request,
-        "coach": coach,
-        "transformations": transformations
-    })
+# Cette route sera déplacée après les routes spécifiques coach/portal, coach/specialties, etc.
 
 # Routes d'authentification
 @app.get("/signup", response_class=HTMLResponse)
@@ -155,7 +175,12 @@ async def signup_submit(
     
     result = sign_up_user(supabase_anon, email, password, full_name, role)
     if result:
-        return RedirectResponse(url="/login?message=inscription_reussie", status_code=303)
+        if result.get("requires_confirmation"):
+            # Confirmation email requise
+            return RedirectResponse(url="/login?message=confirmation_email", status_code=303)
+        else:
+            # Inscription réussie avec session
+            return RedirectResponse(url="/login?message=inscription_reussie", status_code=303)
     else:
         return templates.TemplateResponse("signup.html", {
             "request": request,
@@ -332,6 +357,34 @@ async def coach_transformations_add(
                 user_supabase.table("transformations").update(update_data).eq("id", transformation["id"]).execute()
     
     return RedirectResponse(url="/coach/portal", status_code=303)
+
+# Route pour profil de coach - définie APRÈS /coach/portal pour éviter les conflits
+@app.get("/coach/{coach_id}", response_class=HTMLResponse)
+async def coach_profile(request: Request, coach_id: str):
+    """Affichage du profil d'un coach."""
+    
+    # Récupérer le coach
+    if supabase_anon:
+        coach = get_coach_by_id_supabase(supabase_anon, coach_id)
+        transformations = get_transformations_by_coach_supabase(supabase_anon, coach_id)
+    else:
+        # Convertir en int pour les données mock si nécessaire
+        try:
+            coach_id_int = int(coach_id)
+            coach = get_coach_by_id_mock(coach_id_int)
+            transformations = get_transformations_by_coach_mock(coach_id_int)
+        except ValueError:
+            coach = None
+            transformations = []
+    
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trouvé")
+    
+    return templates.TemplateResponse("coach.html", {
+        "request": request,
+        "coach": coach,
+        "transformations": transformations
+    })
 
 # Route pour les images uploadées (si pas d'utilisation directe de Supabase Storage)
 @app.get("/images/{image_path:path}")

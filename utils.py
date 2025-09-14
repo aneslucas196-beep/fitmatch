@@ -130,15 +130,42 @@ def get_supabase_client_for_user(access_token: str):
     """
     Crée un client Supabase avec authentification utilisateur (respecte RLS).
     """
-    client = get_supabase_anon_client()
-    if client and access_token:
-        try:
-            # Utiliser la méthode correcte pour définir le token
-            client.auth.set_auth(access_token)
+    from supabase import create_client
+    import os
+    
+    # Validation des paramètres
+    if not access_token or not isinstance(access_token, str) or len(access_token.strip()) == 0:
+        print("❌ Token d'accès invalide ou manquant")
+        return None
+    
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_KEY")
+    
+    if not url or not key:
+        print("❌ Configuration Supabase manquante (URL ou KEY)")
+        return None
+    
+    # Validation de l'URL Supabase
+    if not url.startswith("https://") or ".supabase.co" not in url:
+        print(f"❌ URL Supabase invalide: {url}")
+        return None
+        
+    try:
+        # Créer un nouveau client avec le token utilisateur
+        client = create_client(url, key)
+        
+        # Validation du token avant de l'utiliser
+        if access_token and len(access_token) > 20:  # JWT minimal length check
+            # Définir le token d'authentification pour respecter les politiques RLS
+            client.postgrest.auth(access_token)
+            print(f"✅ Client authentifié créé avec succès")
             return client
-        except Exception as e:
-            print(f"Erreur authentification client: {e}")
-    return None
+        else:
+            print(f"❌ Format de token d'accès invalide")
+            return None
+    except Exception as e:
+        print(f"❌ Erreur création client authentifié: {e}")
+        return None
 
 def search_coaches_mock(specialty: Optional[str] = None, 
                        user_lat: Optional[float] = None, 
@@ -188,24 +215,49 @@ def get_transformations_by_coach_mock(coach_id: int) -> List[Dict]:
 
 # Fonctions Supabase - Authentification
 def sign_up_user(supabase_client, email: str, password: str, full_name: str, role: str = "client") -> Optional[Dict]:
-    """Inscription d'un nouvel utilisateur."""
+    """Inscription d'un nouvel utilisateur avec création automatique du profil."""
     try:
+        # Forcer le rôle à 'client' pour la sécurité (pas d'auto-promotion coach)
+        safe_role = "client"  # Toujours client lors de l'inscription
+        
         auth_response = supabase_client.auth.sign_up({
             "email": email,
             "password": password
         })
         
         if auth_response.user:
-            # Créer le profil utilisateur
+            # Préparer les données du profil
             profile_data = {
                 "id": auth_response.user.id,
-                "role": role,
+                "role": safe_role,
                 "full_name": full_name,
                 "email": email
             }
             
-            supabase_client.table("profiles").insert(profile_data).execute()
-            return {"user": auth_response.user, "session": auth_response.session}
+            # Si on a une session, utiliser un client authentifié
+            if auth_response.session:
+                user_client = get_supabase_client_for_user(auth_response.session.access_token)
+                
+                if user_client:
+                    # Créer le profil utilisateur avec le client authentifié (respecte RLS)
+                    response = user_client.table("profiles").insert(profile_data).execute()
+                    if response.data:
+                        print(f"✅ Profil créé pour {email} avec le rôle {safe_role} (sécurisé)")
+                        return {"user": auth_response.user, "session": auth_response.session}
+                    else:
+                        # Échec de création de profil - abandon pour sécurité
+                        print(f"❌ Échec création profil pour {email} - RLS ou contraintes DB")
+                        return None
+                else:
+                    # Client authentifié indisponible - abandon pour sécurité (pas de fallback dangereux)
+                    print(f"❌ Client authentifié indisponible pour {email} - abandon sécurisé")
+                    return None
+            else:
+                # Pas de session immédiate (confirmation email requise)
+                # Créer le profil avec un trigger de base de données ou dans la fonction après confirmation
+                print(f"✅ Utilisateur créé pour {email}, confirmation email requise")
+                return {"user": auth_response.user, "session": None, "requires_confirmation": True}
+        
         return None
     except Exception as e:
         print(f"Erreur inscription: {e}")
