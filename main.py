@@ -31,6 +31,14 @@ from utils import (
 
 app = FastAPI()
 
+# Exception handler pour rediriger automatiquement les utilisateurs non connectés
+@app.exception_handler(401)
+async def auth_exception_handler(request: Request, exc: HTTPException):
+    """Redirige automatiquement vers /login si utilisateur non connecté."""
+    if exc.status_code == 401:
+        return RedirectResponse(url="/login", status_code=303)
+    return exc
+
 # Configuration des templates et fichiers statiques
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
