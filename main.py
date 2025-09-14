@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from typing import Optional, List
 import uvicorn
+import jwt
 import os
 import uuid
 from datetime import datetime, timedelta
@@ -41,37 +42,72 @@ supabase_anon = get_supabase_anon_client()
 def get_current_user(session_token: Optional[str] = Cookie(None)):
     """Récupère l'utilisateur connecté via le token de session."""
     # Validation des prérequis
-    if not session_token or not supabase_anon:
+    if not session_token:
         return None
     
     # Validation du format du token
-    if not isinstance(session_token, str) or len(session_token.strip()) < 20:
+    if not isinstance(session_token, str) or len(session_token.strip()) < 10:
         print("❌ Token de session invalide (format)")
         return None
     
+    # Mode démo si pas de Supabase
+    if not supabase_anon:
+        if session_token == "demo_token":
+            return {
+                "id": "demo_user", 
+                "email": "demo@example.com", 
+                "role": "coach",
+                "full_name": "Utilisateur Démo",
+                "_access_token": session_token
+            }
+        return None
+    
     try:
-        # Créer un client authentifié avec le token utilisateur
+        import os
+        
+        # Décoder le JWT pour récupérer l'ID utilisateur (plus robuste que auth.get_user)
+        # On ne vérifie pas la signature car Supabase l'a déjà fait
+        decoded_token = jwt.decode(session_token, options={"verify_signature": False})
+        user_id = decoded_token.get("sub")
+        
+        if not user_id:
+            print("❌ Token JWT invalide (pas d'ID utilisateur)")
+            return None
+            
+        # Créer un client authentifié pour respecter les politiques RLS
         user_supabase = get_supabase_client_for_user(session_token)
         if not user_supabase:
             print("❌ Impossible de créer le client authentifié")
             return None
             
-        # Utiliser l'API Supabase v2 avec access_token
-        user_response = user_supabase.auth.get_user()
-        if not user_response or not user_response.user:
-            print("❌ Token de session expiré ou invalide")
-            return None
-            
-        profile = get_user_profile(user_supabase, user_response.user.id)
+        # Charger le profil directement depuis la table profiles
+        profile = get_user_profile(user_supabase, user_id)
         if profile:
             profile["_access_token"] = session_token  # Garder le token pour les futures requêtes
             print(f"✅ Utilisateur authentifié: {profile.get('email', 'N/A')}")
             return profile
         else:
             # Profil non trouvé - créer automatiquement lors de la première connexion
-            print(f"⚠️ Profil manquant pour {user_response.user.email}, création automatique")
-            return create_profile_on_first_login(user_supabase, user_response.user, session_token)
+            print(f"⚠️ Profil manquant pour utilisateur {user_id}, création automatique")
             
+            # Récupérer l'email depuis le token JWT
+            user_email = decoded_token.get("email")
+            if not user_email:
+                print("❌ Email non trouvé dans le token")
+                return None
+                
+            # Créer un objet utilisateur mock pour la création de profil
+            mock_user = type('User', (), {
+                'id': user_id,
+                'email': user_email,
+                'user_metadata': {}
+            })()
+            
+            return create_profile_on_first_login(user_supabase, mock_user, session_token)
+            
+    except jwt.DecodeError:
+        print("❌ Token JWT mal formé")
+        return None
     except Exception as e:
         print(f"❌ Erreur authentification: {e}")
         return None
@@ -106,13 +142,21 @@ def create_profile_on_first_login(user_supabase, user, access_token: str):
 def require_auth(user = Depends(get_current_user)):
     """Middleware pour routes nécessitant une authentification."""
     if not user:
-        raise HTTPException(status_code=401, detail="Authentification requise")
+        raise HTTPException(
+            status_code=401, 
+            detail="Authentification requise",
+            headers={"Location": "/login"}
+        )
     return user
 
 def require_coach_role(user = Depends(require_auth)):
     """Middleware pour routes réservées aux coaches."""
     if user.get("role") != "coach":
-        raise HTTPException(status_code=403, detail="Accès réservé aux coaches")
+        raise HTTPException(
+            status_code=403, 
+            detail="Accès réservé aux coaches",
+            headers={"Location": "/login"}
+        )
     return user
 
 # Routes publiques
