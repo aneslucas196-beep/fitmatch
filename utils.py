@@ -215,57 +215,31 @@ def get_transformations_by_coach_mock(coach_id: int) -> List[Dict]:
     return [t for t in MOCK_TRANSFORMATIONS if t["coach_id"] == coach_id]
 
 # Fonctions Supabase - Authentification
-def sign_up_user(supabase_client, email: str, password: str, full_name: str, role: str = "client") -> Optional[Dict]:
-    """Inscription d'un nouvel utilisateur avec création automatique du profil."""
+def create_user_profile_on_confirmation(supabase_client, user_id: str, email: str, full_name: str, role: str) -> bool:
+    """Crée le profil utilisateur après confirmation d'email (appelé par webhook ou trigger)."""
     try:
-        # Forcer le rôle à 'client' pour la sécurité (pas d'auto-promotion coach)
-        safe_role = "client"  # Toujours client lors de l'inscription
-        
-        # Normaliser l'email en lowercase
+        # Normaliser l'email
         normalized_email = email.lower().strip()
         
-        auth_response = supabase_client.auth.sign_up({
-            "email": normalized_email,
-            "password": password
-        })
+        # Créer le profil dans la table profiles
+        profile_data = {
+            "id": user_id,
+            "role": role,
+            "full_name": full_name,
+            "email": normalized_email
+        }
         
-        if auth_response.user:
-            # Préparer les données du profil
-            profile_data = {
-                "id": auth_response.user.id,
-                "role": safe_role,
-                "full_name": full_name,
-                "email": normalized_email
-            }
+        response = supabase_client.table("profiles").insert(profile_data).execute()
+        if response.data:
+            print(f"✅ Profil créé pour {normalized_email} avec le rôle {role}")
+            return True
+        else:
+            print(f"❌ Échec création profil pour {normalized_email}")
+            return False
             
-            # Si on a une session, utiliser un client authentifié
-            if auth_response.session:
-                user_client = get_supabase_client_for_user(auth_response.session.access_token)
-                
-                if user_client:
-                    # Créer le profil utilisateur avec le client authentifié (respecte RLS)
-                    response = user_client.table("profiles").insert(profile_data).execute()
-                    if response.data:
-                        print(f"✅ Profil créé pour {normalized_email} avec le rôle {safe_role} (sécurisé)")
-                        return {"user": auth_response.user, "session": auth_response.session}
-                    else:
-                        # Échec de création de profil - abandon pour sécurité
-                        print(f"❌ Échec création profil pour {normalized_email} - RLS ou contraintes DB")
-                        return None
-                else:
-                    # Client authentifié indisponible - abandon pour sécurité (pas de fallback dangereux)
-                    print(f"❌ Client authentifié indisponible pour {normalized_email} - abandon sécurisé")
-                    return None
-            else:
-                # Pas de session immédiate (confirmation email requise)
-                # Créer le profil avec un trigger de base de données ou dans la fonction après confirmation
-                print(f"✅ Utilisateur créé pour {normalized_email}, confirmation email requise")
-                return {"user": auth_response.user, "session": None, "requires_confirmation": True}
-        
-        return None
     except Exception as e:
-        print(f"Erreur inscription: {e}")
-        return None
+        print(f"❌ Erreur création profil: {e}")
+        return False
 
 def sign_in_user(supabase_client, email: str, password: str) -> Optional[Dict]:
     """Connexion d'un utilisateur."""

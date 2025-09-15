@@ -17,7 +17,6 @@ from utils import (
     get_supabase_anon_client,
     get_supabase_client_for_user,
     # Nouvelles fonctions Supabase
-    sign_up_user,
     sign_in_user,
     get_user_profile,
     search_coaches_supabase,
@@ -27,7 +26,8 @@ from utils import (
     update_coach_specialties,
     add_transformation,
     upload_transformation_images,
-    resend_confirmation_email
+    resend_confirmation_email,
+    create_user_profile_on_confirmation
 )
 
 app = FastAPI()
@@ -227,11 +227,11 @@ async def signup_submit(
     password: str = Form(...),
     role: str = Form(...)
 ):
-    """Traitement de l'inscription."""
+    """Inscription utilisateur avec Supabase Auth et création de profil."""
     # Normaliser l'email en lowercase
     email = email.lower().strip()
     
-    # Validation du mot de passe AVANT d'appeler Supabase
+    # Validation du mot de passe
     if not is_valid_password(password):
         return templates.TemplateResponse("signup.html", {
             "request": request,
@@ -241,33 +241,68 @@ async def signup_submit(
             "role": role
         }, status_code=400)
     
-    if not supabase_anon:
-        # Mode démo sans Supabase
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Restreindre les rôles autorisés à l'inscription
+    # Validation du rôle
     if role not in ["client", "coach"]:
         role = "client"
     
-    result = sign_up_user(supabase_anon, email, password, full_name, role)
-    if result:
-        if result.get("requires_confirmation"):
-            # Confirmation email requise - montrer page de vérification
+    if not supabase_anon:
+        # Mode démo sans Supabase
+        return templates.TemplateResponse("verify_email.html", {
+            "request": request,
+            "email": email,
+            "success": "Mode démo - Vérifie ton email pour confirmer ton compte"
+        })
+    
+    try:
+        # Créer l'utilisateur avec Supabase Auth
+        auth_response = supabase_anon.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {
+                "data": {
+                    "full_name": full_name,
+                    "role": role
+                }
+            }
+        })
+        
+        if auth_response.user:
+            # Succès - email de confirmation envoyé automatiquement par Supabase
             return templates.TemplateResponse("verify_email.html", {
                 "request": request,
-                "email": email
+                "email": email,
+                "success": "Vérifie ton email pour confirmer ton compte"
             })
         else:
-            # Inscription réussie avec session
-            return RedirectResponse(url="/login?message=inscription_reussie", status_code=303)
-    else:
+            # Échec de création
+            return templates.TemplateResponse("signup.html", {
+                "request": request,
+                "error": "Erreur lors de l'inscription. Veuillez réessayer.",
+                "full_name": full_name,
+                "email": email,
+                "role": role
+            }, status_code=400)
+            
+    except Exception as e:
+        error_message = str(e).lower()
+        
+        # Messages d'erreur spécifiques selon le type d'erreur
+        if "already" in error_message or "existe" in error_message:
+            error_text = "Un compte avec cet email existe déjà."
+        elif "invalid" in error_message and "email" in error_message:
+            error_text = "Adresse email invalide."
+        elif "weak" in error_message or "password" in error_message:
+            error_text = "Mot de passe trop faible. Utilisez au moins 8 caractères avec lettres et chiffres."
+        else:
+            error_text = "Erreur lors de l'inscription. Veuillez réessayer."
+        
         return templates.TemplateResponse("signup.html", {
             "request": request,
-            "error": "Erreur lors de l'inscription. Vérifiez vos informations.",
+            "error": error_text,
             "full_name": full_name,
             "email": email,
             "role": role
-        })
+        }, status_code=400)
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request, message: Optional[str] = None):
