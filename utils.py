@@ -2,6 +2,7 @@ import os
 import math
 import random
 import secrets
+import hashlib
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 from geopy.geocoders import Nominatim
@@ -304,8 +305,12 @@ def generate_otp_code(length: int = 6) -> str:
     
     return code
 
+def hash_otp_code(code: str) -> str:
+    """Hash un code OTP avec SHA-256."""
+    return hashlib.sha256(code.encode('utf-8')).hexdigest()
+
 def store_otp_code(supabase_client, email: str, full_name: str, role: str, code: str, expiration_minutes: int = 10) -> bool:
-    """Sauvegarde un code OTP en base avec expiration."""
+    """Sauvegarde un code OTP hashé en base avec expiration."""
     try:
         # Normaliser l'email
         normalized_email = email.lower().strip()
@@ -317,23 +322,24 @@ def store_otp_code(supabase_client, email: str, full_name: str, role: str, code:
         if role not in ['client', 'coach']:
             role = 'client'
         
-        # Supprimer les anciens codes non utilisés pour cet email
-        supabase_client.table("otp_codes").delete().eq("email", normalized_email).eq("used", False).execute()
+        # Hasher le code avec SHA-256
+        code_hash = hash_otp_code(code)
         
-        # Insérer le nouveau code
+        # Supprimer les anciens codes non utilisés pour cet email
+        supabase_client.table("otp_codes").delete().eq("email", normalized_email).eq("consumed", False).execute()
+        
+        # Insérer le nouveau code hashé
         otp_data = {
             "email": normalized_email,
-            "code": code,
-            "full_name": full_name,
-            "role": role,
+            "code_hash": code_hash,
             "expires_at": expires_at.isoformat(),
-            "used": False
+            "consumed": False
         }
         
         response = supabase_client.table("otp_codes").insert(otp_data).execute()
         
         if response.data:
-            print(f"✅ Code OTP sauvegardé pour {normalized_email}")
+            print(f"✅ Code OTP hashé sauvegardé pour {normalized_email}")
             return True
         else:
             print(f"❌ Échec sauvegarde OTP pour {normalized_email}")
@@ -343,40 +349,34 @@ def store_otp_code(supabase_client, email: str, full_name: str, role: str, code:
         print(f"❌ Erreur sauvegarde OTP: {e}")
         return False
 
-def verify_otp_code(supabase_client, email: str, code: str) -> Optional[Dict]:
-    """Vérifie un code OTP et retourne les données utilisateur si valide."""
+def verify_otp_code(supabase_client, email: str, code: str) -> bool:
+    """Vérifie un code OTP et le marque comme consommé si valide."""
     try:
         # Normaliser l'email
         normalized_email = email.lower().strip()
         
-        # Rechercher le code OTP valide
-        response = supabase_client.table("otp_codes").select("*").eq("email", normalized_email).eq("code", code).eq("used", False).execute()
+        # Hasher le code fourni pour la comparaison
+        code_hash = hash_otp_code(code)
+        
+        # Rechercher le code OTP valide non consommé et non expiré
+        current_time = datetime.utcnow().isoformat()
+        response = supabase_client.table("otp_codes").select("*").eq("email", normalized_email).eq("code_hash", code_hash).eq("consumed", False).gt("expires_at", current_time).order("created_at", desc=True).limit(1).execute()
         
         if not response.data:
-            print(f"❌ Code OTP introuvable pour {normalized_email}")
-            return None
+            print(f"❌ Code OTP introuvable ou expiré pour {normalized_email}")
+            return False
         
         otp_record = response.data[0]
         
-        # Vérifier l'expiration
-        expires_at = datetime.fromisoformat(otp_record['expires_at'].replace('Z', '+00:00'))
-        if datetime.utcnow().replace(tzinfo=expires_at.tzinfo) > expires_at:
-            print(f"❌ Code OTP expiré pour {normalized_email}")
-            return None
-        
-        # Marquer le code comme utilisé
-        supabase_client.table("otp_codes").update({"used": True}).eq("id", otp_record['id']).execute()
+        # Marquer le code comme consommé
+        supabase_client.table("otp_codes").update({"consumed": True}).eq("id", otp_record['id']).execute()
         
         print(f"✅ Code OTP vérifié avec succès pour {normalized_email}")
-        return {
-            "email": otp_record['email'],
-            "full_name": otp_record['full_name'],
-            "role": otp_record['role']
-        }
+        return True
         
     except Exception as e:
         print(f"❌ Erreur vérification OTP: {e}")
-        return None
+        return False
 
 def cleanup_expired_otp_codes(supabase_client) -> int:
     """Nettoie les codes OTP expirés et retourne le nombre supprimé."""
@@ -394,6 +394,62 @@ def cleanup_expired_otp_codes(supabase_client) -> int:
     except Exception as e:
         print(f"❌ Erreur nettoyage codes OTP: {e}")
         return 0
+
+def get_pending_otp_data(supabase_client, email: str) -> Optional[Dict]:
+    """Récupère les données OTP en attente pour un email."""
+    try:
+        # Normaliser l'email
+        normalized_email = email.lower().strip()
+        
+        # Rechercher le dernier OTP non consommé et non expiré
+        current_time = datetime.utcnow().isoformat()
+        response = supabase_client.table("pending_registrations").select("*").eq("email", normalized_email).gt("expires_at", current_time).order("created_at", desc=True).limit(1).execute()
+        
+        if response.data:
+            return response.data[0]
+        return None
+        
+    except Exception as e:
+        print(f"❌ Erreur récupération données OTP: {e}")
+        return None
+
+def store_pending_registration(supabase_client, email: str, full_name: str, password: str, role: str, expiration_minutes: int = 10) -> bool:
+    """Stocke les données d'inscription en attente de vérification OTP."""
+    try:
+        # Normaliser l'email
+        normalized_email = email.lower().strip()
+        
+        # Calculer l'expiration
+        expires_at = datetime.utcnow() + timedelta(minutes=expiration_minutes)
+        
+        # Vérifier que le rôle est valide
+        if role not in ['client', 'coach']:
+            role = 'client'
+        
+        # Supprimer les anciennes données en attente pour cet email
+        supabase_client.table("pending_registrations").delete().eq("email", normalized_email).execute()
+        
+        # Insérer les nouvelles données
+        pending_data = {
+            "email": normalized_email,
+            "full_name": full_name,
+            "password": password,
+            "role": role,
+            "expires_at": expires_at.isoformat()
+        }
+        
+        response = supabase_client.table("pending_registrations").insert(pending_data).execute()
+        
+        if response.data:
+            print(f"✅ Données d'inscription en attente sauvegardées pour {normalized_email}")
+            return True
+        else:
+            print(f"❌ Échec sauvegarde données en attente pour {normalized_email}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Erreur sauvegarde données en attente: {e}")
+        return False
 
 def create_user_account_with_otp(supabase_client, email: str, password: str, full_name: str, role: str) -> Dict:
     """Crée un compte utilisateur et son profil après vérification OTP."""
