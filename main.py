@@ -317,6 +317,180 @@ async def signup_submit(
             "role": role
         }, status_code=500)
 
+@app.post("/verify-otp")
+async def verify_otp_submit(
+    request: Request,
+    email: str = Form(...),
+    otp_code: str = Form(...)
+):
+    """Vérification du code OTP et activation du compte."""
+    # Normaliser l'email et le code
+    email = email.lower().strip()
+    otp_code = otp_code.strip()
+    
+    # Validation du format du code
+    if not otp_code.isdigit() or len(otp_code) < 4 or len(otp_code) > 6:
+        return templates.TemplateResponse("verify_otp.html", {
+            "request": request,
+            "email": email,
+            "error": "Code invalide. Veuillez saisir un code à 4-6 chiffres."
+        }, status_code=400)
+    
+    if not supabase_anon:
+        # Mode démo - accepter n'importe quel code de 6 chiffres
+        if len(otp_code) == 6:
+            response = RedirectResponse(url="/coach/portal", status_code=303)
+            response.set_cookie(
+                key="session_token",
+                value="demo_token",
+                httponly=True,
+                secure=False,  # True en production
+                samesite="lax"
+            )
+            return response
+        else:
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "error": "Code incorrect. En mode démo, utilisez un code à 6 chiffres."
+            }, status_code=400)
+    
+    try:
+        # Vérifier le code OTP
+        user_data = verify_otp_code(supabase_anon, email, otp_code)
+        
+        if not user_data:
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "error": "Code incorrect ou expiré. Veuillez réessayer."
+            }, status_code=400)
+        
+        # Code valide - créer le compte utilisateur
+        # Récupérer le mot de passe depuis la session ou demander une nouvelle saisie
+        # Pour l'instant, on va créer un mot de passe temporaire et demander à l'utilisateur de le changer
+        temp_password = f"temp_{otp_code}_{email.split('@')[0]}"
+        
+        account_result = create_user_account_with_otp(
+            supabase_anon, 
+            user_data['email'], 
+            temp_password, 
+            user_data['full_name'], 
+            user_data['role']
+        )
+        
+        if account_result.get('success'):
+            # Créer une session utilisateur
+            user = account_result['user']
+            session = account_result['session']
+            
+            # Rediriger selon le rôle
+            if user_data['role'] == 'coach':
+                redirect_url = "/coach/portal"
+            else:
+                redirect_url = "/"
+            
+            response = RedirectResponse(url=redirect_url, status_code=303)
+            
+            # Définir le cookie de session avec le token d'accès
+            if session and session.access_token:
+                response.set_cookie(
+                    key="session_token",
+                    value=session.access_token,
+                    httponly=True,
+                    secure=False,  # True en production
+                    samesite="lax",
+                    max_age=3600 * 24 * 7  # 7 jours
+                )
+            
+            return response
+        else:
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "error": f"Erreur lors de la création du compte: {account_result.get('error', 'Erreur inconnue')}"
+            }, status_code=500)
+            
+    except Exception as e:
+        print(f"❌ Erreur vérification OTP: {e}")
+        return templates.TemplateResponse("verify_otp.html", {
+            "request": request,
+            "email": email,
+            "error": "Erreur lors de la vérification. Veuillez réessayer."
+        }, status_code=500)
+
+@app.post("/resend-otp")
+async def resend_otp_submit(
+    request: Request,
+    email: str = Form(...)
+):
+    """Renvoie un nouveau code OTP."""
+    # Normaliser l'email
+    email = email.lower().strip()
+    
+    if not supabase_anon:
+        # Mode démo - générer un nouveau code
+        new_otp_code = generate_otp_code(6)
+        print(f"🔐 Mode démo - Nouveau code OTP pour {email}: {new_otp_code}")
+        return templates.TemplateResponse("verify_otp.html", {
+            "request": request,
+            "email": email,
+            "demo_code": new_otp_code,
+            "success": "Nouveau code généré en mode démo"
+        })
+    
+    try:
+        # Récupérer les données de l'ancien code OTP pour garder les mêmes infos
+        response = supabase_anon.table("otp_codes").select("full_name, role").eq("email", email).eq("used", False).order("created_at", desc=True).limit(1).execute()
+        
+        if not response.data:
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "error": "Aucune demande d'inscription trouvée pour cet email."
+            }, status_code=400)
+        
+        user_info = response.data[0]
+        full_name = user_info['full_name']
+        role = user_info['role']
+        
+        # Générer un nouveau code OTP
+        new_otp_code = generate_otp_code(6)
+        
+        # Sauvegarder le nouveau code (l'ancien sera automatiquement supprimé)
+        otp_stored = store_otp_code(supabase_anon, email, full_name, role, new_otp_code)
+        
+        if not otp_stored:
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "error": "Erreur lors de la génération du nouveau code."
+            }, status_code=500)
+        
+        # Envoyer le nouveau code par email
+        email_sent = send_otp_email(email, new_otp_code, full_name)
+        
+        if email_sent:
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "success": "Nouveau code envoyé par email"
+            })
+        else:
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "error": "Erreur lors de l'envoi du nouveau code."
+            }, status_code=500)
+            
+    except Exception as e:
+        print(f"❌ Erreur renvoi OTP: {e}")
+        return templates.TemplateResponse("verify_otp.html", {
+            "request": request,
+            "email": email,
+            "error": "Erreur lors du renvoi du code."
+        }, status_code=500)
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request, message: Optional[str] = None):
     """Formulaire de connexion."""
