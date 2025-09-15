@@ -276,18 +276,6 @@ async def signup_submit(
         # Nettoyer les anciens codes expirés
         cleanup_expired_otp_codes(supabase_anon)
         
-        # Sauvegarder le code OTP en base (avec user_id)
-        otp_stored = store_otp_code_for_user(supabase_anon, email, user_id, otp_code)
-        
-        if not otp_stored:
-            return templates.TemplateResponse("signup.html", {
-                "request": request,
-                "error": "Erreur lors de la génération du code. Veuillez réessayer.",
-                "full_name": full_name,
-                "email": email,
-                "role": role
-            }, status_code=500)
-        
         # Créer immédiatement le compte Supabase Auth (sans confirmation)
         try:
             auth_response = supabase_anon.auth.sign_up({
@@ -323,10 +311,22 @@ async def signup_submit(
                 "role": role
             }, status_code=500)
         
-        # Envoyer le code par email avec Resend
-        email_sent = send_otp_email_resend(email, otp_code, full_name)
+        # Sauvegarder le code OTP en base (avec user_id)
+        otp_stored = store_otp_code_for_user(supabase_anon, email, user_id, otp_code)
         
-        if email_sent:
+        if not otp_stored:
+            return templates.TemplateResponse("signup.html", {
+                "request": request,
+                "error": "Erreur lors de la génération du code. Veuillez réessayer.",
+                "full_name": full_name,
+                "email": email,
+                "role": role
+            }, status_code=500)
+        
+        # Envoyer le code par email avec Resend
+        email_result = send_otp_email_resend(email, otp_code, full_name)
+        
+        if email_result.get("success"):
             # Succès - rediriger vers la page de vérification OTP
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
@@ -342,9 +342,18 @@ async def signup_submit(
             except:
                 pass
             
+            # Message d'erreur détaillé basé sur le type d'erreur
+            error_details = email_result.get("error", "Erreur inconnue")
+            if email_result.get("mode") == "resend":
+                error_message = f"Erreur d'envoi d'email (Status {email_result.get('status_code', 'N/A')}). Vérifiez votre adresse email et réessayez."
+            else:
+                error_message = "Erreur de service d'email. Veuillez réessayer dans quelques minutes."
+            
+            print(f"💥 Détails erreur email: {error_details}")
+            
             return templates.TemplateResponse("signup.html", {
                 "request": request,
-                "error": "Erreur lors de l'envoi de l'email. Veuillez réessayer.",
+                "error": error_message,
                 "full_name": full_name,
                 "email": email,
                 "role": role
@@ -536,19 +545,28 @@ async def resend_otp_submit(
             }, status_code=500)
         
         # Envoyer le nouveau code par email avec Resend
-        email_sent = send_otp_email_resend(email, new_otp_code, full_name)
+        email_result = send_otp_email_resend(email, new_otp_code, full_name)
         
-        if email_sent:
+        if email_result.get("success"):
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
                 "success": "Nouveau code envoyé par email"
             })
         else:
+            # Message d'erreur détaillé basé sur le type d'erreur
+            error_details = email_result.get("error", "Erreur inconnue")
+            if email_result.get("mode") == "resend":
+                error_message = f"Erreur d'envoi d'email (Status {email_result.get('status_code', 'N/A')}). Vérifiez votre adresse email et réessayez."
+            else:
+                error_message = "Erreur de service d'email. Veuillez réessayer dans quelques minutes."
+            
+            print(f"💥 Détails erreur renvoi email: {error_details}")
+            
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": "Erreur lors de l'envoi du nouveau code."
+                "error": error_message
             }, status_code=500)
             
     except Exception as e:

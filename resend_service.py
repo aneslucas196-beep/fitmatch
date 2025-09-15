@@ -3,17 +3,25 @@ import os
 import requests
 from typing import Optional
 
-def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str] = None) -> bool:
+def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str] = None) -> dict:
     """
     Envoie un code OTP par email via Resend API
+    Retourne un dictionnaire avec success (bool) et des détails pour le debugging
     """
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = os.environ.get('MAIL_FROM', 'Coach Fitness <no-reply@coachfitness.app>')
+    mail_from = os.environ.get('MAIL_FROM', 'Coach Fitness <onboarding@resend.dev>')
+    site_url = os.environ.get('SITE_URL', 'http://localhost:5000')
+    
+    print(f"🔧 Configuration email:")
+    print(f"  - RESEND_API_KEY: {'✅ Configuré' if resend_key else '❌ Manquant'}")
+    print(f"  - MAIL_FROM: {mail_from}")
+    print(f"  - SITE_URL: {site_url}")
+    print(f"  - Destinataire: {to_email}")
     
     if not resend_key:
         print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi d'email")
         print(f"📧 Email simulé envoyé à {to_email}: Code OTP = {otp_code}")
-        return True
+        return {"success": True, "mode": "demo", "message": "Email simulé"}
     
     try:
         # Prénom pour personnaliser l'email
@@ -83,15 +91,44 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
             "text": text_content
         }
         
+        print(f"📤 Envoi requête Resend...")
+        print(f"  - URL: {url}")
+        print(f"  - Headers: Authorization présent, Content-Type: {headers['Content-Type']}")
+        print(f"  - Payload: from={data['from']}, to={data['to']}, subject={data['subject']}")
+        
         response = requests.post(url, headers=headers, json=data, timeout=10)
         
+        print(f"📥 Réponse Resend:")
+        print(f"  - Status: {response.status_code}")
+        print(f"  - Headers: {dict(response.headers)}")
+        print(f"  - Body: {response.text}")
+        
         if response.status_code == 200:
-            print(f"✅ Email OTP envoyé via Resend à {to_email}")
-            return True
+            response_data = response.json()
+            email_id = response_data.get('id', 'N/A')
+            print(f"✅ Email OTP envoyé via Resend à {to_email} (ID: {email_id})")
+            return {
+                "success": True, 
+                "mode": "resend", 
+                "email_id": email_id,
+                "message": "Email envoyé avec succès"
+            }
         else:
-            print(f"❌ Erreur Resend (Status {response.status_code}): {response.text}")
-            return False
+            error_msg = f"Erreur Resend (Status {response.status_code}): {response.text}"
+            print(f"❌ {error_msg}")
+            return {
+                "success": False, 
+                "mode": "resend", 
+                "error": error_msg,
+                "status_code": response.status_code,
+                "response_body": response.text
+            }
         
     except Exception as e:
-        print(f"❌ Erreur envoi email Resend: {e}")
-        return False
+        error_msg = f"Erreur envoi email Resend: {e}"
+        print(f"❌ {error_msg}")
+        return {
+            "success": False, 
+            "mode": "error", 
+            "error": error_msg
+        }
