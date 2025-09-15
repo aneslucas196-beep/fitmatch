@@ -53,8 +53,8 @@ def is_valid_password(password: str) -> bool:
     Critères: Au moins 8 caractères, une lettre et un chiffre.
     """
     import re
-    # Au moins 8 caractères, une lettre et un chiffre
-    return bool(re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$', password))
+    # Au moins 8 caractères, une lettre et un chiffre (autorisant caractères spéciaux)
+    return bool(re.match(r'^(?=.*[A-Za-z])(?=.*\d).{8,}$', password))
 
 # Helper functions pour l'authentification
 def get_current_user(session_token: Optional[str] = Cookie(None)):
@@ -235,7 +235,7 @@ async def signup_submit(
             "full_name": full_name,
             "email": email,
             "role": role
-        })
+        }, status_code=400)
     
     if not supabase_anon:
         # Mode démo sans Supabase
@@ -303,10 +303,12 @@ async def login_submit(
         )
         return response
     else:
+        # Retourner template avec email conservé pour faciliter la nouvelle tentative
         return templates.TemplateResponse("login.html", {
             "request": request,
-            "error": "Email ou mot de passe incorrect."
-        })
+            "error": "Email ou mot de passe incorrect.",
+            "email": email
+        }, status_code=401)
 
 @app.get("/logout")
 async def logout():
