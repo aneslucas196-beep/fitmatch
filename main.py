@@ -55,6 +55,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Client Supabase anonyme (si disponible)
 supabase_anon = get_supabase_anon_client()
 
+# Cache en mémoire pour les codes OTP en mode démo (email -> code)
+demo_otp_cache = {}
+
 # Fonction de validation du mot de passe
 def is_valid_password(password: str) -> bool:
     """Valide qu'un mot de passe respecte les critères de sécurité.
@@ -257,7 +260,8 @@ async def signup_submit(
     otp_code = generate_otp_code(6)
     
     if not supabase_anon:
-        # Mode démo sans Supabase
+        # Mode démo sans Supabase - stocker le code dans le cache
+        demo_otp_cache[email] = otp_code
         print(f"🔐 Mode démo - Code OTP généré pour {email}: {otp_code}")
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
@@ -337,8 +341,11 @@ async def verify_otp_submit(
         }, status_code=400)
     
     if not supabase_anon:
-        # Mode démo - accepter n'importe quel code de 6 chiffres
-        if len(otp_code) == 6:
+        # Mode démo - vérifier que le code correspond exactement à celui généré
+        stored_code = demo_otp_cache.get(email)
+        if stored_code and otp_code == stored_code:
+            # Code correct - supprimer du cache et connecter
+            del demo_otp_cache[email]
             response = RedirectResponse(url="/coach/portal", status_code=303)
             response.set_cookie(
                 key="session_token",
@@ -352,7 +359,7 @@ async def verify_otp_submit(
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": "Code incorrect. En mode démo, utilisez un code à 6 chiffres."
+                "error": "Code incorrect. Veuillez utiliser le code affiché en mode démo."
             }, status_code=400)
     
     try:
@@ -429,8 +436,9 @@ async def resend_otp_submit(
     email = email.lower().strip()
     
     if not supabase_anon:
-        # Mode démo - générer un nouveau code
+        # Mode démo - générer un nouveau code et le stocker
         new_otp_code = generate_otp_code(6)
+        demo_otp_cache[email] = new_otp_code
         print(f"🔐 Mode démo - Nouveau code OTP pour {email}: {new_otp_code}")
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
