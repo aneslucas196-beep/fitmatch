@@ -46,6 +46,16 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Client Supabase anonyme (si disponible)
 supabase_anon = get_supabase_anon_client()
 
+# Fonction de validation du mot de passe
+def is_valid_password(password: str) -> bool:
+    """Valide qu'un mot de passe respecte les critères de sécurité.
+    
+    Critères: Au moins 8 caractères, une lettre et un chiffre.
+    """
+    import re
+    # Au moins 8 caractères, une lettre et un chiffre
+    return bool(re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$', password))
+
 # Helper functions pour l'authentification
 def get_current_user(session_token: Optional[str] = Cookie(None)):
     """Récupère l'utilisateur connecté via le token de session."""
@@ -217,6 +227,16 @@ async def signup_submit(
     role: str = Form(...)
 ):
     """Traitement de l'inscription."""
+    # Validation du mot de passe AVANT d'appeler Supabase
+    if not is_valid_password(password):
+        return templates.TemplateResponse("signup.html", {
+            "request": request,
+            "error": "Mot de passe trop faible (minimum 8 caractères, 1 lettre et 1 chiffre)",
+            "full_name": full_name,
+            "email": email,
+            "role": role
+        })
+    
     if not supabase_anon:
         # Mode démo sans Supabase
         return RedirectResponse(url="/login", status_code=303)
@@ -236,7 +256,10 @@ async def signup_submit(
     else:
         return templates.TemplateResponse("signup.html", {
             "request": request,
-            "error": "Erreur lors de l'inscription. Vérifiez vos informations."
+            "error": "Erreur lors de l'inscription. Vérifiez vos informations.",
+            "full_name": full_name,
+            "email": email,
+            "role": role
         })
 
 @app.get("/login", response_class=HTMLResponse)
