@@ -268,8 +268,7 @@ async def signup_submit(
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
-            "demo_code": otp_code,  # En mode démo, on affiche le code
-            "success": "Mode démo - Code OTP envoyé"
+            "success": "Code de vérification envoyé à votre adresse email"
         })
     
     try:

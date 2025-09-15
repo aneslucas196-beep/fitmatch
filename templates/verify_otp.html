@@ -35,12 +35,6 @@
         </div>
     {% endif %}
 
-    {% if demo_code %}
-        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4" role="alert">
-            <strong class="font-bold">Mode démo :</strong>
-            <span class="block sm:inline">Votre code est <strong>{{ demo_code }}</strong></span>
-        </div>
-    {% endif %}
 
     <form action="/verify-otp" method="POST" class="space-y-4">
         <input type="hidden" name="email" value="{{ email }}">
