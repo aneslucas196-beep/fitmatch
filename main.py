@@ -278,17 +278,26 @@ async def login_submit(
 ):
     """Traitement de la connexion."""
     if not supabase_anon:
-        # Mode démo sans Supabase
-        response = RedirectResponse(url="/coach/portal", status_code=303)
-        response.set_cookie(
-            key="session_token",
-            value="demo_token",
-            httponly=True,
-            secure=False,  # True en production
-            samesite="lax"
-        )
-        return response
+        # Mode démo sans Supabase - vérifier identifiants démo
+        if email == "demo@example.com" and password == "demopass123":
+            response = RedirectResponse(url="/coach/portal", status_code=303)
+            response.set_cookie(
+                key="session_token",
+                value="demo_token",
+                httponly=True,
+                secure=False,  # True en production
+                samesite="lax"
+            )
+            return response
+        else:
+            # Identifiants incorrects même en mode démo
+            return templates.TemplateResponse("login.html", {
+                "request": request,
+                "error": "Email ou mot de passe incorrect.",
+                "email": email
+            }, status_code=401)
     
+    # Mode Supabase - utiliser exclusivement signInWithPassword
     result = sign_in_user(supabase_anon, email, password)
     if result and result.get("session"):
         response = RedirectResponse(url="/coach/portal", status_code=303)
@@ -303,7 +312,7 @@ async def login_submit(
         )
         return response
     else:
-        # Retourner template avec email conservé pour faciliter la nouvelle tentative
+        # Retourner template avec email conservé - HTTP 401 sans redirection
         return templates.TemplateResponse("login.html", {
             "request": request,
             "error": "Email ou mot de passe incorrect.",
