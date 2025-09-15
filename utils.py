@@ -309,8 +309,45 @@ def hash_otp_code(code: str) -> str:
     """Hash un code OTP avec SHA-256."""
     return hashlib.sha256(code.encode('utf-8')).hexdigest()
 
+def store_otp_code_for_user(supabase_client, email: str, user_id: str, code: str, expiration_minutes: int = 10) -> bool:
+    """Sauvegarde un code OTP hashé en base avec expiration pour un utilisateur."""
+    try:
+        # Normaliser l'email
+        normalized_email = email.lower().strip()
+        
+        # Calculer l'expiration
+        expires_at = datetime.utcnow() + timedelta(minutes=expiration_minutes)
+        
+        # Hasher le code avec SHA-256
+        code_hash = hash_otp_code(code)
+        
+        # Supprimer les anciens codes non utilisés pour cet email
+        supabase_client.table("otp_codes").delete().eq("email", normalized_email).eq("consumed", False).execute()
+        
+        # Insérer le nouveau code hashé avec user_id
+        otp_data = {
+            "email": normalized_email,
+            "user_id": user_id,
+            "code_hash": code_hash,
+            "expires_at": expires_at.isoformat(),
+            "consumed": False
+        }
+        
+        response = supabase_client.table("otp_codes").insert(otp_data).execute()
+        
+        if response.data:
+            print(f"✅ Code OTP hashé sauvegardé pour {normalized_email}")
+            return True
+        else:
+            print(f"❌ Échec sauvegarde OTP pour {normalized_email}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Erreur sauvegarde OTP: {e}")
+        return False
+
 def store_otp_code(supabase_client, email: str, full_name: str, role: str, code: str, expiration_minutes: int = 10) -> bool:
-    """Sauvegarde un code OTP hashé en base avec expiration."""
+    """Sauvegarde un code OTP hashé en base avec expiration (version legacy)."""
     try:
         # Normaliser l'email
         normalized_email = email.lower().strip()

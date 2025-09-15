@@ -31,6 +31,7 @@ from utils import (
     # Fonctions OTP
     generate_otp_code,
     store_otp_code,
+    store_otp_code_for_user,
     verify_otp_code,
     cleanup_expired_otp_codes,
     create_user_account_with_otp,
@@ -275,8 +276,8 @@ async def signup_submit(
         # Nettoyer les anciens codes expirés
         cleanup_expired_otp_codes(supabase_anon)
         
-        # Sauvegarder le code OTP en base
-        otp_stored = store_otp_code(supabase_anon, email, full_name, role, otp_code)
+        # Sauvegarder le code OTP en base (avec user_id)
+        otp_stored = store_otp_code_for_user(supabase_anon, email, user_id, otp_code)
         
         if not otp_stored:
             return templates.TemplateResponse("signup.html", {
@@ -287,13 +288,36 @@ async def signup_submit(
                 "role": role
             }, status_code=500)
         
-        # Stocker les données d'inscription en attente
-        pending_stored = store_pending_registration(supabase_anon, email, full_name, password, role)
-        
-        if not pending_stored:
+        # Créer immédiatement le compte Supabase Auth (sans confirmation)
+        try:
+            auth_response = supabase_anon.auth.sign_up({
+                "email": email,
+                "password": password,
+                "options": {
+                    "email_confirm": False,  # Pas de confirmation par email
+                    "data": {
+                        "full_name": full_name,
+                        "role": role
+                    }
+                }
+            })
+            
+            if not auth_response.user:
+                return templates.TemplateResponse("signup.html", {
+                    "request": request,
+                    "error": "Erreur lors de la création du compte. Veuillez réessayer.",
+                    "full_name": full_name,
+                    "email": email,
+                    "role": role
+                }, status_code=500)
+            
+            user_id = auth_response.user.id
+            
+        except Exception as e:
+            print(f"❌ Erreur création compte Supabase: {e}")
             return templates.TemplateResponse("signup.html", {
                 "request": request,
-                "error": "Erreur lors de la sauvegarde des données. Veuillez réessayer.",
+                "error": "Erreur lors de la création du compte. Veuillez réessayer.",
                 "full_name": full_name,
                 "email": email,
                 "role": role
@@ -310,10 +334,11 @@ async def signup_submit(
                 "success": "Code de vérification envoyé à votre adresse email"
             })
         else:
-            # Échec envoi email - supprimer le code OTP et les données en attente
+            # Échec envoi email - supprimer le code OTP et le compte créé
             try:
                 supabase_anon.table("otp_codes").delete().eq("email", email).execute()
-                supabase_anon.table("pending_registrations").delete().eq("email", email).execute()
+                # Note: Supabase Auth ne permet pas de supprimer facilement un utilisateur via l'API
+                # En production, implémenter un nettoyage automatique des comptes non vérifiés
             except:
                 pass
             
@@ -387,61 +412,71 @@ async def verify_otp_submit(
                 "error": "Code incorrect ou expiré. Veuillez réessayer."
             }, status_code=400)
         
-        # Code valide - récupérer les données d'inscription en attente
-        pending_data = get_pending_otp_data(supabase_anon, email)
+        # Code valide - récupérer les données de l'utilisateur depuis otp_codes
+        response = supabase_anon.table("otp_codes").select("user_id").eq("email", email).eq("consumed", True).order("created_at", desc=True).limit(1).execute()
         
-        if not pending_data:
+        if not response.data:
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": "Données d'inscription expirées. Veuillez recommencer l'inscription."
+                "error": "Utilisateur introuvable. Veuillez recommencer l'inscription."
             }, status_code=400)
         
-        # Créer le compte utilisateur avec les vraies données
-        account_result = create_user_account_with_otp(
-            supabase_anon, 
-            pending_data['email'], 
-            pending_data['password'], 
-            pending_data['full_name'], 
-            pending_data['role']
-        )
+        user_id = response.data[0]['user_id']
         
-        if account_result.get('success'):
-            # Nettoyer les données temporaires
-            try:
-                supabase_anon.table("pending_registrations").delete().eq("email", email).execute()
-            except:
-                pass
+        # Récupérer les informations utilisateur depuis Supabase Auth
+        try:
+            user_response = supabase_anon.auth.admin.get_user_by_id(user_id)
+            if not user_response.user:
+                return templates.TemplateResponse("verify_otp.html", {
+                    "request": request,
+                    "email": email,
+                    "error": "Compte utilisateur introuvable."
+                }, status_code=400)
             
-            # Créer une session utilisateur
-            user = account_result['user']
-            session = account_result['session']
+            user = user_response.user
+            user_metadata = user.user_metadata
+            role = user_metadata.get('role', 'client')
+            
+            # Créer le profil utilisateur
+            profile_created = create_user_profile_on_confirmation(
+                supabase_anon, 
+                user_id, 
+                email, 
+                user_metadata.get('full_name', ''), 
+                role
+            )
+            
+            # Connecter l'utilisateur
+            # Note: En production, il faudrait une vraie session Supabase
+            # Pour le mode démo, on va simplement rediriger
             
             # Rediriger selon le rôle
-            if pending_data['role'] == 'coach':
+            if role == 'coach':
                 redirect_url = "/coach/portal"
             else:
                 redirect_url = "/"
             
             response = RedirectResponse(url=redirect_url, status_code=303)
             
-            # Définir le cookie de session avec le token d'accès
-            if session and session.access_token:
-                response.set_cookie(
-                    key="session_token",
-                    value=session.access_token,
-                    httponly=True,
-                    secure=False,  # True en production
-                    samesite="lax",
-                    max_age=3600 * 24 * 7  # 7 jours
-                )
+            # Cookie de session démo (en production, utiliser un vrai token Supabase)
+            response.set_cookie(
+                key="session_token",
+                value=f"verified_{user_id}",
+                httponly=True,
+                secure=False,  # True en production avec HTTPS
+                samesite="lax",
+                max_age=3600 * 24 * 7  # 7 jours
+            )
             
             return response
-        else:
+            
+        except Exception as e:
+            print(f"❌ Erreur récupération utilisateur: {e}")
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": f"Erreur lors de la création du compte: {account_result.get('error', 'Erreur inconnue')}"
+                "error": "Erreur lors de la vérification du compte."
             }, status_code=500)
             
     except Exception as e:
