@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Vérifie ton e-mail - Coach Fitness{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
+    <div class="text-center">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-6">
+            <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 7.89a2 2 0 002.83 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Vérifie ton e-mail</h1>
+        <p class="text-gray-600 mb-6">
+            Nous avons envoyé un lien de confirmation à<br>
+            <strong class="text-gray-900">{{ email }}</strong>
+        </p>
+        <p class="text-sm text-gray-500 mb-8">
+            Clique sur le lien dans l'email pour activer ton compte.<br>
+            Si tu ne vois pas l'email, vérifie tes spams.
+        </p>
+    </div>
+
+    {% if error %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+            <strong class="font-bold">Erreur :</strong>
+            <span class="block sm:inline">{{ error }}</span>
+        </div>
+    {% endif %}
+
+    {% if success %}
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4" role="alert">
+            <strong class="font-bold">Succès :</strong>
+            <span class="block sm:inline">{{ success }}</span>
+        </div>
+    {% endif %}
+
+    <form action="/auth/resend-confirmation" method="POST" class="space-y-4">
+        <input type="hidden" name="email" value="{{ email }}">
+        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition duration-200">
+            Renvoyer le mail
+        </button>
+    </form>
+
+    <p class="text-center mt-6 text-sm text-gray-600">
+        Déjà confirmé ton email ? 
+        <a href="/login" class="text-blue-600 hover:text-blue-800">Se connecter</a>
+    </p>
+</div>
+{% endblock %}

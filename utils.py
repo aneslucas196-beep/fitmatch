@@ -112,7 +112,8 @@ def get_supabase_anon_client():
         from supabase import create_client, Client
         
         url = os.getenv("SUPABASE_URL")
-        anon_key = os.getenv("SUPABASE_KEY")  # Clé publique/anon
+        # Essayer SUPABASE_KEY d'abord, puis SUPABASE_ANON_KEY en fallback
+        anon_key = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")
         
         if url and anon_key:
             # Valider l'URL
@@ -220,8 +221,11 @@ def sign_up_user(supabase_client, email: str, password: str, full_name: str, rol
         # Forcer le rôle à 'client' pour la sécurité (pas d'auto-promotion coach)
         safe_role = "client"  # Toujours client lors de l'inscription
         
+        # Normaliser l'email en lowercase
+        normalized_email = email.lower().strip()
+        
         auth_response = supabase_client.auth.sign_up({
-            "email": email,
+            "email": normalized_email,
             "password": password
         })
         
@@ -231,7 +235,7 @@ def sign_up_user(supabase_client, email: str, password: str, full_name: str, rol
                 "id": auth_response.user.id,
                 "role": safe_role,
                 "full_name": full_name,
-                "email": email
+                "email": normalized_email
             }
             
             # Si on a une session, utiliser un client authentifié
@@ -242,20 +246,20 @@ def sign_up_user(supabase_client, email: str, password: str, full_name: str, rol
                     # Créer le profil utilisateur avec le client authentifié (respecte RLS)
                     response = user_client.table("profiles").insert(profile_data).execute()
                     if response.data:
-                        print(f"✅ Profil créé pour {email} avec le rôle {safe_role} (sécurisé)")
+                        print(f"✅ Profil créé pour {normalized_email} avec le rôle {safe_role} (sécurisé)")
                         return {"user": auth_response.user, "session": auth_response.session}
                     else:
                         # Échec de création de profil - abandon pour sécurité
-                        print(f"❌ Échec création profil pour {email} - RLS ou contraintes DB")
+                        print(f"❌ Échec création profil pour {normalized_email} - RLS ou contraintes DB")
                         return None
                 else:
                     # Client authentifié indisponible - abandon pour sécurité (pas de fallback dangereux)
-                    print(f"❌ Client authentifié indisponible pour {email} - abandon sécurisé")
+                    print(f"❌ Client authentifié indisponible pour {normalized_email} - abandon sécurisé")
                     return None
             else:
                 # Pas de session immédiate (confirmation email requise)
                 # Créer le profil avec un trigger de base de données ou dans la fonction après confirmation
-                print(f"✅ Utilisateur créé pour {email}, confirmation email requise")
+                print(f"✅ Utilisateur créé pour {normalized_email}, confirmation email requise")
                 return {"user": auth_response.user, "session": None, "requires_confirmation": True}
         
         return None
@@ -266,8 +270,11 @@ def sign_up_user(supabase_client, email: str, password: str, full_name: str, rol
 def sign_in_user(supabase_client, email: str, password: str) -> Optional[Dict]:
     """Connexion d'un utilisateur."""
     try:
+        # Normaliser l'email en lowercase
+        normalized_email = email.lower().strip()
+        
         auth_response = supabase_client.auth.sign_in_with_password({
-            "email": email,
+            "email": normalized_email,
             "password": password
         })
         
@@ -276,7 +283,24 @@ def sign_in_user(supabase_client, email: str, password: str) -> Optional[Dict]:
         return None
     except Exception as e:
         print(f"Erreur connexion: {e}")
-        return None
+        # Retourner l'erreur pour permettre la détection d'email non confirmé
+        return {"error": str(e)}
+
+def resend_confirmation_email(supabase_client, email: str) -> bool:
+    """Renvoie l'email de confirmation pour un compte."""
+    try:
+        # Normaliser l'email en lowercase
+        normalized_email = email.lower().strip()
+        
+        result = supabase_client.auth.resend({
+            "type": "signup",
+            "email": normalized_email
+        })
+        
+        return True
+    except Exception as e:
+        print(f"Erreur renvoi email: {e}")
+        return False
 
 def get_user_profile(supabase_client, user_id: str) -> Optional[Dict]:
     """Récupère le profil d'un utilisateur."""

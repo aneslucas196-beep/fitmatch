@@ -26,7 +26,8 @@ from utils import (
     update_coach_profile,
     update_coach_specialties,
     add_transformation,
-    upload_transformation_images
+    upload_transformation_images,
+    resend_confirmation_email
 )
 
 app = FastAPI()
@@ -227,6 +228,9 @@ async def signup_submit(
     role: str = Form(...)
 ):
     """Traitement de l'inscription."""
+    # Normaliser l'email en lowercase
+    email = email.lower().strip()
+    
     # Validation du mot de passe AVANT d'appeler Supabase
     if not is_valid_password(password):
         return templates.TemplateResponse("signup.html", {
@@ -248,8 +252,11 @@ async def signup_submit(
     result = sign_up_user(supabase_anon, email, password, full_name, role)
     if result:
         if result.get("requires_confirmation"):
-            # Confirmation email requise
-            return RedirectResponse(url="/login?message=confirmation_email", status_code=303)
+            # Confirmation email requise - montrer page de vérification
+            return templates.TemplateResponse("verify_email.html", {
+                "request": request,
+                "email": email
+            })
         else:
             # Inscription réussie avec session
             return RedirectResponse(url="/login?message=inscription_reussie", status_code=303)
@@ -277,6 +284,9 @@ async def login_submit(
     password: str = Form(...)
 ):
     """Traitement de la connexion."""
+    # Normaliser l'email en lowercase
+    email = email.lower().strip()
+    
     if not supabase_anon:
         # Mode démo sans Supabase - vérifier identifiants démo
         if email == "demo@example.com" and password == "demopass123":
@@ -311,6 +321,23 @@ async def login_submit(
             max_age=3600 * 24 * 7  # 7 jours
         )
         return response
+    elif result and result.get("error"):
+        # Vérifier si c'est un problème d'email non confirmé
+        error_message = result["error"].lower()
+        if "email not confirmed" in error_message or "not confirmed" in error_message:
+            return templates.TemplateResponse("login.html", {
+                "request": request,
+                "error": "Email non confirmé",
+                "email": email,
+                "show_resend": True
+            }, status_code=401)
+        else:
+            # Autre erreur d'authentification
+            return templates.TemplateResponse("login.html", {
+                "request": request,
+                "error": "Email ou mot de passe incorrect.",
+                "email": email
+            }, status_code=401)
     else:
         # Retourner template avec email conservé - HTTP 401 sans redirection
         return templates.TemplateResponse("login.html", {
@@ -318,6 +345,37 @@ async def login_submit(
             "error": "Email ou mot de passe incorrect.",
             "email": email
         }, status_code=401)
+
+@app.post("/auth/resend-confirmation")
+async def resend_confirmation(
+    request: Request,
+    email: str = Form(...)
+):
+    """Renvoie l'email de confirmation."""
+    # Normaliser l'email en lowercase
+    email = email.lower().strip()
+    
+    if not supabase_anon:
+        # Mode démo - pas de renvoi d'email
+        return templates.TemplateResponse("verify_email.html", {
+            "request": request,
+            "email": email,
+            "error": "Mode démo - renvoi d'email non disponible"
+        })
+    
+    success = resend_confirmation_email(supabase_anon, email)
+    if success:
+        return templates.TemplateResponse("verify_email.html", {
+            "request": request,
+            "email": email,
+            "success": "Email de confirmation renvoyé ! Vérifiez votre boîte mail."
+        })
+    else:
+        return templates.TemplateResponse("verify_email.html", {
+            "request": request,
+            "email": email,
+            "error": "Erreur lors du renvoi de l'email. Veuillez réessayer."
+        })
 
 @app.get("/logout")
 async def logout():
