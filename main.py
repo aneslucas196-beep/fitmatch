@@ -33,10 +33,12 @@ from utils import (
     store_otp_code,
     verify_otp_code,
     cleanup_expired_otp_codes,
-    create_user_account_with_otp
+    create_user_account_with_otp,
+    get_pending_otp_data,
+    store_pending_registration
 )
 
-from email_service import send_otp_email
+from resend_service import send_otp_email_resend
 
 app = FastAPI()
 
@@ -286,8 +288,20 @@ async def signup_submit(
                 "role": role
             }, status_code=500)
         
-        # Envoyer le code par email
-        email_sent = send_otp_email(email, otp_code, full_name)
+        # Stocker les données d'inscription en attente
+        pending_stored = store_pending_registration(supabase_anon, email, full_name, password, role)
+        
+        if not pending_stored:
+            return templates.TemplateResponse("signup.html", {
+                "request": request,
+                "error": "Erreur lors de la sauvegarde des données. Veuillez réessayer.",
+                "full_name": full_name,
+                "email": email,
+                "role": role
+            }, status_code=500)
+        
+        # Envoyer le code par email avec Resend
+        email_sent = send_otp_email_resend(email, otp_code, full_name)
         
         if email_sent:
             # Succès - rediriger vers la page de vérification OTP
@@ -297,9 +311,10 @@ async def signup_submit(
                 "success": "Code de vérification envoyé à votre adresse email"
             })
         else:
-            # Échec envoi email - supprimer le code OTP en base
+            # Échec envoi email - supprimer le code OTP et les données en attente
             try:
-                supabase_anon.table("otp_codes").delete().eq("email", email).eq("code", otp_code).execute()
+                supabase_anon.table("otp_codes").delete().eq("email", email).execute()
+                supabase_anon.table("pending_registrations").delete().eq("email", email).execute()
             except:
                 pass
             
@@ -364,35 +379,47 @@ async def verify_otp_submit(
     
     try:
         # Vérifier le code OTP
-        user_data = verify_otp_code(supabase_anon, email, otp_code)
+        otp_valid = verify_otp_code(supabase_anon, email, otp_code)
         
-        if not user_data:
+        if not otp_valid:
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
                 "error": "Code incorrect ou expiré. Veuillez réessayer."
             }, status_code=400)
         
-        # Code valide - créer le compte utilisateur
-        # Récupérer le mot de passe depuis la session ou demander une nouvelle saisie
-        # Pour l'instant, on va créer un mot de passe temporaire et demander à l'utilisateur de le changer
-        temp_password = f"temp_{otp_code}_{email.split('@')[0]}"
+        # Code valide - récupérer les données d'inscription en attente
+        pending_data = get_pending_otp_data(supabase_anon, email)
         
+        if not pending_data:
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "error": "Données d'inscription expirées. Veuillez recommencer l'inscription."
+            }, status_code=400)
+        
+        # Créer le compte utilisateur avec les vraies données
         account_result = create_user_account_with_otp(
             supabase_anon, 
-            user_data['email'], 
-            temp_password, 
-            user_data['full_name'], 
-            user_data['role']
+            pending_data['email'], 
+            pending_data['password'], 
+            pending_data['full_name'], 
+            pending_data['role']
         )
         
         if account_result.get('success'):
+            # Nettoyer les données temporaires
+            try:
+                supabase_anon.table("pending_registrations").delete().eq("email", email).execute()
+            except:
+                pass
+            
             # Créer une session utilisateur
             user = account_result['user']
             session = account_result['session']
             
             # Rediriger selon le rôle
-            if user_data['role'] == 'coach':
+            if pending_data['role'] == 'coach':
                 redirect_url = "/coach/portal"
             else:
                 redirect_url = "/"
@@ -448,19 +475,18 @@ async def resend_otp_submit(
         })
     
     try:
-        # Récupérer les données de l'ancien code OTP pour garder les mêmes infos
-        response = supabase_anon.table("otp_codes").select("full_name, role").eq("email", email).eq("used", False).order("created_at", desc=True).limit(1).execute()
+        # Récupérer les données d'inscription en attente
+        pending_data = get_pending_otp_data(supabase_anon, email)
         
-        if not response.data:
+        if not pending_data:
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
                 "error": "Aucune demande d'inscription trouvée pour cet email."
             }, status_code=400)
         
-        user_info = response.data[0]
-        full_name = user_info['full_name']
-        role = user_info['role']
+        full_name = pending_data['full_name']
+        role = pending_data['role']
         
         # Générer un nouveau code OTP
         new_otp_code = generate_otp_code(6)
@@ -475,8 +501,8 @@ async def resend_otp_submit(
                 "error": "Erreur lors de la génération du nouveau code."
             }, status_code=500)
         
-        # Envoyer le nouveau code par email
-        email_sent = send_otp_email(email, new_otp_code, full_name)
+        # Envoyer le nouveau code par email avec Resend
+        email_sent = send_otp_email_resend(email, new_otp_code, full_name)
         
         if email_sent:
             return templates.TemplateResponse("verify_otp.html", {
