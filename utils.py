@@ -119,6 +119,10 @@ def get_supabase_anon_client():
         # Essayer SUPABASE_KEY d'abord, puis SUPABASE_ANON_KEY en fallback
         anon_key = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")
         
+        # TEMPORAIRE : Forcer mode démo pour tester les logs Resend détaillés
+        print("🔧 Mode démo forcé pour tester les logs Resend détaillés")
+        return None
+        
         if url and anon_key:
             # Valider l'URL
             if url.startswith("https://") and ".supabase.co" in url:

@@ -263,13 +263,22 @@ async def signup_submit(
     otp_code = generate_otp_code(6)
     
     if not supabase_anon:
-        # Mode démo sans Supabase - stocker le code dans le cache
+        # Mode démo sans Supabase - stocker le code dans le cache et tester Resend
         demo_otp_cache[email] = otp_code
         print(f"🔐 Mode démo - Code OTP généré pour {email}: {otp_code}")
+        
+        # Tester l'envoi d'email avec Resend même en mode démo
+        email_result = send_otp_email_resend(email, otp_code, full_name)
+        
+        success_message = "Code de vérification envoyé à votre adresse email"
+        if email_result.get("success"):
+            if email_result.get("mode") == "resend":
+                success_message += f" (Email ID: {email_result.get('email_id', 'N/A')})"
+        
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
-            "success": "Code de vérification envoyé à votre adresse email"
+            "success": success_message
         })
     
     try:
