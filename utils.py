@@ -1,5 +1,8 @@
 import os
 import math
+import random
+import secrets
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
@@ -284,6 +287,164 @@ def get_user_profile(supabase_client, user_id: str) -> Optional[Dict]:
     except Exception as e:
         print(f"Erreur récupération profil: {e}")
         return None
+
+# === Fonctions OTP ===
+
+def generate_otp_code(length: int = 6) -> str:
+    """Génère un code OTP aléatoire de 4 à 6 chiffres."""
+    if length < 4 or length > 6:
+        length = 6
+    
+    # Générer un code numérique sécurisé
+    code = ''.join([str(secrets.randbelow(10)) for _ in range(length)])
+    
+    # S'assurer qu'il ne commence pas par 0
+    if code[0] == '0':
+        code = str(secrets.randbelow(9) + 1) + code[1:]
+    
+    return code
+
+def store_otp_code(supabase_client, email: str, full_name: str, role: str, code: str, expiration_minutes: int = 10) -> bool:
+    """Sauvegarde un code OTP en base avec expiration."""
+    try:
+        # Normaliser l'email
+        normalized_email = email.lower().strip()
+        
+        # Calculer l'expiration
+        expires_at = datetime.utcnow() + timedelta(minutes=expiration_minutes)
+        
+        # Vérifier que le rôle est valide
+        if role not in ['client', 'coach']:
+            role = 'client'
+        
+        # Supprimer les anciens codes non utilisés pour cet email
+        supabase_client.table("otp_codes").delete().eq("email", normalized_email).eq("used", False).execute()
+        
+        # Insérer le nouveau code
+        otp_data = {
+            "email": normalized_email,
+            "code": code,
+            "full_name": full_name,
+            "role": role,
+            "expires_at": expires_at.isoformat(),
+            "used": False
+        }
+        
+        response = supabase_client.table("otp_codes").insert(otp_data).execute()
+        
+        if response.data:
+            print(f"✅ Code OTP sauvegardé pour {normalized_email}")
+            return True
+        else:
+            print(f"❌ Échec sauvegarde OTP pour {normalized_email}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Erreur sauvegarde OTP: {e}")
+        return False
+
+def verify_otp_code(supabase_client, email: str, code: str) -> Optional[Dict]:
+    """Vérifie un code OTP et retourne les données utilisateur si valide."""
+    try:
+        # Normaliser l'email
+        normalized_email = email.lower().strip()
+        
+        # Rechercher le code OTP valide
+        response = supabase_client.table("otp_codes").select("*").eq("email", normalized_email).eq("code", code).eq("used", False).execute()
+        
+        if not response.data:
+            print(f"❌ Code OTP introuvable pour {normalized_email}")
+            return None
+        
+        otp_record = response.data[0]
+        
+        # Vérifier l'expiration
+        expires_at = datetime.fromisoformat(otp_record['expires_at'].replace('Z', '+00:00'))
+        if datetime.utcnow().replace(tzinfo=expires_at.tzinfo) > expires_at:
+            print(f"❌ Code OTP expiré pour {normalized_email}")
+            return None
+        
+        # Marquer le code comme utilisé
+        supabase_client.table("otp_codes").update({"used": True}).eq("id", otp_record['id']).execute()
+        
+        print(f"✅ Code OTP vérifié avec succès pour {normalized_email}")
+        return {
+            "email": otp_record['email'],
+            "full_name": otp_record['full_name'],
+            "role": otp_record['role']
+        }
+        
+    except Exception as e:
+        print(f"❌ Erreur vérification OTP: {e}")
+        return None
+
+def cleanup_expired_otp_codes(supabase_client) -> int:
+    """Nettoie les codes OTP expirés et retourne le nombre supprimé."""
+    try:
+        # Supprimer tous les codes expirés
+        current_time = datetime.utcnow().isoformat()
+        response = supabase_client.table("otp_codes").delete().lt("expires_at", current_time).execute()
+        
+        deleted_count = len(response.data) if response.data else 0
+        if deleted_count > 0:
+            print(f"🧹 {deleted_count} codes OTP expirés supprimés")
+        
+        return deleted_count
+        
+    except Exception as e:
+        print(f"❌ Erreur nettoyage codes OTP: {e}")
+        return 0
+
+def create_user_account_with_otp(supabase_client, email: str, password: str, full_name: str, role: str) -> Dict:
+    """Crée un compte utilisateur et son profil après vérification OTP."""
+    try:
+        # Normaliser l'email
+        normalized_email = email.lower().strip()
+        
+        # Créer l'utilisateur avec Supabase Auth
+        auth_response = supabase_client.auth.sign_up({
+            "email": normalized_email,
+            "password": password,
+            "options": {
+                "data": {
+                    "full_name": full_name,
+                    "role": role
+                }
+            }
+        })
+        
+        if auth_response.user:
+            # Créer le profil utilisateur
+            profile_created = create_user_profile_on_confirmation(
+                supabase_client, 
+                auth_response.user.id, 
+                normalized_email, 
+                full_name, 
+                role
+            )
+            
+            if profile_created:
+                print(f"✅ Compte créé avec succès pour {normalized_email}")
+                return {
+                    "success": True,
+                    "user": auth_response.user,
+                    "session": auth_response.session
+                }
+            else:
+                print(f"⚠️ Utilisateur créé mais échec création profil pour {normalized_email}")
+                return {
+                    "success": True,
+                    "user": auth_response.user,
+                    "session": auth_response.session,
+                    "warning": "Profil non créé"
+                }
+        else:
+            print(f"❌ Échec création utilisateur pour {normalized_email}")
+            return {"success": False, "error": "Échec création compte"}
+            
+    except Exception as e:
+        print(f"❌ Erreur création compte: {e}")
+        return {"success": False, "error": str(e)}
 
 # Fonctions Supabase - Coaches
 def search_coaches_supabase(supabase_client, specialty: Optional[str] = None, 
