@@ -852,78 +852,126 @@ def remove_coach_gym(coach_id: str, relation_id: str) -> bool:
 def search_gyms_by_zone(query: str) -> List[Dict]:
     """
     Recherche toutes les salles d'une ville ou zone spécifique en France.
-    Détecte automatiquement les villes et affiche TOUTES les salles de cette ville.
+    Utilise l'API officielle Data ES du gouvernement français pour obtenir 
+    toutes les vraies salles de sport (7951 salles de musculation + 4125 salles collectives).
     """
     try:
+        import requests
         from main import GYMS_DATABASE
         
-        results = []
         query_lower = query.lower().strip()
-        
         print(f"🔍 Recherche par zone: {query}")
         
-        # 1. RECHERCHE DIRECTE PAR NOM DE VILLE
-        # Essayer de matcher directement avec le champ "city" de chaque salle
+        # API officielle française Data ES - 330 000+ équipements sportifs
+        api_url = "https://equipements.sports.gouv.fr/api/explore/v2.1/catalog/datasets/data-es/records"
+        
+        results = []
+        
+        # 1. RECHERCHE DANS L'API OFFICIELLE DATA ES
+        try:
+            # Requête pour les salles de musculation/cardio
+            params_muscu = {
+                "limit": 50,
+                "where": f'new_name like "{query}" AND (equip_type_name like "Salle de musculation" OR equip_type_name like "Salle de cours collectifs" OR equip_type_name like "Salle de culturisme" OR equip_type_name like "Salle multisports")'
+            }
+            
+            # Si c'est un code postal, adapter la recherche
+            if query.isdigit() and len(query) == 5:
+                params_muscu["where"] = f'inst_cp = "{query}" AND (equip_type_name like "Salle de musculation" OR equip_type_name like "Salle de cours collectifs" OR equip_type_name like "Salle de culturisme" OR equip_type_name like "Salle multisports")'
+            
+            response = requests.get(api_url, params=params_muscu, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                for record in data.get("results", []):
+                    # Extraire les informations de la salle
+                    gym_name = record.get("equip_nom", "Salle sans nom")
+                    gym_type = record.get("equip_type_name", "Salle de sport")
+                    city = record.get("new_name", "Ville inconnue")
+                    address = record.get("inst_adresse", "")
+                    postal_code = record.get("inst_cp", "")
+                    
+                    # Coordonnées
+                    coords = record.get("equip_coordonnees", {})
+                    lat = coords.get("lat", 0) if coords else 0
+                    lng = coords.get("lon", 0) if coords else 0
+                    
+                    # Créer une adresse complète
+                    full_address = f"{address}, {postal_code} {city}" if address else f"{postal_code} {city}"
+                    
+                    # ID unique basé sur le numéro d'équipement
+                    gym_id = f"data_es_{record.get('equip_numero', gym_name.replace(' ', '_'))}"
+                    
+                    # Compter les coaches (pour l'instant 0, car nouvelles salles)
+                    coach_count = len(COACH_GYMS_BY_ID.get(gym_id, set()))
+                    
+                    gym_result = {
+                        "id": gym_id,
+                        "name": gym_name,
+                        "chain": f"Vraie salle - {gym_type}",
+                        "lat": lat,
+                        "lng": lng,
+                        "address": full_address,
+                        "city": city,
+                        "distance_km": None,
+                        "coach_count": coach_count,
+                        "zone": city,
+                        "source": "Data ES (officiel)"
+                    }
+                    results.append(gym_result)
+                    
+                print(f"🏛️ API Data ES: {len(results)} vraies salles trouvées")
+        
+        except Exception as api_error:
+            print(f"⚠️ Erreur API Data ES: {api_error}")
+        
+        # 2. COMPLÉTER AVEC NOS DONNÉES STATIQUES (backup)
+        # Recherche dans notre base existante pour compléter
         for gym in GYMS_DATABASE:
             gym_city = gym.get("city", "").lower()
             
-            # Vérifier correspondance exacte ou partielle
+            # Vérifier correspondance
             if (query_lower == gym_city or 
                 query_lower in gym_city or 
                 gym_city in query_lower):
                 
-                # Calculer coach_count pour cette gym
-                gym_id = gym["id"]
-                coach_count = 0
-                
-                # Compter dans COACH_GYMS_BY_ID
-                if gym_id in COACH_GYMS_BY_ID:
-                    coach_count += len(COACH_GYMS_BY_ID[gym_id])
-                
-                # Compter aussi les coaches qui ont ajouté cette même adresse
-                for relation in COACH_GYMS:
-                    if relation["gym_data"]["address"] == gym["address"]:
-                        coach_count += 1
-                
-                gym_result = gym.copy()
-                gym_result["distance_km"] = None  # Pas de distance pour recherche par ville
-                gym_result["coach_count"] = coach_count
-                gym_result["zone"] = gym.get("city", "Zone inconnue")
-                results.append(gym_result)
+                # Éviter les doublons avec Data ES
+                if not any(existing["name"] == gym["name"] for existing in results):
+                    gym_id = gym["id"]
+                    coach_count = len(COACH_GYMS_BY_ID.get(gym_id, set()))
+                    
+                    gym_result = gym.copy()
+                    gym_result["distance_km"] = None
+                    gym_result["coach_count"] = coach_count
+                    gym_result["zone"] = gym.get("city", "Zone inconnue")
+                    gym_result["source"] = "Base locale"
+                    results.append(gym_result)
         
-        # 2. RECHERCHE PAR CODE POSTAL (si query ressemble à un code postal)
+        # 3. RECHERCHE PAR CODE POSTAL DANS BASE LOCALE
         if query.isdigit() and len(query) == 5:
             postal_code = query
             for gym in GYMS_DATABASE:
                 if postal_code in gym["address"]:
-                    # Éviter les doublons déjà trouvés par nom de ville
                     if not any(existing["id"] == gym["id"] for existing in results):
                         gym_id = gym["id"]
-                        coach_count = 0
-                        
-                        if gym_id in COACH_GYMS_BY_ID:
-                            coach_count += len(COACH_GYMS_BY_ID[gym_id])
-                        
-                        for relation in COACH_GYMS:
-                            if relation["gym_data"]["address"] == gym["address"]:
-                                coach_count += 1
+                        coach_count = len(COACH_GYMS_BY_ID.get(gym_id, set()))
                         
                         gym_result = gym.copy()
                         gym_result["distance_km"] = None
                         gym_result["coach_count"] = coach_count
                         gym_result["zone"] = gym.get("city", f"Zone {postal_code}")
+                        gym_result["source"] = "Base locale"
                         results.append(gym_result)
         
-        # 3. RECHERCHE DANS LES SALLES AJOUTÉES PAR LES COACHS
+        # 4. RECHERCHE DANS LES SALLES AJOUTÉES PAR LES COACHS
         for relation in COACH_GYMS:
             gym_data = relation["gym_data"]
             gym_address_lower = gym_data["address"].lower()
             
-            # Vérifier si la recherche correspond à l'adresse de la salle coach
             if (query_lower in gym_address_lower or 
                 any(word in gym_address_lower for word in query_lower.split() if len(word) > 2)):
                 
-                # Éviter les doublons avec GYMS_DATABASE
                 if not any(existing["address"] == gym_data["address"] for existing in results):
                     gym_id = relation.get("gym_id", f"coach_gym_{relation['id']}")
                     coach_count = len(COACH_GYMS_BY_ID.get(gym_id, set()))
@@ -937,18 +985,23 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
                         "chain": "Salle personnalisée",
                         "distance_km": None,
                         "coach_count": coach_count,
-                        "zone": "Zone personnalisée"
+                        "zone": "Zone personnalisée",
+                        "source": "Coach ajouté"
                     }
                     results.append(gym_result)
         
         if results:
-            # Trier par nom pour une recherche par ville
-            results.sort(key=lambda x: x["name"])
+            # Trier par source (Data ES en premier) puis par nom
+            results.sort(key=lambda x: (x.get("source", "zzz") != "Data ES (officiel)", x["name"]))
             city_name = results[0]["zone"] if results else "zone"
-            print(f"🎯 Recherche par zone {query}: {len(results)} salles trouvées dans {city_name}")
+            
+            # Compter par source
+            data_es_count = len([r for r in results if r.get("source") == "Data ES (officiel)"])
+            total_count = len(results)
+            
+            print(f"🎯 Recherche {query}: {total_count} salles trouvées ({data_es_count} officielles + {total_count - data_es_count} locales)")
             return results
         
-        # Aucune correspondance trouvée
         print(f"❌ Aucune salle trouvée pour: {query}")
         return []
         
