@@ -76,6 +76,29 @@ GYMS_DATABASE = [
     {"id": "keep_cool_mantes", "name": "Keep Cool Mantes-la-Jolie", "chain": "Keep Cool", "lat": 49.0014, "lng": 1.7168, "address": "Avenue du Maréchal Juin, 78200 Mantes-la-Jolie"}
 ]
 
+# IDs de salles valides pour validation
+VALID_GYM_IDS = {gym["id"] for gym in GYMS_DATABASE}
+
+def validate_selected_gyms(selected_gyms_str: str) -> List[str]:
+    """Valide et nettoie la liste des salles sélectionnées."""
+    if not selected_gyms_str:
+        return []
+    
+    try:
+        import json
+        selected_gyms = json.loads(selected_gyms_str)
+        if not isinstance(selected_gyms, list):
+            return []
+        
+        # Filtrer seulement les IDs valides
+        valid_gyms = [gym_id for gym_id in selected_gyms if isinstance(gym_id, str) and gym_id in VALID_GYM_IDS]
+        return valid_gyms[:10]  # Limiter à 10 salles max
+        
+    except json.JSONDecodeError:
+        return []
+    except Exception:
+        return []
+
 # Fonction de validation du mot de passe
 def is_valid_password(password: str) -> bool:
     """Valide qu'un mot de passe respecte les critères de sécurité.
@@ -310,14 +333,22 @@ async def signup_submit(
     if not supabase_anon:
         # Mode démo sans Supabase - stocker le code et les infos utilisateur dans le cache
         demo_otp_cache[email] = otp_code
-        # Traiter les salles sélectionnées pour les clients
+        # Traiter et valider les salles sélectionnées pour les clients
         selected_gyms_list = []
-        if role == "client" and selected_gyms:
-            try:
-                import json
-                selected_gyms_list = json.loads(selected_gyms) if selected_gyms else []
-            except:
-                selected_gyms_list = []
+        if role == "client":
+            selected_gyms_list = validate_selected_gyms(selected_gyms)
+            if selected_gyms and not selected_gyms_list:
+                # L'utilisateur a fourni des données invalides
+                print(f"⚠️ Salles invalides reçues pour {email}: {selected_gyms}")
+                return templates.TemplateResponse("signup.html", {
+                    "request": request,
+                    "error": "Salles sélectionnées invalides. Veuillez réessayer.",
+                    "full_name": full_name,
+                    "email": email,
+                    "gender": gender,
+                    "role": role,
+                    "coach_gender_preference": coach_gender_preference
+                }, status_code=400)
         
         demo_user_cache[email] = {
             "full_name": full_name,
@@ -396,6 +427,24 @@ async def signup_submit(
                 "coach_gender_preference": coach_gender_preference
             }, status_code=500)
         
+        # Valider et traiter les salles sélectionnées pour le flux Supabase
+        validated_gyms = None
+        if role == "client":
+            validated_gyms_list = validate_selected_gyms(selected_gyms)
+            if selected_gyms and not validated_gyms_list:
+                print(f"⚠️ Salles invalides reçues pour {email}: {selected_gyms}")
+                return templates.TemplateResponse("signup.html", {
+                    "request": request,
+                    "error": "Salles sélectionnées invalides. Veuillez réessayer.",
+                    "full_name": full_name,
+                    "email": email,
+                    "gender": gender,
+                    "role": role,
+                    "coach_gender_preference": coach_gender_preference
+                }, status_code=400)
+            # Convertir en JSON pour stockage
+            validated_gyms = json.dumps(validated_gyms_list) if validated_gyms_list else None
+        
         # Sauvegarder les données d'inscription complètes pour récupération après vérification OTP
         pending_stored = store_pending_registration(
             supabase_anon, 
@@ -405,7 +454,7 @@ async def signup_submit(
             role, 
             gender,
             coach_gender_preference if role == "client" else None,
-            selected_gyms if role == "client" else None
+            validated_gyms
         )
         
         if not pending_stored:
