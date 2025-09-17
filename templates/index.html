@@ -1,81 +1,61 @@
 {% extends "base.html" %}
 
-{% block title %}Trouvez votre coach fitness - Coach Fitness{% endblock %}
+{% block title %}Inscription - Coach Fitness{% endblock %}
 
 {% block content %}
 <div class="text-center mb-8">
-    <h1 class="text-4xl font-bold text-gray-900 mb-4">Trouvez votre coach fitness idéal</h1>
-    <p class="text-xl text-gray-600">Découvrez des coachs qualifiés près de chez vous</p>
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Bienvenue sur Coach Fitness</h1>
+    <p class="text-xl text-gray-600">Choisissez votre type de compte pour commencer</p>
 </div>
 
-<div class="bg-white rounded-lg shadow-md p-6 mb-8">
-    <form action="/search" method="GET" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <label for="specialty" class="block text-sm font-medium text-gray-700 mb-2">Spécialité</label>
-                <select name="specialty" id="specialty" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">Toutes les spécialités</option>
-                    <option value="musculation">Musculation</option>
-                    <option value="cardio">Cardio</option>
-                    <option value="yoga">Yoga</option>
-                    <option value="crossfit">CrossFit</option>
-                    <option value="pilates">Pilates</option>
-                    <option value="nutrition">Nutrition</option>
-                </select>
-            </div>
-            <div>
-                <label for="city" class="block text-sm font-medium text-gray-700 mb-2">Ville ou Code Postal</label>
-                <input type="text" name="city" id="city" placeholder="Paris, 75001..." 
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            </div>
-            <div>
-                <label for="radius_km" class="block text-sm font-medium text-gray-700 mb-2">Rayon (km)</label>
-                <select name="radius_km" id="radius_km" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="10">10 km</option>
-                    <option value="25">25 km</option>
-                    <option value="50">50 km</option>
-                    <option value="100">100 km</option>
-                </select>
-            </div>
+<div class="max-w-4xl mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Option Client -->
+        <div class="bg-white rounded-lg shadow-lg p-8 text-center hover:shadow-xl transition duration-300 border-2 border-transparent hover:border-blue-500">
+            <div class="text-6xl mb-6">🏃‍♂️</div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Je suis un Client</h2>
+            <p class="text-gray-600 mb-6">Je cherche un coach fitness pour m'accompagner dans mes objectifs</p>
+            <ul class="text-left text-gray-600 mb-6 space-y-2">
+                <li>✓ Trouvez des coachs près de chez vous</li>
+                <li>✓ Consultez les profils et spécialités</li>
+                <li>✓ Réservez vos séances en ligne</li>
+                <li>✓ Suivez votre progression</li>
+            </ul>
+            <a href="/signup?role=client" class="bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 transition duration-200 font-medium inline-block">
+                S'inscrire comme Client
+            </a>
         </div>
-        <div class="text-center">
-            <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 transition duration-200 font-medium">
-                Rechercher des coachs
-            </button>
-        </div>
-    </form>
-</div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">💪</div>
-        <h3 class="text-xl font-semibold mb-2">Musculation</h3>
-        <p class="text-gray-600">Développez votre force et votre masse musculaire</p>
+        <!-- Option Coach -->
+        <div class="bg-white rounded-lg shadow-lg p-8 text-center hover:shadow-xl transition duration-300 border-2 border-transparent hover:border-green-500">
+            <div class="text-6xl mb-6">💪</div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Je suis un Coach</h2>
+            <p class="text-gray-600 mb-6">Je veux proposer mes services de coaching fitness</p>
+            <ul class="text-left text-gray-600 mb-6 space-y-2">
+                <li>✓ Créez votre profil professionnel</li>
+                <li>✓ Gérez vos disponibilités</li>
+                <li>✓ Présentez vos transformations</li>
+                <li>✓ Développez votre clientèle</li>
+            </ul>
+            <a href="/signup?role=coach" class="bg-green-600 text-white px-8 py-3 rounded-md hover:bg-green-700 transition duration-200 font-medium inline-block">
+                S'inscrire comme Coach
+            </a>
+        </div>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">🏃</div>
-        <h3 class="text-xl font-semibold mb-2">Cardio</h3>
-        <p class="text-gray-600">Améliorez votre endurance cardiovasculaire</p>
+
+    <!-- Lien connexion -->
+    <div class="text-center mt-8">
+        <p class="text-gray-600">
+            Vous avez déjà un compte ? 
+            <a href="/login" class="text-blue-600 hover:text-blue-800 font-medium">Se connecter</a>
+        </p>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">🧘</div>
-        <h3 class="text-xl font-semibold mb-2">Yoga</h3>
-        <p class="text-gray-600">Trouvez l'équilibre corps-esprit</p>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">🏋️</div>
-        <h3 class="text-xl font-semibold mb-2">CrossFit</h3>
-        <p class="text-gray-600">Entraînement fonctionnel intense</p>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">🤸</div>
-        <h3 class="text-xl font-semibold mb-2">Pilates</h3>
-        <p class="text-gray-600">Renforcez votre core et votre flexibilité</p>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">🥗</div>
-        <h3 class="text-xl font-semibold mb-2">Nutrition</h3>
-        <p class="text-gray-600">Optimisez votre alimentation</p>
+
+    <!-- Lien vers recherche -->
+    <div class="text-center mt-4">
+        <a href="/search" class="text-gray-500 hover:text-gray-700 text-sm">
+            Ou rechercher des coachs sans s'inscrire
+        </a>
     </div>
 </div>
 {% endblock %}
