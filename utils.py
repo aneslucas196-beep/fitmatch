@@ -761,7 +761,7 @@ def add_coach_gym(coach_id: str, gym_data: Dict) -> bool:
         print(f"Erreur ajout coach-gym: {e}")
         return False
 
-def remove_coach_gym(coach_id: str, gym_id: int) -> bool:
+def remove_coach_gym(coach_id: str, gym_id: str) -> bool:
     """Supprime une relation coach-salle."""
     try:
         global COACH_GYMS

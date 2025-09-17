@@ -37,7 +37,14 @@ from utils import (
     cleanup_expired_otp_codes,
     create_user_account_with_otp,
     get_pending_otp_data,
-    store_pending_registration
+    store_pending_registration,
+    # Système coach ↔ salle ↔ client
+    geocode_address,
+    get_coach_gyms,
+    add_coach_gym,
+    remove_coach_gym,
+    search_gyms_by_location,
+    get_coaches_by_gym
 )
 
 from resend_service import send_otp_email_resend
@@ -1076,6 +1083,249 @@ async def coach_profile(request: Request, coach_id: str):
         "coach": coach,
         "transformations": transformations
     })
+
+# ======================================
+# ENDPOINTS API COACH - GESTION DES LIEUX
+# ======================================
+
+@app.get("/api/coach/gyms")
+async def get_coach_gym_locations(user = Depends(require_coach_role)):
+    """Récupère les lieux de coaching d'un coach."""
+    try:
+        coach_id = str(user["id"])
+        gym_relations = get_coach_gyms(coach_id)
+        
+        return {
+            "success": True,
+            "gyms": gym_relations
+        }
+        
+    except Exception as e:
+        print(f"Erreur récupération lieux coach: {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de la récupération des lieux",
+            "gyms": []
+        }
+
+@app.post("/api/coach/gyms")
+async def add_coach_gym_location(
+    request: Request,
+    user = Depends(require_coach_role)
+):
+    """Ajoute un lieu de coaching pour un coach."""
+    try:
+        coach_id = str(user["id"])
+        
+        # Récupérer les données JSON de la requête
+        data = await request.json()
+        
+        # Valider les données requises
+        if "query" not in data:
+            return {
+                "success": False,
+                "message": "Adresse ou nom de salle requis"
+            }
+        
+        query = data["query"].strip()
+        if not query:
+            return {
+                "success": False,
+                "message": "Adresse ne peut pas être vide"
+            }
+        
+        # Géocoder l'adresse
+        geocoded = geocode_address(query)
+        if not geocoded:
+            return {
+                "success": False,
+                "message": f"Impossible de localiser '{query}'. Vérifiez l'adresse."
+            }
+        
+        # Ajouter la relation coach-salle
+        success = add_coach_gym(coach_id, geocoded)
+        
+        if success:
+            return {
+                "success": True,
+                "message": f"Lieu '{geocoded['name']}' ajouté avec succès",
+                "gym": geocoded
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Ce lieu est déjà dans votre liste"
+            }
+            
+    except Exception as e:
+        print(f"Erreur ajout lieu coach: {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de l'ajout du lieu"
+        }
+
+@app.delete("/api/coach/gyms/{gym_id}")
+async def remove_coach_gym_location(
+    gym_id: str,
+    user = Depends(require_coach_role)
+):
+    """Supprime un lieu de coaching d'un coach."""
+    try:
+        coach_id = str(user["id"])
+        
+        success = remove_coach_gym(coach_id, gym_id)
+        
+        if success:
+            return {
+                "success": True,
+                "message": "Lieu supprimé avec succès"
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Lieu non trouvé ou non autorisé"
+            }
+            
+    except Exception as e:
+        print(f"Erreur suppression lieu coach: {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de la suppression"
+        }
+
+# ======================================
+# ENDPOINTS API CLIENT - RECHERCHE SALLES
+# ======================================
+
+@app.get("/api/gyms/search")
+async def search_gyms_by_location_api(
+    q: Optional[str] = None,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    radius_km: int = 25
+):
+    """
+    Recherche de salles par localisation ou nom.
+    Paramètres: q (nom/adresse) OU lat,lng + radius_km
+    """
+    try:
+        results = []
+        
+        if q:
+            # Recherche par nom/adresse - géocoder d'abord
+            geocoded = geocode_address(q)
+            if geocoded:
+                results = search_gyms_by_location(
+                    geocoded["lat"], 
+                    geocoded["lng"], 
+                    radius_km
+                )
+            else:
+                # Recherche par nom dans GYMS_DATABASE si géocodage échoue
+                for gym in GYMS_DATABASE:
+                    if q.lower() in gym["name"].lower() or q.lower() in gym["address"].lower():
+                        # Compter les coachs dans cette salle
+                        coach_count = len(get_coaches_by_gym(gym["address"]))
+                        gym_result = gym.copy()
+                        gym_result["distance_km"] = None  # Pas de distance si recherche par nom
+                        gym_result["coach_count"] = coach_count
+                        results.append(gym_result)
+        
+        elif lat is not None and lng is not None:
+            # Recherche par coordonnées
+            results = search_gyms_by_location(lat, lng, radius_km)
+        
+        else:
+            return {
+                "success": False,
+                "message": "Paramètres requis: 'q' (recherche) OU 'lat' + 'lng'",
+                "gyms": []
+            }
+        
+        return {
+            "success": True,
+            "gyms": results,
+            "count": len(results)
+        }
+        
+    except Exception as e:
+        print(f"Erreur recherche salles: {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de la recherche",
+            "gyms": []
+        }
+
+@app.get("/api/gyms/{gym_address:path}/coaches")
+async def get_gym_coaches(gym_address: str):
+    """
+    Récupère tous les coachs disponibles dans une salle spécifique.
+    gym_address: adresse complète de la salle
+    """
+    try:
+        # Décoder l'adresse (au cas où elle est URL-encodée)
+        from urllib.parse import unquote
+        gym_address = unquote(gym_address)
+        
+        coaches = get_coaches_by_gym(gym_address)
+        
+        # Ajouter des infos spécifiques à la salle si nécessaire
+        enhanced_coaches = []
+        for coach in coaches:
+            enhanced_coach = coach.copy()
+            # Ici on pourrait ajouter des infos spécifiques comme prix dans cette salle
+            # Pour l'instant, on garde les infos de base
+            enhanced_coaches.append(enhanced_coach)
+        
+        return {
+            "success": True,
+            "coaches": enhanced_coaches,
+            "count": len(enhanced_coaches),
+            "gym_address": gym_address
+        }
+        
+    except Exception as e:
+        print(f"Erreur récupération coachs pour salle '{gym_address}': {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de la récupération des coachs",
+            "coaches": []
+        }
+
+@app.get("/api/gyms/{gym_id}/coaches")  
+async def get_gym_coaches_by_id(gym_id: str):
+    """
+    Récupère tous les coachs disponibles dans une salle par ID.
+    Fallback pour gym_id au lieu d'adresse complète.
+    """
+    try:
+        # Chercher la salle par ID dans GYMS_DATABASE
+        gym = next((g for g in GYMS_DATABASE if g["id"] == gym_id), None)
+        
+        if not gym:
+            return {
+                "success": False,
+                "message": f"Salle avec ID '{gym_id}' non trouvée",
+                "coaches": []
+            }
+        
+        # Utiliser l'adresse pour chercher les coachs
+        coaches = get_coaches_by_gym(gym["address"])
+        
+        return {
+            "success": True,
+            "coaches": coaches,
+            "count": len(coaches),
+            "gym": gym
+        }
+        
+    except Exception as e:
+        print(f"Erreur récupération coachs pour salle ID '{gym_id}': {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de la récupération des coachs",
+            "coaches": []
+        }
 
 # Route pour les images uploadées (si pas d'utilisation directe de Supabase Storage)
 @app.get("/images/{image_path:path}")
