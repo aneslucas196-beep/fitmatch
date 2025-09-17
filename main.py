@@ -7,6 +7,7 @@ import uvicorn
 import jwt
 import os
 import uuid
+import json
 from datetime import datetime, timedelta
 
 from utils import (
@@ -283,6 +284,91 @@ async def signup_form(request: Request, role: str | None = None):
 async def get_gyms():
     """API pour récupérer la liste des salles de sport disponibles."""
     return {"gyms": GYMS_DATABASE}
+
+@app.get("/api/user/gyms")
+async def get_user_gyms(user = Depends(get_current_user)):
+    """Récupère les salles préférées de l'utilisateur connecté."""
+    try:
+        # Vérifier l'authentification
+        if not user:
+            return {"success": False, "message": "Utilisateur non connecté", "selected_gyms": []}
+        
+        user_id = user.get("id")
+        email = user.get("email")
+        
+        if not supabase_anon:
+            # Mode démo - chercher dans le cache
+            if email in demo_user_cache:
+                selected_gyms_str = demo_user_cache[email].get("selected_gyms", "[]")
+                try:
+                    selected_gyms = json.loads(selected_gyms_str) if selected_gyms_str else []
+                    return {"success": True, "selected_gyms": selected_gyms}
+                except:
+                    return {"success": True, "selected_gyms": []}
+            else:
+                return {"success": True, "selected_gyms": []}
+        else:
+            # Mode Supabase - récupérer depuis la base de données
+            response = supabase_anon.table("profiles").select("selected_gyms").eq("id", user_id).execute()
+            
+            if response.data and len(response.data) > 0:
+                selected_gyms_str = response.data[0].get("selected_gyms")
+                if selected_gyms_str:
+                    try:
+                        selected_gyms = json.loads(selected_gyms_str)
+                        return {"success": True, "selected_gyms": selected_gyms}
+                    except:
+                        return {"success": True, "selected_gyms": []}
+                else:
+                    return {"success": True, "selected_gyms": []}
+            else:
+                return {"success": True, "selected_gyms": []}
+                
+    except Exception as e:
+        print(f"❌ Erreur lors de la récupération des salles utilisateur: {e}")
+        return {"success": False, "message": "Erreur serveur", "selected_gyms": []}
+
+@app.post("/api/user/gyms")
+async def save_user_gyms(request: Request, user = Depends(get_current_user)):
+    """Sauvegarde les salles préférées de l'utilisateur connecté."""
+    try:
+        # Vérifier l'authentification
+        if not user:
+            return {"success": False, "message": "Utilisateur non connecté"}
+        
+        user_id = user.get("id")
+        email = user.get("email")
+        
+        # Récupérer les données JSON de la requête
+        body = await request.json()
+        selected_gyms = body.get("selected_gyms", [])
+        
+        # Valider les salles sélectionnées
+        validated_gyms = validate_selected_gyms(json.dumps(selected_gyms))
+        
+        if not supabase_anon:
+            # Mode démo - sauvegarder dans le cache
+            if email in demo_user_cache:
+                demo_user_cache[email]["selected_gyms"] = json.dumps(validated_gyms)
+                print(f"✅ Salles sauvegardées en mode démo pour {email}: {validated_gyms}")
+                return {"success": True, "message": "Salles sauvegardées avec succès"}
+            else:
+                return {"success": False, "message": "Utilisateur non trouvé"}
+        else:
+            # Mode Supabase - sauvegarder dans la base de données
+            response = supabase_anon.table("profiles").update({
+                "selected_gyms": json.dumps(validated_gyms)
+            }).eq("id", user_id).execute()
+            
+            if response.data:
+                print(f"✅ Salles sauvegardées en Supabase pour l'utilisateur {user_id}: {validated_gyms}")
+                return {"success": True, "message": "Salles sauvegardées avec succès"}
+            else:
+                return {"success": False, "message": "Erreur lors de la sauvegarde"}
+                
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde des salles: {e}")
+        return {"success": False, "message": "Erreur serveur"}
 
 @app.post("/signup")
 async def signup_submit(
