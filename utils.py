@@ -690,3 +690,168 @@ def upload_transformation_images(supabase_client, transformation_id: str, before
     except Exception as e:
         print(f"Erreur upload images: {e}")
         return None, None
+
+# ======================================
+# SYSTÈME COACH ↔ SALLE ↔ CLIENT
+# ======================================
+
+# Structure pour les relations coach-salle (stockage temporaire en attendant la DB)
+COACH_GYMS = []
+
+def geocode_address(query: str) -> Optional[Dict]:
+    """
+    Service de géocodage unifié pour convertir adresse en coordonnées GPS.
+    Retourne: {"name": str, "address": str, "lat": float, "lng": float, "place_id": str?}
+    """
+    try:
+        # Ajouter "France" pour améliorer la précision des résultats
+        location = geolocator.geocode(f"{query}, France")
+        if location:
+            lat = getattr(location, 'latitude', None)
+            lng = getattr(location, 'longitude', None)
+            address = getattr(location, 'address', query)
+            if lat is not None and lng is not None:
+                return {
+                    "name": query,
+                    "address": address,
+                    "lat": float(lat),
+                    "lng": float(lng),
+                    "place_id": None  # Nominatim n'a pas de place_id comme Google
+                }
+        return None
+    except (GeocoderTimedOut, GeocoderServiceError, Exception) as e:
+        print(f"Erreur géocodage pour '{query}': {e}")
+        return None
+
+def get_coach_gyms(coach_id: str) -> List[Dict]:
+    """Récupère les salles où exerce un coach."""
+    return [
+        relation for relation in COACH_GYMS 
+        if relation["coach_id"] == coach_id
+    ]
+
+def add_coach_gym(coach_id: str, gym_data: Dict) -> bool:
+    """
+    Ajoute une relation coach-salle.
+    gym_data: {"name": str, "address": str, "lat": float, "lng": float}
+    """
+    try:
+        # Vérifier si la relation existe déjà
+        existing = any(
+            relation["coach_id"] == coach_id and 
+            relation["gym_data"]["address"] == gym_data["address"]
+            for relation in COACH_GYMS
+        )
+        
+        if existing:
+            return False  # Relation déjà existante
+        
+        # Ajouter la nouvelle relation
+        relation = {
+            "id": len(COACH_GYMS) + 1,  # ID temporaire
+            "coach_id": coach_id,
+            "gym_data": gym_data,
+            "created_at": datetime.now().isoformat()
+        }
+        
+        COACH_GYMS.append(relation)
+        return True
+        
+    except Exception as e:
+        print(f"Erreur ajout coach-gym: {e}")
+        return False
+
+def remove_coach_gym(coach_id: str, gym_id: int) -> bool:
+    """Supprime une relation coach-salle."""
+    try:
+        global COACH_GYMS
+        initial_count = len(COACH_GYMS)
+        
+        COACH_GYMS = [
+            relation for relation in COACH_GYMS
+            if not (relation["coach_id"] == coach_id and relation["id"] == gym_id)
+        ]
+        
+        return len(COACH_GYMS) < initial_count
+        
+    except Exception as e:
+        print(f"Erreur suppression coach-gym: {e}")
+        return False
+
+def search_gyms_by_location(lat: float, lng: float, radius_km: int = 25) -> List[Dict]:
+    """
+    Recherche les salles dans un rayon donné.
+    Combine GYMS_DATABASE + salles ajoutées par les coachs.
+    """
+    try:
+        from main import GYMS_DATABASE  # Import depuis main.py
+        
+        results = []
+        
+        # Rechercher dans GYMS_DATABASE
+        for gym in GYMS_DATABASE:
+            distance = haversine_distance(lat, lng, gym["lat"], gym["lng"])
+            if distance <= radius_km:
+                # Compter les coachs dans cette salle
+                coach_count = len([
+                    relation for relation in COACH_GYMS
+                    if relation["gym_data"]["address"] == gym["address"]
+                ])
+                
+                gym_result = gym.copy()
+                gym_result["distance_km"] = round(distance, 1)
+                gym_result["coach_count"] = coach_count
+                results.append(gym_result)
+        
+        # Rechercher dans les salles ajoutées par les coachs
+        for relation in COACH_GYMS:
+            gym_data = relation["gym_data"]
+            distance = haversine_distance(lat, lng, gym_data["lat"], gym_data["lng"])
+            if distance <= radius_km:
+                # Éviter les doublons avec GYMS_DATABASE
+                if not any(existing["address"] == gym_data["address"] for existing in results):
+                    coach_count = len([
+                        r for r in COACH_GYMS
+                        if r["gym_data"]["address"] == gym_data["address"]
+                    ])
+                    
+                    gym_result = {
+                        "id": f"coach_gym_{relation['id']}",
+                        "name": gym_data["name"],
+                        "address": gym_data["address"],
+                        "lat": gym_data["lat"],
+                        "lng": gym_data["lng"],
+                        "chain": "Salle personnalisée",
+                        "distance_km": round(distance, 1),
+                        "coach_count": coach_count
+                    }
+                    results.append(gym_result)
+        
+        # Trier par distance
+        results.sort(key=lambda x: x["distance_km"])
+        return results
+        
+    except Exception as e:
+        print(f"Erreur recherche salles: {e}")
+        return []
+
+def get_coaches_by_gym(gym_address: str) -> List[Dict]:
+    """Récupère tous les coachs exerçant dans une salle donnée."""
+    try:
+        coach_ids = [
+            relation["coach_id"] for relation in COACH_GYMS
+            if relation["gym_data"]["address"] == gym_address
+        ]
+        
+        # Récupérer les infos détaillées des coachs depuis MOCK_COACHES
+        coaches = []
+        for coach_id in coach_ids:
+            coach = next((c for c in MOCK_COACHES if str(c["id"]) == str(coach_id)), None)
+            if coach:
+                coaches.append(coach)
+        
+        return coaches
+        
+    except Exception as e:
+        print(f"Erreur récupération coachs par salle: {e}")
+        return []
