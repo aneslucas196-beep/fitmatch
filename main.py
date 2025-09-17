@@ -60,6 +60,7 @@ supabase_anon = get_supabase_anon_client()
 
 # Cache en mémoire pour les codes OTP en mode démo (email -> code)
 demo_otp_cache = {}
+demo_user_cache = {}
 
 # Fonction de validation du mot de passe
 def is_valid_password(password: str) -> bool:
@@ -228,6 +229,11 @@ async def search_coaches(
 # Cette route sera déplacée après les routes spécifiques coach/portal, coach/specialties, etc.
 
 # Routes d'authentification
+@app.get("/client/home", response_class=HTMLResponse)
+async def client_home(request: Request):
+    """Page d'accueil pour les clients avec formulaire de recherche."""
+    return templates.TemplateResponse("client_home.html", {"request": request})
+
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription."""
@@ -266,8 +272,13 @@ async def signup_submit(
     otp_code = generate_otp_code(6)
     
     if not supabase_anon:
-        # Mode démo sans Supabase - stocker le code dans le cache et tester Resend
+        # Mode démo sans Supabase - stocker le code et les infos utilisateur dans le cache
         demo_otp_cache[email] = otp_code
+        demo_user_cache[email] = {
+            "full_name": full_name,
+            "role": role,
+            "password": password  # En production, il faudrait le hasher
+        }
         print(f"🔐 Mode démo - Code OTP généré pour {email}: {otp_code}")
         
         # Tester l'envoi d'email avec Resend même en mode démo
@@ -405,8 +416,17 @@ async def verify_otp_submit(
         stored_code = demo_otp_cache.get(email)
         if stored_code and otp_code == stored_code:
             # Code correct - supprimer du cache et connecter
+            user_info = demo_user_cache.get(email, {})
+            role = user_info.get('role', 'client')
             del demo_otp_cache[email]
-            response = RedirectResponse(url="/coach/portal", status_code=303)
+            
+            # Rediriger selon le rôle
+            if role == 'coach':
+                redirect_url = "/coach/portal"
+            else:
+                redirect_url = "/client/home"
+                
+            response = RedirectResponse(url=redirect_url, status_code=303)
             response.set_cookie(
                 key="session_token",
                 value="demo_token",
@@ -476,7 +496,7 @@ async def verify_otp_submit(
             if role == 'coach':
                 redirect_url = "/coach/portal"
             else:
-                redirect_url = "/"
+                redirect_url = "/client/home"
             
             response = RedirectResponse(url=redirect_url, status_code=303)
             
