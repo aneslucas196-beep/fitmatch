@@ -42,9 +42,20 @@
         <div>
             <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Type de compte</label>
             <select name="role" id="role" required
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onchange="toggleCoachPreference()">
                 <option value="client" {{ 'selected' if role == 'client' else '' }}>Client</option>
                 <option value="coach" {{ 'selected' if role == 'coach' else '' }}>Coach</option>
+            </select>
+        </div>
+        
+        <div id="coach-preference" class="{% if role != 'client' %}hidden{% endif %}">
+            <label for="coach_gender_preference" class="block text-sm font-medium text-gray-700 mb-2">Préférence de genre du coach</label>
+            <select name="coach_gender_preference" id="coach_gender_preference"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="aucune" {{ 'selected' if coach_gender_preference == 'aucune' else '' }}>Aucune préférence</option>
+                <option value="homme" {{ 'selected' if coach_gender_preference == 'homme' else '' }}>Coach homme</option>
+                <option value="femme" {{ 'selected' if coach_gender_preference == 'femme' else '' }}>Coach femme</option>
             </select>
         </div>
         
@@ -58,4 +69,22 @@
         <a href="/login" class="text-blue-600 hover:text-blue-800">Se connecter</a>
     </p>
 </div>
+
+<script>
+function toggleCoachPreference() {
+    const roleSelect = document.getElementById('role');
+    const coachPreferenceDiv = document.getElementById('coach-preference');
+    
+    if (roleSelect.value === 'client') {
+        coachPreferenceDiv.classList.remove('hidden');
+    } else {
+        coachPreferenceDiv.classList.add('hidden');
+    }
+}
+
+// Initialiser l'état au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    toggleCoachPreference();
+});
+</script>
 {% endblock %}

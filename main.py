@@ -248,7 +248,8 @@ async def signup_submit(
     full_name: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
-    role: str = Form(...)
+    role: str = Form(...),
+    coach_gender_preference: str = Form("aucune")
 ):
     """Inscription utilisateur avec système OTP par email."""
     # Normaliser l'email en lowercase
@@ -261,7 +262,8 @@ async def signup_submit(
             "error": "Mot de passe trop faible (minimum 8 caractères, 1 lettre et 1 chiffre)",
             "full_name": full_name,
             "email": email,
-            "role": role
+            "role": role,
+            "coach_gender_preference": coach_gender_preference
         }, status_code=400)
     
     # Validation du rôle
@@ -277,7 +279,8 @@ async def signup_submit(
         demo_user_cache[email] = {
             "full_name": full_name,
             "role": role,
-            "password": password  # En production, il faudrait le hasher
+            "password": password,  # En production, il faudrait le hasher
+            "coach_gender_preference": coach_gender_preference if role == "client" else None
         }
         print(f"🔐 Mode démo - Code OTP généré pour {email}: {otp_code}")
         
