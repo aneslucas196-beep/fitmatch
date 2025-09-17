@@ -454,7 +454,7 @@ def get_pending_otp_data(supabase_client, email: str) -> Optional[Dict]:
         print(f"❌ Erreur récupération données OTP: {e}")
         return None
 
-def store_pending_registration(supabase_client, email: str, full_name: str, password: str, role: str, expiration_minutes: int = 10) -> bool:
+def store_pending_registration(supabase_client, email: str, full_name: str, password: str, role: str, gender: Optional[str] = None, coach_gender_preference: Optional[str] = None, selected_gyms: Optional[str] = None, expiration_minutes: int = 10) -> bool:
     """Stocke les données d'inscription en attente de vérification OTP."""
     try:
         # Normaliser l'email
@@ -476,6 +476,9 @@ def store_pending_registration(supabase_client, email: str, full_name: str, pass
             "full_name": full_name,
             "password": password,
             "role": role,
+            "gender": gender,
+            "coach_gender_preference": coach_gender_preference if role == "client" else None,
+            "selected_gyms": selected_gyms if role == "client" else None,
             "expires_at": expires_at.isoformat()
         }
         

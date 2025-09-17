@@ -391,8 +391,26 @@ async def signup_submit(
                 "error": "Erreur lors de la génération du code. Veuillez réessayer.",
                 "full_name": full_name,
                 "email": email,
-                "role": role
+                "gender": gender,
+                "role": role,
+                "coach_gender_preference": coach_gender_preference
             }, status_code=500)
+        
+        # Sauvegarder les données d'inscription complètes pour récupération après vérification OTP
+        pending_stored = store_pending_registration(
+            supabase_anon, 
+            email, 
+            full_name, 
+            password, 
+            role, 
+            gender,
+            coach_gender_preference if role == "client" else None,
+            selected_gyms if role == "client" else None
+        )
+        
+        if not pending_stored:
+            print("⚠️ Attention: Les données d'inscription supplémentaires n'ont pas pu être sauvegardées")
+            # On continue quand même car le compte et l'OTP sont créés
         
         # Envoyer le code par email avec Resend
         email_result = send_otp_email_resend(email, otp_code, full_name)
