@@ -698,6 +698,44 @@ def upload_transformation_images(supabase_client, transformation_id: str, before
 # Structure pour les relations coach-salle (stockage temporaire en attendant la DB)
 COACH_GYMS = []
 
+# Mapping unifié gym_id -> Set[coach_id] pour performances optimisées
+COACH_GYMS_BY_ID = {}
+
+# Données de test - Simuler qu'un coach demo a ajouté une salle
+def init_test_data():
+    """Initialise des données de test pour valider le système coach ↔ gym."""
+    global COACH_GYMS, COACH_GYMS_BY_ID
+    
+    # Simuler qu'un coach (ID=1, Marie Dubois) a ajouté une salle de test
+    if not COACH_GYMS:  # Éviter de dupliquer si déjà initialisé
+        test_gym_data = {
+            "name": "Salle Test Demo",
+            "address": "123 Rue de Test, 78000 Versailles, France",
+            "lat": 48.8014,
+            "lng": 2.1301
+        }
+        
+        # Ajouter la relation directement (comme si add_coach_gym avait été appelée)
+        relation = {
+            "id": 1,
+            "gym_id": "coach_gym_1",
+            "coach_id": "1",  # ID du coach Marie Dubois dans MOCK_COACHES
+            "gym_data": test_gym_data,
+            "created_at": "2025-09-17T17:00:00Z"
+        }
+        
+        COACH_GYMS.append(relation)
+        
+        # Ajouter dans le mapping unifié
+        if "coach_gym_1" not in COACH_GYMS_BY_ID:
+            COACH_GYMS_BY_ID["coach_gym_1"] = set()
+        COACH_GYMS_BY_ID["coach_gym_1"].add("1")
+        
+        print("✅ Données de test initialisées: coach 1 -> gym coach_gym_1")
+
+# Initialiser les données de test au démarrage
+init_test_data()
+
 def geocode_address(query: str) -> Optional[Dict]:
     """
     Service de géocodage unifié pour convertir adresse en coordonnées GPS.
@@ -746,33 +784,66 @@ def add_coach_gym(coach_id: str, gym_data: Dict) -> bool:
         if existing:
             return False  # Relation déjà existante
         
+        # Générer l'ID pour cette gym (sera utilisé comme gym_id)
+        relation_id = len(COACH_GYMS) + 1
+        gym_id = f"coach_gym_{relation_id}"
+        
         # Ajouter la nouvelle relation
         relation = {
-            "id": len(COACH_GYMS) + 1,  # ID temporaire
+            "id": relation_id,
+            "gym_id": gym_id,  # Stocker le gym_id directement
             "coach_id": coach_id,
             "gym_data": gym_data,
             "created_at": datetime.now().isoformat()
         }
         
         COACH_GYMS.append(relation)
+        
+        # Mettre à jour le mapping gym_id -> coaches
+        if gym_id not in COACH_GYMS_BY_ID:
+            COACH_GYMS_BY_ID[gym_id] = set()
+        COACH_GYMS_BY_ID[gym_id].add(coach_id)
+        
+        print(f"✅ Relation ajoutée: coach {coach_id} -> gym {gym_id}")
         return True
         
     except Exception as e:
         print(f"Erreur ajout coach-gym: {e}")
         return False
 
-def remove_coach_gym(coach_id: str, gym_id: str) -> bool:
+def remove_coach_gym(coach_id: str, relation_id: str) -> bool:
     """Supprime une relation coach-salle."""
     try:
         global COACH_GYMS
         initial_count = len(COACH_GYMS)
         
-        COACH_GYMS = [
-            relation for relation in COACH_GYMS
-            if not (relation["coach_id"] == coach_id and relation["id"] == gym_id)
-        ]
+        # Trouver la relation à supprimer pour récupérer le gym_id
+        relation_to_remove = None
+        for relation in COACH_GYMS:
+            if relation["coach_id"] == coach_id and str(relation["id"]) == str(relation_id):
+                relation_to_remove = relation
+                break
         
-        return len(COACH_GYMS) < initial_count
+        if relation_to_remove:
+            gym_id = relation_to_remove.get("gym_id", f"coach_gym_{relation_to_remove['id']}")
+            
+            # Supprimer de COACH_GYMS
+            COACH_GYMS = [
+                relation for relation in COACH_GYMS
+                if not (relation["coach_id"] == coach_id and str(relation["id"]) == str(relation_id))
+            ]
+            
+            # Mettre à jour COACH_GYMS_BY_ID
+            if gym_id in COACH_GYMS_BY_ID:
+                COACH_GYMS_BY_ID[gym_id].discard(coach_id)
+                # Supprimer la clé si plus de coaches
+                if not COACH_GYMS_BY_ID[gym_id]:
+                    del COACH_GYMS_BY_ID[gym_id]
+            
+            print(f"✅ Relation supprimée: coach {coach_id} -> gym {gym_id}")
+            return len(COACH_GYMS) < initial_count
+        
+        return False
         
     except Exception as e:
         print(f"Erreur suppression coach-gym: {e}")
@@ -792,11 +863,19 @@ def search_gyms_by_location(lat: float, lng: float, radius_km: int = 25) -> List
         for gym in GYMS_DATABASE:
             distance = haversine_distance(lat, lng, gym["lat"], gym["lng"])
             if distance <= radius_km:
-                # Compter les coachs dans cette salle
-                coach_count = len([
-                    relation for relation in COACH_GYMS
-                    if relation["gym_data"]["address"] == gym["address"]
-                ])
+                # Calculer coach_count pour cette gym statique
+                # Chercher les coaches qui ont ajouté cette salle (par adresse)
+                gym_id = gym["id"]
+                coach_count = 0
+                
+                # Compter dans COACH_GYMS_BY_ID si la gym existe
+                if gym_id in COACH_GYMS_BY_ID:
+                    coach_count += len(COACH_GYMS_BY_ID[gym_id])
+                
+                # Compter aussi les coaches qui ont ajouté cette même adresse
+                for relation in COACH_GYMS:
+                    if relation["gym_data"]["address"] == gym["address"]:
+                        coach_count += 1
                 
                 gym_result = gym.copy()
                 gym_result["distance_km"] = round(distance, 1)
@@ -810,13 +889,13 @@ def search_gyms_by_location(lat: float, lng: float, radius_km: int = 25) -> List
             if distance <= radius_km:
                 # Éviter les doublons avec GYMS_DATABASE
                 if not any(existing["address"] == gym_data["address"] for existing in results):
-                    coach_count = len([
-                        r for r in COACH_GYMS
-                        if r["gym_data"]["address"] == gym_data["address"]
-                    ])
+                    gym_id = relation.get("gym_id", f"coach_gym_{relation['id']}")
+                    
+                    # Utiliser COACH_GYMS_BY_ID pour compter efficacement
+                    coach_count = len(COACH_GYMS_BY_ID.get(gym_id, set()))
                     
                     gym_result = {
-                        "id": f"coach_gym_{relation['id']}",
+                        "id": gym_id,
                         "name": gym_data["name"],
                         "address": gym_data["address"],
                         "lat": gym_data["lat"],
@@ -835,23 +914,43 @@ def search_gyms_by_location(lat: float, lng: float, radius_km: int = 25) -> List
         print(f"Erreur recherche salles: {e}")
         return []
 
-def get_coaches_by_gym(gym_address: str) -> List[Dict]:
-    """Récupère tous les coachs exerçant dans une salle donnée."""
+def get_coaches_by_gym(gym_id: str) -> List[Dict]:
+    """Récupère tous les coachs exerçant dans une salle donnée par gym_id."""
     try:
-        coach_ids = [
-            relation["coach_id"] for relation in COACH_GYMS
-            if relation["gym_data"]["address"] == gym_address
-        ]
+        coach_ids = set()
         
-        # Récupérer les infos détaillées des coachs depuis MOCK_COACHES
+        # 1. Chercher dans COACH_GYMS_BY_ID (gym_id dynamiques: coach_gym_X)
+        if gym_id in COACH_GYMS_BY_ID:
+            coach_ids.update(COACH_GYMS_BY_ID[gym_id])
+            print(f"✅ Trouvé {len(coach_ids)} coaches dans COACH_GYMS_BY_ID pour gym {gym_id}")
+        
+        # 2. Pour les gyms statiques, chercher aussi par adresse dans COACH_GYMS
+        # (compatibilité avec gyms ajoutées avant le nouveau système)
+        try:
+            from main import GYMS_DATABASE
+            gym_static = next((g for g in GYMS_DATABASE if g["id"] == gym_id), None)
+            if gym_static:
+                # Chercher les coaches qui ont ajouté cette même adresse
+                for relation in COACH_GYMS:
+                    if relation["gym_data"]["address"] == gym_static["address"]:
+                        coach_ids.add(relation["coach_id"])
+                        print(f"✅ Coach {relation['coach_id']} trouvé par adresse pour gym statique {gym_id}")
+        except ImportError:
+            pass
+        
+        # 3. Récupérer les infos détaillées des coachs depuis MOCK_COACHES
         coaches = []
         for coach_id in coach_ids:
             coach = next((c for c in MOCK_COACHES if str(c["id"]) == str(coach_id)), None)
             if coach:
                 coaches.append(coach)
+                print(f"✅ Détails coach récupérés: {coach['full_name']} (ID: {coach_id})")
+            else:
+                print(f"⚠️ Coach ID {coach_id} non trouvé dans MOCK_COACHES")
         
+        print(f"📊 Résultat final pour gym {gym_id}: {len(coaches)} coaches trouvés")
         return coaches
         
     except Exception as e:
-        print(f"Erreur récupération coachs par salle: {e}")
+        print(f"❌ Erreur récupération coachs pour gym {gym_id}: {e}")
         return []

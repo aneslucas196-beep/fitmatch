@@ -1296,35 +1296,37 @@ async def get_gym_coaches(gym_address: str):
 async def get_gym_coaches_by_id(gym_id: str):
     """
     Récupère tous les coachs disponibles dans une salle par ID.
-    Fallback pour gym_id au lieu d'adresse complète.
+    Fonctionne avec gym_id statiques (GYMS_DATABASE) et dynamiques (coach_gym_X).
     """
     try:
-        # Chercher la salle par ID dans GYMS_DATABASE
+        print(f"🔍 Recherche coaches pour gym_id: {gym_id}")
+        
+        # Utiliser directement le nouveau système unifié basé sur gym_id
+        coaches = get_coaches_by_gym(gym_id)
+        
+        # Récupérer les infos de la gym si disponible (optionnel)
+        gym_info = None
         gym = next((g for g in GYMS_DATABASE if g["id"] == gym_id), None)
+        if gym:
+            gym_info = gym
         
-        if not gym:
-            return {
-                "success": False,
-                "message": f"Salle avec ID '{gym_id}' non trouvée",
-                "coaches": []
-            }
-        
-        # Utiliser l'adresse pour chercher les coachs
-        coaches = get_coaches_by_gym(gym["address"])
+        print(f"📊 Résultat pour {gym_id}: {len(coaches)} coaches trouvés")
         
         return {
             "success": True,
             "coaches": coaches,
             "count": len(coaches),
-            "gym": gym
+            "gym_id": gym_id,
+            "gym_info": gym_info  # Infos de la gym si statique, sinon None
         }
         
     except Exception as e:
-        print(f"Erreur récupération coachs pour salle ID '{gym_id}': {e}")
+        print(f"❌ Erreur récupération coachs pour gym_id '{gym_id}': {e}")
         return {
             "success": False,
             "message": "Erreur lors de la récupération des coachs",
-            "coaches": []
+            "coaches": [],
+            "gym_id": gym_id
         }
 
 # Route pour les images uploadées (si pas d'utilisation directe de Supabase Storage)
