@@ -120,8 +120,8 @@ def get_supabase_anon_client():
         anon_key = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")
         
         # Supabase désactivé temporairement - problème de configuration détecté
-        # print("🔧 Mode démo forcé pour tester les logs Resend détaillés")
-        # return None
+        print("🔧 Mode démo forcé - problème table otp_codes dans Supabase")
+        return None
         
         if url and anon_key:
             # Valider l'URL

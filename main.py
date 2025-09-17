@@ -229,7 +229,7 @@ async def search_coaches(
 
 # Routes d'authentification
 @app.get("/signup", response_class=HTMLResponse)
-async def signup_form(request: Request, role: str = None):
+async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription."""
     return templates.TemplateResponse("signup.html", {
         "request": request, 
