@@ -46,6 +46,22 @@
     </form>
 </div>
 
+<!-- Section des salles préférées -->
+<div class="bg-white rounded-lg shadow-md p-6 mb-8">
+    <h2 class="text-2xl font-semibold text-gray-900 mb-4">🏋️ Mes salles préférées</h2>
+    <p class="text-gray-600 mb-4">Sélectionnez vos salles de sport préférées pour faciliter la recherche de coachs.</p>
+    
+    <div class="mb-3">
+        <button type="button" id="show-gym-map-btn" 
+                class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            📍 Gérer mes salles sur la carte
+        </button>
+    </div>
+    <div id="current-selected-gyms" class="text-sm text-gray-600">
+        Chargement de vos salles...
+    </div>
+</div>
+
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
         <div class="text-4xl mb-4">💪</div>
@@ -78,4 +94,297 @@
         <p class="text-gray-600">Optimisez votre alimentation</p>
     </div>
 </div>
+
+<!-- Modale de sélection de salles -->
+<div id="gym-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div class="p-6 border-b">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-semibold">Sélectionnez vos salles préférées</h3>
+                    <button type="button" id="close-modal-btn" 
+                            class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Carte -->
+                    <div>
+                        <div id="map" style="height: 400px; width: 100%;"></div>
+                    </div>
+                    
+                    <!-- Liste des salles -->
+                    <div>
+                        <h4 class="font-semibold mb-3">Salles disponibles</h4>
+                        <div class="space-y-2 max-h-80 overflow-y-auto">
+                            <div id="gyms-list"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-between items-center">
+                    <div class="text-sm text-gray-600">
+                        <span id="selected-count">0</span> salle(s) sélectionnée(s)
+                    </div>
+                    <div class="space-x-3">
+                        <button type="button" id="clear-selection-btn" 
+                                class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">
+                            Tout effacer
+                        </button>
+                        <button type="button" id="save-selection-btn" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            Sauvegarder
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let map;
+let gymsData = [];
+let selectedGyms = [];
+let gymMarkers = [];
+
+function loadGymsData() {
+    fetch('/api/gyms')
+        .then(response => response.json())
+        .then(data => {
+            gymsData = data.gyms;
+            initializeMap();
+            renderGymsList();
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des salles:', error);
+        });
+}
+
+function loadCurrentUserGyms() {
+    // Charger les salles actuellement sélectionnées par l'utilisateur
+    fetch('/api/user/gyms')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.selected_gyms) {
+                selectedGyms = data.selected_gyms;
+                updateCurrentGymsDisplay();
+            } else {
+                document.getElementById('current-selected-gyms').textContent = 'Aucune salle sélectionnée';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des salles utilisateur:', error);
+            document.getElementById('current-selected-gyms').textContent = 'Aucune salle sélectionnée';
+        });
+}
+
+function updateCurrentGymsDisplay() {
+    const selectedGymNames = selectedGyms.map(gymId => {
+        const gym = gymsData.find(g => g.id === gymId);
+        return gym ? gym.name : '';
+    }).filter(name => name);
+    
+    const currentDiv = document.getElementById('current-selected-gyms');
+    if (selectedGymNames.length > 0) {
+        currentDiv.innerHTML = `<strong>${selectedGymNames.length} salle(s):</strong> ${selectedGymNames.join(', ')}`;
+        currentDiv.classList.remove('text-gray-600');
+        currentDiv.classList.add('text-green-600');
+    } else {
+        currentDiv.textContent = 'Aucune salle sélectionnée';
+        currentDiv.classList.remove('text-green-600');
+        currentDiv.classList.add('text-gray-600');
+    }
+}
+
+function initializeMap() {
+    // Centrer sur l'Île-de-France
+    map = L.map('map').setView([48.8566, 2.3522], 10);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Ajouter les marqueurs des salles
+    gymsData.forEach(gym => {
+        const marker = L.marker([gym.lat, gym.lng])
+            .addTo(map)
+            .bindPopup(`
+                <div class="text-center">
+                    <h5 class="font-semibold">${gym.name}</h5>
+                    <p class="text-sm text-gray-600">${gym.chain}</p>
+                    <p class="text-xs">${gym.address}</p>
+                </div>
+            `);
+        
+        marker.on('click', function() {
+            toggleGymSelection(gym.id);
+        });
+        
+        gymMarkers.push({marker: marker, gymId: gym.id});
+    });
+    
+    updateMapMarkers();
+}
+
+function renderGymsList() {
+    const container = document.getElementById('gyms-list');
+    container.innerHTML = '';
+    
+    gymsData.forEach(gym => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center space-x-3 p-2 border rounded hover:bg-gray-50';
+        
+        const isSelected = selectedGyms.includes(gym.id);
+        
+        div.innerHTML = `
+            <input type="checkbox" id="gym-${gym.id}" ${isSelected ? 'checked' : ''} 
+                   onchange="toggleGymSelection('${gym.id}')"
+                   class="text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+            <label for="gym-${gym.id}" class="flex-1 cursor-pointer">
+                <div class="font-medium text-sm">${gym.name}</div>
+                <div class="text-xs text-gray-500">${gym.chain} - ${gym.address}</div>
+            </label>
+        `;
+        
+        container.appendChild(div);
+    });
+}
+
+function toggleGymSelection(gymId) {
+    if (selectedGyms.includes(gymId)) {
+        selectedGyms = selectedGyms.filter(id => id !== gymId);
+    } else {
+        selectedGyms.push(gymId);
+    }
+    
+    // Mettre à jour l'affichage
+    updateMapMarkers();
+    updateSelectedCount();
+    
+    // Mettre à jour les checkboxes
+    const checkbox = document.getElementById(`gym-${gymId}`);
+    if (checkbox) {
+        checkbox.checked = selectedGyms.includes(gymId);
+    }
+}
+
+function updateMapMarkers() {
+    gymMarkers.forEach(({marker, gymId}) => {
+        if (selectedGyms.includes(gymId)) {
+            marker.setIcon(L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            }));
+        } else {
+            marker.setIcon(L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            }));
+        }
+    });
+}
+
+function updateSelectedCount() {
+    document.getElementById('selected-count').textContent = selectedGyms.length;
+}
+
+function saveGymSelection() {
+    // Sauvegarder les préférences de salles
+    fetch('/api/user/gyms', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            selected_gyms: selectedGyms
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateCurrentGymsDisplay();
+            document.getElementById('gym-modal').classList.add('hidden');
+            
+            // Afficher un message de succès
+            const successMsg = document.createElement('div');
+            successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50';
+            successMsg.textContent = 'Salles sauvegardées avec succès !';
+            document.body.appendChild(successMsg);
+            
+            setTimeout(() => {
+                document.body.removeChild(successMsg);
+            }, 3000);
+        } else {
+            alert('Erreur lors de la sauvegarde: ' + (data.message || 'Erreur inconnue'));
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de la sauvegarde:', error);
+        alert('Erreur lors de la sauvegarde');
+    });
+}
+
+// Initialiser au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Charger les données des salles pour l'affichage actuel
+    fetch('/api/gyms')
+        .then(response => response.json())
+        .then(data => {
+            gymsData = data.gyms;
+            loadCurrentUserGyms();
+        });
+    
+    // Bouton pour ouvrir la modale
+    document.getElementById('show-gym-map-btn').addEventListener('click', function() {
+        document.getElementById('gym-modal').classList.remove('hidden');
+        if (!map) {
+            loadGymsData();
+        } else {
+            // Recharger les salles actuelles de l'utilisateur
+            loadCurrentUserGyms();
+            updateMapMarkers();
+            updateSelectedCount();
+            renderGymsList();
+        }
+    });
+    
+    // Fermer la modale
+    document.getElementById('close-modal-btn').addEventListener('click', function() {
+        document.getElementById('gym-modal').classList.add('hidden');
+    });
+    
+    // Effacer la sélection
+    document.getElementById('clear-selection-btn').addEventListener('click', function() {
+        selectedGyms = [];
+        const checkboxes = document.querySelectorAll('#gyms-list input[type="checkbox"]');
+        checkboxes.forEach(checkbox => checkbox.checked = false);
+        updateMapMarkers();
+        updateSelectedCount();
+    });
+    
+    // Sauvegarder la sélection
+    document.getElementById('save-selection-btn').addEventListener('click', saveGymSelection);
+    
+    // Fermer la modale en cliquant à l'extérieur
+    document.getElementById('gym-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.classList.add('hidden');
+        }
+    });
+});
+</script>
 {% endblock %}
