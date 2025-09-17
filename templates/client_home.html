@@ -8,6 +8,59 @@
     <p class="text-xl text-gray-600">Découvrez des coachs qualifiés près de chez vous</p>
 </div>
 
+<!-- Section recherche de salles par zone -->
+<div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-md p-6 mb-8">
+    <h2 class="text-2xl font-semibold text-gray-900 mb-4">🗺️ Recherche de salles par zone</h2>
+    <p class="text-gray-600 mb-4">Entrez votre code postal ou ville pour voir toutes les salles de sport disponibles dans votre zone.</p>
+    
+    <div class="flex flex-col md:flex-row gap-4 mb-4">
+        <div class="flex-1">
+            <input type="text" id="zone-search-input" placeholder="Exemple: 78990, 75114, Élancourt..." 
+                   class="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+        </div>
+        <div class="flex gap-2">
+            <select id="zone-radius" class="border border-gray-300 rounded-md px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="10">10 km</option>
+                <option value="25" selected>25 km</option>
+                <option value="50">50 km</option>
+            </select>
+            <button type="button" id="search-gyms-btn" 
+                    class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition duration-200 font-medium">
+                🔍 Rechercher des coaches
+            </button>
+        </div>
+    </div>
+    
+    <!-- Résultats de recherche -->
+    <div id="search-results" class="hidden">
+        <hr class="my-6">
+        <h3 class="text-xl font-semibold mb-4">🏋️ Salles trouvées</h3>
+        
+        <!-- Carte interactive -->
+        <div class="mb-6">
+            <div id="gyms-map" style="height: 400px; border-radius: 8px;" class="border border-gray-300"></div>
+        </div>
+        
+        <!-- Liste des salles -->
+        <div id="gyms-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Les salles seront ajoutées ici par JavaScript -->
+        </div>
+    </div>
+    
+    <!-- Indicateur de chargement -->
+    <div id="search-loading" class="hidden text-center py-4">
+        <div class="inline-flex items-center">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
+            <span class="text-gray-600">Recherche en cours...</span>
+        </div>
+    </div>
+    
+    <!-- Message d'erreur -->
+    <div id="search-error" class="hidden bg-red-50 border border-red-200 rounded-md p-4 text-red-700">
+        <!-- Le message d'erreur sera ajouté ici -->
+    </div>
+</div>
+
 <div class="bg-white rounded-lg shadow-md p-6 mb-8">
     <form action="/search" method="GET" class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -385,6 +438,188 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('hidden');
         }
     });
+    
+    // ======================================
+    // RECHERCHE DE SALLES PAR ZONE
+    // ======================================
+    
+    let searchMap = null;
+    let searchMarkers = [];
+    
+    // Bouton de recherche de salles par zone
+    document.getElementById('search-gyms-btn').addEventListener('click', function() {
+        const query = document.getElementById('zone-search-input').value.trim();
+        const radius = parseInt(document.getElementById('zone-radius').value);
+        
+        if (!query) {
+            showSearchError('Veuillez entrer un code postal ou une ville.');
+            return;
+        }
+        
+        searchGymsInZone(query, radius);
+    });
+    
+    // Recherche avec Entrée sur le champ
+    document.getElementById('zone-search-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('search-gyms-btn').click();
+        }
+    });
+    
+    function searchGymsInZone(query, radius) {
+        // Afficher le loading
+        showSearchLoading();
+        
+        // Appeler l'API de recherche
+        fetch(`/api/gyms/search?q=${encodeURIComponent(query)}&radius_km=${radius}`)
+            .then(response => response.json())
+            .then(data => {
+                hideSearchLoading();
+                
+                if (data.success && data.gyms.length > 0) {
+                    displaySearchResults(data.gyms, query);
+                } else if (data.gyms.length === 0) {
+                    showSearchError(`Aucune salle trouvée dans la zone "${query}" (rayon ${radius}km).`);
+                } else {
+                    showSearchError(data.message || 'Erreur lors de la recherche.');
+                }
+            })
+            .catch(error => {
+                hideSearchLoading();
+                console.error('Erreur recherche salles:', error);
+                showSearchError('Erreur de connexion. Vérifiez votre connexion internet.');
+            });
+    }
+    
+    function displaySearchResults(gyms, query) {
+        hideSearchError();
+        
+        // Afficher la section résultats
+        document.getElementById('search-results').classList.remove('hidden');
+        
+        // Mettre à jour le titre
+        document.querySelector('#search-results h3').innerHTML = 
+            `🏋️ ${gyms.length} salle${gyms.length > 1 ? 's' : ''} trouvée${gyms.length > 1 ? 's' : ''} près de "${query}"`;
+        
+        // Initialiser la carte de recherche
+        initSearchMap(gyms);
+        
+        // Afficher la liste des salles
+        displayGymsList(gyms);
+    }
+    
+    function initSearchMap(gyms) {
+        // Détruire la carte existante si elle existe
+        if (searchMap) {
+            searchMap.remove();
+            searchMap = null;
+        }
+        
+        // Calculer le centre de la carte basé sur les salles trouvées
+        if (gyms.length === 0) return;
+        
+        const centerLat = gyms.reduce((sum, gym) => sum + gym.lat, 0) / gyms.length;
+        const centerLng = gyms.reduce((sum, gym) => sum + gym.lng, 0) / gyms.length;
+        
+        // Créer la nouvelle carte
+        searchMap = L.map('gyms-map').setView([centerLat, centerLng], 11);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(searchMap);
+        
+        // Ajouter les marqueurs des salles
+        searchMarkers = [];
+        gyms.forEach(gym => {
+            const marker = L.marker([gym.lat, gym.lng])
+                .bindPopup(`
+                    <div class="p-2">
+                        <h4 class="font-semibold text-lg">${gym.name}</h4>
+                        <p class="text-sm text-gray-600 mb-2">${gym.address}</p>
+                        <p class="text-sm mb-2">
+                            <span class="font-medium">${gym.coach_count} coach(s)</span>
+                            ${gym.distance_km ? `• ${gym.distance_km} km` : ''}
+                        </p>
+                        <button onclick="viewGymCoaches('${gym.address}', '${gym.name}')" 
+                                class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                            Voir les coachs
+                        </button>
+                    </div>
+                `)
+                .addTo(searchMap);
+            
+            searchMarkers.push(marker);
+        });
+        
+        // Ajuster la vue pour inclure tous les marqueurs
+        if (searchMarkers.length > 1) {
+            const group = new L.featureGroup(searchMarkers);
+            searchMap.fitBounds(group.getBounds().pad(0.1));
+        }
+    }
+    
+    function displayGymsList(gyms) {
+        const gymsList = document.getElementById('gyms-list');
+        
+        gymsList.innerHTML = gyms.map(gym => `
+            <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200">
+                <div class="flex justify-between items-start mb-2">
+                    <h4 class="font-semibold text-lg text-gray-900">${gym.name}</h4>
+                    <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">${gym.chain}</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-2">${gym.address}</p>
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-sm text-gray-500">
+                        ${gym.coach_count} coach(s) disponible(s)
+                    </span>
+                    ${gym.distance_km ? `<span class="text-sm text-blue-600 font-medium">${gym.distance_km} km</span>` : ''}
+                </div>
+                <button onclick="viewGymCoaches('${gym.address}', '${gym.name}')" 
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition duration-200 text-sm font-medium">
+                    👥 Voir les coachs disponibles
+                </button>
+            </div>
+        `).join('');
+    }
+    
+    // Fonction globale pour voir les coachs d'une salle
+    window.viewGymCoaches = function(gymAddress, gymName) {
+        // Afficher un modal ou rediriger vers une page dédiée
+        alert(`Fonctionnalité en cours de développement !\n\nSalle: ${gymName}\nAdresse: ${gymAddress}\n\nProchainement: Liste des coachs disponibles dans cette salle.`);
+        
+        // TODO: Implémenter l'affichage des coachs de cette salle
+        // fetch(`/api/gyms/${encodeURIComponent(gymAddress)}/coaches`)
+        //     .then(response => response.json())
+        //     .then(data => {
+        //         // Afficher la liste des coachs dans un modal
+        //     });
+    };
+    
+    function showSearchLoading() {
+        document.getElementById('search-loading').classList.remove('hidden');
+        document.getElementById('search-results').classList.add('hidden');
+        document.getElementById('search-error').classList.add('hidden');
+    }
+    
+    function hideSearchLoading() {
+        document.getElementById('search-loading').classList.add('hidden');
+    }
+    
+    function showSearchError(message) {
+        const errorDiv = document.getElementById('search-error');
+        errorDiv.innerHTML = `
+            <div class="flex items-center">
+                <span class="text-red-500 mr-2">⚠️</span>
+                <span>${message}</span>
+            </div>
+        `;
+        errorDiv.classList.remove('hidden');
+        document.getElementById('search-results').classList.add('hidden');
+    }
+    
+    function hideSearchError() {
+        document.getElementById('search-error').classList.add('hidden');
+    }
 });
 </script>
 {% endblock %}
