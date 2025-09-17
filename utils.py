@@ -851,90 +851,105 @@ def remove_coach_gym(coach_id: str, relation_id: str) -> bool:
 
 def search_gyms_by_zone(query: str) -> List[Dict]:
     """
-    Recherche toutes les salles d'une zone spécifique (arrondissement, quartier, ville).
-    Détecte automatiquement les zones géographiques et affiche TOUTES les salles de cette zone.
+    Recherche toutes les salles d'une ville ou zone spécifique en France.
+    Détecte automatiquement les villes et affiche TOUTES les salles de cette ville.
     """
     try:
         from main import GYMS_DATABASE
         
         results = []
-        
-        # Détecter les patterns de zones parisiennes
-        zone_patterns = {
-            # Arrondissements parisiens
-            '15': ['75015', '15ème', '15e', 'paris 15', 'quinzième'],
-            '1': ['75001', '1er', '1ère', 'paris 1', 'premier'],
-            '7': ['75007', '7ème', '7e', 'paris 7', 'septième'],
-            '16': ['75016', '16ème', '16e', 'paris 16', 'seizième'],
-            # Ajouter d'autres arrondissements si nécessaire
-        }
-        
         query_lower = query.lower().strip()
-        target_zone = None
         
-        # Identifier la zone recherchée
-        for zone, patterns in zone_patterns.items():
-            if any(pattern in query_lower for pattern in patterns):
-                target_zone = zone
-                break
+        print(f"🔍 Recherche par zone: {query}")
         
-        # Si on a identifié un arrondissement, filtrer les salles
-        if target_zone:
-            postal_code = f"75{target_zone.zfill(3)}"  # Ex: 75015 pour le 15ème
+        # 1. RECHERCHE DIRECTE PAR NOM DE VILLE
+        # Essayer de matcher directement avec le champ "city" de chaque salle
+        for gym in GYMS_DATABASE:
+            gym_city = gym.get("city", "").lower()
             
-            # Rechercher dans GYMS_DATABASE
+            # Vérifier correspondance exacte ou partielle
+            if (query_lower == gym_city or 
+                query_lower in gym_city or 
+                gym_city in query_lower):
+                
+                # Calculer coach_count pour cette gym
+                gym_id = gym["id"]
+                coach_count = 0
+                
+                # Compter dans COACH_GYMS_BY_ID
+                if gym_id in COACH_GYMS_BY_ID:
+                    coach_count += len(COACH_GYMS_BY_ID[gym_id])
+                
+                # Compter aussi les coaches qui ont ajouté cette même adresse
+                for relation in COACH_GYMS:
+                    if relation["gym_data"]["address"] == gym["address"]:
+                        coach_count += 1
+                
+                gym_result = gym.copy()
+                gym_result["distance_km"] = None  # Pas de distance pour recherche par ville
+                gym_result["coach_count"] = coach_count
+                gym_result["zone"] = gym.get("city", "Zone inconnue")
+                results.append(gym_result)
+        
+        # 2. RECHERCHE PAR CODE POSTAL (si query ressemble à un code postal)
+        if query.isdigit() and len(query) == 5:
+            postal_code = query
             for gym in GYMS_DATABASE:
                 if postal_code in gym["address"]:
-                    # Calculer coach_count pour cette gym
-                    gym_id = gym["id"]
-                    coach_count = 0
-                    
-                    # Compter dans COACH_GYMS_BY_ID si la gym existe
-                    if gym_id in COACH_GYMS_BY_ID:
-                        coach_count += len(COACH_GYMS_BY_ID[gym_id])
-                    
-                    # Compter aussi les coaches qui ont ajouté cette même adresse
-                    for relation in COACH_GYMS:
-                        if relation["gym_data"]["address"] == gym["address"]:
-                            coach_count += 1
-                    
-                    gym_result = gym.copy()
-                    gym_result["distance_km"] = None  # Pas de distance pour recherche par zone
-                    gym_result["coach_count"] = coach_count
-                    gym_result["zone"] = f"Paris {target_zone}ème"
-                    results.append(gym_result)
-            
-            # Rechercher dans les salles ajoutées par les coachs
-            for relation in COACH_GYMS:
-                gym_data = relation["gym_data"]
-                if postal_code in gym_data["address"]:
-                    # Éviter les doublons avec GYMS_DATABASE
-                    if not any(existing["address"] == gym_data["address"] for existing in results):
-                        gym_id = relation.get("gym_id", f"coach_gym_{relation['id']}")
+                    # Éviter les doublons déjà trouvés par nom de ville
+                    if not any(existing["id"] == gym["id"] for existing in results):
+                        gym_id = gym["id"]
+                        coach_count = 0
                         
-                        # Utiliser COACH_GYMS_BY_ID pour compter efficacement
-                        coach_count = len(COACH_GYMS_BY_ID.get(gym_id, set()))
+                        if gym_id in COACH_GYMS_BY_ID:
+                            coach_count += len(COACH_GYMS_BY_ID[gym_id])
                         
-                        gym_result = {
-                            "id": gym_id,
-                            "name": gym_data["name"],
-                            "address": gym_data["address"],
-                            "lat": gym_data["lat"],
-                            "lng": gym_data["lng"],
-                            "chain": "Salle personnalisée",
-                            "distance_km": None,
-                            "coach_count": coach_count,
-                            "zone": f"Paris {target_zone}ème"
-                        }
+                        for relation in COACH_GYMS:
+                            if relation["gym_data"]["address"] == gym["address"]:
+                                coach_count += 1
+                        
+                        gym_result = gym.copy()
+                        gym_result["distance_km"] = None
+                        gym_result["coach_count"] = coach_count
+                        gym_result["zone"] = gym.get("city", f"Zone {postal_code}")
                         results.append(gym_result)
+        
+        # 3. RECHERCHE DANS LES SALLES AJOUTÉES PAR LES COACHS
+        for relation in COACH_GYMS:
+            gym_data = relation["gym_data"]
+            gym_address_lower = gym_data["address"].lower()
             
-            # Trier par nom pour une recherche par zone
+            # Vérifier si la recherche correspond à l'adresse de la salle coach
+            if (query_lower in gym_address_lower or 
+                any(word in gym_address_lower for word in query_lower.split() if len(word) > 2)):
+                
+                # Éviter les doublons avec GYMS_DATABASE
+                if not any(existing["address"] == gym_data["address"] for existing in results):
+                    gym_id = relation.get("gym_id", f"coach_gym_{relation['id']}")
+                    coach_count = len(COACH_GYMS_BY_ID.get(gym_id, set()))
+                    
+                    gym_result = {
+                        "id": gym_id,
+                        "name": gym_data["name"],
+                        "address": gym_data["address"],
+                        "lat": gym_data["lat"],
+                        "lng": gym_data["lng"],
+                        "chain": "Salle personnalisée",
+                        "distance_km": None,
+                        "coach_count": coach_count,
+                        "zone": "Zone personnalisée"
+                    }
+                    results.append(gym_result)
+        
+        if results:
+            # Trier par nom pour une recherche par ville
             results.sort(key=lambda x: x["name"])
-            print(f"🎯 Recherche par zone {query}: {len(results)} salles trouvées dans Paris {target_zone}ème")
+            city_name = results[0]["zone"] if results else "zone"
+            print(f"🎯 Recherche par zone {query}: {len(results)} salles trouvées dans {city_name}")
             return results
         
-        # Si pas de zone identifiée, retourner liste vide
-        print(f"❌ Zone non reconnue pour: {query}")
+        # Aucune correspondance trouvée
+        print(f"❌ Aucune salle trouvée pour: {query}")
         return []
         
     except Exception as e:

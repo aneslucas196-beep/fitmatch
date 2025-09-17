@@ -71,27 +71,82 @@ supabase_anon = get_supabase_anon_client()
 demo_otp_cache = {}
 demo_user_cache = {}
 
-# Base de données des salles de sport populaires
+# Base de données nationale des salles de sport
 GYMS_DATABASE = [
-    # Salles banlieue
-    {"id": "bf_coigniere", "name": "Basic-Fit Coignières", "chain": "Basic-Fit", "lat": 48.7392, "lng": 1.9127, "address": "Centre Commercial Auchan, 78310 Coignières"},
-    {"id": "bf_plaisir", "name": "Basic-Fit Plaisir", "chain": "Basic-Fit", "lat": 48.8247, "lng": 1.9504, "address": "Avenue du Général de Gaulle, 78370 Plaisir"},
-    {"id": "bf_versailles", "name": "Basic-Fit Versailles", "chain": "Basic-Fit", "lat": 48.8014, "lng": 2.1301, "address": "Boulevard de la Reine, 78000 Versailles"},
-    {"id": "fp_saint_quentin", "name": "Fitness Park Saint-Quentin-en-Yvelines", "chain": "Fitness Park", "lat": 48.7838, "lng": 2.0482, "address": "Place Georges Pompidou, 78180 Montigny-le-Bretonneux"},
-    {"id": "fp_velizy", "name": "Fitness Park Vélizy", "chain": "Fitness Park", "lat": 48.7804, "lng": 2.1889, "address": "Centre Commercial Vélizy 2, 78140 Vélizy-Villacoublay"},
-    {"id": "bf_trappes", "name": "Basic-Fit Trappes", "chain": "Basic-Fit", "lat": 48.7765, "lng": 2.0079, "address": "Centre Commercial Auchan, 78190 Trappes"},
-    {"id": "neoness_paris", "name": "Neoness Châtelet", "chain": "Neoness", "lat": 48.8584, "lng": 2.3470, "address": "Forum des Halles, 75001 Paris"},
-    {"id": "neoness_defense", "name": "Neoness La Défense", "chain": "Neoness", "lat": 48.8922, "lng": 2.2359, "address": "CNIT, 92800 Puteaux"},
-    {"id": "l_orange_bleue_rambouillet", "name": "L'Orange Bleue Rambouillet", "chain": "L'Orange Bleue", "lat": 48.6436, "lng": 1.8287, "address": "Zone d'activité des Closeaux, 78120 Rambouillet"},
-    {"id": "keep_cool_mantes", "name": "Keep Cool Mantes-la-Jolie", "chain": "Keep Cool", "lat": 49.0014, "lng": 1.7168, "address": "Avenue du Maréchal Juin, 78200 Mantes-la-Jolie"},
-    
-    # VRAIES SALLES DU 15ème ARRONDISSEMENT
-    {"id": "fp_paris_theatre", "name": "Fitness Park Paris-Théâtre", "chain": "Fitness Park", "lat": 48.8407, "lng": 2.2936, "address": "104 bis rue du Théâtre, 75015 Paris"},
-    {"id": "keepcool_paris15", "name": "Keepcool Paris 15 Convention", "chain": "Keep Cool", "lat": 48.8423, "lng": 2.2963, "address": "59 Rue Gutenberg, 75015 Paris"},
-    {"id": "neoness_motte_picquet", "name": "Neoness La Motte-Picquet", "chain": "Neoness", "lat": 48.8506, "lng": 2.3026, "address": "15 rue de La Motte-Picquet, 75015 Paris"},
-    {"id": "cmg_grenelle", "name": "CMG Sports Club One Grenelle", "chain": "CMG Sports Club", "lat": 48.8450, "lng": 2.2985, "address": "8 rue Frémicourt, 75015 Paris"},
-    {"id": "cercles_porte_versailles", "name": "Cercles de la Forme Porte de Versailles", "chain": "Cercles de la Forme", "lat": 48.8353, "lng": 2.2886, "address": "31, rue du Hameau, 75015 Paris"},
-    {"id": "front_de_seine", "name": "Front de Seine", "chain": "Indépendant", "lat": 48.8487, "lng": 2.2835, "address": "44 rue Émeriau, 75015 Paris"}
+    # RÉGION PARISIENNE
+    {"id": "bf_coigniere", "name": "Basic-Fit Coignières", "chain": "Basic-Fit", "lat": 48.7392, "lng": 1.9127, "address": "Centre Commercial Auchan, 78310 Coignières", "city": "Coignières"},
+    {"id": "bf_plaisir", "name": "Basic-Fit Plaisir", "chain": "Basic-Fit", "lat": 48.8247, "lng": 1.9504, "address": "Avenue du Général de Gaulle, 78370 Plaisir", "city": "Plaisir"},
+    {"id": "bf_versailles", "name": "Basic-Fit Versailles", "chain": "Basic-Fit", "lat": 48.8014, "lng": 2.1301, "address": "Boulevard de la Reine, 78000 Versailles", "city": "Versailles"},
+    {"id": "fp_saint_quentin", "name": "Fitness Park Saint-Quentin-en-Yvelines", "chain": "Fitness Park", "lat": 48.7838, "lng": 2.0482, "address": "Place Georges Pompidou, 78180 Montigny-le-Bretonneux", "city": "Montigny-le-Bretonneux"},
+    {"id": "fp_velizy", "name": "Fitness Park Vélizy", "chain": "Fitness Park", "lat": 48.7804, "lng": 2.1889, "address": "Centre Commercial Vélizy 2, 78140 Vélizy-Villacoublay", "city": "Vélizy-Villacoublay"},
+    {"id": "bf_trappes", "name": "Basic-Fit Trappes", "chain": "Basic-Fit", "lat": 48.7765, "lng": 2.0079, "address": "Centre Commercial Auchan, 78190 Trappes", "city": "Trappes"},
+    {"id": "keep_cool_mantes", "name": "Keep Cool Mantes-la-Jolie", "chain": "Keep Cool", "lat": 49.0014, "lng": 1.7168, "address": "Avenue du Maréchal Juin, 78200 Mantes-la-Jolie", "city": "Mantes-la-Jolie"},
+    {"id": "l_orange_bleue_rambouillet", "name": "L'Orange Bleue Rambouillet", "chain": "L'Orange Bleue", "lat": 48.6436, "lng": 1.8287, "address": "Zone d'activité des Closeaux, 78120 Rambouillet", "city": "Rambouillet"},
+
+    # PARIS CENTRE - 1er, 2ème, 3ème, 4ème arrondissements
+    {"id": "neoness_chatelet", "name": "Neoness Châtelet", "chain": "Neoness", "lat": 48.8584, "lng": 2.3470, "address": "Forum des Halles, 75001 Paris", "city": "Paris"},
+    {"id": "club_med_gym_rivoli", "name": "Club Med Gym Rivoli", "chain": "Club Med Gym", "lat": 48.8606, "lng": 2.3376, "address": "2 Place du Châtelet, 75001 Paris", "city": "Paris"},
+    {"id": "cmg_one_marais", "name": "CMG Sports Club One Marais", "chain": "CMG Sports Club", "lat": 48.8566, "lng": 2.3522, "address": "10 rue de Turenne, 75004 Paris", "city": "Paris"},
+
+    # PARIS OUEST - 15ème, 16ème, 17ème arrondissements  
+    {"id": "fp_paris_theatre", "name": "Fitness Park Paris-Théâtre", "chain": "Fitness Park", "lat": 48.8407, "lng": 2.2936, "address": "104 bis rue du Théâtre, 75015 Paris", "city": "Paris"},
+    {"id": "keepcool_paris15", "name": "Keepcool Paris 15 Convention", "chain": "Keep Cool", "lat": 48.8423, "lng": 2.2963, "address": "59 Rue Gutenberg, 75015 Paris", "city": "Paris"},
+    {"id": "neoness_motte_picquet", "name": "Neoness La Motte-Picquet", "chain": "Neoness", "lat": 48.8506, "lng": 2.3026, "address": "15 rue de La Motte-Picquet, 75015 Paris", "city": "Paris"},
+    {"id": "cmg_grenelle", "name": "CMG Sports Club One Grenelle", "chain": "CMG Sports Club", "lat": 48.8450, "lng": 2.2985, "address": "8 rue Frémicourt, 75015 Paris", "city": "Paris"},
+    {"id": "cercles_porte_versailles", "name": "Cercles de la Forme Porte de Versailles", "chain": "Cercles de la Forme", "lat": 48.8353, "lng": 2.2886, "address": "31, rue du Hameau, 75015 Paris", "city": "Paris"},
+    {"id": "front_de_seine", "name": "Front de Seine", "chain": "Indépendant", "lat": 48.8487, "lng": 2.2835, "address": "44 rue Émeriau, 75015 Paris", "city": "Paris"},
+    {"id": "cmg_trocadero", "name": "CMG Sports Club One Trocadéro", "chain": "CMG Sports Club", "lat": 48.8620, "lng": 2.2870, "address": "35 avenue Kléber, 75016 Paris", "city": "Paris"},
+    {"id": "fitness_park_ternes", "name": "Fitness Park Ternes", "chain": "Fitness Park", "lat": 48.8783, "lng": 2.2967, "address": "208 rue de Courcelles, 75017 Paris", "city": "Paris"},
+
+    # PARIS EST - 19ème, 20ème arrondissements
+    {"id": "keep_cool_belleville", "name": "Keep Cool Belleville", "chain": "Keep Cool", "lat": 48.8728, "lng": 2.3831, "address": "52 rue de Belleville, 75019 Paris", "city": "Paris"},
+    {"id": "neoness_pere_lachaise", "name": "Neoness Père Lachaise", "chain": "Neoness", "lat": 48.8566, "lng": 2.3915, "address": "147 avenue Parmentier, 75020 Paris", "city": "Paris"},
+    {"id": "forest_hill_menilmontant", "name": "Forest Hill Ménilmontant", "chain": "Forest Hill", "lat": 48.8642, "lng": 2.3855, "address": "17 rue Boyer, 75020 Paris", "city": "Paris"},
+
+    # HAUTS-DE-SEINE (92)
+    {"id": "neoness_defense", "name": "Neoness La Défense", "chain": "Neoness", "lat": 48.8922, "lng": 2.2359, "address": "CNIT, 92800 Puteaux", "city": "Puteaux"},
+    {"id": "cmg_neuilly", "name": "CMG Sports Club One Neuilly", "chain": "CMG Sports Club", "lat": 48.8846, "lng": 2.2686, "address": "12 rue Madeleine Michelis, 92200 Neuilly-sur-Seine", "city": "Neuilly-sur-Seine"},
+    {"id": "fitness_park_boulogne", "name": "Fitness Park Boulogne", "chain": "Fitness Park", "lat": 48.8392, "lng": 2.2402, "address": "133 route de la Reine, 92100 Boulogne-Billancourt", "city": "Boulogne-Billancourt"},
+    {"id": "keep_cool_issy", "name": "Keep Cool Issy-les-Moulineaux", "chain": "Keep Cool", "lat": 48.8267, "lng": 2.2725, "address": "2 rue Rouget de Lisle, 92130 Issy-les-Moulineaux", "city": "Issy-les-Moulineaux"},
+
+    # SEINE-SAINT-DENIS (93)
+    {"id": "basic_fit_bobigny", "name": "Basic-Fit Bobigny", "chain": "Basic-Fit", "lat": 48.9127, "lng": 2.4494, "address": "Centre Commercial Bobigny 2, 93000 Bobigny", "city": "Bobigny"},
+    {"id": "fitness_park_saint_denis", "name": "Fitness Park Saint-Denis", "chain": "Fitness Park", "lat": 48.9362, "lng": 2.3574, "address": "8 rue du Landy, 93200 Saint-Denis", "city": "Saint-Denis"},
+    {"id": "keep_cool_montreuil", "name": "Keep Cool Montreuil", "chain": "Keep Cool", "lat": 48.8644, "lng": 2.4530, "address": "128 avenue de la Résistance, 93100 Montreuil", "city": "Montreuil"},
+
+    # VAL-DE-MARNE (94)
+    {"id": "basic_fit_creteil", "name": "Basic-Fit Créteil", "chain": "Basic-Fit", "lat": 48.7900, "lng": 2.4656, "address": "Centre Commercial Créteil Soleil, 94000 Créteil", "city": "Créteil"},
+    {"id": "fitness_park_vincennes", "name": "Fitness Park Vincennes", "chain": "Fitness Park", "lat": 48.8467, "lng": 2.4378, "address": "43 rue de Fontenay, 94300 Vincennes", "city": "Vincennes"},
+
+    # NORD (59) - Lille et région
+    {"id": "basic_fit_lille_centre", "name": "Basic-Fit Lille Centre", "chain": "Basic-Fit", "lat": 50.6292, "lng": 3.0573, "address": "15 rue Nationale, 59000 Lille", "city": "Lille"},
+    {"id": "keep_cool_lille", "name": "Keep Cool Lille", "chain": "Keep Cool", "lat": 50.6365, "lng": 3.0635, "address": "89 rue du Molinel, 59000 Lille", "city": "Lille"},
+    {"id": "fitness_park_villeneuve", "name": "Fitness Park Villeneuve d'Ascq", "chain": "Fitness Park", "lat": 50.6184, "lng": 3.1474, "address": "Centre Commercial V2, 59650 Villeneuve-d'Ascq", "city": "Villeneuve-d'Ascq"},
+    {"id": "neoness_lille_flandres", "name": "Neoness Lille Flandres", "chain": "Neoness", "lat": 50.6372, "lng": 3.0700, "address": "Gare Lille Flandres, 59000 Lille", "city": "Lille"},
+    {"id": "orange_bleue_tourcoing", "name": "L'Orange Bleue Tourcoing", "chain": "L'Orange Bleue", "lat": 50.7262, "lng": 3.1615, "address": "132 rue de Tournai, 59200 Tourcoing", "city": "Tourcoing"},
+
+    # RHÔNE (69) - Lyon et région
+    {"id": "basic_fit_lyon_part_dieu", "name": "Basic-Fit Lyon Part-Dieu", "chain": "Basic-Fit", "lat": 45.7608, "lng": 4.8567, "address": "Centre Commercial Part-Dieu, 69003 Lyon", "city": "Lyon"},
+    {"id": "keep_cool_lyon", "name": "Keep Cool Lyon", "chain": "Keep Cool", "lat": 45.7640, "lng": 4.8357, "address": "45 cours Gambetta, 69003 Lyon", "city": "Lyon"},
+    {"id": "fitness_park_lyon", "name": "Fitness Park Lyon", "chain": "Fitness Park", "lat": 45.7489, "lng": 4.8467, "address": "112 rue de la République, 69002 Lyon", "city": "Lyon"},
+    {"id": "cmg_lyon_bellecour", "name": "CMG Sports Club Lyon Bellecour", "chain": "CMG Sports Club", "lat": 45.7578, "lng": 4.8320, "address": "2 place Bellecour, 69002 Lyon", "city": "Lyon"},
+    {"id": "neoness_lyon_perrache", "name": "Neoness Lyon Perrache", "chain": "Neoness", "lat": 45.7494, "lng": 4.8265, "address": "Gare de Perrache, 69002 Lyon", "city": "Lyon"},
+
+    # BOUCHES-DU-RHÔNE (13) - Marseille et région
+    {"id": "basic_fit_marseille_centre", "name": "Basic-Fit Marseille Centre", "chain": "Basic-Fit", "lat": 43.2965, "lng": 5.3698, "address": "47 La Canebière, 13001 Marseille", "city": "Marseille"},
+    {"id": "keep_cool_marseille", "name": "Keep Cool Marseille", "chain": "Keep Cool", "lat": 43.3047, "lng": 5.3806, "address": "232 avenue du Prado, 13008 Marseille", "city": "Marseille"},
+    {"id": "fitness_park_marseille", "name": "Fitness Park Marseille", "chain": "Fitness Park", "lat": 43.2922, "lng": 5.3656, "address": "Centre Bourse, 13001 Marseille", "city": "Marseille"},
+    {"id": "orange_bleue_aix", "name": "L'Orange Bleue Aix-en-Provence", "chain": "L'Orange Bleue", "lat": 43.5263, "lng": 5.4454, "address": "765 avenue de la Grande Bégude, 13100 Aix-en-Provence", "city": "Aix-en-Provence"},
+
+    # HAUTE-GARONNE (31) - Toulouse et région
+    {"id": "basic_fit_toulouse_centre", "name": "Basic-Fit Toulouse Centre", "chain": "Basic-Fit", "lat": 43.6047, "lng": 1.4442, "address": "39 rue d'Alsace-Lorraine, 31000 Toulouse", "city": "Toulouse"},
+    {"id": "keep_cool_toulouse", "name": "Keep Cool Toulouse", "chain": "Keep Cool", "lat": 43.6108, "lng": 1.4544, "address": "123 avenue de Muret, 31300 Toulouse", "city": "Toulouse"},
+    {"id": "fitness_park_toulouse", "name": "Fitness Park Toulouse", "chain": "Fitness Park", "lat": 43.6029, "lng": 1.4486, "address": "Centre Commercial Saint-Georges, 31000 Toulouse", "city": "Toulouse"},
+
+    # LOIRE-ATLANTIQUE (44) - Nantes et région
+    {"id": "basic_fit_nantes_centre", "name": "Basic-Fit Nantes Centre", "chain": "Basic-Fit", "lat": 47.2184, "lng": -1.5536, "address": "15 rue de Strasbourg, 44000 Nantes", "city": "Nantes"},
+    {"id": "keep_cool_nantes", "name": "Keep Cool Nantes", "chain": "Keep Cool", "lat": 47.2073, "lng": -1.5334, "address": "8 boulevard de Berlin, 44000 Nantes", "city": "Nantes"},
+    {"id": "fitness_park_nantes", "name": "Fitness Park Nantes", "chain": "Fitness Park", "lat": 47.2159, "lng": -1.5541, "address": "Centre Commercial Beaulieu, 44000 Nantes", "city": "Nantes"}
 ]
 
 # IDs de salles valides pour validation
