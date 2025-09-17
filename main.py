@@ -62,6 +62,20 @@ supabase_anon = get_supabase_anon_client()
 demo_otp_cache = {}
 demo_user_cache = {}
 
+# Base de données des salles de sport populaires
+GYMS_DATABASE = [
+    {"id": "bf_coigniere", "name": "Basic-Fit Coignières", "chain": "Basic-Fit", "lat": 48.7392, "lng": 1.9127, "address": "Centre Commercial Auchan, 78310 Coignières"},
+    {"id": "bf_plaisir", "name": "Basic-Fit Plaisir", "chain": "Basic-Fit", "lat": 48.8247, "lng": 1.9504, "address": "Avenue du Général de Gaulle, 78370 Plaisir"},
+    {"id": "bf_versailles", "name": "Basic-Fit Versailles", "chain": "Basic-Fit", "lat": 48.8014, "lng": 2.1301, "address": "Boulevard de la Reine, 78000 Versailles"},
+    {"id": "fp_saint_quentin", "name": "Fitness Park Saint-Quentin-en-Yvelines", "chain": "Fitness Park", "lat": 48.7838, "lng": 2.0482, "address": "Place Georges Pompidou, 78180 Montigny-le-Bretonneux"},
+    {"id": "fp_velizy", "name": "Fitness Park Vélizy", "chain": "Fitness Park", "lat": 48.7804, "lng": 2.1889, "address": "Centre Commercial Vélizy 2, 78140 Vélizy-Villacoublay"},
+    {"id": "bf_trappes", "name": "Basic-Fit Trappes", "chain": "Basic-Fit", "lat": 48.7765, "lng": 2.0079, "address": "Centre Commercial Auchan, 78190 Trappes"},
+    {"id": "neoness_paris", "name": "Neoness Châtelet", "chain": "Neoness", "lat": 48.8584, "lng": 2.3470, "address": "Forum des Halles, 75001 Paris"},
+    {"id": "neoness_defense", "name": "Neoness La Défense", "chain": "Neoness", "lat": 48.8922, "lng": 2.2359, "address": "CNIT, 92800 Puteaux"},
+    {"id": "l_orange_bleue_rambouillet", "name": "L'Orange Bleue Rambouillet", "chain": "L'Orange Bleue", "lat": 48.6436, "lng": 1.8287, "address": "Zone d'activité des Closeaux, 78120 Rambouillet"},
+    {"id": "keep_cool_mantes", "name": "Keep Cool Mantes-la-Jolie", "chain": "Keep Cool", "lat": 49.0014, "lng": 1.7168, "address": "Avenue du Maréchal Juin, 78200 Mantes-la-Jolie"}
+]
+
 # Fonction de validation du mot de passe
 def is_valid_password(password: str) -> bool:
     """Valide qu'un mot de passe respecte les critères de sécurité.
@@ -242,6 +256,11 @@ async def signup_form(request: Request, role: str | None = None):
         "role": role
     })
 
+@app.get("/api/gyms")
+async def get_gyms():
+    """API pour récupérer la liste des salles de sport disponibles."""
+    return {"gyms": GYMS_DATABASE}
+
 @app.post("/signup")
 async def signup_submit(
     request: Request,
@@ -250,7 +269,8 @@ async def signup_submit(
     password: str = Form(...),
     gender: str = Form(...),
     role: str = Form(...),
-    coach_gender_preference: str = Form("aucune")
+    coach_gender_preference: str = Form("aucune"),
+    selected_gyms: str = Form("")
 ):
     """Inscription utilisateur avec système OTP par email."""
     # Normaliser l'email en lowercase
@@ -290,12 +310,22 @@ async def signup_submit(
     if not supabase_anon:
         # Mode démo sans Supabase - stocker le code et les infos utilisateur dans le cache
         demo_otp_cache[email] = otp_code
+        # Traiter les salles sélectionnées pour les clients
+        selected_gyms_list = []
+        if role == "client" and selected_gyms:
+            try:
+                import json
+                selected_gyms_list = json.loads(selected_gyms) if selected_gyms else []
+            except:
+                selected_gyms_list = []
+        
         demo_user_cache[email] = {
             "full_name": full_name,
             "gender": gender,
             "role": role,
             "password": password,  # En production, il faudrait le hasher
-            "coach_gender_preference": coach_gender_preference if role == "client" else None
+            "coach_gender_preference": coach_gender_preference if role == "client" else None,
+            "selected_gyms": selected_gyms_list if role == "client" else None
         }
         print(f"🔐 Mode démo - Code OTP généré pour {email}: {otp_code}")
         
