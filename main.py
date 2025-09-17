@@ -519,7 +519,17 @@ async def verify_otp_submit(
                 "error": "Code incorrect ou expiré. Veuillez réessayer."
             }, status_code=400)
         
-        # Code valide - récupérer les données de l'utilisateur depuis otp_codes
+        # Code valide - récupérer les données complètes d'inscription
+        pending_data = get_pending_otp_data(supabase_anon, email)
+        
+        if not pending_data:
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "error": "Données d'inscription introuvables. Veuillez recommencer l'inscription."
+            }, status_code=400)
+        
+        # Récupérer l'user_id depuis otp_codes
         response = supabase_anon.table("otp_codes").select("user_id").eq("email", email).eq("consumed", True).order("created_at", desc=True).limit(1).execute()
         
         if not response.data:
@@ -531,54 +541,50 @@ async def verify_otp_submit(
         
         user_id = response.data[0]['user_id']
         
-        # Récupérer les informations utilisateur depuis Supabase Auth
-        try:
-            user_response = supabase_anon.auth.admin.get_user_by_id(user_id)
-            if not user_response.user:
-                return templates.TemplateResponse("verify_otp.html", {
-                    "request": request,
-                    "email": email,
-                    "error": "Compte utilisateur introuvable."
-                }, status_code=400)
-            
-            user = user_response.user
-            user_metadata = user.user_metadata
-            role = user_metadata.get('role', 'client')
-            
-            # Créer le profil utilisateur
-            profile_created = create_user_profile_on_confirmation(
-                supabase_anon, 
-                user_id, 
-                email, 
-                user_metadata.get('full_name', ''), 
-                role
-            )
-            
-            # Connecter l'utilisateur
-            # Note: En production, il faudrait une vraie session Supabase
-            # Pour le mode démo, on va simplement rediriger
-            
-            # Rediriger selon le rôle
-            if role == 'coach':
-                redirect_url = "/coach/portal"
-            else:
-                redirect_url = "/client/home"
-            
-            response = RedirectResponse(url=redirect_url, status_code=303)
-            
-            # Cookie de session démo (en production, utiliser un vrai token Supabase)
-            response.set_cookie(
-                key="session_token",
-                value=f"verified_{user_id}",
-                httponly=True,
-                secure=False,  # True en production avec HTTPS
-                samesite="lax",
-                max_age=3600 * 24 * 7  # 7 jours
-            )
-            
-            return response
-            
-        except Exception as e:
+        # Extraire les données d'inscription
+        full_name = pending_data.get('full_name', '')
+        role = pending_data.get('role', 'client')
+        gender = pending_data.get('gender')
+        coach_gender_preference = pending_data.get('coach_gender_preference')
+        selected_gyms = pending_data.get('selected_gyms')
+        
+        # Créer le profil utilisateur avec toutes les données
+        profile_created = create_user_profile_on_confirmation(
+            supabase_anon, 
+            user_id, 
+            email, 
+            full_name, 
+            role,
+            gender,
+            coach_gender_preference,
+            selected_gyms
+        )
+        
+        # Connecter l'utilisateur
+        # Note: En production, il faudrait une vraie session Supabase
+        # Pour le mode démo, on va simplement rediriger
+        
+        # Rediriger selon le rôle
+        if role == 'coach':
+            redirect_url = "/coach/portal"
+        else:
+            redirect_url = "/client/home"
+        
+        response = RedirectResponse(url=redirect_url, status_code=303)
+        
+        # Cookie de session démo (en production, utiliser un vrai token Supabase)
+        response.set_cookie(
+            key="session_token",
+            value=f"verified_{user_id}",
+            httponly=True,
+            secure=False,  # True en production avec HTTPS
+            samesite="lax",
+            max_age=3600 * 24 * 7  # 7 jours
+        )
+        
+        return response
+        
+    except Exception as e:
             print(f"❌ Erreur récupération utilisateur: {e}")
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,

@@ -223,7 +223,7 @@ def get_transformations_by_coach_mock(coach_id: int) -> List[Dict]:
     return [t for t in MOCK_TRANSFORMATIONS if t["coach_id"] == coach_id]
 
 # Fonctions Supabase - Authentification
-def create_user_profile_on_confirmation(supabase_client, user_id: str, email: str, full_name: str, role: str) -> bool:
+def create_user_profile_on_confirmation(supabase_client, user_id: str, email: str, full_name: str, role: str, gender: Optional[str] = None, coach_gender_preference: Optional[str] = None, selected_gyms: Optional[str] = None) -> bool:
     """Crée le profil utilisateur après confirmation d'email (appelé par webhook ou trigger)."""
     try:
         # Normaliser l'email
@@ -234,7 +234,10 @@ def create_user_profile_on_confirmation(supabase_client, user_id: str, email: st
             "id": user_id,
             "role": role,
             "full_name": full_name,
-            "email": normalized_email
+            "email": normalized_email,
+            "gender": gender,
+            "coach_gender_preference": coach_gender_preference if role == "client" else None,
+            "selected_gyms": selected_gyms if role == "client" else None
         }
         
         response = supabase_client.table("profiles").insert(profile_data).execute()
