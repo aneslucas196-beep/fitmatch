@@ -248,6 +248,7 @@ async def signup_submit(
     full_name: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
+    gender: str = Form(...),
     role: str = Form(...),
     coach_gender_preference: str = Form("aucune")
 ):
@@ -262,6 +263,19 @@ async def signup_submit(
             "error": "Mot de passe trop faible (minimum 8 caractères, 1 lettre et 1 chiffre)",
             "full_name": full_name,
             "email": email,
+            "gender": gender,
+            "role": role,
+            "coach_gender_preference": coach_gender_preference
+        }, status_code=400)
+    
+    # Validation du genre
+    if gender not in ["homme", "femme"]:
+        return templates.TemplateResponse("signup.html", {
+            "request": request,
+            "error": "Veuillez sélectionner votre genre",
+            "full_name": full_name,
+            "email": email,
+            "gender": gender,
             "role": role,
             "coach_gender_preference": coach_gender_preference
         }, status_code=400)
@@ -278,6 +292,7 @@ async def signup_submit(
         demo_otp_cache[email] = otp_code
         demo_user_cache[email] = {
             "full_name": full_name,
+            "gender": gender,
             "role": role,
             "password": password,  # En production, il faudrait le hasher
             "coach_gender_preference": coach_gender_preference if role == "client" else None
