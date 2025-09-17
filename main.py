@@ -44,6 +44,7 @@ from utils import (
     add_coach_gym,
     remove_coach_gym,
     search_gyms_by_location,
+    search_gyms_by_zone,
     get_coaches_by_gym
 )
 
@@ -72,6 +73,7 @@ demo_user_cache = {}
 
 # Base de données des salles de sport populaires
 GYMS_DATABASE = [
+    # Salles banlieue
     {"id": "bf_coigniere", "name": "Basic-Fit Coignières", "chain": "Basic-Fit", "lat": 48.7392, "lng": 1.9127, "address": "Centre Commercial Auchan, 78310 Coignières"},
     {"id": "bf_plaisir", "name": "Basic-Fit Plaisir", "chain": "Basic-Fit", "lat": 48.8247, "lng": 1.9504, "address": "Avenue du Général de Gaulle, 78370 Plaisir"},
     {"id": "bf_versailles", "name": "Basic-Fit Versailles", "chain": "Basic-Fit", "lat": 48.8014, "lng": 2.1301, "address": "Boulevard de la Reine, 78000 Versailles"},
@@ -81,7 +83,15 @@ GYMS_DATABASE = [
     {"id": "neoness_paris", "name": "Neoness Châtelet", "chain": "Neoness", "lat": 48.8584, "lng": 2.3470, "address": "Forum des Halles, 75001 Paris"},
     {"id": "neoness_defense", "name": "Neoness La Défense", "chain": "Neoness", "lat": 48.8922, "lng": 2.2359, "address": "CNIT, 92800 Puteaux"},
     {"id": "l_orange_bleue_rambouillet", "name": "L'Orange Bleue Rambouillet", "chain": "L'Orange Bleue", "lat": 48.6436, "lng": 1.8287, "address": "Zone d'activité des Closeaux, 78120 Rambouillet"},
-    {"id": "keep_cool_mantes", "name": "Keep Cool Mantes-la-Jolie", "chain": "Keep Cool", "lat": 49.0014, "lng": 1.7168, "address": "Avenue du Maréchal Juin, 78200 Mantes-la-Jolie"}
+    {"id": "keep_cool_mantes", "name": "Keep Cool Mantes-la-Jolie", "chain": "Keep Cool", "lat": 49.0014, "lng": 1.7168, "address": "Avenue du Maréchal Juin, 78200 Mantes-la-Jolie"},
+    
+    # VRAIES SALLES DU 15ème ARRONDISSEMENT
+    {"id": "fp_paris_theatre", "name": "Fitness Park Paris-Théâtre", "chain": "Fitness Park", "lat": 48.8407, "lng": 2.2936, "address": "104 bis rue du Théâtre, 75015 Paris"},
+    {"id": "keepcool_paris15", "name": "Keepcool Paris 15 Convention", "chain": "Keep Cool", "lat": 48.8423, "lng": 2.2963, "address": "59 Rue Gutenberg, 75015 Paris"},
+    {"id": "neoness_motte_picquet", "name": "Neoness La Motte-Picquet", "chain": "Neoness", "lat": 48.8506, "lng": 2.3026, "address": "15 rue de La Motte-Picquet, 75015 Paris"},
+    {"id": "cmg_grenelle", "name": "CMG Sports Club One Grenelle", "chain": "CMG Sports Club", "lat": 48.8450, "lng": 2.2985, "address": "8 rue Frémicourt, 75015 Paris"},
+    {"id": "cercles_porte_versailles", "name": "Cercles de la Forme Porte de Versailles", "chain": "Cercles de la Forme", "lat": 48.8353, "lng": 2.2886, "address": "31, rue du Hameau, 75015 Paris"},
+    {"id": "front_de_seine", "name": "Front de Seine", "chain": "Indépendant", "lat": 48.8487, "lng": 2.2835, "address": "44 rue Émeriau, 75015 Paris"}
 ]
 
 # IDs de salles valides pour validation
@@ -1212,24 +1222,30 @@ async def search_gyms_by_location_api(
         results = []
         
         if q:
-            # Recherche par nom/adresse - géocoder d'abord
-            geocoded = geocode_address(q)
-            if geocoded:
-                results = search_gyms_by_location(
-                    geocoded["lat"], 
-                    geocoded["lng"], 
-                    radius_km
-                )
+            # 🎯 NOUVEAU: Détection automatique des recherches par zone/arrondissement
+            zone_results = search_gyms_by_zone(q)
+            if zone_results:
+                # Recherche par zone réussie - afficher TOUTES les salles de cette zone
+                results = zone_results
             else:
-                # Recherche par nom dans GYMS_DATABASE si géocodage échoue
-                for gym in GYMS_DATABASE:
-                    if q.lower() in gym["name"].lower() or q.lower() in gym["address"].lower():
-                        # Compter les coachs dans cette salle
-                        coach_count = len(get_coaches_by_gym(gym["address"]))
-                        gym_result = gym.copy()
-                        gym_result["distance_km"] = None  # Pas de distance si recherche par nom
-                        gym_result["coach_count"] = coach_count
-                        results.append(gym_result)
+                # Recherche classique par géocodage + rayon
+                geocoded = geocode_address(q)
+                if geocoded:
+                    results = search_gyms_by_location(
+                        geocoded["lat"], 
+                        geocoded["lng"], 
+                        radius_km
+                    )
+                else:
+                    # Recherche par nom dans GYMS_DATABASE si géocodage échoue
+                    for gym in GYMS_DATABASE:
+                        if q.lower() in gym["name"].lower() or q.lower() in gym["address"].lower():
+                            # Compter les coachs dans cette salle
+                            coach_count = len(get_coaches_by_gym(gym["address"]))
+                            gym_result = gym.copy()
+                            gym_result["distance_km"] = None  # Pas de distance si recherche par nom
+                            gym_result["coach_count"] = coach_count
+                            results.append(gym_result)
         
         elif lat is not None and lng is not None:
             # Recherche par coordonnées

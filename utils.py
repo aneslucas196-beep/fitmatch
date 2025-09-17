@@ -849,6 +849,98 @@ def remove_coach_gym(coach_id: str, relation_id: str) -> bool:
         print(f"Erreur suppression coach-gym: {e}")
         return False
 
+def search_gyms_by_zone(query: str) -> List[Dict]:
+    """
+    Recherche toutes les salles d'une zone spécifique (arrondissement, quartier, ville).
+    Détecte automatiquement les zones géographiques et affiche TOUTES les salles de cette zone.
+    """
+    try:
+        from main import GYMS_DATABASE
+        
+        results = []
+        
+        # Détecter les patterns de zones parisiennes
+        zone_patterns = {
+            # Arrondissements parisiens
+            '15': ['75015', '15ème', '15e', 'paris 15', 'quinzième'],
+            '1': ['75001', '1er', '1ère', 'paris 1', 'premier'],
+            '7': ['75007', '7ème', '7e', 'paris 7', 'septième'],
+            '16': ['75016', '16ème', '16e', 'paris 16', 'seizième'],
+            # Ajouter d'autres arrondissements si nécessaire
+        }
+        
+        query_lower = query.lower().strip()
+        target_zone = None
+        
+        # Identifier la zone recherchée
+        for zone, patterns in zone_patterns.items():
+            if any(pattern in query_lower for pattern in patterns):
+                target_zone = zone
+                break
+        
+        # Si on a identifié un arrondissement, filtrer les salles
+        if target_zone:
+            postal_code = f"75{target_zone.zfill(3)}"  # Ex: 75015 pour le 15ème
+            
+            # Rechercher dans GYMS_DATABASE
+            for gym in GYMS_DATABASE:
+                if postal_code in gym["address"]:
+                    # Calculer coach_count pour cette gym
+                    gym_id = gym["id"]
+                    coach_count = 0
+                    
+                    # Compter dans COACH_GYMS_BY_ID si la gym existe
+                    if gym_id in COACH_GYMS_BY_ID:
+                        coach_count += len(COACH_GYMS_BY_ID[gym_id])
+                    
+                    # Compter aussi les coaches qui ont ajouté cette même adresse
+                    for relation in COACH_GYMS:
+                        if relation["gym_data"]["address"] == gym["address"]:
+                            coach_count += 1
+                    
+                    gym_result = gym.copy()
+                    gym_result["distance_km"] = None  # Pas de distance pour recherche par zone
+                    gym_result["coach_count"] = coach_count
+                    gym_result["zone"] = f"Paris {target_zone}ème"
+                    results.append(gym_result)
+            
+            # Rechercher dans les salles ajoutées par les coachs
+            for relation in COACH_GYMS:
+                gym_data = relation["gym_data"]
+                if postal_code in gym_data["address"]:
+                    # Éviter les doublons avec GYMS_DATABASE
+                    if not any(existing["address"] == gym_data["address"] for existing in results):
+                        gym_id = relation.get("gym_id", f"coach_gym_{relation['id']}")
+                        
+                        # Utiliser COACH_GYMS_BY_ID pour compter efficacement
+                        coach_count = len(COACH_GYMS_BY_ID.get(gym_id, set()))
+                        
+                        gym_result = {
+                            "id": gym_id,
+                            "name": gym_data["name"],
+                            "address": gym_data["address"],
+                            "lat": gym_data["lat"],
+                            "lng": gym_data["lng"],
+                            "chain": "Salle personnalisée",
+                            "distance_km": None,
+                            "coach_count": coach_count,
+                            "zone": f"Paris {target_zone}ème"
+                        }
+                        results.append(gym_result)
+            
+            # Trier par nom pour une recherche par zone
+            results.sort(key=lambda x: x["name"])
+            print(f"🎯 Recherche par zone {query}: {len(results)} salles trouvées dans Paris {target_zone}ème")
+            return results
+        
+        # Si pas de zone identifiée, retourner liste vide
+        print(f"❌ Zone non reconnue pour: {query}")
+        return []
+        
+    except Exception as e:
+        print(f"Erreur recherche par zone: {e}")
+        return []
+
 def search_gyms_by_location(lat: float, lng: float, radius_km: int = 25) -> List[Dict]:
     """
     Recherche les salles dans un rayon donné.
