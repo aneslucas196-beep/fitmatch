@@ -47,7 +47,7 @@
         </div>
         
         <!-- Liste des salles -->
-        <div id="gyms-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div id="search-gyms-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <!-- Les salles seront ajoutées ici par JavaScript -->
         </div>
     </div>
@@ -180,7 +180,7 @@
                     <div>
                         <h4 class="font-semibold mb-3">Salles disponibles</h4>
                         <div class="space-y-2 max-h-80 overflow-y-auto">
-                            <div id="gyms-list"></div>
+                            <div id="modal-gyms-list"></div>
                         </div>
                     </div>
                 </div>
@@ -291,7 +291,7 @@ function initializeMap() {
 }
 
 function renderGymsList() {
-    const container = document.getElementById('gyms-list');
+    const container = document.getElementById('modal-gyms-list');
     container.innerHTML = '';
     
     gymsData.forEach(gym => {
@@ -428,7 +428,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Effacer la sélection
     document.getElementById('clear-selection-btn').addEventListener('click', function() {
         selectedGyms = [];
-        const checkboxes = document.querySelectorAll('#gyms-list input[type="checkbox"]');
+        const checkboxes = document.querySelectorAll('#modal-gyms-list input[type="checkbox"]');
         checkboxes.forEach(checkbox => checkbox.checked = false);
         updateMapMarkers();
         updateSelectedCount();
@@ -650,7 +650,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function displayGymsList(gyms) {
-        const gymsList = document.getElementById('gyms-list');
+        const gymsList = document.getElementById('search-gyms-list');
         
         gymsList.innerHTML = gyms.map(gym => `
             <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200">
