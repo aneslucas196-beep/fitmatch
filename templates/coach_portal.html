@@ -156,18 +156,26 @@
 <div class="bg-white rounded-lg shadow-md p-6 mt-8">
     <h2 class="text-xl font-semibold mb-4">Mes Transformations</h2>
     
-    <form action="/coach/transformations" method="POST" enctype="multipart/form-data" class="mb-6 p-4 bg-gray-50 rounded-lg">
+    <form action="/coach/transformations" method="POST" enctype="multipart/form-data" class="mb-6 p-4 bg-gray-50 rounded-lg" id="transformationForm">
         <h3 class="font-medium mb-4">Ajouter une transformation</h3>
+        
+        <!-- Messages d'erreur -->
+        {% if request.query_params.get('error') %}
+        <div class="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md">
+            <strong>Erreur :</strong> {{ request.query_params.get('error') }}
+        </div>
+        {% endif %}
+        
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label for="title" class="block text-sm font-medium text-gray-700 mb-2">Titre</label>
+                <label for="title" class="block text-sm font-medium text-gray-700 mb-2">Titre *</label>
                 <input type="text" name="title" id="title" required
                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
             
             <div>
                 <label for="duration_weeks" class="block text-sm font-medium text-gray-700 mb-2">Durée (semaines)</label>
-                <input type="number" name="duration_weeks" id="duration_weeks" min="1" max="52"
+                <input type="number" name="duration_weeks" id="duration_weeks" min="1" max="104"
                        class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
             </div>
         </div>
@@ -178,18 +186,108 @@
                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
         </div>
         
+        <!-- Section upload d'images -->
+        <div class="mt-6">
+            <h4 class="text-sm font-medium text-gray-700 mb-4">Photos de transformation</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Image avant -->
+                <div>
+                    <label for="before_image" class="block text-sm font-medium text-gray-700 mb-2">
+                        Photo avant
+                        <span class="text-gray-500 text-xs">(JPEG/PNG, max 5MB)</span>
+                    </label>
+                    <div class="relative">
+                        <input type="file" name="before_image" id="before_image" accept="image/jpeg,image/png" 
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-l-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                               onchange="previewImage(this, 'beforePreview')">
+                    </div>
+                    <div id="beforePreview" class="mt-2 hidden">
+                        <img class="w-32 h-32 object-cover rounded-md border" alt="Aperçu avant">
+                        <p class="text-xs text-gray-500 mt-1" id="beforeFileInfo"></p>
+                    </div>
+                </div>
+                
+                <!-- Image après -->
+                <div>
+                    <label for="after_image" class="block text-sm font-medium text-gray-700 mb-2">
+                        Photo après
+                        <span class="text-gray-500 text-xs">(JPEG/PNG, max 5MB)</span>
+                    </label>
+                    <div class="relative">
+                        <input type="file" name="after_image" id="after_image" accept="image/jpeg,image/png" 
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-l-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                               onchange="previewImage(this, 'afterPreview')">
+                    </div>
+                    <div id="afterPreview" class="mt-2 hidden">
+                        <img class="w-32 h-32 object-cover rounded-md border" alt="Aperçu après">
+                        <p class="text-xs text-gray-500 mt-1" id="afterFileInfo"></p>
+                    </div>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                ✨ Les images seront automatiquement optimisées et des miniatures (600px) seront créées pour un affichage rapide.
+            </p>
+        </div>
+        
         <div class="mt-4">
             <label class="flex items-center">
                 <input type="checkbox" name="consent" required
                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                <span class="ml-2 text-sm">J'ai l'autorisation du client pour publier cette transformation</span>
+                <span class="ml-2 text-sm">J'ai l'autorisation du client pour publier cette transformation *</span>
             </label>
         </div>
         
-        <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200">
+        <button type="submit" class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200 disabled:bg-gray-400" id="submitBtn">
             Ajouter la transformation
         </button>
     </form>
+    
+    <script>
+    function previewImage(input, previewId) {
+        const preview = document.getElementById(previewId);
+        const img = preview.querySelector('img');
+        const fileInfo = document.getElementById(previewId.replace('Preview', 'FileInfo'));
+        
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            
+            // Validation côté client
+            const allowedTypes = ['image/jpeg', 'image/png'];
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            
+            if (!allowedTypes.includes(file.type)) {
+                alert('Format non supporté. Utilisez JPEG ou PNG uniquement.');
+                input.value = '';
+                preview.classList.add('hidden');
+                return;
+            }
+            
+            if (file.size > maxSize) {
+                alert('Fichier trop volumineux. Maximum 5MB autorisé.');
+                input.value = '';
+                preview.classList.add('hidden');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                img.src = e.target.result;
+                fileInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.classList.add('hidden');
+        }
+    }
+    
+    // Validation du formulaire
+    document.getElementById('transformationForm').addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Upload en cours...';
+    });
+    </script>
     
     {% if transformations %}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

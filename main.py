@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request, Form, HTTPException, Depends, File, UploadFile, Cookie
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, File, UploadFile, Cookie, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -8,7 +9,13 @@ import jwt
 import os
 import uuid
 import json
+import hashlib
 from datetime import datetime, timedelta
+import mimetypes
+from PIL import Image
+import io
+from pathlib import Path
+from typing import Tuple
 
 from utils import (
     geocode_city, 
@@ -51,6 +58,104 @@ from utils import (
 from resend_service import send_otp_email_resend
 
 app = FastAPI()
+
+# Configuration sécurisée - plus de stockage local, utilisation de Supabase Storage uniquement
+
+# Configuration pour upload d'images
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png"}
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB
+THUMBNAIL_SIZE = 600
+THUMBNAIL_QUALITY = 80
+UPLOAD_DIR = "transformations"
+
+# Fonctions utilitaires pour l'upload d'images
+def validate_image_file(file: UploadFile) -> Tuple[bool, str]:
+    """Valide le type MIME et la taille d'un fichier image avec validation serveur robuste."""
+    # Lire le contenu du fichier
+    content = file.file.read()
+    file.file.seek(0)  # Remettre à zéro pour réutilisation
+    
+    # Vérifier la taille avant traitement
+    if len(content) > MAX_IMAGE_SIZE:
+        return False, "Fichier trop volumineux. Maximum 5MB autorisé."
+    
+    # Validation robuste côté serveur avec Pillow - ignore le MIME client
+    try:
+        image = Image.open(io.BytesIO(content))
+        image.verify()  # Vérifier l'intégrité de l'image
+        
+        # Vérifier que c'est un format supporté
+        if image.format not in ['JPEG', 'PNG']:
+            return False, "Format non supporté. Utilisez JPEG ou PNG uniquement."
+            
+        return True, ""
+    except Exception:
+        # Toute erreur Pillow signifie un fichier invalide
+        return False, "Fichier image invalide ou corrompu."
+
+def sanitize_coach_id(coach_id: str) -> str:
+    """Sanitise l'ID coach pour éviter les attaques path traversal."""
+    import re
+    # Accepter seulement alphanumériques, tirets et underscores, max 64 caractères
+    if not re.match(r'^[a-zA-Z0-9_-]{1,64}$', str(coach_id)):
+        # Si invalide, utiliser un hash sécurisé
+        return hashlib.sha256(str(coach_id).encode()).hexdigest()[:16]
+    return str(coach_id)
+
+def process_image_for_upload(image_content: bytes, coach_id: str) -> Tuple[bytes, bytes, str]:
+    """Traite une image pour créer l'originale et le thumbnail."""
+    # Sanitiser le coach_id pour éviter path traversal
+    safe_coach_id = sanitize_coach_id(coach_id)
+    
+    # Générer un nom de fichier unique
+    unique_id = str(uuid.uuid4())
+    filename = f"{safe_coach_id}/{unique_id}.jpg"
+    
+    # Ouvrir l'image avec Pillow
+    image = Image.open(io.BytesIO(image_content))
+    
+    # Convertir en RGB si nécessaire (pour PNG avec transparence)
+    if image.mode in ("RGBA", "LA", "P"):
+        background = Image.new("RGB", image.size, (255, 255, 255))
+        if image.mode == "P":
+            image = image.convert("RGBA")
+        background.paste(image, mask=image.split()[-1] if image.mode == "RGBA" else None)
+        image = background
+    
+    # Créer l'image originale optimisée
+    original_buffer = io.BytesIO()
+    image.save(original_buffer, format='JPEG', quality=90, optimize=True)
+    original_content = original_buffer.getvalue()
+    
+    # Créer le thumbnail
+    thumbnail = image.copy()
+    thumbnail.thumbnail((THUMBNAIL_SIZE, THUMBNAIL_SIZE), Image.Resampling.LANCZOS)
+    
+    thumbnail_buffer = io.BytesIO()
+    thumbnail.save(thumbnail_buffer, format='JPEG', quality=THUMBNAIL_QUALITY, optimize=True)
+    thumbnail_content = thumbnail_buffer.getvalue()
+    
+    return original_content, thumbnail_content, filename
+
+async def upload_to_supabase_storage(supabase_client, content: bytes, filename: str) -> Optional[str]:
+    """Upload un fichier vers Supabase Storage et retourne l'URL publique."""
+    try:
+        # Upload vers le bucket transformations
+        supabase_client.storage.from_("transformations").upload(
+            filename, content, 
+            file_options={"content-type": "image/jpeg", "upsert": True}
+        )
+        
+        # Récupérer l'URL publique
+        url_response = supabase_client.storage.from_("transformations").get_public_url(filename)
+        
+        if hasattr(url_response, 'get'):
+            return url_response.get("data", {}).get("publicUrl")
+        else:
+            return str(url_response)
+    except Exception as e:
+        print(f"Erreur upload Supabase Storage: {e}")
+        return None
 
 # Exception handler pour rediriger automatiquement les utilisateurs non connectés
 @app.exception_handler(401)
@@ -1113,10 +1218,26 @@ async def coach_transformations_add(
     before_image: Optional[UploadFile] = File(None),
     after_image: Optional[UploadFile] = File(None)
 ):
-    """Ajout d'une transformation."""
+    """Ajout d'une transformation avec upload d'images sécurisé."""
     
     if not consent:
         return RedirectResponse(url="/coach/portal?error=consent", status_code=303)
+    
+    # Valider les images si présentes
+    error_msg = ""
+    
+    if before_image and before_image.filename:
+        is_valid, msg = validate_image_file(before_image)
+        if not is_valid:
+            error_msg = f"Image avant: {msg}"
+    
+    if after_image and after_image.filename and not error_msg:
+        is_valid, msg = validate_image_file(after_image)
+        if not is_valid:
+            error_msg = f"Image après: {msg}"
+    
+    if error_msg:
+        return RedirectResponse(url=f"/coach/portal?error={error_msg}", status_code=303)
     
     transformation_data = {
         "title": title,
@@ -1127,27 +1248,54 @@ async def coach_transformations_add(
     
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
     if user_supabase:
-        # Ajouter la transformation
-        transformation = add_transformation(user_supabase, user["id"], transformation_data)
-        
-        if transformation and (before_image or after_image):
-            # Upload des images si fournies
-            before_content = before_image.file.read() if before_image else None
-            after_content = after_image.file.read() if after_image else None
+        try:
+            # Ajouter la transformation
+            transformation = add_transformation(user_supabase, user["id"], transformation_data)
             
-            before_url, after_url = upload_transformation_images(
-                user_supabase, transformation["id"], before_content, after_content
-            )
-            
-            # Mettre à jour la transformation avec les URLs des images
-            if before_url or after_url:
+            if transformation and (before_image or after_image):
+                coach_id = user["id"]
                 update_data = {}
-                if before_url:
-                    update_data["before_url"] = before_url
-                if after_url:
-                    update_data["after_url"] = after_url
                 
-                user_supabase.table("transformations").update(update_data).eq("id", transformation["id"]).execute()
+                # Traiter l'image avant
+                if before_image and before_image.filename:
+                    before_content = before_image.file.read()
+                    original_content, thumb_content, filename = process_image_for_upload(before_content, coach_id)
+                    
+                    # Upload sécurisé vers Supabase Storage
+                    original_url = await upload_to_supabase_storage(user_supabase, original_content, f"original_{filename}")
+                    thumb_url = await upload_to_supabase_storage(user_supabase, thumb_content, f"thumb_{filename}")
+                    
+                    if original_url and thumb_url:
+                        update_data["before_url"] = original_url
+                        update_data["before_thumbnail_url"] = thumb_url
+                    else:
+                        error_msg = "Erreur lors de l'upload de l'image avant."
+                
+                # Traiter l'image après
+                if after_image and after_image.filename and not error_msg:
+                    after_content = after_image.file.read()
+                    original_content, thumb_content, filename = process_image_for_upload(after_content, coach_id)
+                    
+                    # Upload sécurisé vers Supabase Storage
+                    original_url = await upload_to_supabase_storage(user_supabase, original_content, f"original_{filename}")
+                    thumb_url = await upload_to_supabase_storage(user_supabase, thumb_content, f"thumb_{filename}")
+                    
+                    if original_url and thumb_url:
+                        update_data["after_url"] = original_url
+                        update_data["after_thumbnail_url"] = thumb_url
+                    else:
+                        error_msg = "Erreur lors de l'upload de l'image après."
+                
+                # Gestion d'erreur et redirection
+                if error_msg:
+                    return RedirectResponse(url=f"/coach/portal?error={error_msg}", status_code=303)
+                
+                # Mettre à jour la transformation avec les URLs
+                if update_data:
+                    user_supabase.table("transformations").update(update_data).eq("id", transformation["id"]).execute()
+                    
+        except Exception as e:
+            return RedirectResponse(url=f"/coach/portal?error=Erreur lors de l'upload: {str(e)}", status_code=303)
     
     return RedirectResponse(url="/coach/portal", status_code=303)
 
