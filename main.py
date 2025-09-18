@@ -354,8 +354,38 @@ async def signup_form(request: Request, role: str | None = None):
 
 @app.get("/api/gyms")
 async def get_gyms():
-    """API pour récupérer la liste des salles de sport disponibles."""
-    return {"gyms": GYMS_DATABASE}
+    """API pour récupérer la liste des salles de sport disponibles - MISE À JOUR avec vraies salles."""
+    try:
+        # Récupérer un échantillon de vraies salles françaises via Data ES
+        sample_gyms = []
+        
+        # Essayer d'abord avec search_gyms_by_zone pour avoir des vraies salles
+        try:
+            from utils import search_gyms_by_zone
+            # Récupérer des salles populaires de différentes villes
+            cities_sample = ["Paris", "Lyon", "Marseille", "Toulouse", "Nice"]
+            
+            for city in cities_sample:
+                city_gyms = search_gyms_by_zone(city)
+                if city_gyms:
+                    sample_gyms.extend(city_gyms[:10])  # Max 10 salles par ville
+                    if len(sample_gyms) >= 50:  # Limiter à 50 salles au total
+                        break
+        except Exception as api_error:
+            print(f"⚠️ Erreur récupération échantillon Data ES: {api_error}")
+        
+        # Si pas assez de salles via API, compléter avec notre base locale
+        if len(sample_gyms) < 20:
+            sample_gyms.extend(GYMS_DATABASE[:30])  # Ajouter jusqu'à 30 salles locales
+        
+        print(f"🏋️ API /gyms: {len(sample_gyms)} salles retournées ({len([g for g in sample_gyms if 'Data ES' in g.get('source', '')])} officielles)")
+        
+        return {"gyms": sample_gyms[:50]}  # Limiter la réponse à 50 salles max
+        
+    except Exception as e:
+        print(f"❌ Erreur /api/gyms: {e}")
+        # Fallback vers base locale en cas d'erreur
+        return {"gyms": GYMS_DATABASE}
 
 @app.get("/api/user/gyms")
 async def get_user_gyms(user = Depends(get_current_user)):
