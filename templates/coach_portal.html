@@ -96,18 +96,25 @@
         <h3 class="font-medium mb-4 text-blue-800">➕ Ajouter un nouveau lieu</h3>
         
         <div class="flex flex-col md:flex-row gap-3">
-            <div class="flex-1">
-                <input type="text" id="gym-location-input" placeholder="Nom de la salle ou adresse complète (ex: Basic-Fit Élancourt, 12 rue de la Paix Paris...)" 
-                       class="w-full border border-blue-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+            <div class="flex-1 relative">
+                <input type="text" id="gym-location-input" placeholder="Tapez le nom de la salle... (ex: Basic-Fit, ASCH, One Air...)" 
+                       class="w-full border border-blue-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                       autocomplete="off">
+                
+                <!-- Liste de suggestions d'autocomplétion -->
+                <div id="gym-suggestions" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    <!-- Les suggestions seront chargées ici -->
+                </div>
             </div>
             <button type="button" id="add-gym-location-btn" 
-                    class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition duration-200 font-medium whitespace-nowrap">
+                    class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition duration-200 font-medium whitespace-nowrap disabled:bg-gray-400"
+                    disabled>
                 📍 Ajouter ce lieu
             </button>
         </div>
         
         <div class="mt-2 text-xs text-blue-600">
-            💡 Conseil : Soyez précis dans l'adresse pour un géocodage optimal (ex: "Basic-Fit Élancourt, 78990")
+            ✨ Nouveau : Tapez le nom d'une salle et choisissez parmi <strong>TOUTES les salles de France</strong> ! (7 951 salles de musculation + 4 125 salles de cours)
         </div>
     </div>
     
@@ -208,6 +215,11 @@
 // GESTION DES LIEUX DE COACHING
 // ======================================
 
+// Variables globales pour l'autocomplétion
+let currentSuggestions = [];
+let selectedGym = null;
+let suggestionTimeout = null;
+
 document.addEventListener('DOMContentLoaded', function() {
     // Charger les lieux actuels du coach
     loadCoachGyms();
@@ -215,10 +227,45 @@ document.addEventListener('DOMContentLoaded', function() {
     // Bouton d'ajout de lieu
     document.getElementById('add-gym-location-btn').addEventListener('click', addGymLocation);
     
-    // Recherche avec Entrée
-    document.getElementById('gym-location-input').addEventListener('keypress', function(e) {
+    const gymInput = document.getElementById('gym-location-input');
+    const suggestionsDiv = document.getElementById('gym-suggestions');
+    
+    // Autocomplétion avec debouncing
+    gymInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        
+        // Clear timeout precedent
+        if (suggestionTimeout) {
+            clearTimeout(suggestionTimeout);
+        }
+        
+        if (query.length < 2) {
+            hideSuggestions();
+            selectedGym = null;
+            updateAddButton();
+            return;
+        }
+        
+        // Debouncing : attendre 300ms après la dernière frappe
+        suggestionTimeout = setTimeout(() => {
+            fetchGymSuggestions(query);
+        }, 300);
+    });
+    
+    // Cacher les suggestions si on clique ailleurs
+    document.addEventListener('click', function(e) {
+        if (!gymInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            hideSuggestions();
+        }
+    });
+    
+    // Recherche avec Entrée (seulement si une salle est sélectionnée)
+    gymInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            addGymLocation();
+            e.preventDefault();
+            if (selectedGym) {
+                addGymLocation();
+            }
         }
     });
 });
@@ -312,26 +359,115 @@ function displayCoachGyms(gyms) {
     });
 }
 
-function addGymLocation() {
-    const input = document.getElementById('gym-location-input');
-    const query = input.value.trim();
+// ======================================
+// AUTOCOMPLÉTION SALLES
+// ======================================
+
+function fetchGymSuggestions(query) {
+    fetch(`/api/gyms/suggestions?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.suggestions) {
+                currentSuggestions = data.suggestions;
+                showSuggestions(data.suggestions);
+            } else {
+                hideSuggestions();
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la recherche de suggestions:', error);
+            hideSuggestions();
+        });
+}
+
+function showSuggestions(suggestions) {
+    const suggestionsDiv = document.getElementById('gym-suggestions');
     
-    if (!query) {
-        showGymMessage('error', 'Veuillez entrer le nom de la salle ou son adresse.');
+    if (suggestions.length === 0) {
+        suggestionsDiv.innerHTML = '<div class="p-3 text-gray-500 text-sm">Aucune salle trouvée</div>';
+        suggestionsDiv.classList.remove('hidden');
+        return;
+    }
+    
+    const html = suggestions.map(gym => `
+        <div class="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 suggestion-item" 
+             data-gym-id="${gym.id}">
+            <div class="font-medium text-gray-900">${gym.name}</div>
+            <div class="text-sm text-gray-600">${gym.address}</div>
+            <div class="text-xs text-blue-500 mt-1">
+                <span class="inline-block bg-blue-100 px-2 py-1 rounded">${gym.chain}</span>
+                <span class="ml-2 text-gray-400">${gym.source}</span>
+            </div>
+        </div>
+    `).join('');
+    
+    suggestionsDiv.innerHTML = html;
+    suggestionsDiv.classList.remove('hidden');
+    
+    // Ajouter event listeners pour chaque suggestion
+    suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const gymId = this.dataset.gymId;
+            const gym = suggestions.find(g => g.id === gymId);
+            selectGym(gym);
+        });
+    });
+}
+
+function hideSuggestions() {
+    document.getElementById('gym-suggestions').classList.add('hidden');
+}
+
+function selectGym(gym) {
+    selectedGym = gym;
+    document.getElementById('gym-location-input').value = gym.display_name;
+    hideSuggestions();
+    updateAddButton();
+}
+
+function updateAddButton() {
+    const button = document.getElementById('add-gym-location-btn');
+    if (selectedGym) {
+        button.disabled = false;
+        button.textContent = '📍 Ajouter ce lieu';
+    } else {
+        button.disabled = true;
+        button.textContent = '📍 Sélectionnez une salle';
+    }
+}
+
+// ======================================
+// AJOUT DE LIEU MODIFIÉ
+// ======================================
+
+function addGymLocation() {
+    if (!selectedGym) {
+        showGymMessage('error', 'Veuillez sélectionner une salle dans la liste de suggestions.');
         return;
     }
     
     // Afficher le loading
     showGymLoading();
     
-    // Appeler l'API d'ajout
+    // Utiliser les données de la salle sélectionnée
+    const gymData = {
+        name: selectedGym.name,
+        address: selectedGym.address,
+        lat: selectedGym.lat,
+        lng: selectedGym.lng,
+        city: selectedGym.city,
+        chain: selectedGym.chain,
+        source: selectedGym.source
+    };
+    
+    // Appeler l'API d'ajout avec les données structurées
     fetch('/api/coach/gyms', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            query: query
+            gym_data: gymData
         })
     })
     .then(response => response.json())
@@ -340,8 +476,15 @@ function addGymLocation() {
         
         if (data.success) {
             showGymMessage('success', data.message);
-            input.value = ''; // Vider le champ
-            loadCoachGyms(); // Recharger la liste
+            
+            // Reset du formulaire
+            document.getElementById('gym-location-input').value = '';
+            selectedGym = null;
+            updateAddButton();
+            hideSuggestions();
+            
+            // Recharger la liste
+            loadCoachGyms();
         } else {
             showGymMessage('error', data.message || 'Erreur lors de l\'ajout du lieu.');
         }

@@ -1178,48 +1178,75 @@ async def add_coach_gym_location(
     request: Request,
     user = Depends(require_coach_role)
 ):
-    """Ajoute un lieu de coaching pour un coach."""
+    """
+    Ajoute un lieu de coaching pour un coach.
+    Accepte 2 formats :
+    1. Ancien : {"query": "nom ou adresse"} -> géocodage automatique
+    2. Nouveau : {"gym_data": {...}} -> salle pré-sélectionnée avec toutes les infos
+    """
     try:
         coach_id = str(user["id"])
         
         # Récupérer les données JSON de la requête
         data = await request.json()
         
-        # Valider les données requises
-        if "query" not in data:
+        gym_data = None
+        
+        # Format NOUVEAU : gym_data complet (salle sélectionnée depuis l'autocomplétion)
+        if "gym_data" in data:
+            print("🎯 NOUVEAU FORMAT: Salle pré-sélectionnée")
+            gym_data = data["gym_data"]
+            
+            # Valider les champs requis
+            required_fields = ["name", "address", "lat", "lng"]
+            missing_fields = [field for field in required_fields if field not in gym_data]
+            
+            if missing_fields:
+                return {
+                    "success": False,
+                    "message": f"Données de salle incomplètes. Champs manquants: {', '.join(missing_fields)}"
+                }
+        
+        # Format ANCIEN : query à géocoder (pour compatibilité)
+        elif "query" in data:
+            print("🔄 ANCIEN FORMAT: Géocodage nécessaire")
+            query = data["query"].strip()
+            if not query:
+                return {
+                    "success": False,
+                    "message": "Adresse ne peut pas être vide"
+                }
+            
+            # Géocoder l'adresse
+            gym_data = geocode_address(query)
+            if not gym_data:
+                return {
+                    "success": False,
+                    "message": f"Impossible de localiser '{query}'. Vérifiez l'adresse."
+                }
+        
+        # Aucun format valide
+        else:
             return {
                 "success": False,
-                "message": "Adresse ou nom de salle requis"
+                "message": "Données requises: 'gym_data' (salle sélectionnée) OU 'query' (adresse à géocoder)"
             }
         
-        query = data["query"].strip()
-        if not query:
-            return {
-                "success": False,
-                "message": "Adresse ne peut pas être vide"
-            }
-        
-        # Géocoder l'adresse
-        geocoded = geocode_address(query)
-        if not geocoded:
-            return {
-                "success": False,
-                "message": f"Impossible de localiser '{query}'. Vérifiez l'adresse."
-            }
+        print(f"📍 Ajout salle: {gym_data['name']} à {gym_data['address']}")
         
         # Ajouter la relation coach-salle
-        success = add_coach_gym(coach_id, geocoded)
+        success = add_coach_gym(coach_id, gym_data)
         
         if success:
             return {
                 "success": True,
-                "message": f"Lieu '{geocoded['name']}' ajouté avec succès",
-                "gym": geocoded
+                "message": f"Salle '{gym_data['name']}' ajoutée avec succès !",
+                "gym": gym_data
             }
         else:
             return {
                 "success": False,
-                "message": "Ce lieu est déjà dans votre liste"
+                "message": "Cette salle est déjà dans votre liste de lieux de coaching"
             }
             
     except Exception as e:
@@ -1325,6 +1352,126 @@ async def search_gyms_by_location_api(
             "success": False,
             "message": "Erreur lors de la recherche",
             "gyms": []
+        }
+
+@app.get("/api/gyms/suggestions")
+async def get_gym_suggestions(q: str):
+    """
+    NOUVEAU ENDPOINT COACH : Recherche TOUTES les salles de France pour l'autocomplétion coach.
+    Utilise l'API Data ES (7951 salles de musculation + 4125 salles collectives).
+    Paramètres: q = nom partiel de salle ou ville
+    """
+    try:
+        print(f"🎯 COACH RECHERCHE: {q}")
+        
+        if len(q.strip()) < 2:
+            return {
+                "success": True,
+                "suggestions": [],
+                "message": "Tapez au moins 2 caractères"
+            }
+        
+        # Utiliser notre fonction existante qui interroge l'API Data ES
+        results = search_gyms_by_zone(q)
+        
+        # Formater pour l'autocomplétion coach
+        suggestions = []
+        for gym in results[:20]:  # Limiter à 20 suggestions
+            suggestion = {
+                "id": gym["id"],
+                "name": gym["name"],
+                "address": gym["address"],
+                "city": gym.get("city", gym.get("zone", "Ville inconnue")),
+                "lat": gym["lat"],
+                "lng": gym["lng"],
+                "chain": gym.get("chain", "Salle de sport"),
+                "source": gym.get("source", "Data ES (officiel)"),
+                "display_name": f"{gym['name']} - {gym['address']}"
+            }
+            suggestions.append(suggestion)
+        
+        # Si pas de résultats via zone, essayer par nom de salle directement dans API Data ES
+        if len(suggestions) == 0:
+            try:
+                import requests
+                api_url = "https://equipements.sports.gouv.fr/api/explore/v2.1/catalog/datasets/data-es/records"
+                
+                # Recherche par nom de salle
+                params_name = {
+                    "limit": 20,
+                    "where": f'equip_nom like "%{q}%" AND (equip_type_name like "Salle de musculation" OR equip_type_name like "Salle de cours collectifs" OR equip_type_name like "Salle de culturisme" OR equip_type_name like "Salle multisports")'
+                }
+                
+                response = requests.get(api_url, params=params_name, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    for record in data.get("results", []):
+                        gym_name = record.get("equip_nom", "Salle sans nom")
+                        city = record.get("new_name", "Ville inconnue")
+                        address = record.get("inst_adresse", "")
+                        postal_code = record.get("inst_cp", "")
+                        
+                        coords = record.get("equip_coordonnees", {})
+                        lat = coords.get("lat", 0) if coords else 0
+                        lng = coords.get("lon", 0) if coords else 0
+                        
+                        full_address = f"{address}, {postal_code} {city}" if address else f"{postal_code} {city}"
+                        
+                        suggestion = {
+                            "id": f"data_es_{record.get('equip_numero', gym_name.replace(' ', '_'))}",
+                            "name": gym_name,
+                            "address": full_address,
+                            "city": city,
+                            "lat": lat,
+                            "lng": lng,
+                            "chain": f"Vraie salle - {record.get('equip_type_name', 'Salle de sport')}",
+                            "source": "Data ES (officiel)",
+                            "display_name": f"{gym_name} - {full_address}"
+                        }
+                        suggestions.append(suggestion)
+                        
+                print(f"🏛️ API Data ES (par nom): {len(suggestions)} suggestions trouvées")
+                        
+            except Exception as api_error:
+                print(f"⚠️ Erreur API Data ES (par nom): {api_error}")
+        
+        # Compléter avec notre base locale si pas assez de résultats
+        if len(suggestions) < 10:
+            for gym in GYMS_DATABASE:
+                if (q.lower() in gym["name"].lower() or 
+                    q.lower() in gym["address"].lower() or
+                    q.lower() in gym.get("city", "").lower()):
+                    
+                    # Éviter les doublons
+                    if not any(s["id"] == gym["id"] for s in suggestions):
+                        suggestion = {
+                            "id": gym["id"],
+                            "name": gym["name"],
+                            "address": gym["address"],
+                            "city": gym.get("city", "Ville inconnue"),
+                            "lat": gym["lat"],
+                            "lng": gym["lng"],
+                            "chain": gym.get("chain", "Salle de sport"),
+                            "source": "Base locale",
+                            "display_name": f"{gym['name']} - {gym['address']}"
+                        }
+                        suggestions.append(suggestion)
+        
+        print(f"🎯 TOTAL SUGGESTIONS COACH: {len(suggestions)} salles trouvées")
+        
+        return {
+            "success": True,
+            "suggestions": suggestions,
+            "count": len(suggestions)
+        }
+        
+    except Exception as e:
+        print(f"Erreur suggestions coach: {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de la recherche de suggestions",
+            "suggestions": []
         }
 
 @app.get("/api/gyms/{gym_address:path}/coaches")
