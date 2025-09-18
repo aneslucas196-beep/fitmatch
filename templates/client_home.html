@@ -14,9 +14,14 @@
     <p class="text-gray-600 mb-4">Entrez votre code postal ou ville pour voir toutes les salles de sport disponibles dans votre zone.</p>
     
     <div class="flex flex-col md:flex-row gap-4 mb-4">
-        <div class="flex-1">
-            <input type="text" id="zone-search-input" placeholder="Exemple: 78990, 75114, Élancourt..." 
-                   class="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+        <div class="flex-1 relative">
+            <input type="text" id="zone-search-input" placeholder="Tapez le nom d'une salle ou zone: Basic-Fit, musculation, Paris..." 
+                   class="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg" autocomplete="off">
+            
+            <!-- Suggestions d'autocomplétion pour clients -->
+            <div id="client-autocomplete-suggestions" class="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
+                <!-- Les suggestions apparaîtront ici -->
+            </div>
         </div>
         <div class="flex gap-2">
             <select id="zone-radius" class="border border-gray-300 rounded-md px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -465,6 +470,92 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('search-gyms-btn').click();
         }
     });
+    
+    // ======================================
+    // AUTOCOMPLÉTION CLIENT - VRAIES SALLES
+    // ======================================
+    
+    let clientAutocompleteTimer = null;
+    
+    // Autocomplétion en temps réel pour les clients
+    document.getElementById('zone-search-input').addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        // Annuler la recherche précédente
+        if (clientAutocompleteTimer) {
+            clearTimeout(clientAutocompleteTimer);
+        }
+        
+        if (query.length < 2) {
+            hideClientAutocomplete();
+            return;
+        }
+        
+        // Délai pour éviter trop de requêtes
+        clientAutocompleteTimer = setTimeout(() => {
+            fetchClientAutocompleteSuggestions(query);
+        }, 300);
+    });
+    
+    // Masquer l'autocomplétion quand on clique ailleurs
+    document.addEventListener('click', function(e) {
+        if (!document.getElementById('zone-search-input').contains(e.target) && 
+            !document.getElementById('client-autocomplete-suggestions').contains(e.target)) {
+            hideClientAutocomplete();
+        }
+    });
+    
+    function fetchClientAutocompleteSuggestions(query) {
+        fetch(`/api/gyms/suggestions?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.suggestions.length > 0) {
+                    showClientAutocompleteSuggestions(data.suggestions);
+                } else {
+                    hideClientAutocomplete();
+                }
+            })
+            .catch(error => {
+                console.error('Erreur autocomplétion client:', error);
+                hideClientAutocomplete();
+            });
+    }
+    
+    function showClientAutocompleteSuggestions(suggestions) {
+        const container = document.getElementById('client-autocomplete-suggestions');
+        
+        // Vider les suggestions précédentes
+        container.innerHTML = '';
+        
+        // Créer les nouvelles suggestions
+        suggestions.slice(0, 8).forEach(suggestion => { // Limiter à 8 suggestions
+            const div = document.createElement('div');
+            div.className = 'p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0';
+            div.innerHTML = `
+                <div class="font-medium text-gray-900">${suggestion.name}</div>
+                <div class="text-sm text-gray-600">${suggestion.address}</div>
+                <div class="text-xs text-blue-600 mt-1">${suggestion.source} • ${suggestion.chain}</div>
+            `;
+            
+            div.addEventListener('click', function() {
+                // Remplir le champ avec le nom de la salle
+                document.getElementById('zone-search-input').value = suggestion.name;
+                hideClientAutocomplete();
+                
+                // Déclencher automatiquement la recherche
+                document.getElementById('search-gyms-btn').click();
+            });
+            
+            container.appendChild(div);
+        });
+        
+        // Afficher le conteneur
+        container.classList.remove('hidden');
+    }
+    
+    function hideClientAutocomplete() {
+        document.getElementById('client-autocomplete-suggestions').classList.add('hidden');
+    }
     
     function searchGymsInZone(query, radius) {
         // Afficher le loading
