@@ -119,9 +119,8 @@ def get_supabase_anon_client():
         # Essayer SUPABASE_KEY d'abord, puis SUPABASE_ANON_KEY en fallback
         anon_key = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")
         
-        # Supabase désactivé temporairement - problème de configuration détecté
-        print("🔧 Mode démo forcé - problème table otp_codes dans Supabase")
-        return None
+        # Configuration Supabase active
+        print("🔗 Connexion Supabase activée")
         
         if url and anon_key:
             # Valider l'URL
@@ -869,15 +868,22 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
         
         # 1. RECHERCHE DANS L'API OFFICIELLE DATA ES
         try:
-            # Requête pour les salles de musculation/cardio
+            # Requête pour les salles de musculation/fitness avec les codes officiels Data ES
+            # Code 802: Salle de musculation/cardiotraining
+            # Code 2104: Salle de culturisme  
+            # Code 2101: Salle de basket (souvent multi-usage avec fitness)
+            # Code 2201: Salles polyvalentes (incluent souvent du fitness)
+            # Code 2105: Salle de danse (souvent équipée pour fitness)
+            fitness_codes = "'802', '2104', '2101', '2201', '2105'"
+            
             params_muscu = {
-                "limit": 50,
-                "where": f'new_name like "{query}" AND (equip_type_name like "Salle de musculation" OR equip_type_name like "Salle de cours collectifs" OR equip_type_name like "Salle de culturisme" OR equip_type_name like "Salle multisports")'
+                "limit": 100,  # Augmenté pour capturer plus de salles
+                "where": f'new_name like "{query}" AND equip_type_code in ({fitness_codes})'
             }
             
             # Si c'est un code postal, adapter la recherche
             if query.isdigit() and len(query) == 5:
-                params_muscu["where"] = f'inst_cp = "{query}" AND (equip_type_name like "Salle de musculation" OR equip_type_name like "Salle de cours collectifs" OR equip_type_name like "Salle de culturisme" OR equip_type_name like "Salle multisports")'
+                params_muscu["where"] = f'inst_cp = "{query}" AND equip_type_code in ({fitness_codes})'
             
             response = requests.get(api_url, params=params_muscu, timeout=10)
             
@@ -926,7 +932,62 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
         except Exception as api_error:
             print(f"⚠️ Erreur API Data ES: {api_error}")
         
-        # 2. COMPLÉTER AVEC NOS DONNÉES STATIQUES (backup)
+        # 2. RECHERCHE SPÉCIFIQUE PAR ENSEIGNE POUR LES CHAÎNES (One Air, etc.)
+        try:
+            # Recherche par nom d'établissement pour capturer les chaînes de fitness
+            chains_query = 'inst_nom like "One Air" OR inst_nom like "Basic Fit" OR inst_nom like "Keep Cool" OR inst_nom like "Gigagym" OR inst_nom like "L\'Orange Bleue" OR inst_nom like "Fitness Park" OR inst_nom like "Neoness" OR inst_nom like "CMG Sports Club"'
+            
+            params_chains = {
+                "limit": 50,
+                "where": f'new_name like "{query}" AND ({chains_query})'
+            }
+            
+            if query.isdigit() and len(query) == 5:
+                params_chains["where"] = f'inst_cp = "{query}" AND ({chains_query})'
+            
+            response_chains = requests.get(api_url, params=params_chains, timeout=10)
+            
+            if response_chains.status_code == 200:
+                data_chains = response_chains.json()
+                print(f"🏢 Trouvé {len(data_chains.get('results', []))} chaînes de fitness")
+                
+                for record in data_chains.get("results", []):
+                    gym_name = record.get("equip_nom", record.get("inst_nom", "Salle sans nom"))
+                    gym_type = record.get("equip_type_name", "Salle de fitness")
+                    city = record.get("new_name", "Ville inconnue")
+                    address = record.get("inst_adresse", "")
+                    postal_code = record.get("inst_cp", "")
+                    chain_name = record.get("inst_nom", "Chaîne inconnue")
+                    
+                    coords = record.get("equip_coordonnees", {})
+                    lat = coords.get("lat", 0) if coords else 0
+                    lng = coords.get("lon", 0) if coords else 0
+                    
+                    full_address = f"{address}, {postal_code} {city}" if address else f"{postal_code} {city}"
+                    gym_id = f"data_es_chain_{record.get('equip_numero', gym_name.replace(' ', '_'))}"
+                    
+                    # Éviter les doublons
+                    if not any(g.get("id") == gym_id for g in results):
+                        gym_result = {
+                            "id": gym_id,
+                            "name": gym_name,
+                            "chain": f"Chaîne {chain_name}",
+                            "lat": lat,
+                            "lng": lng,
+                            "address": full_address,
+                            "city": city,
+                            "postal_code": postal_code,
+                            "coach_count": 0,
+                            "source": "Data ES (Chaîne)",
+                            "zone": city,
+                            "distance_km": None
+                        }
+                        results.append(gym_result)
+                        
+        except Exception as e:
+            print(f"❌ Erreur recherche chaînes: {e}")
+        
+        # 3. COMPLÉTER AVEC NOS DONNÉES STATIQUES (backup)
         # Recherche dans notre base existante pour compléter
         for gym in GYMS_DATABASE:
             gym_city = gym.get("city", "").lower()

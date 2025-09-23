@@ -1,0 +1,90 @@
+Refonds le design de mon app Flask + Jinja en gardant la même structure et les mêmes routes/templates.
+Objectif : style FitMatch (musculation) → pro, motivant, premium.
+
+Contraintes :
+
+Ne change aucune logique Python ni les noms de pages/variables Jinja.
+
+Juste HTML/CSS (et un peu JS si besoin pour l’UI).
+
+Tout le texte reste en français.
+
+Identité visuelle :
+
+Couleurs : noir #000, blanc #fff, vert néon #00FF7F (accents/CTA).
+
+Police : Poppins (400/600/700).
+
+Boutons arrondis, hover clair, ombres légères.
+
+Icônes modernes (Font Awesome).
+
+Pages à améliorer (même contenu/sections qu’actuel) :
+
+Inscription – choix Client / Coach
+
+Héro motivant (titre + sous-titre).
+
+Deux cartes équilibrées “Je suis un Client” / “Je suis un Coach” avec icônes (haltères pour coach, silhouette running pour client), puces lisibles, CTA contrastés.
+
+Espace Coach (profil + spécialités)
+
+En-tête avec avatar circulaire, nom, badge “Coach vérifié”.
+
+Spécialités sous forme de pills/badges avec icônes (Musculation, Cardio, Yoga, CrossFit, Pilates, Nutrition).
+
+Bouton “Mettre à jour” large, vert néon.
+
+Mes lieux de coaching
+
+Barre d’ajout avec icône localisation + suggestions.
+
+Carte visuelle de liste (même si pas de map JS pour l’instant).
+
+Message onboarding clair si vide.
+
+Mes transformations
+
+Formulaire propre + composant avant/après (slider simple CSS/JS si possible).
+
+Avertissement “autorisation du client” stylé.
+
+Accueil Client (recherche)
+
+Héro : “Trouvez votre coach FitMatch idéal 💪” + sous-titre.
+
+Bloc recherche dans une carte : champ “salle ou zone”, rayon, spécialité, ville/CP, bouton bleu/néon.
+
+Section “Mes salles préférées” en cartes.
+
+Grille catégories (Musculation, Cardio, Yoga, CrossFit, Pilates, Nutrition) en cards avec icônes, hover, ombre.
+
+Header/Footer :
+
+Navbar sombre avec logo FitMatch (place un placeholder static/img/fitmatch-logo.svg).
+
+Liens : Accueil / S’inscrire / Connexion / Espace Coach.
+
+Footer sombre minimal, liens légaux.
+
+Accessibilité & responsive :
+
+Contrastes OK, focus visible, mobile-first (≤ 375px).
+
+Pas de texte trop petit (<14px).
+
+Livrables attendus :
+
+1 fichier CSS global static/css/fitmatch.css.
+
+Ajustements HTML dans mes templates sans casser les blocs Jinja.
+
+Un fitmatch-logo.svg placeholder (simple “F” vert néon sur fond noir).
+
+Critères de validation :
+
+L’app tourne sans erreur.
+
+Même fonctionnalités, mais rendu beaucoup plus moderne et motivant.
+
+Boutons/CTAs verts néon visibles, typographie Poppins chargée, icônes présentes.
