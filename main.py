@@ -457,6 +457,16 @@ async def signup_form(request: Request, role: str | None = None):
         "role": role
     })
 
+@app.get("/api/test-gym-data")
+async def test_gym_data_validation():
+    """ENDPOINT DE TEST : Validation de la complétude des données salles nationales."""
+    try:
+        from utils import test_national_gym_data_completeness
+        validation_results = test_national_gym_data_completeness()
+        return {"success": True, "validation": validation_results}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 @app.get("/api/gyms")
 async def get_gyms():
     """API pour récupérer la liste des salles de sport disponibles - MISE À JOUR avec vraies salles."""
