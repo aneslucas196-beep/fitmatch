@@ -56,7 +56,7 @@ from utils import (
 )
 
 from resend_service import send_otp_email_resend
-from supabase_auth_service import signup_with_supabase_email_confirmation, resend_email_confirmation, sign_in_with_email_password
+from supabase_auth_service import signup_with_supabase_email_confirmation, resend_email_confirmation, sign_in_with_email_password, get_user_role
 
 app = FastAPI()
 
@@ -1019,9 +1019,25 @@ async def login_submit(
     email = email.lower().strip()
     
     if not supabase_anon:
-        # Mode démo sans Supabase - vérifier identifiants démo
-        if email == "demo@example.com" and password == "demopass123":
-            response = RedirectResponse(url="/coach/portal", status_code=303)
+        # Mode démo sans Supabase - vérifier identifiants démo avec rôles
+        demo_users = {
+            "coach@demo.com": {"password": "demopass123", "role": "coach"},
+            "client@demo.com": {"password": "demopass123", "role": "client"}
+        }
+        
+        demo_user = demo_users.get(email)
+        if demo_user and demo_user["password"] == password:
+            # Redirection selon le rôle en mode démo
+            if demo_user["role"] == "coach":
+                redirect_url = "/coach/portal"
+            elif demo_user["role"] == "client":
+                redirect_url = "/client/portal"
+            else:
+                redirect_url = "/coach/portal"
+            
+            print(f"✅ Connexion démo réussie - Redirection vers {redirect_url} (rôle: {demo_user['role']})")
+            
+            response = RedirectResponse(url=redirect_url, status_code=303)
             response.set_cookie(
                 key="session_token",
                 value="demo_token",
@@ -1042,8 +1058,27 @@ async def login_submit(
     result = sign_in_with_email_password(email, password)
     
     if result.get("success"):
-        # Connexion réussie - rediriger vers le portail
-        response = RedirectResponse(url="/coach/portal", status_code=303)
+        # Connexion réussie - récupérer le profil pour rediriger vers le bon portail
+        user_id = result["user"].id
+        profile_result = get_user_role(user_id)
+        
+        # Déterminer l'URL de redirection selon le rôle
+        if profile_result.get("success"):
+            user_role = profile_result.get("role")
+            if user_role == "coach":
+                redirect_url = "/coach/portal"
+            elif user_role == "client":
+                redirect_url = "/client/portal"
+            else:
+                # Fallback en cas de rôle non reconnu
+                redirect_url = "/coach/portal"
+        else:
+            # Fallback si impossible de récupérer le profil
+            redirect_url = "/coach/portal"
+        
+        print(f"✅ Redirection vers {redirect_url} pour utilisateur rôle: {profile_result.get('role', 'inconnu')}")
+        
+        response = RedirectResponse(url=redirect_url, status_code=303)
         # Cookie HttpOnly sécurisé
         response.set_cookie(
             key="session_token",

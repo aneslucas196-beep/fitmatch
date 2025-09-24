@@ -168,3 +168,37 @@ def sign_in_with_email_password(email: str, password: str) -> Dict:
             "error": str(e),
             "mode": "exception"
         }
+
+def get_user_role(user_id: str) -> Dict:
+    """
+    Récupère le profil utilisateur depuis Supabase pour déterminer le rôle
+    """
+    try:
+        client = get_supabase_client()
+        if not client:
+            return {
+                "success": False,
+                "error": "Configuration Supabase manquante"
+            }
+        
+        # Récupérer le profil depuis la table users
+        response = client.table('users').select('role').eq('id', user_id).single().execute()
+        
+        if response.data:
+            return {
+                "success": True,
+                "role": response.data.get('role'),
+                "user_id": user_id
+            }
+        else:
+            return {
+                "success": False,
+                "error": "Profil utilisateur non trouvé"
+            }
+            
+    except Exception as e:
+        print(f"❌ Erreur récupération profil: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
