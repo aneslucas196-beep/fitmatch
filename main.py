@@ -56,6 +56,7 @@ from utils import (
 )
 
 from resend_service import send_otp_email_resend
+from supabase_auth_service import signup_with_supabase_email_confirmation, resend_email_confirmation, sign_in_with_email_password
 
 app = FastAPI()
 
@@ -678,59 +679,9 @@ async def signup_submit(
         })
     
     try:
-        # Nettoyer les anciens codes expirés
-        cleanup_expired_otp_codes(supabase_anon)
+        # NOUVEAU: Utiliser le service email natif Supabase au lieu de l'OTP manuel
         
-        # Créer immédiatement le compte Supabase Auth (sans confirmation)
-        try:
-            auth_response = supabase_anon.auth.sign_up({
-                "email": email,
-                "password": password,
-                "options": {
-                    "email_confirm": False,  # Pas de confirmation par email
-                    "data": {
-                        "full_name": full_name,
-                        "role": role
-                    }
-                }
-            })
-            
-            if not auth_response.user:
-                return templates.TemplateResponse("signup.html", {
-                    "request": request,
-                    "error": "Erreur lors de la création du compte. Veuillez réessayer.",
-                    "full_name": full_name,
-                    "email": email,
-                    "role": role
-                }, status_code=500)
-            
-            user_id = auth_response.user.id
-            
-        except Exception as e:
-            print(f"❌ Erreur création compte Supabase: {e}")
-            return templates.TemplateResponse("signup.html", {
-                "request": request,
-                "error": "Erreur lors de la création du compte. Veuillez réessayer.",
-                "full_name": full_name,
-                "email": email,
-                "role": role
-            }, status_code=500)
-        
-        # Sauvegarder le code OTP en base (avec user_id)
-        otp_stored = store_otp_code_for_user(supabase_anon, email, user_id, otp_code)
-        
-        if not otp_stored:
-            return templates.TemplateResponse("signup.html", {
-                "request": request,
-                "error": "Erreur lors de la génération du code. Veuillez réessayer.",
-                "full_name": full_name,
-                "email": email,
-                "gender": gender,
-                "role": role,
-                "coach_gender_preference": coach_gender_preference
-            }, status_code=500)
-        
-        # Valider et traiter les salles sélectionnées pour le flux Supabase
+        # Valider et traiter les salles sélectionnées avant inscription
         validated_gyms = None
         if role == "client":
             validated_gyms_list = validate_selected_gyms(selected_gyms)
@@ -748,7 +699,7 @@ async def signup_submit(
             # Convertir en JSON pour stockage
             validated_gyms = json.dumps(validated_gyms_list) if validated_gyms_list else None
         
-        # Sauvegarder les données d'inscription complètes pour récupération après vérification OTP
+        # Sauvegarder les données supplémentaires en attente
         pending_stored = store_pending_registration(
             supabase_anon, 
             email, 
@@ -760,37 +711,28 @@ async def signup_submit(
             validated_gyms
         )
         
-        if not pending_stored:
-            print("⚠️ Attention: Les données d'inscription supplémentaires n'ont pas pu être sauvegardées")
-            # On continue quand même car le compte et l'OTP sont créés
+        # Inscription avec email de confirmation natif Supabase
+        signup_result = signup_with_supabase_email_confirmation(
+            email=email,
+            password=password, 
+            full_name=full_name,
+            role=role
+        )
         
-        # Envoyer le code par email avec Resend
-        email_result = send_otp_email_resend(email, otp_code, full_name)
-        
-        if email_result.get("success"):
-            # Succès - rediriger vers la page de vérification OTP
-            return templates.TemplateResponse("verify_otp.html", {
+        if signup_result.get("success"):
+            # Succès - rediriger vers la page d'attente de confirmation email
+            return templates.TemplateResponse("email_confirmation_sent.html", {
                 "request": request,
                 "email": email,
-                "success": "Code de vérification envoyé à votre adresse email"
+                "success": signup_result.get("message", "Email de confirmation envoyé")
             })
         else:
-            # Échec envoi email - supprimer le code OTP et le compte créé
-            try:
-                supabase_anon.table("otp_codes").delete().eq("email", email).execute()
-                # Note: Supabase Auth ne permet pas de supprimer facilement un utilisateur via l'API
-                # En production, implémenter un nettoyage automatique des comptes non vérifiés
-            except:
-                pass
+            # Échec inscription - afficher erreur détaillée
+            error_message = signup_result.get("error", "Erreur lors de l'inscription")
+            if "already registered" in error_message.lower() or "already exists" in error_message.lower():
+                error_message = "Cette adresse email est déjà utilisée. Essayez de vous connecter ou utilisez une autre adresse."
             
-            # Message d'erreur détaillé basé sur le type d'erreur
-            error_details = email_result.get("error", "Erreur inconnue")
-            if email_result.get("mode") == "resend":
-                error_message = f"Erreur d'envoi d'email (Status {email_result.get('status_code', 'N/A')}). Vérifiez votre adresse email et réessayez."
-            else:
-                error_message = "Erreur de service d'email. Veuillez réessayer dans quelques minutes."
-            
-            print(f"💥 Détails erreur email: {error_details}")
+            print(f"💥 Détails erreur inscription Supabase: {error_message}")
             
             return templates.TemplateResponse("signup.html", {
                 "request": request,
@@ -798,7 +740,7 @@ async def signup_submit(
                 "full_name": full_name,
                 "email": email,
                 "role": role
-            }, status_code=500)
+            }, status_code=400)
             
     except Exception as e:
         print(f"❌ Erreur inscription OTP: {e}")
@@ -810,13 +752,38 @@ async def signup_submit(
             "role": role
         }, status_code=500)
 
+@app.post("/resend-confirmation")
+async def resend_confirmation_email(request: Request):
+    """Renvoie l'email de confirmation Supabase."""
+    try:
+        body = await request.json()
+        email = body.get("email", "").lower().strip()
+        
+        if not email:
+            return {"success": False, "error": "Email requis"}
+        
+        result = resend_email_confirmation(email)
+        return result
+        
+    except Exception as e:
+        print(f"❌ Erreur renvoi confirmation: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.get("/auth/email-confirmed")
+async def email_confirmed_callback(request: Request):
+    """Page affichée après confirmation d'email via Supabase."""
+    return templates.TemplateResponse("email_confirmed.html", {
+        "request": request,
+        "success": "Email confirmé avec succès ! Vous pouvez maintenant vous connecter."
+    })
+
 @app.post("/verify-otp")
 async def verify_otp_submit(
     request: Request,
     email: str = Form(...),
     otp_code: str = Form(...)
 ):
-    """Vérification du code OTP et activation du compte."""
+    """Vérification du code OTP et activation du compte (legacy pour le mode démo)."""
     # Normaliser l'email et le code
     email = email.lower().strip()
     otp_code = otp_code.strip()
@@ -1071,9 +1038,11 @@ async def login_submit(
                 "email": email
             }, status_code=401)
     
-    # Mode Supabase - utiliser exclusivement signInWithPassword
-    result = sign_in_user(supabase_anon, email, password)
-    if result and result.get("session"):
+    # Mode Supabase - utiliser le nouveau service avec vérification d'email confirmé
+    result = sign_in_with_email_password(email, password)
+    
+    if result.get("success"):
+        # Connexion réussie - rediriger vers le portail
         response = RedirectResponse(url="/coach/portal", status_code=303)
         # Cookie HttpOnly sécurisé
         response.set_cookie(
@@ -1085,30 +1054,33 @@ async def login_submit(
             max_age=3600 * 24 * 7  # 7 jours
         )
         return response
-    elif result and result.get("error"):
-        # Vérifier si c'est un problème d'email non confirmé
-        error_message = result["error"].lower()
-        if "email not confirmed" in error_message or "not confirmed" in error_message:
+    else:
+        # Gérer les différents types d'erreurs
+        error_message = result.get("error", "Erreur de connexion")
+        
+        if result.get("mode") == "email_not_confirmed":
+            # Email non confirmé - proposer de renvoyer l'email
             return templates.TemplateResponse("login.html", {
                 "request": request,
-                "error": "Email non confirmé",
+                "error": "Email non confirmé. Vérifiez votre boîte mail ou renvoyez l'email de confirmation.",
                 "email": email,
                 "show_resend": True
             }, status_code=401)
-        else:
-            # Autre erreur d'authentification
+        elif result.get("mode") == "invalid_credentials":
+            # Identifiants incorrects
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
                 "email": email
             }, status_code=401)
-    else:
-        # Retourner template avec email conservé - HTTP 401 sans redirection
-        return templates.TemplateResponse("login.html", {
-            "request": request,
-            "error": "Email ou mot de passe incorrect.",
-            "email": email
-        }, status_code=401)
+        else:
+            # Autre erreur
+            print(f"💥 Erreur connexion: {error_message}")
+            return templates.TemplateResponse("login.html", {
+                "request": request,
+                "error": "Erreur de connexion. Veuillez réessayer.",
+                "email": email
+            }, status_code=401)
 
 @app.post("/auth/resend-confirmation")
 async def resend_confirmation(
