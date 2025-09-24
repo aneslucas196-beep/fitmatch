@@ -9,7 +9,8 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
     Retourne un dictionnaire avec success (bool) et des détails pour le debugging
     """
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = os.environ.get('MAIL_FROM', 'Coach Fitness <onboarding@resend.dev>')
+    # Utiliser domaine vérifié fitmatch.fr par défaut
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
     site_url = os.environ.get('SITE_URL', 'http://localhost:5000')
     
     print(f"🔧 Configuration email:")
@@ -31,7 +32,7 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
         html_content = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 40px; text-align: center;">
-                <h1 style="color: white; margin: 0; font-size: 28px;">Coach Fitness</h1>
+                <h1 style="color: white; margin: 0; font-size: 28px;">Fitmatch</h1>
                 <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Votre plateforme fitness</p>
             </div>
             
@@ -54,7 +55,7 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
                 
                 <div style="margin-top: 40px; padding: 20px; background: #f8fafc; border-radius: 8px;">
                     <p style="color: #666; font-size: 12px; margin: 0; text-align: center;">
-                        Cet email a été envoyé par Coach Fitness.<br>
+                        Cet email a été envoyé par Fitmatch.<br>
                         Si vous avez des questions, contactez notre support.
                     </p>
                 </div>
@@ -66,14 +67,14 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
         text_content = f"""
         Bonjour {first_name} !
         
-        Voici votre code de vérification Coach Fitness : {otp_code}
+        Voici votre code de vérification Fitmatch : {otp_code}
         
         Ce code expire dans 10 minutes.
         Saisissez-le sur la page de vérification pour activer votre compte.
         
         Si vous n'avez pas demandé ce code, ignorez cet email.
         
-        L'équipe Coach Fitness
+        L'équipe Fitmatch
         """
         
         # Préparer la requête vers l'API Resend
