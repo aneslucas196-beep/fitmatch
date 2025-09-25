@@ -1461,11 +1461,3 @@ def remove_demo_user(email: str) -> bool:
         print(f"❌ Erreur lors de la suppression de l'utilisateur {email}: {e}")
         return False
 
-def list_demo_users() -> List[str]:
-    """Liste tous les emails des utilisateurs démonstration."""
-    try:
-        users = load_demo_users()
-        return list(users.keys())
-    except Exception as e:
-        print(f"⚠️ Erreur lors du listage des utilisateurs démo: {e}")
-        return []
