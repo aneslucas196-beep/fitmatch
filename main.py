@@ -58,7 +58,10 @@ from utils import (
     remove_coach_gym,
     search_gyms_by_location,
     search_gyms_by_zone,
-    get_coaches_by_gym
+    get_coaches_by_gym,
+    # Géolocalisation et pays
+    get_countries_list,
+    get_country_name
 )
 
 from resend_service import send_otp_email_resend
@@ -1774,6 +1777,197 @@ async def get_gym_coaches_by_id(gym_id: str):
             "message": "Erreur lors de la récupération des coachs",
             "coaches": [],
             "gym_id": gym_id
+        }
+
+# ======================================
+# ENDPOINTS API SALLES - BASE MONDIALE 
+# ======================================
+
+@app.get("/api/gyms/countries")
+async def get_countries():
+    """Retourne la liste complète des pays pour le sélecteur."""
+    try:
+        countries = get_countries_list()
+        return {
+            "success": True,
+            "countries": countries,
+            "count": len(countries)
+        }
+    except Exception as e:
+        print(f"❌ Erreur récupération pays: {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de la récupération des pays",
+            "countries": []
+        }
+
+@app.get("/api/gyms/worldwide")
+async def get_gyms_worldwide(
+    country: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100)
+):
+    """
+    API pour récupérer les salles de sport par pays avec pagination.
+    Paramètres:
+    - country: Code pays ISO 3166-1 alpha-2 (optionnel)
+    - page: Numéro de page (défaut 1)
+    - page_size: Taille de page (défaut 50, max 100)
+    """
+    try:
+        if not supabase_anon:
+            return {
+                "success": False,
+                "message": "Base de données non disponible en mode démo",
+                "gyms": [],
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total": 0,
+                    "total_pages": 0
+                }
+            }
+        
+        # Construire la requête Supabase
+        query = supabase_anon.table("gyms").select("*")
+        
+        # Filtrer par pays si spécifié
+        if country:
+            query = query.eq("country_code", country.upper())
+        
+        # Compter le total d'abord
+        count_query = supabase_anon.table("gyms").select("id", count="exact")
+        if country:
+            count_query = count_query.eq("country_code", country.upper())
+        
+        count_response = count_query.execute()
+        total_gyms = count_response.count if count_response.count else 0
+        
+        # Calculer les paramètres de pagination
+        offset = (page - 1) * page_size
+        total_pages = (total_gyms + page_size - 1) // page_size
+        
+        # Exécuter la requête avec pagination
+        response = query.range(offset, offset + page_size - 1).order("name").execute()
+        
+        gyms = []
+        if response.data:
+            for gym in response.data:
+                gym_data = {
+                    "id": gym["id"],
+                    "name": gym["name"],
+                    "country_code": gym["country_code"],
+                    "country_name": get_country_name(gym["country_code"]),
+                    "city": gym["city"],
+                    "address": gym.get("address"),
+                    "lat": float(gym["lat"]) if gym["lat"] else None,
+                    "lng": float(gym["lng"]) if gym["lng"] else None,
+                    "phone": gym.get("phone"),
+                    "website": gym.get("website"),
+                    "amenities": gym.get("amenities", []),
+                    "source": gym.get("source", "manual")
+                }
+                gyms.append(gym_data)
+        
+        return {
+            "success": True,
+            "gyms": gyms,
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "total": total_gyms,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_previous": page > 1
+            },
+            "filters": {
+                "country": country,
+                "country_name": get_country_name(country) if country else None
+            }
+        }
+        
+    except Exception as e:
+        print(f"❌ Erreur récupération salles mondiales: {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de la récupération des salles",
+            "gyms": [],
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "total": 0,
+                "total_pages": 0
+            }
+        }
+
+@app.get("/api/gyms/near")
+async def search_gyms_near_location(
+    lat: float = Query(..., description="Latitude de recherche"),
+    lng: float = Query(..., description="Longitude de recherche"),
+    radius: int = Query(25, ge=1, le=100, description="Rayon de recherche en km"),
+    country: Optional[str] = Query(None, description="Code pays ISO 3166-1 alpha-2 (optionnel)")
+):
+    """
+    Recherche géographique de salles dans un rayon donné.
+    Utilise la fonction Haversine de Supabase pour calculer les distances.
+    """
+    try:
+        if not supabase_anon:
+            return {
+                "success": False,
+                "message": "Base de données non disponible en mode démo",
+                "gyms": []
+            }
+        
+        # Utiliser la fonction PostgreSQL search_gyms_near
+        query = f"""
+        SELECT * FROM search_gyms_near({lat}, {lng}, {radius}, {f"'{country.upper()}'" if country else 'NULL'})
+        """
+        
+        response = supabase_anon.rpc("search_gyms_near", {
+            "search_lat": lat,
+            "search_lng": lng,
+            "radius_km": radius,
+            "search_country_code": country.upper() if country else None
+        }).execute()
+        
+        gyms = []
+        if response.data:
+            for gym in response.data:
+                gym_data = {
+                    "id": gym["id"],
+                    "name": gym["name"],
+                    "country_code": gym["country_code"],
+                    "country_name": get_country_name(gym["country_code"]),
+                    "city": gym["city"],
+                    "address": gym.get("address"),
+                    "lat": float(gym["lat"]) if gym["lat"] else None,
+                    "lng": float(gym["lng"]) if gym["lng"] else None,
+                    "phone": gym.get("phone"),
+                    "website": gym.get("website"),
+                    "distance_km": float(gym["distance_km"]) if gym.get("distance_km") else None
+                }
+                gyms.append(gym_data)
+        
+        return {
+            "success": True,
+            "gyms": gyms,
+            "count": len(gyms),
+            "search_params": {
+                "lat": lat,
+                "lng": lng,
+                "radius_km": radius,
+                "country": country,
+                "country_name": get_country_name(country) if country else None
+            }
+        }
+        
+    except Exception as e:
+        print(f"❌ Erreur recherche géographique salles: {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de la recherche géographique",
+            "gyms": []
         }
 
 # Route pour les images uploadées (si pas d'utilisation directe de Supabase Storage)
