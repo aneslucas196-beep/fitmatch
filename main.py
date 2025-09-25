@@ -1049,7 +1049,7 @@ async def login_submit(
             if role == "coach":
                 redirect_url = "/coach/portal"
             elif role == "client":
-                redirect_url = "/client/portal"
+                redirect_url = "/client/home"
             else:
                 redirect_url = "/coach/portal"
             
@@ -1086,7 +1086,7 @@ async def login_submit(
             if user_role == "coach":
                 redirect_url = "/coach/portal"
             elif user_role == "client":
-                redirect_url = "/client/portal"
+                redirect_url = "/client/home"
             else:
                 # Fallback en cas de rôle non reconnu
                 redirect_url = "/coach/portal"
