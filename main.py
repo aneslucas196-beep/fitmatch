@@ -658,7 +658,7 @@ async def signup_submit(
             "full_name": full_name,
             "gender": gender,
             "role": role,
-            "password": password,  # En production, il faudrait le hasher
+            "password": password.strip(),  # Normaliser le mot de passe stocké
             "coach_gender_preference": coach_gender_preference if role == "client" else None,
             "selected_gyms": selected_gyms_list if role == "client" else None
         }
@@ -1036,7 +1036,10 @@ async def login_submit(
         # Si pas trouvé, vérifier les utilisateurs inscrits dans le cache
         if not user_found and email in demo_user_cache:
             cached_user = demo_user_cache[email]
-            if cached_user.get("password") == password:
+            # Normaliser les mots de passe pour la comparaison
+            stored_password = cached_user.get("password", "").strip()
+            submitted_password = password.strip()
+            if stored_password and stored_password == submitted_password:
                 user_found = cached_user
                 print(f"✅ Connexion avec compte inscrit (cache)")
         
