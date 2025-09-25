@@ -1390,3 +1390,80 @@ def get_coaches_by_gym(gym_id: str) -> List[Dict]:
     except Exception as e:
         print(f"❌ Erreur récupération coachs pour gym {gym_id}: {e}")
         return []
+
+
+# ================================
+# STOCKAGE PERSISTANT UTILISATEURS DÉMONSTRATION
+# ================================
+
+DEMO_USERS_FILE = "demo_users.json"
+
+def load_demo_users() -> Dict:
+    """Charge les utilisateurs démonstration depuis le fichier JSON."""
+    try:
+        if Path(DEMO_USERS_FILE).exists():
+            with open(DEMO_USERS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        print(f"⚠️ Erreur lors du chargement des utilisateurs démo: {e}")
+        return {}
+
+def save_demo_user(email: str, user_data: Dict) -> bool:
+    """Sauvegarde un utilisateur démonstration dans le fichier persistant."""
+    try:
+        # Charger les utilisateurs existants
+        users = load_demo_users()
+        
+        # Ajouter/mettre à jour l'utilisateur
+        users[email] = user_data
+        
+        # Sauvegarder dans le fichier
+        with open(DEMO_USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users, f, ensure_ascii=False, indent=2)
+            
+        print(f"✅ Utilisateur {email} sauvegardé dans le stockage persistant")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde de l'utilisateur {email}: {e}")
+        return False
+
+def get_demo_user(email: str) -> Optional[Dict]:
+    """Récupère un utilisateur démonstration spécifique."""
+    try:
+        users = load_demo_users()
+        return users.get(email)
+    except Exception as e:
+        print(f"⚠️ Erreur lors de la récupération de l'utilisateur {email}: {e}")
+        return None
+
+def remove_demo_user(email: str) -> bool:
+    """Supprime un utilisateur démonstration du stockage persistant."""
+    try:
+        users = load_demo_users()
+        if email in users:
+            del users[email]
+            
+            # Sauvegarder les modifications
+            with open(DEMO_USERS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(users, f, ensure_ascii=False, indent=2)
+                
+            print(f"✅ Utilisateur {email} supprimé du stockage persistant")
+            return True
+        else:
+            print(f"⚠️ Utilisateur {email} non trouvé dans le stockage persistant")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Erreur lors de la suppression de l'utilisateur {email}: {e}")
+        return False
+
+def list_demo_users() -> List[str]:
+    """Liste tous les emails des utilisateurs démonstration."""
+    try:
+        users = load_demo_users()
+        return list(users.keys())
+    except Exception as e:
+        print(f"⚠️ Erreur lors du listage des utilisateurs démo: {e}")
+        return []

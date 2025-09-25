@@ -43,6 +43,12 @@ from utils import (
     verify_otp_code,
     cleanup_expired_otp_codes,
     create_user_account_with_otp,
+    # Fonctions stockage persistant
+    load_demo_users,
+    save_demo_user,
+    get_demo_user,
+    remove_demo_user,
+    list_demo_users,
     get_pending_otp_data,
     store_pending_registration,
     # Système coach ↔ salle ↔ client
