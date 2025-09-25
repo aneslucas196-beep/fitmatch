@@ -521,9 +521,10 @@ async def get_user_gyms(user = Depends(get_current_user)):
         email = user.get("email")
         
         if not supabase_anon:
-            # Mode démo - chercher dans le cache
-            if email in demo_user_cache:
-                selected_gyms_str = demo_user_cache[email].get("selected_gyms", "[]")
+            # Mode démo - chercher dans le stockage persistant
+            user_data = get_demo_user(email)
+            if user_data:
+                selected_gyms_str = user_data.get("selected_gyms", "[]")
                 try:
                     selected_gyms = json.loads(selected_gyms_str) if selected_gyms_str else []
                     return {"success": True, "selected_gyms": selected_gyms}
@@ -571,9 +572,11 @@ async def save_user_gyms(request: Request, user = Depends(get_current_user)):
         validated_gyms = validate_selected_gyms(json.dumps(selected_gyms))
         
         if not supabase_anon:
-            # Mode démo - sauvegarder dans le cache
-            if email in demo_user_cache:
-                demo_user_cache[email]["selected_gyms"] = json.dumps(validated_gyms)
+            # Mode démo - sauvegarder dans le stockage persistant
+            user_data = get_demo_user(email)
+            if user_data:
+                user_data["selected_gyms"] = json.dumps(validated_gyms)
+                save_demo_user(email, user_data)
                 print(f"✅ Salles sauvegardées en mode démo pour {email}: {validated_gyms}")
                 return {"success": True, "message": "Salles sauvegardées avec succès"}
             else:
@@ -1045,15 +1048,16 @@ async def login_submit(
             user_found = demo_user
             print(f"✅ Connexion avec compte démo hardcodé")
         
-        # Si pas trouvé, vérifier les utilisateurs inscrits dans le cache
-        if not user_found and email in demo_user_cache:
-            cached_user = demo_user_cache[email]
-            # Normaliser les mots de passe pour la comparaison
-            stored_password = cached_user.get("password", "").strip()
-            submitted_password = password.strip()
-            if stored_password and stored_password == submitted_password:
-                user_found = cached_user
-                print(f"✅ Connexion avec compte inscrit (cache)")
+        # Si pas trouvé, vérifier les utilisateurs inscrits dans le stockage persistant
+        if not user_found:
+            cached_user = get_demo_user(email)
+            if cached_user:
+                # Normaliser les mots de passe pour la comparaison
+                stored_password = cached_user.get("password", "").strip()
+                submitted_password = password.strip()
+                if stored_password and stored_password == submitted_password:
+                    user_found = cached_user
+                    print(f"✅ Connexion avec compte inscrit (stockage persistant)")
         
         if user_found:
             # Redirection selon le rôle en mode démo
