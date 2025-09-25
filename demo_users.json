@@ -6,5 +6,13 @@
     "password": "Anasking1234!",
     "coach_gender_preference": "aucune",
     "selected_gyms": []
+  },
+  "aneslucas196@gmail.com": {
+    "full_name": "Anas",
+    "gender": "homme",
+    "role": "client",
+    "password": "Anasking1234!",
+    "coach_gender_preference": "femme",
+    "selected_gyms": []
   }
 }
