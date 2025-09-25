@@ -660,7 +660,8 @@ async def signup_submit(
                     "coach_gender_preference": coach_gender_preference
                 }, status_code=400)
         
-        demo_user_cache[email] = {
+        # Sauvegarder l'utilisateur dans le stockage persistant
+        user_data = {
             "full_name": full_name,
             "gender": gender,
             "role": role,
@@ -668,6 +669,10 @@ async def signup_submit(
             "coach_gender_preference": coach_gender_preference if role == "client" else None,
             "selected_gyms": selected_gyms_list if role == "client" else None
         }
+        save_demo_user(email, user_data)
+        
+        # Garder aussi en cache mémoire pour compatibilité temporaire
+        demo_user_cache[email] = user_data
         print(f"🔐 Mode démo - Code OTP généré pour {email}: {otp_code}")
         
         # Tester l'envoi d'email avec Resend même en mode démo
@@ -807,7 +812,8 @@ async def verify_otp_submit(
         stored_code = demo_otp_cache.get(email)
         if stored_code and otp_code == stored_code:
             # Code correct - supprimer du cache et connecter
-            user_info = demo_user_cache.get(email, {})
+            # Récupérer les informations utilisateur depuis le stockage persistant
+            user_info = get_demo_user(email) or demo_user_cache.get(email, {})
             role = user_info.get('role', 'client')
             del demo_otp_cache[email]
             
