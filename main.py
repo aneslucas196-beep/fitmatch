@@ -1025,17 +1025,32 @@ async def login_submit(
             "client@demo.com": {"password": "demopass123", "role": "client"}
         }
         
+        user_found = None
+        
+        # D'abord vérifier les comptes démo hardcodés
         demo_user = demo_users.get(email)
         if demo_user and demo_user["password"] == password:
+            user_found = demo_user
+            print(f"✅ Connexion avec compte démo hardcodé")
+        
+        # Si pas trouvé, vérifier les utilisateurs inscrits dans le cache
+        if not user_found and email in demo_user_cache:
+            cached_user = demo_user_cache[email]
+            if cached_user.get("password") == password:
+                user_found = cached_user
+                print(f"✅ Connexion avec compte inscrit (cache)")
+        
+        if user_found:
             # Redirection selon le rôle en mode démo
-            if demo_user["role"] == "coach":
+            role = user_found["role"]
+            if role == "coach":
                 redirect_url = "/coach/portal"
-            elif demo_user["role"] == "client":
+            elif role == "client":
                 redirect_url = "/client/portal"
             else:
                 redirect_url = "/coach/portal"
             
-            print(f"✅ Connexion démo réussie - Redirection vers {redirect_url} (rôle: {demo_user['role']})")
+            print(f"✅ Connexion démo réussie - Redirection vers {redirect_url} (rôle: {role})")
             
             response = RedirectResponse(url=redirect_url, status_code=303)
             response.set_cookie(
