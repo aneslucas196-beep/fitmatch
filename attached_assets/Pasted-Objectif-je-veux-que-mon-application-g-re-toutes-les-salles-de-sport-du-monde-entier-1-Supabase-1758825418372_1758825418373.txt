@@ -1,0 +1,47 @@
+Objectif : je veux que mon application gère toutes les salles de sport du monde entier.
+
+1) Supabase - Base de données
+- Crée une table gyms avec : id, name, country_code (ISO 3166-1 alpha2), city, lat, lng.
+- Ajoute un index géographique.
+- Crée une fonction SQL search_gyms_near(lat,lng,radius,country_code) qui renvoie toutes les salles dans un rayon donné.
+
+2) Import mondial
+- Script pour importer automatiquement les salles de sport du monde entier depuis OpenStreetMap (tag "leisure=fitness_centre").
+- Stocke les résultats dans la table gyms.
+- Dé-doublonne par nom + coordonnée.
+- Prévoir un import par pays (batch), ex: importer d’abord France, Suisse, Allemagne, puis le reste.
+
+3) Supabase - Profils
+- Dans la table profiles, ajoute les colonnes : country_code, postal_code, city, lat, lng.
+- country_code est rempli au signup.
+- postal_code/city/lat/lng sont remplis après que l’utilisateur tape son code postal ou sa ville.
+
+4) Signup (inscription)
+- Dans les formulaires signup (coach et client), ajoute un champ Select pays.
+- La liste doit contenir tous les pays du monde (ISO 3166).
+- Au signup, sauvegarde le country_code dans profiles.
+
+5) Page recherche (après connexion)
+- Ajoute un champ “Ville ou code postal” + un champ “Rayon (km)”.
+- Quand l’utilisateur entre une ville ou un code postal :
+   a) Géocoder (par défaut Nominatim OpenStreetMap, mais permettre de configurer une API Mapbox/Google).
+   b) Sauvegarder city, postal_code, lat, lng dans profiles.
+   c) Appeler la fonction search_gyms_near(lat,lng,radius,country_code) pour renvoyer les salles proches.
+
+6) API
+- Crée endpoint GET /api/gyms?country=XX&page=1&pageSize=50 → renvoie toutes les salles d’un pays.
+- Crée endpoint GET /api/gyms/near?city=...,country=XX,radius=.. → renvoie les salles proches.
+- Gérer les erreurs (ville non trouvée, pas de salles).
+
+7) UI/UX
+- Sur la page recherche :
+   - Sélecteur pays
+   - Champ ville/code postal
+   - Champ rayon
+   - Bouton rechercher
+- Afficher résultats paginés avec nom, ville, adresse.
+- Si aucun résultat : afficher “Aucune salle trouvée dans ce rayon”.
+
+8) i18n
+- Laisser l’interface traduisible (fr, en, ar…).
+- Les données (noms de salles) restent dans leur langue originale.
