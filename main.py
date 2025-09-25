@@ -458,6 +458,11 @@ async def client_home(request: Request):
     """Page d'accueil pour les clients avec formulaire de recherche."""
     return templates.TemplateResponse("client_home.html", {"request": request})
 
+@app.get("/gyms/search", response_class=HTMLResponse)
+async def gym_search_page(request: Request):
+    """Page de recherche de salles de sport avec géolocalisation."""
+    return templates.TemplateResponse("gym_search.html", {"request": request})
+
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription."""
