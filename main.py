@@ -48,7 +48,6 @@ from utils import (
     save_demo_user,
     get_demo_user,
     remove_demo_user,
-    list_demo_users,
     get_pending_otp_data,
     store_pending_registration,
     # Système coach ↔ salle ↔ client
@@ -462,9 +461,11 @@ async def client_home(request: Request):
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription."""
+    countries = get_countries_list()
     return templates.TemplateResponse("signup.html", {
         "request": request, 
-        "role": role
+        "role": role,
+        "countries": countries
     })
 
 @app.get("/api/test-gym-data")
@@ -608,12 +609,16 @@ async def signup_submit(
     password: str = Form(...),
     gender: str = Form(...),
     role: str = Form(...),
+    country: str = Form(...),
     coach_gender_preference: str = Form("aucune"),
     selected_gyms: str = Form("")
 ):
     """Inscription utilisateur avec système OTP par email."""
     # Normaliser l'email en lowercase
     email = email.lower().strip()
+    
+    # Récupérer la liste des pays une seule fois pour tous les cas d'erreur
+    countries = get_countries_list()
     
     # Validation du mot de passe
     if not is_valid_password(password):
@@ -624,6 +629,8 @@ async def signup_submit(
             "email": email,
             "gender": gender,
             "role": role,
+            "country_code": country,
+            "countries": countries,
             "coach_gender_preference": coach_gender_preference
         }, status_code=400)
     
@@ -636,6 +643,23 @@ async def signup_submit(
             "email": email,
             "gender": gender,
             "role": role,
+            "country_code": country,
+            "countries": countries,
+            "coach_gender_preference": coach_gender_preference
+        }, status_code=400)
+    
+    # Validation du pays
+    valid_countries = [c["code"] for c in countries]
+    if not country or country not in valid_countries:
+        return templates.TemplateResponse("signup.html", {
+            "request": request,
+            "error": "Veuillez sélectionner votre pays",
+            "full_name": full_name,
+            "email": email,
+            "gender": gender,
+            "role": role,
+            "country_code": country,
+            "countries": countries,
             "coach_gender_preference": coach_gender_preference
         }, status_code=400)
     
@@ -671,6 +695,7 @@ async def signup_submit(
             "full_name": full_name,
             "gender": gender,
             "role": role,
+            "country_code": country,
             "password": password.strip(),  # Normaliser le mot de passe stocké
             "coach_gender_preference": coach_gender_preference if role == "client" else None,
             "selected_gyms": selected_gyms_list if role == "client" else None
@@ -756,7 +781,11 @@ async def signup_submit(
                 "error": error_message,
                 "full_name": full_name,
                 "email": email,
-                "role": role
+                "gender": gender,
+                "role": role,
+                "country_code": country,
+                "countries": countries,
+                "coach_gender_preference": coach_gender_preference
             }, status_code=400)
             
     except Exception as e:
@@ -766,7 +795,11 @@ async def signup_submit(
             "error": "Erreur lors de l'inscription. Veuillez réessayer.",
             "full_name": full_name,
             "email": email,
-            "role": role
+            "gender": gender,
+            "role": role,
+            "country_code": country,
+            "countries": countries,
+            "coach_gender_preference": coach_gender_preference
         }, status_code=500)
 
 @app.post("/resend-confirmation")

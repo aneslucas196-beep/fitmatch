@@ -59,6 +59,19 @@
             </select>
         </div>
         
+        <div>
+            <label for="country" class="block text-sm font-medium text-gray-700 mb-2">Pays</label>
+            <select name="country" id="country" required
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Sélectionnez votre pays</option>
+                {% for country in countries %}
+                <option value="{{ country.code }}" {{ 'selected' if country_code == country.code else '' }}>
+                    {{ country.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
         <div id="coach-preference" class="{% if role != 'client' %}hidden{% endif %}">
             <label for="coach_gender_preference" class="block text-sm font-medium text-gray-700 mb-2">Préférence de genre du coach</label>
             <select name="coach_gender_preference" id="coach_gender_preference"
