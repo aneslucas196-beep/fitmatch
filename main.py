@@ -454,9 +454,16 @@ async def search_coaches(
 
 # Routes d'authentification
 @app.get("/client/home", response_class=HTMLResponse)
-async def client_home(request: Request):
+async def client_home(request: Request, user = Depends(get_current_user)):
     """Page d'accueil pour les clients avec formulaire de recherche."""
-    return templates.TemplateResponse("client_home.html", {"request": request})
+    # Si pas d'utilisateur connecté, rediriger vers la page de connexion
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    return templates.TemplateResponse("client_home.html", {
+        "request": request, 
+        "user": user
+    })
 
 @app.get("/gyms/search", response_class=HTMLResponse)
 async def gym_search_page(request: Request):
