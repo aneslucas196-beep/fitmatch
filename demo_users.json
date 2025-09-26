@@ -1,16 +1,44 @@
 {
   "anaslimeme830@gmail.com": {
-    "full_name": "Test User",
+    "full_name": "Anas",
     "gender": "homme",
     "role": "client",
+    "country_code": "FR",
     "password": "Anasking1234!",
-    "coach_gender_preference": "aucune",
+    "coach_gender_preference": "homme",
     "selected_gyms": []
   },
   "aneslucas196@gmail.com": {
     "full_name": "Anas",
     "gender": "homme",
     "role": "client",
+    "password": "Anasking1234!",
+    "coach_gender_preference": "femme",
+    "selected_gyms": []
+  },
+  "limamanas12@gmail.com": {
+    "full_name": "anas",
+    "gender": "homme",
+    "role": "client",
+    "country_code": "CA",
+    "password": "Anaskîg1234!",
+    "coach_gender_preference": "homme",
+    "selected_gyms": []
+  },
+  "limamanes12@gmail.com": {
+    "full_name": "Anas",
+    "gender": "homme",
+    "role": "coach",
+    "country_code": "BE",
+    "password": "Anasking1234!",
+    "coach_gender_preference": null,
+    "selected_gyms": null
+  },
+  "limamanas0@gmail.com": {
+    "full_name": "Anas",
+    "gender": "homme",
+    "role": "client",
+    "country_code": "DE",
     "password": "Anasking1234!",
     "coach_gender_preference": "femme",
     "selected_gyms": []

@@ -1,716 +1,268 @@
 {% extends "base.html" %}
 
-{% block title %}Accueil Client - Coach Fitness{% endblock %}
+{% block title %}Espace Client - Coach Fitness{% endblock %}
 
 {% block content %}
-<div class="text-center mb-8">
-    <h1 class="text-4xl font-bold text-gray-900 mb-4">Trouvez votre coach fitness idéal</h1>
-    <p class="text-xl text-gray-600">Découvrez des coachs qualifiés près de chez vous</p>
-</div>
-
-<!-- Section recherche de salles par zone -->
-<div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-md p-6 mb-8">
-    <h2 class="text-2xl font-semibold text-gray-900 mb-4">🗺️ Recherche de salles par zone</h2>
-    <p class="text-gray-600 mb-4">Entrez votre code postal ou ville pour voir toutes les salles de sport disponibles dans votre zone.</p>
+<!-- Fond dégradé moderne style fitness -->
+<div class="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800">
     
-    <div class="flex flex-col md:flex-row gap-4 mb-4">
-        <div class="flex-1 relative">
-            <input type="text" id="zone-search-input" placeholder="Tapez le nom d'une salle ou zone: Basic-Fit, musculation, Paris..." 
-                   class="w-full border border-gray-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg" autocomplete="off">
-            
-            <!-- Suggestions d'autocomplétion pour clients -->
-            <div id="client-autocomplete-suggestions" class="absolute z-50 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
-                <!-- Les suggestions apparaîtront ici -->
-            </div>
-        </div>
-        <div class="flex gap-2">
-            <select id="zone-radius" class="border border-gray-300 rounded-md px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="10">10 km</option>
-                <option value="25" selected>25 km</option>
-                <option value="50">50 km</option>
-            </select>
-            <button type="button" id="search-gyms-btn" 
-                    class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition duration-200 font-medium">
-                🔍 Rechercher des coaches
-            </button>
+    <!-- Section d'accueil avec motivation -->
+    <div class="relative overflow-hidden">
+        <div class="absolute inset-0 bg-black opacity-20"></div>
+        <div class="relative px-6 py-12 text-center text-white">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">
+                Bienvenue {{ user.first_name or 'Champion' }} ! 💪
+            </h1>
+            <p id="motivation-quote" class="text-xl md:text-2xl font-light opacity-90 mb-8">
+                <!-- La phrase de motivation sera ajoutée par JavaScript -->
+            </p>
+            <div class="w-32 h-1 bg-gradient-to-r from-yellow-400 to-orange-500 mx-auto rounded-full"></div>
         </div>
     </div>
-    
-    <!-- Résultats de recherche -->
-    <div id="search-results" class="hidden">
-        <hr class="my-6">
-        <h3 class="text-xl font-semibold mb-4">🏋️ Salles trouvées</h3>
-        
-        <!-- Carte interactive -->
-        <div class="mb-6">
-            <div id="gyms-map" style="height: 400px; border-radius: 8px;" class="border border-gray-300"></div>
-        </div>
-        
-        <!-- Liste des salles -->
-        <div id="search-gyms-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Les salles seront ajoutées ici par JavaScript -->
-        </div>
-    </div>
-    
-    <!-- Indicateur de chargement -->
-    <div id="search-loading" class="hidden text-center py-4">
-        <div class="inline-flex items-center">
-            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
-            <span class="text-gray-600">Recherche en cours...</span>
-        </div>
-    </div>
-    
-    <!-- Message d'erreur -->
-    <div id="search-error" class="hidden bg-red-50 border border-red-200 rounded-md p-4 text-red-700">
-        <!-- Le message d'erreur sera ajouté ici -->
-    </div>
-</div>
 
-<div class="bg-white rounded-lg shadow-md p-6 mb-8">
-    <form action="/search" method="GET" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <label for="specialty" class="block text-sm font-medium text-gray-700 mb-2">Spécialité</label>
-                <select name="specialty" id="specialty" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">Toutes les spécialités</option>
-                    <option value="musculation">Musculation</option>
-                    <option value="cardio">Cardio</option>
-                    <option value="yoga">Yoga</option>
-                    <option value="crossfit">CrossFit</option>
-                    <option value="pilates">Pilates</option>
-                    <option value="nutrition">Nutrition</option>
-                </select>
-            </div>
-            <div>
-                <label for="city" class="block text-sm font-medium text-gray-700 mb-2">Ville ou Code Postal</label>
-                <input type="text" name="city" id="city" placeholder="Paris, 75001..." 
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            </div>
-            <div>
-                <label for="radius_km" class="block text-sm font-medium text-gray-700 mb-2">Rayon (km)</label>
-                <select name="radius_km" id="radius_km" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="10">10 km</option>
-                    <option value="25">25 km</option>
-                    <option value="50">50 km</option>
-                    <option value="100">100 km</option>
-                </select>
-            </div>
-        </div>
-        <div class="text-center">
-            <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 transition duration-200 font-medium">
-                Rechercher des coachs
-            </button>
-        </div>
-    </form>
-</div>
+    <!-- Dashboard principal -->
+    <div class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
-<!-- Section des salles préférées -->
-<div class="bg-white rounded-lg shadow-md p-6 mb-8">
-    <h2 class="text-2xl font-semibold text-gray-900 mb-4">🏋️ Mes salles préférées</h2>
-    <p class="text-gray-600 mb-4">Sélectionnez vos salles de sport préférées pour faciliter la recherche de coachs.</p>
-    
-    <div class="mb-3">
-        <button type="button" id="show-gym-map-btn" 
-                class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            📍 Gérer mes salles sur la carte
-        </button>
-    </div>
-    <div id="current-selected-gyms" class="text-sm text-gray-600">
-        Chargement de vos salles...
-    </div>
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">💪</div>
-        <h3 class="text-xl font-semibold mb-2">Musculation</h3>
-        <p class="text-gray-600">Développez votre force et votre masse musculaire</p>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">🏃</div>
-        <h3 class="text-xl font-semibold mb-2">Cardio</h3>
-        <p class="text-gray-600">Améliorez votre endurance cardiovasculaire</p>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">🧘</div>
-        <h3 class="text-xl font-semibold mb-2">Yoga</h3>
-        <p class="text-gray-600">Trouvez l'équilibre corps-esprit</p>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">🏋️</div>
-        <h3 class="text-xl font-semibold mb-2">CrossFit</h3>
-        <p class="text-gray-600">Entraînement fonctionnel intense</p>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">🤸</div>
-        <h3 class="text-xl font-semibold mb-2">Pilates</h3>
-        <p class="text-gray-600">Renforcez votre core et votre flexibilité</p>
-    </div>
-    <div class="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition duration-200">
-        <div class="text-4xl mb-4">🥗</div>
-        <h3 class="text-xl font-semibold mb-2">Nutrition</h3>
-        <p class="text-gray-600">Optimisez votre alimentation</p>
-    </div>
-</div>
-
-<!-- Modale de sélection de salles -->
-<div id="gym-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div class="p-6 border-b">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-semibold">Sélectionnez vos salles préférées</h3>
-                    <button type="button" id="close-modal-btn" 
-                            class="text-gray-400 hover:text-gray-600 focus:outline-none">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
+        <!-- Section Progression -->
+        <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+            <div class="flex items-center mb-6">
+                <div class="bg-gradient-to-r from-green-400 to-green-600 p-3 rounded-full mr-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Ma Progression</h2>
+                    <p class="text-gray-600">Objectif : Perdre 5kg en 8 semaines</p>
                 </div>
             </div>
             
-            <div class="p-6">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Carte -->
-                    <div>
-                        <div id="map" style="height: 400px; width: 100%;"></div>
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium text-gray-700">Progression : 3kg / 5kg</span>
+                    <span class="text-sm font-medium text-green-600">60%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                    <div class="bg-gradient-to-r from-green-400 to-green-600 h-4 rounded-full" style="width: 60%"></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-600">3kg</div>
+                    <div class="text-sm text-gray-600">Perdus</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-600">12</div>
+                    <div class="text-sm text-gray-600">Séances</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-purple-600">4</div>
+                    <div class="text-sm text-gray-600">Semaines</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-orange-600">85%</div>
+                    <div class="text-sm text-gray-600">Assiduité</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Prochains entraînements -->
+        <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+            <div class="flex items-center mb-6">
+                <div class="bg-gradient-to-r from-blue-400 to-blue-600 p-3 rounded-full mr-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Prochains Entraînements</h2>
+                    <p class="text-gray-600">Vos séances planifiées</p>
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- Entraînement 1 -->
+                <div class="flex items-center p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border-l-4 border-orange-500">
+                    <div class="bg-orange-500 p-2 rounded-full mr-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
                     </div>
-                    
-                    <!-- Liste des salles -->
-                    <div>
-                        <h4 class="font-semibold mb-3">Salles disponibles</h4>
-                        <div class="space-y-2 max-h-80 overflow-y-auto">
-                            <div id="modal-gyms-list"></div>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-gray-900">Musculation haut du corps</h3>
+                        <p class="text-gray-600">Aujourd'hui à 18h00</p>
+                        <p class="text-sm text-orange-600 font-medium">Fitness Park Maurepas</p>
+                    </div>
+                    <div class="text-orange-500 font-bold text-lg">Aujourd'hui</div>
+                </div>
+                
+                <!-- Entraînement 2 -->
+                <div class="flex items-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-l-4 border-green-500">
+                    <div class="bg-green-500 p-2 rounded-full mr-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-gray-900">Cardio & Endurance</h3>
+                        <p class="text-gray-600">Demain à 09h30</p>
+                        <p class="text-sm text-green-600 font-medium">Basic-Fit Paris 15</p>
+                    </div>
+                    <div class="text-green-500 font-bold text-lg">Demain</div>
+                </div>
+                
+                <!-- Entraînement 3 -->
+                <div class="flex items-center p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border-l-4 border-purple-500">
+                    <div class="bg-purple-500 p-2 rounded-full mr-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-gray-900">Yoga & Relaxation</h3>
+                        <p class="text-gray-600">Vendredi à 19h00</p>
+                        <p class="text-sm text-purple-600 font-medium">Studio Zen Versailles</p>
+                    </div>
+                    <div class="text-purple-500 font-bold text-lg">Vendredi</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Badges -->
+        <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+            <div class="flex items-center mb-6">
+                <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 p-3 rounded-full mr-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Mes Badges</h2>
+                    <p class="text-gray-600">Vos réussites et objectifs</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <!-- Badge débloqué -->
+                <div class="text-center p-4 rounded-xl bg-gradient-to-br from-green-100 to-green-200 border-2 border-green-300">
+                    <div class="text-4xl mb-2">✅</div>
+                    <h4 class="font-semibold text-green-800 text-sm">1re Séance</h4>
+                    <p class="text-xs text-green-600">Débloqué</p>
+                </div>
+                
+                <!-- Badge débloqué -->
+                <div class="text-center p-4 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 border-2 border-blue-300">
+                    <div class="text-4xl mb-2">✅</div>
+                    <h4 class="font-semibold text-blue-800 text-sm">10 Séances</h4>
+                    <p class="text-xs text-blue-600">Débloqué</p>
+                </div>
+                
+                <!-- Badge débloqué -->
+                <div class="text-center p-4 rounded-xl bg-gradient-to-br from-purple-100 to-purple-200 border-2 border-purple-300">
+                    <div class="text-4xl mb-2">✅</div>
+                    <h4 class="font-semibold text-purple-800 text-sm">1 Mois</h4>
+                    <p class="text-xs text-purple-600">Débloqué</p>
+                </div>
+                
+                <!-- Badge verrouillé -->
+                <div class="text-center p-4 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-300 opacity-60">
+                    <div class="text-4xl mb-2">🔒</div>
+                    <h4 class="font-semibold text-gray-800 text-sm">50 Séances</h4>
+                    <p class="text-xs text-gray-600">Verrouillé</p>
+                </div>
+                
+                <!-- Badge verrouillé -->
+                <div class="text-center p-4 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-300 opacity-60">
+                    <div class="text-4xl mb-2">🔒</div>
+                    <h4 class="font-semibold text-gray-800 text-sm">Champion</h4>
+                    <p class="text-xs text-gray-600">Verrouillé</p>
+                </div>
+                
+                <!-- Badge légendaire -->
+                <div class="text-center p-4 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-gray-300 opacity-60">
+                    <div class="text-4xl mb-2">🔒</div>
+                    <h4 class="font-semibold text-gray-800 text-sm">🏆 Légende</h4>
+                    <p class="text-xs text-gray-600">Verrouillé</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Boutons d'action -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <a href="/gym-search" class="group">
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-xl p-8 text-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                    <div class="flex items-center">
+                        <div class="bg-white bg-opacity-20 p-4 rounded-full mr-6">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold mb-2">Trouver une salle</h3>
+                            <p class="text-lg opacity-90">Découvrez les salles près de chez vous</p>
                         </div>
                     </div>
                 </div>
-                
-                <div class="mt-6 flex justify-between items-center">
-                    <div class="text-sm text-gray-600">
-                        <span id="selected-count">0</span> salle(s) sélectionnée(s)
-                    </div>
-                    <div class="space-x-3">
-                        <button type="button" id="clear-selection-btn" 
-                                class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">
-                            Tout effacer
-                        </button>
-                        <button type="button" id="save-selection-btn" 
-                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                            Sauvegarder
-                        </button>
+            </a>
+            
+            <a href="/search" class="group">
+                <div class="bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl shadow-xl p-8 text-white hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                    <div class="flex items-center">
+                        <div class="bg-white bg-opacity-20 p-4 rounded-full mr-6">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold mb-2">Découvrir des coachs</h3>
+                            <p class="text-lg opacity-90">Trouvez le coach parfait pour vous</p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 </div>
 
 <script>
-let map;
-let gymsData = [];
-let selectedGyms = [];
-let gymMarkers = [];
+// Phrases de motivation qui changent à chaque visite
+const motivationQuotes = [
+    "Votre corps peut le faire. C'est votre esprit qu'il faut convaincre ! 💪",
+    "Chaque séance vous rapproche de votre objectif ! 🌆",
+    "La seule mauvaise séance est celle que vous ne faites pas ! ✨",
+    "Transformez vos rêves en sueur, puis en réalité ! 🔥",
+    "Vous êtes plus fort que vos excuses ! 🦅",
+    "Progresser c'est bouger, même d'un petit pas ! 🚀",
+    "Votre futur moi vous remerciera pour l'effort d'aujourd'hui ! 🌆",
+    "Champions, on ne naît pas, on le devient ! 🏆",
+    "Chaque goutte de sueur est un investissement sur votre santé ! 💰",
+    "Dépassez vos limites, elles ne sont que dans votre tête ! 🧠"
+];
 
-function loadGymsData() {
-    fetch('/api/gyms')
-        .then(response => response.json())
-        .then(data => {
-            gymsData = data.gyms;
-            initializeMap();
-            renderGymsList();
-        })
-        .catch(error => {
-            console.error('Erreur lors du chargement des salles:', error);
-        });
-}
-
-function loadCurrentUserGyms() {
-    // Charger les salles actuellement sélectionnées par l'utilisateur
-    fetch('/api/user/gyms')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.selected_gyms) {
-                selectedGyms = data.selected_gyms;
-                updateCurrentGymsDisplay();
-            } else {
-                document.getElementById('current-selected-gyms').textContent = 'Aucune salle sélectionnée';
-            }
-        })
-        .catch(error => {
-            console.error('Erreur lors du chargement des salles utilisateur:', error);
-            document.getElementById('current-selected-gyms').textContent = 'Aucune salle sélectionnée';
-        });
-}
-
-function updateCurrentGymsDisplay() {
-    const selectedGymNames = selectedGyms.map(gymId => {
-        const gym = gymsData.find(g => g.id === gymId);
-        return gym ? gym.name : '';
-    }).filter(name => name);
+// Fonction pour afficher une phrase de motivation aléatoire
+function displayRandomMotivation() {
+    const quoteElement = document.getElementById('motivation-quote');
+    const randomIndex = Math.floor(Math.random() * motivationQuotes.length);
+    quoteElement.textContent = motivationQuotes[randomIndex];
     
-    const currentDiv = document.getElementById('current-selected-gyms');
-    if (selectedGymNames.length > 0) {
-        currentDiv.innerHTML = `<strong>${selectedGymNames.length} salle(s):</strong> ${selectedGymNames.join(', ')}`;
-        currentDiv.classList.remove('text-gray-600');
-        currentDiv.classList.add('text-green-600');
-    } else {
-        currentDiv.textContent = 'Aucune salle sélectionnée';
-        currentDiv.classList.remove('text-green-600');
-        currentDiv.classList.add('text-gray-600');
-    }
-}
-
-function initializeMap() {
-    // Centrer sur l'Île-de-France
-    map = L.map('map').setView([48.8566, 2.3522], 10);
-    
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-    
-    // Ajouter les marqueurs des salles
-    gymsData.forEach(gym => {
-        const marker = L.marker([gym.lat, gym.lng])
-            .addTo(map)
-            .bindPopup(`
-                <div class="text-center">
-                    <h5 class="font-semibold">${gym.name}</h5>
-                    <p class="text-sm text-gray-600">${gym.chain}</p>
-                    <p class="text-xs">${gym.address}</p>
-                </div>
-            `);
-        
-        marker.on('click', function() {
-            toggleGymSelection(gym.id);
-        });
-        
-        gymMarkers.push({marker: marker, gymId: gym.id});
-    });
-    
-    updateMapMarkers();
-}
-
-function renderGymsList() {
-    const container = document.getElementById('modal-gyms-list');
-    container.innerHTML = '';
-    
-    gymsData.forEach(gym => {
-        const div = document.createElement('div');
-        div.className = 'flex items-center space-x-3 p-2 border rounded hover:bg-gray-50';
-        
-        const isSelected = selectedGyms.includes(gym.id);
-        
-        div.innerHTML = `
-            <input type="checkbox" id="gym-${gym.id}" ${isSelected ? 'checked' : ''} 
-                   onchange="toggleGymSelection('${gym.id}')"
-                   class="text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-            <label for="gym-${gym.id}" class="flex-1 cursor-pointer">
-                <div class="font-medium text-sm">${gym.name}</div>
-                <div class="text-xs text-gray-500">${gym.chain} - ${gym.address}</div>
-            </label>
-        `;
-        
-        container.appendChild(div);
-    });
-}
-
-function toggleGymSelection(gymId) {
-    if (selectedGyms.includes(gymId)) {
-        selectedGyms = selectedGyms.filter(id => id !== gymId);
-    } else {
-        selectedGyms.push(gymId);
-    }
-    
-    // Mettre à jour l'affichage
-    updateMapMarkers();
-    updateSelectedCount();
-    
-    // Mettre à jour les checkboxes
-    const checkbox = document.getElementById(`gym-${gymId}`);
-    if (checkbox) {
-        checkbox.checked = selectedGyms.includes(gymId);
-    }
-}
-
-function updateMapMarkers() {
-    gymMarkers.forEach(({marker, gymId}) => {
-        if (selectedGyms.includes(gymId)) {
-            marker.setIcon(L.icon({
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
-            }));
-        } else {
-            marker.setIcon(L.icon({
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
-            }));
-        }
-    });
-}
-
-function updateSelectedCount() {
-    document.getElementById('selected-count').textContent = selectedGyms.length;
-}
-
-function saveGymSelection() {
-    // Sauvegarder les préférences de salles
-    fetch('/api/user/gyms', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            selected_gyms: selectedGyms
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            updateCurrentGymsDisplay();
-            document.getElementById('gym-modal').classList.add('hidden');
-            
-            // Afficher un message de succès
-            const successMsg = document.createElement('div');
-            successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50';
-            successMsg.textContent = 'Salles sauvegardées avec succès !';
-            document.body.appendChild(successMsg);
-            
-            setTimeout(() => {
-                document.body.removeChild(successMsg);
-            }, 3000);
-        } else {
-            alert('Erreur lors de la sauvegarde: ' + (data.message || 'Erreur inconnue'));
-        }
-    })
-    .catch(error => {
-        console.error('Erreur lors de la sauvegarde:', error);
-        alert('Erreur lors de la sauvegarde');
-    });
+    // Animation d'apparition
+    quoteElement.style.opacity = '0';
+    setTimeout(() => {
+        quoteElement.style.opacity = '1';
+        quoteElement.style.transition = 'opacity 0.8s ease-in-out';
+    }, 100);
 }
 
 // Initialiser au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
-    // Charger les données des salles pour l'affichage actuel
-    fetch('/api/gyms')
-        .then(response => response.json())
-        .then(data => {
-            gymsData = data.gyms;
-            loadCurrentUserGyms();
-        });
+    // Afficher une phrase de motivation aléatoire
+    displayRandomMotivation();
     
-    // Bouton pour ouvrir la modale
-    document.getElementById('show-gym-map-btn').addEventListener('click', function() {
-        document.getElementById('gym-modal').classList.remove('hidden');
-        if (!map) {
-            loadGymsData();
-        } else {
-            // Recharger les salles actuelles de l'utilisateur
-            loadCurrentUserGyms();
-            updateMapMarkers();
-            updateSelectedCount();
-            renderGymsList();
-        }
-    });
-    
-    // Fermer la modale
-    document.getElementById('close-modal-btn').addEventListener('click', function() {
-        document.getElementById('gym-modal').classList.add('hidden');
-    });
-    
-    // Effacer la sélection
-    document.getElementById('clear-selection-btn').addEventListener('click', function() {
-        selectedGyms = [];
-        const checkboxes = document.querySelectorAll('#modal-gyms-list input[type="checkbox"]');
-        checkboxes.forEach(checkbox => checkbox.checked = false);
-        updateMapMarkers();
-        updateSelectedCount();
-    });
-    
-    // Sauvegarder la sélection
-    document.getElementById('save-selection-btn').addEventListener('click', saveGymSelection);
-    
-    // Fermer la modale en cliquant à l'extérieur
-    document.getElementById('gym-modal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            this.classList.add('hidden');
-        }
-    });
-    
-    // ======================================
-    // RECHERCHE DE SALLES PAR ZONE
-    // ======================================
-    
-    let searchMap = null;
-    let searchMarkers = [];
-    
-    // Bouton de recherche de salles par zone
-    document.getElementById('search-gyms-btn').addEventListener('click', function() {
-        const query = document.getElementById('zone-search-input').value.trim();
-        const radius = parseInt(document.getElementById('zone-radius').value);
-        
-        if (!query) {
-            showSearchError('Veuillez entrer un code postal ou une ville.');
-            return;
-        }
-        
-        searchGymsInZone(query, radius);
-    });
-    
-    // Recherche avec Entrée sur le champ
-    document.getElementById('zone-search-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            document.getElementById('search-gyms-btn').click();
-        }
-    });
-    
-    // ======================================
-    // AUTOCOMPLÉTION CLIENT - VRAIES SALLES
-    // ======================================
-    
-    let clientAutocompleteTimer = null;
-    
-    // Autocomplétion en temps réel pour les clients
-    document.getElementById('zone-search-input').addEventListener('input', function() {
-        const query = this.value.trim();
-        
-        // Annuler la recherche précédente
-        if (clientAutocompleteTimer) {
-            clearTimeout(clientAutocompleteTimer);
-        }
-        
-        if (query.length < 2) {
-            hideClientAutocomplete();
-            return;
-        }
-        
-        // Délai pour éviter trop de requêtes
-        clientAutocompleteTimer = setTimeout(() => {
-            fetchClientAutocompleteSuggestions(query);
-        }, 300);
-    });
-    
-    // Masquer l'autocomplétion quand on clique ailleurs
-    document.addEventListener('click', function(e) {
-        if (!document.getElementById('zone-search-input').contains(e.target) && 
-            !document.getElementById('client-autocomplete-suggestions').contains(e.target)) {
-            hideClientAutocomplete();
-        }
-    });
-    
-    function fetchClientAutocompleteSuggestions(query) {
-        fetch(`/api/gyms/suggestions?q=${encodeURIComponent(query)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.suggestions.length > 0) {
-                    showClientAutocompleteSuggestions(data.suggestions);
-                } else {
-                    hideClientAutocomplete();
-                }
-            })
-            .catch(error => {
-                console.error('Erreur autocomplétion client:', error);
-                hideClientAutocomplete();
-            });
-    }
-    
-    function showClientAutocompleteSuggestions(suggestions) {
-        const container = document.getElementById('client-autocomplete-suggestions');
-        
-        // Vider les suggestions précédentes
-        container.innerHTML = '';
-        
-        // Créer les nouvelles suggestions
-        suggestions.slice(0, 8).forEach(suggestion => { // Limiter à 8 suggestions
-            const div = document.createElement('div');
-            div.className = 'p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0';
-            div.innerHTML = `
-                <div class="font-medium text-gray-900">${suggestion.name}</div>
-                <div class="text-sm text-gray-600">${suggestion.address}</div>
-                <div class="text-xs text-blue-600 mt-1">${suggestion.source} • ${suggestion.chain}</div>
-            `;
-            
-            div.addEventListener('click', function() {
-                // Remplir le champ avec le nom de la salle
-                document.getElementById('zone-search-input').value = suggestion.name;
-                hideClientAutocomplete();
-                
-                // Déclencher automatiquement la recherche
-                document.getElementById('search-gyms-btn').click();
-            });
-            
-            container.appendChild(div);
-        });
-        
-        // Afficher le conteneur
-        container.classList.remove('hidden');
-    }
-    
-    function hideClientAutocomplete() {
-        document.getElementById('client-autocomplete-suggestions').classList.add('hidden');
-    }
-    
-    function searchGymsInZone(query, radius) {
-        // Afficher le loading
-        showSearchLoading();
-        
-        // Appeler l'API de recherche
-        fetch(`/api/gyms/search?q=${encodeURIComponent(query)}&radius_km=${radius}`)
-            .then(response => response.json())
-            .then(data => {
-                hideSearchLoading();
-                
-                if (data.success && data.gyms.length > 0) {
-                    displaySearchResults(data.gyms, query);
-                } else if (data.gyms.length === 0) {
-                    showSearchError(`Aucune salle trouvée dans la zone "${query}" (rayon ${radius}km).`);
-                } else {
-                    showSearchError(data.message || 'Erreur lors de la recherche.');
-                }
-            })
-            .catch(error => {
-                hideSearchLoading();
-                console.error('Erreur recherche salles:', error);
-                showSearchError('Erreur de connexion. Vérifiez votre connexion internet.');
-            });
-    }
-    
-    function displaySearchResults(gyms, query) {
-        hideSearchError();
-        
-        // Afficher la section résultats
-        document.getElementById('search-results').classList.remove('hidden');
-        
-        // Mettre à jour le titre
-        document.querySelector('#search-results h3').innerHTML = 
-            `🏋️ ${gyms.length} salle${gyms.length > 1 ? 's' : ''} trouvée${gyms.length > 1 ? 's' : ''} près de "${query}"`;
-        
-        // Initialiser la carte de recherche
-        initSearchMap(gyms);
-        
-        // Afficher la liste des salles
-        displayGymsList(gyms);
-    }
-    
-    function initSearchMap(gyms) {
-        // Détruire la carte existante si elle existe
-        if (searchMap) {
-            searchMap.remove();
-            searchMap = null;
-        }
-        
-        // Calculer le centre de la carte basé sur les salles trouvées
-        if (gyms.length === 0) return;
-        
-        const centerLat = gyms.reduce((sum, gym) => sum + gym.lat, 0) / gyms.length;
-        const centerLng = gyms.reduce((sum, gym) => sum + gym.lng, 0) / gyms.length;
-        
-        // Créer la nouvelle carte
-        searchMap = L.map('gyms-map').setView([centerLat, centerLng], 11);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(searchMap);
-        
-        // Ajouter les marqueurs des salles
-        searchMarkers = [];
-        gyms.forEach(gym => {
-            const marker = L.marker([gym.lat, gym.lng])
-                .bindPopup(`
-                    <div class="p-2">
-                        <h4 class="font-semibold text-lg">${gym.name}</h4>
-                        <p class="text-sm text-gray-600 mb-2">${gym.address}</p>
-                        <p class="text-sm mb-2">
-                            <span class="font-medium">${gym.coach_count} coach(s)</span>
-                            ${gym.distance_km ? `• ${gym.distance_km} km` : ''}
-                        </p>
-                        <button onclick="viewGymCoaches('${gym.address}', '${gym.name}')" 
-                                class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                            Voir les coachs
-                        </button>
-                    </div>
-                `)
-                .addTo(searchMap);
-            
-            searchMarkers.push(marker);
-        });
-        
-        // Ajuster la vue pour inclure tous les marqueurs
-        if (searchMarkers.length > 1) {
-            const group = new L.featureGroup(searchMarkers);
-            searchMap.fitBounds(group.getBounds().pad(0.1));
-        }
-    }
-    
-    function displayGymsList(gyms) {
-        const gymsList = document.getElementById('search-gyms-list');
-        
-        gymsList.innerHTML = gyms.map(gym => `
-            <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-200">
-                <div class="flex justify-between items-start mb-2">
-                    <h4 class="font-semibold text-lg text-gray-900">${gym.name}</h4>
-                    <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">${gym.chain}</span>
-                </div>
-                <p class="text-sm text-gray-600 mb-2">${gym.address}</p>
-                <div class="flex justify-between items-center mb-3">
-                    <span class="text-sm text-gray-500">
-                        ${gym.coach_count} coach(s) disponible(s)
-                    </span>
-                    ${gym.distance_km ? `<span class="text-sm text-blue-600 font-medium">${gym.distance_km} km</span>` : ''}
-                </div>
-                <button onclick="viewGymCoaches('${gym.address}', '${gym.name}')" 
-                        class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition duration-200 text-sm font-medium">
-                    👥 Voir les coachs disponibles
-                </button>
-            </div>
-        `).join('');
-    }
-    
-    // Fonction globale pour voir les coachs d'une salle
-    window.viewGymCoaches = function(gymAddress, gymName) {
-        // Afficher un modal ou rediriger vers une page dédiée
-        alert(`Fonctionnalité en cours de développement !\n\nSalle: ${gymName}\nAdresse: ${gymAddress}\n\nProchainement: Liste des coachs disponibles dans cette salle.`);
-        
-        // TODO: Implémenter l'affichage des coachs de cette salle
-        // fetch(`/api/gyms/${encodeURIComponent(gymAddress)}/coaches`)
-        //     .then(response => response.json())
-        //     .then(data => {
-        //         // Afficher la liste des coachs dans un modal
-        //     });
-    };
-    
-    function showSearchLoading() {
-        document.getElementById('search-loading').classList.remove('hidden');
-        document.getElementById('search-results').classList.add('hidden');
-        document.getElementById('search-error').classList.add('hidden');
-    }
-    
-    function hideSearchLoading() {
-        document.getElementById('search-loading').classList.add('hidden');
-    }
-    
-    function showSearchError(message) {
-        const errorDiv = document.getElementById('search-error');
-        errorDiv.innerHTML = `
-            <div class="flex items-center">
-                <span class="text-red-500 mr-2">⚠️</span>
-                <span>${message}</span>
-            </div>
-        `;
-        errorDiv.classList.remove('hidden');
-        document.getElementById('search-results').classList.add('hidden');
-    }
-    
-    function hideSearchError() {
-        document.getElementById('search-error').classList.add('hidden');
-    }
+    // Changer la phrase toutes les 10 secondes
+    setInterval(displayRandomMotivation, 10000);
 });
 </script>
+
 {% endblock %}
