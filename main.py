@@ -1353,7 +1353,7 @@ async def coach_profile_setup_post(
     
     try:
         if user_supabase:
-            # Préparer les données de profil
+            # Mode Supabase - Préparer les données de profil
             profile_data = {
                 "full_name": full_name.strip(),
                 "bio": bio.strip(),
@@ -1393,7 +1393,24 @@ async def coach_profile_setup_post(
             else:
                 error_message = "Erreur lors de la mise à jour du profil."
         else:
-            error_message = "Service temporairement indisponible."
+            # Mode démo - Simuler la mise à jour réussie du profil
+            print(f"✅ Mode démo - Profil mis à jour pour {user.get('email', 'coach')} avec:")
+            print(f"   - Nom: {full_name}")
+            print(f"   - Ville: {city}")
+            print(f"   - Spécialités: {specialties}")
+            print(f"   - Salles: {selected_gym_ids}")
+            
+            # Mettre à jour l'utilisateur en mémoire pour le mode démo
+            user["profile_completed"] = True
+            user["full_name"] = full_name
+            user["bio"] = bio
+            user["city"] = city
+            user["instagram_url"] = instagram_url
+            user["price_from"] = price_from
+            user["radius_km"] = radius_km
+            
+            # Redirection vers le dashboard après succès
+            return RedirectResponse(url="/coach/portal", status_code=303)
             
     except Exception as e:
         print(f"❌ Erreur lors de la soumission du profil: {e}")
