@@ -312,19 +312,32 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
     if not supabase_anon:
         if session_token.startswith("demo_"):
             # Extraire l'email depuis le token unique
-            from utils import load_demo_users
+            from utils import load_demo_users, get_demo_user
             import hashlib
             
-            # Charger tous les utilisateurs démo
+            print(f"🔍 Mode démo - Recherche utilisateur pour token: {session_token}")
+            
+            # D'abord essayer de récupérer depuis le stockage persistant
+            # Charger tous les utilisateurs démo des DEUX sources (fichier + persistant)
             all_demo_users = load_demo_users()
             
             # Trouver l'utilisateur correspondant à ce token
             for email, user_data in all_demo_users.items():
                 expected_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
                 if session_token == expected_token:
-                    # Utilisateur trouvé
-                    user_data["_access_token"] = session_token
-                    return user_data
+                    print(f"✅ Token trouvé pour {email} - Récupération données persistantes...")
+                    
+                    # Récupérer les données les plus récentes depuis le stockage persistant
+                    fresh_user_data = get_demo_user(email)
+                    if fresh_user_data:
+                        print(f"✅ Données fraîches récupérées: profile_completed={fresh_user_data.get('profile_completed', False)}")
+                        fresh_user_data["_access_token"] = session_token
+                        return fresh_user_data
+                    else:
+                        print(f"⚠️  Pas de données persistantes pour {email}, utilisation données fichier")
+                        # Fallback sur les données du fichier
+                        user_data["_access_token"] = session_token
+                        return user_data
             
             # Token démo non reconnu
             print(f"❌ Token démo non reconnu: {session_token}")
