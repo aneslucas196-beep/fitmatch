@@ -1,658 +1,632 @@
 {% extends "base.html" %}
 
-{% block title %}Espace Coach - Coach Fitness{% endblock %}
+{% block title %}Dashboard Coach - Coach Fitness{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <h1 class="text-3xl font-bold text-gray-900 mb-2">Espace Coach</h1>
-    <p class="text-gray-600">Gérez votre profil et vos transformations</p>
-</div>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <!-- Profil -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-semibold mb-4">Mon Profil</h2>
-        
-        <form action="/coach/portal" method="POST" class="space-y-4">
-            <div>
-                <label for="full_name" class="block text-sm font-medium text-gray-700 mb-2">Nom complet</label>
-                <input type="text" name="full_name" id="full_name" value="{{ coach.full_name if coach else '' }}"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            
-            <div>
-                <label for="bio" class="block text-sm font-medium text-gray-700 mb-2">Biographie</label>
-                <textarea name="bio" id="bio" rows="4" 
-                          class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">{{ coach.bio if coach else '' }}</textarea>
-            </div>
-            
-            <div>
-                <label for="city" class="block text-sm font-medium text-gray-700 mb-2">Ville</label>
-                <input type="text" name="city" id="city" value="{{ coach.city if coach else '' }}"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                       placeholder="Paris, Lyon, Marseille...">
-            </div>
-            
-            <div>
-                <label for="instagram_url" class="block text-sm font-medium text-gray-700 mb-2">Instagram URL</label>
-                <input type="url" name="instagram_url" id="instagram_url" value="{{ coach.instagram_url if coach else '' }}"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                       placeholder="https://instagram.com/votre_compte">
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label for="price_from" class="block text-sm font-medium text-gray-700 mb-2">Tarif à partir de (€)</label>
-                    <input type="number" name="price_from" id="price_from" value="{{ coach.price_from if coach else '' }}"
-                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                
-                <div>
-                    <label for="radius_km" class="block text-sm font-medium text-gray-700 mb-2">Rayon d'action (km)</label>
-                    <select name="radius_km" id="radius_km" 
-                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="10" {% if coach and coach.radius_km == 10 %}selected{% endif %}>10 km</option>
-                        <option value="25" {% if coach and coach.radius_km == 25 %}selected{% endif %}>25 km</option>
-                        <option value="50" {% if coach and coach.radius_km == 50 %}selected{% endif %}>50 km</option>
-                        <option value="100" {% if coach and coach.radius_km == 100 %}selected{% endif %}>100 km</option>
-                    </select>
-                </div>
-            </div>
-            
-            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition duration-200">
-                Mettre à jour le profil
-            </button>
-        </form>
-    </div>
+<!-- Dashboard Coach Moderne -->
+<div class="min-h-screen bg-gradient-to-br from-emerald-500 via-teal-600 to-blue-700">
     
-    <!-- Spécialités -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-semibold mb-4">Mes Spécialités</h2>
-        
-        <form action="/coach/specialties" method="POST" class="space-y-4">
-            {% for specialty in ['musculation', 'cardio', 'yoga', 'crossfit', 'pilates', 'nutrition'] %}
-            <label class="flex items-center">
-                <input type="checkbox" name="specialties" value="{{ specialty }}"
-                       {% if coach and specialty in coach.specialties %}checked{% endif %}
-                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                <span class="ml-2 capitalize">{{ specialty }}</span>
-            </label>
-            {% endfor %}
-            
-            <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition duration-200">
-                Mettre à jour les spécialités
-            </button>
-        </form>
-    </div>
-</div>
-
-<!-- Mes lieux de coaching -->
-<div class="bg-white rounded-lg shadow-md p-6 mt-8">
-    <h2 class="text-xl font-semibold mb-4">🏋️ Mes lieux de coaching</h2>
-    <p class="text-gray-600 mb-4">Ajoutez les salles de sport où vous entraînez vos clients. Vos clients pourront ainsi vous trouver facilement !</p>
-    
-    <!-- Formulaire d'ajout -->
-    <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h3 class="font-medium mb-4 text-blue-800">➕ Ajouter un nouveau lieu</h3>
-        
-        <div class="flex flex-col md:flex-row gap-3">
-            <div class="flex-1 relative">
-                <input type="text" id="gym-location-input" placeholder="Tapez le nom de la salle... (ex: Basic-Fit, ASCH, One Air...)" 
-                       class="w-full border border-blue-300 rounded-md px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                       autocomplete="off">
-                
-                <!-- Liste de suggestions d'autocomplétion -->
-                <div id="gym-suggestions" class="hidden absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    <!-- Les suggestions seront chargées ici -->
-                </div>
-            </div>
-            <button type="button" id="add-gym-location-btn" 
-                    class="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition duration-200 font-medium whitespace-nowrap disabled:bg-gray-400"
-                    disabled>
-                📍 Ajouter ce lieu
-            </button>
-        </div>
-        
-        <div class="mt-2 text-xs text-blue-600">
-            ✨ Nouveau : Tapez le nom d'une salle et choisissez parmi <strong>TOUTES les salles de France</strong> ! (7 951 salles de musculation + 4 125 salles de cours)
-        </div>
-    </div>
-    
-    <!-- Messages d'état -->
-    <div id="gym-loading" class="hidden mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-        <div class="flex items-center text-yellow-800">
-            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 mr-2"></div>
-            <span class="text-sm">Localisation en cours...</span>
-        </div>
-    </div>
-    
-    <div id="gym-success" class="hidden mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
-        <div class="flex items-center text-green-800">
-            <span class="text-green-500 mr-2">✅</span>
-            <span class="text-sm" id="gym-success-message"></span>
-        </div>
-    </div>
-    
-    <div id="gym-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-        <div class="flex items-center text-red-800">
-            <span class="text-red-500 mr-2">⚠️</span>
-            <span class="text-sm" id="gym-error-message"></span>
-        </div>
-    </div>
-    
-    <!-- Liste des lieux actuels -->
-    <div id="coach-gyms-list">
-        <h3 class="font-medium mb-3 text-gray-700">📍 Vos lieux de coaching actuels</h3>
-        <div id="current-coach-gyms" class="space-y-3">
-            <!-- Les lieux seront chargés ici par JavaScript -->
-            <div class="text-gray-500 text-center py-4">
-                Chargement de vos lieux...
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Transformations -->
-<div class="bg-white rounded-lg shadow-md p-6 mt-8">
-    <h2 class="text-xl font-semibold mb-4">Mes Transformations</h2>
-    
-    <form action="/coach/transformations" method="POST" enctype="multipart/form-data" class="mb-6 p-4 bg-gray-50 rounded-lg" id="transformationForm">
-        <h3 class="font-medium mb-4">Ajouter une transformation</h3>
-        
-        <!-- Messages d'erreur -->
-        {% if request.query_params.get('error') %}
-        <div class="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md">
-            <strong>Erreur :</strong> {{ request.query_params.get('error') }}
-        </div>
-        {% endif %}
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <label for="title" class="block text-sm font-medium text-gray-700 mb-2">Titre *</label>
-                <input type="text" name="title" id="title" required
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            
-            <div>
-                <label for="duration_weeks" class="block text-sm font-medium text-gray-700 mb-2">Durée (semaines)</label>
-                <input type="number" name="duration_weeks" id="duration_weeks" min="1" max="104"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-        </div>
-        
-        <div class="mt-4">
-            <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-            <textarea name="description" id="description" rows="3"
-                      class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-        </div>
-        
-        <!-- Section upload d'images -->
-        <div class="mt-6">
-            <h4 class="text-sm font-medium text-gray-700 mb-4">Photos de transformation</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Image avant -->
-                <div>
-                    <label for="before_image" class="block text-sm font-medium text-gray-700 mb-2">
-                        Photo avant
-                        <span class="text-gray-500 text-xs">(JPEG/PNG, max 5MB)</span>
-                    </label>
-                    <div class="relative">
-                        <input type="file" name="before_image" id="before_image" accept="image/jpeg,image/png" 
-                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-l-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                               onchange="previewImage(this, 'beforePreview')">
-                    </div>
-                    <div id="beforePreview" class="mt-2 hidden">
-                        <img class="w-32 h-32 object-cover rounded-md border" alt="Aperçu avant">
-                        <p class="text-xs text-gray-500 mt-1" id="beforeFileInfo"></p>
-                    </div>
-                </div>
-                
-                <!-- Image après -->
-                <div>
-                    <label for="after_image" class="block text-sm font-medium text-gray-700 mb-2">
-                        Photo après
-                        <span class="text-gray-500 text-xs">(JPEG/PNG, max 5MB)</span>
-                    </label>
-                    <div class="relative">
-                        <input type="file" name="after_image" id="after_image" accept="image/jpeg,image/png" 
-                               class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-l-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                               onchange="previewImage(this, 'afterPreview')">
-                    </div>
-                    <div id="afterPreview" class="mt-2 hidden">
-                        <img class="w-32 h-32 object-cover rounded-md border" alt="Aperçu après">
-                        <p class="text-xs text-gray-500 mt-1" id="afterFileInfo"></p>
-                    </div>
-                </div>
-            </div>
-            <p class="text-xs text-gray-500 mt-2">
-                ✨ Les images seront automatiquement optimisées et des miniatures (600px) seront créées pour un affichage rapide.
+    <!-- Bannière motivante en haut -->
+    <div class="relative overflow-hidden">
+        <div class="absolute inset-0 bg-black opacity-20"></div>
+        <div class="relative px-6 py-16 text-center text-white">
+            <h1 class="text-4xl md:text-6xl font-bold mb-4">
+                Prêt à coacher ? 💪
+            </h1>
+            <p class="text-xl md:text-2xl font-light opacity-90 mb-8">
+                Transformez des vies, une séance à la fois !
             </p>
+            <div class="flex justify-center items-center space-x-8 text-sm md:text-base">
+                <div class="bg-white bg-opacity-20 px-4 py-2 rounded-full">
+                    <span class="font-semibold">{{ coach.full_name or 'Coach' }}</span>
+                </div>
+                <div class="bg-white bg-opacity-20 px-4 py-2 rounded-full">
+                    <span>🎯 Expert Fitness</span>
+                </div>
+            </div>
         </div>
-        
-        <div class="mt-4">
-            <label class="flex items-center">
-                <input type="checkbox" name="consent" required
-                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                <span class="ml-2 text-sm">J'ai l'autorisation du client pour publier cette transformation *</span>
-            </label>
-        </div>
-        
-        <button type="submit" class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200 disabled:bg-gray-400" id="submitBtn">
-            Ajouter la transformation
-        </button>
-    </form>
-    
-    <script>
-    function previewImage(input, previewId) {
-        const preview = document.getElementById(previewId);
-        const img = preview.querySelector('img');
-        const fileInfo = document.getElementById(previewId.replace('Preview', 'FileInfo'));
-        
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            
-            // Validation côté client
-            const allowedTypes = ['image/jpeg', 'image/png'];
-            const maxSize = 5 * 1024 * 1024; // 5MB
-            
-            if (!allowedTypes.includes(file.type)) {
-                alert('Format non supporté. Utilisez JPEG ou PNG uniquement.');
-                input.value = '';
-                preview.classList.add('hidden');
-                return;
-            }
-            
-            if (file.size > maxSize) {
-                alert('Fichier trop volumineux. Maximum 5MB autorisé.');
-                input.value = '';
-                preview.classList.add('hidden');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                img.src = e.target.result;
-                fileInfo.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-                preview.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        } else {
-            preview.classList.add('hidden');
-        }
-    }
-    
-    // Validation du formulaire
-    document.getElementById('transformationForm').addEventListener('submit', function(e) {
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Upload en cours...';
-    });
-    </script>
-    
-    {% if transformations %}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {% for transformation in transformations %}
-        <div class="border rounded-lg p-4">
-            <h4 class="font-semibold">{{ transformation.title }}</h4>
-            {% if transformation.description %}
-            <p class="text-gray-600 text-sm mt-1">{{ transformation.description }}</p>
-            {% endif %}
-            {% if transformation.duration_weeks %}
-            <p class="text-sm text-gray-500 mt-2">{{ transformation.duration_weeks }} semaines</p>
-            {% endif %}
-        </div>
-        {% endfor %}
     </div>
-    {% else %}
-    <p class="text-gray-600 text-center py-4">Aucune transformation ajoutée pour le moment.</p>
-    {% endif %}
+
+    <!-- Dashboard principal -->
+    <div class="max-w-7xl mx-auto px-6 py-8 space-y-8">
+
+        <!-- Résumé rapide - Top Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Réservations semaine -->
+            <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6 border-l-4 border-orange-500">
+                <div class="flex items-center">
+                    <div class="bg-orange-500 p-3 rounded-full mr-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-bookings">12</h3>
+                        <p class="text-gray-600 text-sm">Séances cette semaine</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenus estimés -->
+            <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6 border-l-4 border-green-500">
+                <div class="flex items-center">
+                    <div class="bg-green-500 p-3 rounded-full mr-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-revenue">€720</h3>
+                        <p class="text-gray-600 text-sm">Revenus semaine</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clients actifs -->
+            <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6 border-l-4 border-blue-500">
+                <div class="flex items-center">
+                    <div class="bg-blue-500 p-3 rounded-full mr-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-900" id="active-clients">28</h3>
+                        <p class="text-gray-600 text-sm">Clients actifs</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6 border-l-4 border-red-500">
+                <div class="flex items-center">
+                    <div class="bg-red-500 p-3 rounded-full mr-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM10.5 14H7a2 2 0 01-2-2V5a2 2 0 012-2h5.5M16 3h3a2 2 0 012 2v7a2 2 0 01-2 2h-1"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold text-red-600" id="notifications-count">3</h3>
+                        <p class="text-gray-600 text-sm">Notifications</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section principale avec calendrier et réservations -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Calendrier interactif (2/3 de la largeur) -->
+            <div class="lg:col-span-2 bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center">
+                        <div class="bg-gradient-to-r from-purple-500 to-blue-600 p-3 rounded-full mr-4">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-900">Planning de la Semaine</h2>
+                            <p class="text-gray-600">Vos créneaux et réservations</p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="view-week" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                            Semaine
+                        </button>
+                        <button id="view-month" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                            Mois
+                        </button>
+                        <button id="add-availability" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+                            + Disponibilités
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Navigation calendrier -->
+                <div class="flex items-center justify-between mb-6">
+                    <button id="prev-week" class="flex items-center text-gray-600 hover:text-gray-900">
+                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Précédent
+                    </button>
+                    <h3 id="current-week" class="text-lg font-semibold text-gray-900">
+                        <!-- Sera rempli par JavaScript -->
+                    </h3>
+                    <button id="next-week" class="flex items-center text-gray-600 hover:text-gray-900">
+                        Suivant
+                        <svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Grille calendrier -->
+                <div id="calendar-grid" class="min-h-96">
+                    <!-- Le calendrier sera généré par JavaScript -->
+                </div>
+            </div>
+
+            <!-- Réservations et actions rapides (1/3 de la largeur) -->
+            <div class="space-y-6">
+                
+                <!-- Prochaines réservations -->
+                <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="bg-gradient-to-r from-orange-500 to-red-600 p-3 rounded-full mr-4">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">Prochaines Séances</h3>
+                            <p class="text-sm text-gray-600">Réservations confirmées</p>
+                        </div>
+                    </div>
+
+                    <div id="upcoming-bookings" class="space-y-3">
+                        <!-- Sera rempli par JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Actions rapides -->
+                <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Actions Rapides</h3>
+                    
+                    <div class="space-y-3">
+                        <button class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Ajouter une séance
+                        </button>
+                        
+                        <button class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            Gérer mon profil
+                        </button>
+                        
+                        <button class="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-purple-600 hover:to-purple-700 transition flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            Voir les stats
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Notifications récentes -->
+                <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Notifications</h3>
+                    
+                    <div id="notifications-list" class="space-y-3">
+                        <!-- Sera rempli par JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale pour ajouter des disponibilités -->
+<div id="availability-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
+            <div class="p-6 border-b">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-semibold">Ajouter des disponibilités</h3>
+                    <button id="close-availability-modal" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <form id="availability-form" class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Jour de la semaine</label>
+                        <select id="day-select" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="1">Lundi</option>
+                            <option value="2">Mardi</option>
+                            <option value="3">Mercredi</option>
+                            <option value="4">Jeudi</option>
+                            <option value="5">Vendredi</option>
+                            <option value="6">Samedi</option>
+                            <option value="0">Dimanche</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Heure début</label>
+                            <input type="time" id="start-time" class="w-full border border-gray-300 rounded-lg px-3 py-2" value="09:00">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Heure fin</label>
+                            <input type="time" id="end-time" class="w-full border border-gray-300 rounded-lg px-3 py-2" value="18:00">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex space-x-3">
+                    <button type="button" id="cancel-availability" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">
+                        Annuler
+                    </button>
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                        Ajouter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
-// ======================================
-// GESTION DES LIEUX DE COACHING
-// ======================================
+// Variables globales
+let currentWeekStart = new Date();
+let isWeekView = true;
 
-// Variables globales pour l'autocomplétion
-let currentSuggestions = [];
-let selectedGym = null;
-let suggestionTimeout = null;
+// Données mock pour le développement
+const mockBookings = [
+    {
+        id: 1,
+        client_name: "Marie Dupont",
+        date: "2025-09-28",
+        start_time: "10:00",
+        end_time: "11:00",
+        status: "confirmed",
+        session_type: "musculation",
+        payment_status: "paid",
+        gym_location: "Fitness Park Maurepas",
+        price: 65
+    },
+    {
+        id: 2,
+        client_name: "Pierre Martin",
+        date: "2025-09-29",
+        start_time: "14:00",
+        end_time: "15:00",
+        status: "pending",
+        session_type: "cardio",
+        payment_status: "pending",
+        gym_location: "Basic-Fit Paris 15",
+        price: 60
+    },
+    {
+        id: 3,
+        client_name: "Sophie Leroy",
+        date: "2025-10-01",
+        start_time: "16:00",
+        end_time: "17:00",
+        status: "confirmed",
+        session_type: "yoga",
+        payment_status: "paid",
+        gym_location: "Studio Zen Versailles",
+        price: 55
+    }
+];
 
+const mockNotifications = [
+    {
+        id: 1,
+        type: "booking",
+        message: "Nouvelle réservation de Marie Dupont",
+        time: "Il y a 2h",
+        urgent: false
+    },
+    {
+        id: 2,
+        type: "payment",
+        message: "Paiement en attente - Pierre Martin",
+        time: "Il y a 4h",
+        urgent: true
+    },
+    {
+        id: 3,
+        type: "reminder",
+        message: "Séance dans 1h avec Sophie",
+        time: "Il y a 30min",
+        urgent: false
+    }
+];
+
+// Initialisation
 document.addEventListener('DOMContentLoaded', function() {
-    // Charger les lieux actuels du coach
-    loadCoachGyms();
+    initializeCalendar();
+    loadUpcomingBookings();
+    loadNotifications();
+    setupEventListeners();
     
-    // Bouton d'ajout de lieu
-    document.getElementById('add-gym-location-btn').addEventListener('click', addGymLocation);
+    // Set current week to start from Monday
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const daysUntilMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    currentWeekStart = new Date(today);
+    currentWeekStart.setDate(today.getDate() + daysUntilMonday);
     
-    const gymInput = document.getElementById('gym-location-input');
-    const suggestionsDiv = document.getElementById('gym-suggestions');
-    
-    // Autocomplétion avec debouncing
-    gymInput.addEventListener('input', function(e) {
-        const query = e.target.value.trim();
-        
-        // Clear timeout precedent
-        if (suggestionTimeout) {
-            clearTimeout(suggestionTimeout);
-        }
-        
-        if (query.length < 2) {
-            hideSuggestions();
-            selectedGym = null;
-            updateAddButton();
-            return;
-        }
-        
-        // Debouncing : attendre 300ms après la dernière frappe
-        suggestionTimeout = setTimeout(() => {
-            fetchGymSuggestions(query);
-        }, 300);
-    });
-    
-    // Cacher les suggestions si on clique ailleurs
-    document.addEventListener('click', function(e) {
-        if (!gymInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-            hideSuggestions();
-        }
-    });
-    
-    // Recherche avec Entrée (seulement si une salle est sélectionnée)
-    gymInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            if (selectedGym) {
-                addGymLocation();
-            }
-        }
-    });
+    updateCalendarDisplay();
 });
 
-function loadCoachGyms() {
-    fetch('/api/coach/gyms')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                displayCoachGyms(data.gyms);
-            } else {
-                showGymMessage('error', 'Impossible de charger vos lieux de coaching.');
-            }
-        })
-        .catch(error => {
-            console.error('Erreur chargement lieux coach:', error);
-            showGymMessage('error', 'Erreur de connexion lors du chargement.');
-        });
+function setupEventListeners() {
+    // Navigation calendrier
+    document.getElementById('prev-week').addEventListener('click', () => {
+        if (isWeekView) {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+        } else {
+            currentWeekStart.setMonth(currentWeekStart.getMonth() - 1);
+        }
+        updateCalendarDisplay();
+    });
+    
+    document.getElementById('next-week').addEventListener('click', () => {
+        if (isWeekView) {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+        } else {
+            currentWeekStart.setMonth(currentWeekStart.getMonth() + 1);
+        }
+        updateCalendarDisplay();
+    });
+    
+    // Boutons de vue
+    document.getElementById('view-week').addEventListener('click', () => {
+        setCalendarView('week');
+    });
+    
+    document.getElementById('view-month').addEventListener('click', () => {
+        setCalendarView('month');
+    });
+    
+    // Modal disponibilités
+    document.getElementById('add-availability').addEventListener('click', () => {
+        document.getElementById('availability-modal').classList.remove('hidden');
+    });
+    
+    document.getElementById('close-availability-modal').addEventListener('click', () => {
+        document.getElementById('availability-modal').classList.add('hidden');
+    });
+    
+    document.getElementById('cancel-availability').addEventListener('click', () => {
+        document.getElementById('availability-modal').classList.add('hidden');
+    });
+    
+    document.getElementById('availability-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        addAvailability();
+    });
 }
 
-function displayCoachGyms(gyms) {
-    const container = document.getElementById('current-coach-gyms');
+function setCalendarView(view) {
+    isWeekView = view === 'week';
     
-    if (gyms.length === 0) {
-        container.innerHTML = `
-            <div class="text-gray-500 text-center py-4 border border-gray-200 rounded-lg border-dashed">
-                <div class="text-2xl mb-2">🏢</div>
-                <p>Aucun lieu de coaching ajouté pour le moment.</p>
-                <p class="text-sm mt-1">Ajoutez vos salles de sport pour que vos clients vous trouvent facilement !</p>
+    // Update button styles
+    const weekBtn = document.getElementById('view-week');
+    const monthBtn = document.getElementById('view-month');
+    
+    if (isWeekView) {
+        weekBtn.className = 'bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition';
+        monthBtn.className = 'bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition';
+    } else {
+        weekBtn.className = 'bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition';
+        monthBtn.className = 'bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition';
+    }
+    
+    updateCalendarDisplay();
+}
+
+function updateCalendarDisplay() {
+    const currentWeekElement = document.getElementById('current-week');
+    
+    if (isWeekView) {
+        const endOfWeek = new Date(currentWeekStart);
+        endOfWeek.setDate(currentWeekStart.getDate() + 6);
+        
+        currentWeekElement.textContent = `${formatDate(currentWeekStart)} - ${formatDate(endOfWeek)}`;
+        generateWeekCalendar();
+    } else {
+        const monthName = currentWeekStart.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        currentWeekElement.textContent = monthName;
+        generateMonthCalendar();
+    }
+}
+
+function generateWeekCalendar() {
+    const calendar = document.getElementById('calendar-grid');
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const hours = Array.from({length: 12}, (_, i) => `${8 + i}:00`);
+    
+    let html = '<div class="grid grid-cols-8 gap-1 text-xs">';
+    
+    // Header with days
+    html += '<div class="font-semibold text-gray-600 p-2">Heures</div>';
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(currentWeekStart);
+        date.setDate(currentWeekStart.getDate() + i);
+        html += `<div class="font-semibold text-gray-600 p-2 text-center">
+            ${days[i]}<br>
+            <span class="text-xs text-gray-500">${date.getDate()}</span>
+        </div>`;
+    }
+    
+    // Time slots
+    hours.forEach(hour => {
+        html += `<div class="font-medium text-gray-500 p-2 text-right">${hour}</div>`;
+        
+        for (let day = 0; day < 7; day++) {
+            const date = new Date(currentWeekStart);
+            date.setDate(currentWeekStart.getDate() + day);
+            const dateStr = date.toISOString().split('T')[0];
+            
+            // Check for bookings at this time
+            const booking = mockBookings.find(b => 
+                b.date === dateStr && b.start_time === hour
+            );
+            
+            if (booking) {
+                const statusColor = booking.status === 'confirmed' ? 'bg-green-100 border-green-500' : 'bg-orange-100 border-orange-500';
+                html += `<div class="p-1 border ${statusColor} rounded cursor-pointer hover:opacity-80" 
+                    title="${booking.client_name} - ${booking.session_type}">
+                    <div class="text-xs font-medium truncate">${booking.client_name}</div>
+                    <div class="text-xs text-gray-600 truncate">${booking.session_type}</div>
+                </div>`;
+            } else {
+                html += '<div class="p-1 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer" title="Disponible"></div>';
+            }
+        }
+    });
+    
+    html += '</div>';
+    calendar.innerHTML = html;
+}
+
+function generateMonthCalendar() {
+    const calendar = document.getElementById('calendar-grid');
+    const monthStart = new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), 1);
+    const monthEnd = new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth() + 1, 0);
+    
+    // Start from the Monday of the week containing the first day of the month
+    const calendarStart = new Date(monthStart);
+    const startDay = monthStart.getDay();
+    const daysToSubtract = startDay === 0 ? 6 : startDay - 1;
+    calendarStart.setDate(monthStart.getDate() - daysToSubtract);
+    
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    
+    let html = '<div class="grid grid-cols-7 gap-1">';
+    
+    // Header with day names
+    days.forEach(day => {
+        html += `<div class="font-semibold text-gray-600 p-3 text-center border-b">${day}</div>`;
+    });
+    
+    // Generate 6 weeks to cover the entire month
+    for (let week = 0; week < 6; week++) {
+        for (let day = 0; day < 7; day++) {
+            const date = new Date(calendarStart);
+            date.setDate(calendarStart.getDate() + (week * 7) + day);
+            
+            const isCurrentMonth = date.getMonth() === monthStart.getMonth();
+            const isToday = date.toDateString() === new Date().toDateString();
+            const dateStr = date.toISOString().split('T')[0];
+            
+            // Check for bookings on this date
+            const dayBookings = mockBookings.filter(b => b.date === dateStr);
+            
+            let cellClass = 'p-2 min-h-[80px] border border-gray-200 hover:bg-gray-50 cursor-pointer';
+            if (!isCurrentMonth) {
+                cellClass += ' bg-gray-100 text-gray-400';
+            }
+            if (isToday) {
+                cellClass += ' bg-blue-100 border-blue-500';
+            }
+            
+            html += `<div class="${cellClass}">
+                <div class="font-semibold ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'} mb-1">${date.getDate()}</div>`;
+            
+            // Show bookings for this day
+            dayBookings.forEach(booking => {
+                const statusColor = booking.status === 'confirmed' ? 'bg-green-200 text-green-800' : 'bg-orange-200 text-orange-800';
+                html += `<div class="text-xs p-1 mb-1 rounded ${statusColor} truncate" 
+                    title="${booking.client_name} - ${booking.start_time}">
+                    ${booking.start_time} ${booking.client_name}
+                </div>`;
+            });
+            
+            html += '</div>';
+        }
+    }
+    
+    html += '</div>';
+    calendar.innerHTML = html;
+}
+
+function loadUpcomingBookings() {
+    const container = document.getElementById('upcoming-bookings');
+    
+    // Sort by date and take next 3
+    const upcoming = mockBookings
+        .sort((a, b) => new Date(a.date + ' ' + a.start_time) - new Date(b.date + ' ' + b.start_time))
+        .slice(0, 3);
+    
+    container.innerHTML = upcoming.map(booking => {
+        const statusIcon = booking.payment_status === 'paid' ? '✅' : '⏳';
+        const statusText = booking.payment_status === 'paid' ? 'Payé' : 'En attente';
+        const statusColor = booking.payment_status === 'paid' ? 'text-green-600' : 'text-orange-600';
+        
+        return `
+            <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition">
+                <div class="flex justify-between items-start mb-2">
+                    <h4 class="font-semibold text-gray-900">${booking.client_name}</h4>
+                    <span class="${statusColor} text-xs">${statusIcon} ${statusText}</span>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <p>📅 ${new Date(booking.date).toLocaleDateString('fr-FR')}</p>
+                    <p>⏰ ${booking.start_time} - ${booking.end_time}</p>
+                    <p>🏋️ ${booking.session_type}</p>
+                    <p>📍 ${booking.gym_location}</p>
+                </div>
+                <div class="mt-2 flex justify-between items-center">
+                    <span class="font-semibold text-green-600">€${booking.price}</span>
+                    ${booking.status === 'confirmed' ? 
+                        '<button class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">Marquer terminée</button>' :
+                        '<button class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">Confirmer</button>'
+                    }
+                </div>
             </div>
         `;
-        return;
-    }
-    
-    // Vider le container et recréer avec des éléments sécurisés
-    container.innerHTML = '';
-    
-    gyms.forEach(relation => {
-        const gym = relation.gym_data;
-        
-        // Créer les éléments de manière sécurisée
-        const gymDiv = document.createElement('div');
-        gymDiv.className = 'flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition duration-200';
-        
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'flex-1';
-        
-        const nameH4 = document.createElement('h4');
-        nameH4.className = 'font-medium text-gray-900';
-        nameH4.textContent = gym.name; // Sécurisé avec textContent
-        
-        const addressP = document.createElement('p');
-        addressP.className = 'text-sm text-gray-600 mt-1';
-        addressP.textContent = gym.address; // Sécurisé avec textContent
-        
-        const coordsDiv = document.createElement('div');
-        coordsDiv.className = 'flex items-center mt-2 text-xs text-gray-500';
-        
-        const coordsSpan = document.createElement('span');
-        coordsSpan.className = 'flex items-center';
-        const lat = Number(gym.lat) || 0;
-        const lng = Number(gym.lng) || 0;
-        coordsSpan.innerHTML = '<span class="text-green-500 mr-1">📍</span>Lat: ' + lat.toFixed(4) + ', Lng: ' + lng.toFixed(4);
-        
-        const dateSpan = document.createElement('span');
-        dateSpan.className = 'ml-4 text-blue-500';
-        dateSpan.textContent = 'Ajouté le ' + new Date(relation.created_at).toLocaleDateString('fr-FR');
-        
-        coordsDiv.appendChild(coordsSpan);
-        coordsDiv.appendChild(dateSpan);
-        
-        contentDiv.appendChild(nameH4);
-        contentDiv.appendChild(addressP);
-        contentDiv.appendChild(coordsDiv);
-        
-        // Bouton de suppression sécurisé avec event listener
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'ml-4 bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition duration-200 text-sm';
-        deleteBtn.textContent = '🗑️ Supprimer';
-        deleteBtn.dataset.gymId = relation.id;
-        deleteBtn.dataset.gymName = gym.name;
-        
-        // Event listener sécurisé au lieu d'onclick inline
-        deleteBtn.addEventListener('click', function() {
-            removeGymLocationSecure(this.dataset.gymId, this.dataset.gymName);
-        });
-        
-        gymDiv.appendChild(contentDiv);
-        gymDiv.appendChild(deleteBtn);
-        container.appendChild(gymDiv);
-    });
+    }).join('');
 }
 
-// ======================================
-// AUTOCOMPLÉTION SALLES
-// ======================================
-
-function fetchGymSuggestions(query) {
-    fetch(`/api/gyms/suggestions?q=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.suggestions) {
-                currentSuggestions = data.suggestions;
-                showSuggestions(data.suggestions);
-            } else {
-                hideSuggestions();
-            }
-        })
-        .catch(error => {
-            console.error('Erreur lors de la recherche de suggestions:', error);
-            hideSuggestions();
-        });
-}
-
-function showSuggestions(suggestions) {
-    const suggestionsDiv = document.getElementById('gym-suggestions');
+function loadNotifications() {
+    const container = document.getElementById('notifications-list');
     
-    if (suggestions.length === 0) {
-        suggestionsDiv.innerHTML = '<div class="p-3 text-gray-500 text-sm">Aucune salle trouvée</div>';
-        suggestionsDiv.classList.remove('hidden');
-        return;
-    }
-    
-    const html = suggestions.map(gym => `
-        <div class="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 suggestion-item" 
-             data-gym-id="${gym.id}">
-            <div class="font-medium text-gray-900">${gym.name}</div>
-            <div class="text-sm text-gray-600">${gym.address}</div>
-            <div class="text-xs text-blue-500 mt-1">
-                <span class="inline-block bg-blue-100 px-2 py-1 rounded">${gym.chain}</span>
-                <span class="ml-2 text-gray-400">${gym.source}</span>
+    container.innerHTML = mockNotifications.map(notification => {
+        const urgentClass = notification.urgent ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50';
+        
+        return `
+            <div class="border ${urgentClass} rounded-lg p-3">
+                <div class="flex justify-between items-start">
+                    <p class="text-sm text-gray-900">${notification.message}</p>
+                    ${notification.urgent ? '<span class="text-red-500 text-xs">🔴</span>' : ''}
+                </div>
+                <p class="text-xs text-gray-500 mt-1">${notification.time}</p>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
+}
+
+function addAvailability() {
+    const day = document.getElementById('day-select').value;
+    const startTime = document.getElementById('start-time').value;
+    const endTime = document.getElementById('end-time').value;
     
-    suggestionsDiv.innerHTML = html;
-    suggestionsDiv.classList.remove('hidden');
+    // Here you would make an API call to save the availability
+    console.log('Adding availability:', { day, startTime, endTime });
     
-    // Ajouter event listeners pour chaque suggestion
-    suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
-        item.addEventListener('click', function() {
-            const gymId = this.dataset.gymId;
-            const gym = suggestions.find(g => g.id === gymId);
-            selectGym(gym);
-        });
+    // Close modal
+    document.getElementById('availability-modal').classList.add('hidden');
+    
+    // Show success message
+    alert('Disponibilité ajoutée avec succès!');
+    
+    // Refresh calendar
+    updateCalendarDisplay();
+}
+
+function initializeCalendar() {
+    // Initial calendar setup
+    console.log('Calendar initialized');
+}
+
+function formatDate(date) {
+    return date.toLocaleDateString('fr-FR', { 
+        day: 'numeric', 
+        month: 'short' 
     });
-}
-
-function hideSuggestions() {
-    document.getElementById('gym-suggestions').classList.add('hidden');
-}
-
-function selectGym(gym) {
-    selectedGym = gym;
-    document.getElementById('gym-location-input').value = gym.display_name;
-    hideSuggestions();
-    updateAddButton();
-}
-
-function updateAddButton() {
-    const button = document.getElementById('add-gym-location-btn');
-    if (selectedGym) {
-        button.disabled = false;
-        button.textContent = '📍 Ajouter ce lieu';
-    } else {
-        button.disabled = true;
-        button.textContent = '📍 Sélectionnez une salle';
-    }
-}
-
-// ======================================
-// AJOUT DE LIEU MODIFIÉ
-// ======================================
-
-function addGymLocation() {
-    if (!selectedGym) {
-        showGymMessage('error', 'Veuillez sélectionner une salle dans la liste de suggestions.');
-        return;
-    }
-    
-    // Afficher le loading
-    showGymLoading();
-    
-    // Utiliser les données de la salle sélectionnée
-    const gymData = {
-        name: selectedGym.name,
-        address: selectedGym.address,
-        lat: selectedGym.lat,
-        lng: selectedGym.lng,
-        city: selectedGym.city,
-        chain: selectedGym.chain,
-        source: selectedGym.source
-    };
-    
-    // Appeler l'API d'ajout avec les données structurées
-    fetch('/api/coach/gyms', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            gym_data: gymData
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideGymLoading();
-        
-        if (data.success) {
-            showGymMessage('success', data.message);
-            
-            // Reset du formulaire
-            document.getElementById('gym-location-input').value = '';
-            selectedGym = null;
-            updateAddButton();
-            hideSuggestions();
-            
-            // Recharger la liste
-            loadCoachGyms();
-        } else {
-            showGymMessage('error', data.message || 'Erreur lors de l\'ajout du lieu.');
-        }
-    })
-    .catch(error => {
-        hideGymLoading();
-        console.error('Erreur ajout lieu:', error);
-        showGymMessage('error', 'Erreur de connexion lors de l\'ajout.');
-    });
-}
-
-// Fonction sécurisée pour supprimer un lieu
-function removeGymLocationSecure(gymId, gymName) {
-    // Échapper le nom pour l'affichage sécurisé
-    const safeName = gymName.replace(/[<>&"']/g, function(match) {
-        const escape = {'<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;'};
-        return escape[match];
-    });
-    
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer "${safeName}" de vos lieux de coaching ?`)) {
-        return;
-    }
-    
-    fetch(`/api/coach/gyms/${encodeURIComponent(gymId)}`, {
-        method: 'DELETE'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showGymMessage('success', data.message);
-            loadCoachGyms(); // Recharger la liste
-        } else {
-            showGymMessage('error', data.message || 'Erreur lors de la suppression.');
-        }
-    })
-    .catch(error => {
-        console.error('Erreur suppression lieu:', error);
-        showGymMessage('error', 'Erreur de connexion lors de la suppression.');
-    });
-}
-
-function showGymLoading() {
-    document.getElementById('gym-loading').classList.remove('hidden');
-    hideGymMessages();
-}
-
-function hideGymLoading() {
-    document.getElementById('gym-loading').classList.add('hidden');
-}
-
-function showGymMessage(type, message) {
-    hideGymMessages();
-    
-    if (type === 'success') {
-        document.getElementById('gym-success-message').textContent = message;
-        document.getElementById('gym-success').classList.remove('hidden');
-        
-        // Masquer automatiquement après 5 secondes
-        setTimeout(() => {
-            document.getElementById('gym-success').classList.add('hidden');
-        }, 5000);
-    } else if (type === 'error') {
-        document.getElementById('gym-error-message').textContent = message;
-        document.getElementById('gym-error').classList.remove('hidden');
-    }
-}
-
-function hideGymMessages() {
-    document.getElementById('gym-success').classList.add('hidden');
-    document.getElementById('gym-error').classList.add('hidden');
 }
 </script>
 

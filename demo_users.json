@@ -1,12 +1,12 @@
 {
   "anaslimeme830@gmail.com": {
-    "full_name": "Anas",
+    "full_name": "anas",
     "gender": "homme",
-    "role": "client",
-    "country_code": "FR",
+    "role": "coach",
+    "country_code": "AZ",
     "password": "Anasking1234!",
-    "coach_gender_preference": "homme",
-    "selected_gyms": []
+    "coach_gender_preference": null,
+    "selected_gyms": null
   },
   "aneslucas196@gmail.com": {
     "full_name": "Anas",
