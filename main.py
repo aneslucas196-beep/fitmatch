@@ -311,13 +311,24 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
     # Mode démo si pas de Supabase
     if not supabase_anon:
         if session_token == "demo_token":
-            return {
-                "id": "demo_user", 
-                "email": "demo@example.com", 
-                "role": "coach",
-                "full_name": "Utilisateur Démo",
-                "_access_token": session_token
-            }
+            # Charger les données utilisateur depuis le stockage persistant
+            from utils import get_demo_user
+            demo_user = get_demo_user("demo@example.com")
+            
+            if demo_user:
+                # Utiliser les données sauvegardées
+                demo_user["_access_token"] = session_token
+                return demo_user
+            else:
+                # Utilisateur par défaut si pas de données sauvegardées
+                return {
+                    "id": "demo_user", 
+                    "email": "demo@example.com", 
+                    "role": "coach",
+                    "full_name": "Utilisateur Démo",
+                    "profile_completed": False,
+                    "_access_token": session_token
+                }
         return None
     
     try:
@@ -1400,14 +1411,24 @@ async def coach_profile_setup_post(
             print(f"   - Spécialités: {specialties}")
             print(f"   - Salles: {selected_gym_ids}")
             
-            # Mettre à jour l'utilisateur en mémoire pour le mode démo
-            user["profile_completed"] = True
-            user["full_name"] = full_name
-            user["bio"] = bio
-            user["city"] = city
-            user["instagram_url"] = instagram_url
-            user["price_from"] = price_from
-            user["radius_km"] = radius_km
+            # Mettre à jour l'utilisateur et sauvegarder dans le stockage persistant
+            from utils import save_demo_user
+            updated_user = {
+                "id": user["id"],
+                "email": user["email"],
+                "role": user["role"],
+                "profile_completed": True,
+                "full_name": full_name,
+                "bio": bio,
+                "city": city,
+                "instagram_url": instagram_url,
+                "price_from": price_from,
+                "radius_km": radius_km
+            }
+            
+            # Sauvegarder les modifications dans le stockage persistant
+            save_demo_user(user["email"], updated_user)
+            print(f"✅ Données utilisateur démo sauvegardées avec profile_completed=True")
             
             # Redirection vers le dashboard après succès
             return RedirectResponse(url="/coach/portal", status_code=303)
