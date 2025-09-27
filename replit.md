@@ -16,6 +16,15 @@ The platform includes a worldwide gym database with all gyms globally, OpenStree
 - **Badge System**: Achievement badges with unlocked (✅) and locked (🔒) states
 - **Action Buttons**: Prominent buttons for "Find a gym" and "Discover coaches" with hover animations
 
+### Coach Onboarding System Implementation
+- **Complete Onboarding Flow**: First-time coach users are automatically redirected to profile setup
+- **Profile Completion Tracking**: Database field `profile_completed` tracks onboarding status
+- **4-Section Setup Form**: Comprehensive profile configuration (basic info, zone, specialties, gym locations)
+- **Gym Selection Autocomplete**: Real-time search across 5710+ French gyms via Data ES API
+- **Redirect Logic**: Incomplete profiles automatically redirect to onboarding, completed profiles access dashboard
+- **Profile Management**: "Gérer mon profil" button allows coaches to update their information anytime
+- **Database Migration**: Persistent SQL migration ensures profile_completed field exists in all environments
+
 ### Worldwide Gym Database Implementation
 - **Complete Database**: Supabase gyms table with geographic indexing and search capabilities
 - **Global Coverage**: Support for 249 countries with ISO 3166-1 alpha-2 standardization  
