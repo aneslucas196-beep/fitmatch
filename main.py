@@ -1240,14 +1240,30 @@ async def logout():
 # Routes protégées - Espace Coach
 @app.get("/coach/portal", response_class=HTMLResponse)
 async def coach_portal(request: Request, user = Depends(require_coach_role)):
-    """Espace coach - gestion du profil."""
+    """Dashboard coach - avec vérification du profil complété."""
     
-    # Récupérer les transformations du coach avec client authentifié
+    # Vérifier si le profil est complété
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
     if user_supabase:
-        transformations = get_transformations_by_coach_supabase(user_supabase, user["id"])
+        try:
+            # Récupérer le statut du profil
+            profile_response = user_supabase.table("profiles").select("profile_completed").eq("user_id", user["id"]).single().execute()
+            profile_completed = profile_response.data.get("profile_completed", False) if profile_response.data else False
+            
+            # Si le profil n'est pas complété, rediriger vers l'onboarding
+            if not profile_completed:
+                return RedirectResponse(url="/coach/profile-setup", status_code=302)
+                
+            # Récupérer les transformations du coach
+            transformations = get_transformations_by_coach_supabase(user_supabase, user["id"])
+        except Exception as e:
+            print(f"❌ Erreur lors de la vérification du profil: {e}")
+            # En cas d'erreur, rediriger vers l'onboarding par sécurité
+            return RedirectResponse(url="/coach/profile-setup", status_code=302)
     else:
-        # Mode démo
+        # Mode démo - simuler un profil non complété pour les nouveaux utilisateurs
+        if not user.get("profile_completed", False):
+            return RedirectResponse(url="/coach/profile-setup", status_code=302)
         transformations = get_transformations_by_coach_mock(1)
     
     return templates.TemplateResponse("coach_portal.html", {
@@ -1289,6 +1305,108 @@ async def coach_portal_update(
             })
     
     return RedirectResponse(url="/coach/portal", status_code=303)
+
+# Route onboarding coach
+@app.get("/coach/profile-setup", response_class=HTMLResponse)
+async def coach_profile_setup_get(request: Request, user = Depends(require_coach_role)):
+    """Page d'onboarding/configuration du profil coach."""
+    
+    user_supabase = get_supabase_client_for_user(user.get("_access_token"))
+    coach_data = None
+    profile_completed = False
+    
+    if user_supabase:
+        try:
+            # Récupérer les données actuelles du profil
+            profile_response = user_supabase.table("profiles").select("*").eq("user_id", user["id"]).single().execute()
+            if profile_response.data:
+                coach_data = profile_response.data
+                profile_completed = coach_data.get("profile_completed", False)
+        except Exception as e:
+            print(f"❌ Erreur lors de la récupération du profil: {e}")
+    
+    return templates.TemplateResponse("coach_profile_setup.html", {
+        "request": request,
+        "coach": coach_data,
+        "profile_completed": profile_completed,
+        "user": user
+    })
+
+@app.post("/coach/profile-setup")
+async def coach_profile_setup_post(
+    request: Request,
+    full_name: str = Form(...),
+    bio: str = Form(...),
+    city: str = Form(...),
+    instagram_url: Optional[str] = Form(""),
+    price_from: Optional[int] = Form(None),
+    radius_km: int = Form(25),
+    specialties: List[str] = Form([]),
+    selected_gym_ids: Optional[str] = Form(""),
+    user = Depends(require_coach_role)
+):
+    """Traitement du formulaire d'onboarding coach."""
+    
+    user_supabase = get_supabase_client_for_user(user.get("_access_token"))
+    error_message = None
+    success_message = None
+    
+    try:
+        if user_supabase:
+            # Préparer les données de profil
+            profile_data = {
+                "full_name": full_name.strip(),
+                "bio": bio.strip(),
+                "city": city.strip(),
+                "instagram_url": instagram_url.strip() if instagram_url else None,
+                "price_from": price_from,
+                "radius_km": radius_km,
+                "profile_completed": True  # Marquer le profil comme complété
+            }
+            
+            # Mettre à jour le profil principal
+            profile_response = user_supabase.table("profiles").update(profile_data).eq("user_id", user["id"]).execute()
+            
+            if profile_response.data:
+                # Traiter les spécialités si fournies
+                if specialties:
+                    # Supprimer les anciennes spécialités
+                    user_supabase.table("coach_specialties").delete().eq("coach_id", user["id"]).execute()
+                    
+                    # Ajouter les nouvelles spécialités
+                    specialty_data = [{"coach_id": user["id"], "specialty": spec} for spec in specialties]
+                    user_supabase.table("coach_specialties").insert(specialty_data).execute()
+                
+                # Traiter les salles sélectionnées si fournies
+                if selected_gym_ids and selected_gym_ids.strip():
+                    gym_ids = [gid.strip() for gid in selected_gym_ids.split(",") if gid.strip()]
+                    if gym_ids:
+                        # Supprimer les anciennes associations
+                        user_supabase.table("coach_gyms").delete().eq("coach_id", user["id"]).execute()
+                        
+                        # Ajouter les nouvelles associations
+                        gym_data = [{"coach_id": user["id"], "gym_id": gym_id} for gym_id in gym_ids]
+                        user_supabase.table("coach_gyms").insert(gym_data).execute()
+                
+                # Redirection vers le dashboard après succès
+                return RedirectResponse(url="/coach/portal", status_code=303)
+            else:
+                error_message = "Erreur lors de la mise à jour du profil."
+        else:
+            error_message = "Service temporairement indisponible."
+            
+    except Exception as e:
+        print(f"❌ Erreur lors de la soumission du profil: {e}")
+        error_message = "Une erreur s'est produite lors de la sauvegarde."
+    
+    # En cas d'erreur, recharger la page avec le message d'erreur
+    return templates.TemplateResponse("coach_profile_setup.html", {
+        "request": request,
+        "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km},
+        "profile_completed": False,
+        "error_message": error_message,
+        "user": user
+    })
 
 @app.post("/coach/specialties")
 async def coach_specialties_update(
