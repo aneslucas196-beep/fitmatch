@@ -1474,6 +1474,9 @@ async def coach_profile_setup_post(
             
             print(f"🔧 Mode démo - Sauvegarde profil pour: {user_email}")
             
+            # CORRECTION : Récupérer les données existantes pour préserver le mot de passe
+            existing_user = get_demo_user(user_email) or {}
+            
             updated_user = {
                 "id": user.get("id", user_email),  # Utiliser email comme ID si pas d'ID
                 "email": user_email,
@@ -1484,8 +1487,16 @@ async def coach_profile_setup_post(
                 "city": city,
                 "instagram_url": instagram_url,
                 "price_from": price_from,
-                "radius_km": radius_km
+                "radius_km": radius_km,
+                # PRÉSERVER les données d'inscription existantes
+                "password": existing_user.get("password"),  # ✅ Conserver le mot de passe !
+                "gender": existing_user.get("gender"),
+                "country_code": existing_user.get("country_code"),
+                "coach_gender_preference": existing_user.get("coach_gender_preference"),
+                "selected_gyms": existing_user.get("selected_gyms")
             }
+            
+            print(f"🔒 Mot de passe préservé: {'✅' if updated_user['password'] else '❌'}")
             
             # Sauvegarder les modifications dans le stockage persistant
             save_demo_user(user_email, updated_user)
