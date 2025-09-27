@@ -1281,7 +1281,8 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     if user_supabase:
         try:
             # Récupérer le statut du profil
-            profile_response = user_supabase.table("profiles").select("profile_completed").eq("user_id", user["id"]).single().execute()
+            user_id = user.get("id", user.get("email", "demo_user"))
+            profile_response = user_supabase.table("profiles").select("profile_completed").eq("user_id", user_id).single().execute()
             profile_completed = profile_response.data.get("profile_completed", False) if profile_response.data else False
             
             # Si le profil n'est pas complété, rediriger vers l'onboarding
@@ -1289,7 +1290,7 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
                 return RedirectResponse(url="/coach/profile-setup", status_code=302)
                 
             # Récupérer les transformations du coach
-            transformations = get_transformations_by_coach_supabase(user_supabase, user["id"])
+            transformations = get_transformations_by_coach_supabase(user_supabase, user_id)
         except Exception as e:
             print(f"❌ Erreur lors de la vérification du profil: {e}")
             # En cas d'erreur, rediriger vers l'onboarding par sécurité
@@ -1330,7 +1331,8 @@ async def coach_portal_update(
     
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
     if user_supabase:
-        success = update_coach_profile(user_supabase, user["id"], profile_data)
+        user_id = user.get("id", user.get("email", "demo_user"))
+        success = update_coach_profile(user_supabase, user_id, profile_data)
         if not success:
             return templates.TemplateResponse("coach_portal.html", {
                 "request": request,
@@ -1352,7 +1354,8 @@ async def coach_profile_setup_get(request: Request, user = Depends(require_coach
     if user_supabase:
         try:
             # Récupérer les données actuelles du profil
-            profile_response = user_supabase.table("profiles").select("*").eq("user_id", user["id"]).single().execute()
+            user_id = user.get("id", user.get("email", "demo_user"))
+            profile_response = user_supabase.table("profiles").select("*").eq("user_id", user_id).single().execute()
             if profile_response.data:
                 coach_data = profile_response.data
                 profile_completed = coach_data.get("profile_completed", False)
@@ -1399,16 +1402,17 @@ async def coach_profile_setup_post(
             }
             
             # Mettre à jour le profil principal
-            profile_response = user_supabase.table("profiles").update(profile_data).eq("user_id", user["id"]).execute()
+            user_id = user.get("id", user.get("email", "demo_user"))
+            profile_response = user_supabase.table("profiles").update(profile_data).eq("user_id", user_id).execute()
             
             if profile_response.data:
                 # Traiter les spécialités si fournies
                 if specialties:
                     # Supprimer les anciennes spécialités
-                    user_supabase.table("coach_specialties").delete().eq("coach_id", user["id"]).execute()
+                    user_supabase.table("coach_specialties").delete().eq("coach_id", user_id).execute()
                     
                     # Ajouter les nouvelles spécialités
-                    specialty_data = [{"coach_id": user["id"], "specialty": spec} for spec in specialties]
+                    specialty_data = [{"coach_id": user_id, "specialty": spec} for spec in specialties]
                     user_supabase.table("coach_specialties").insert(specialty_data).execute()
                 
                 # Traiter les salles sélectionnées si fournies
@@ -1416,10 +1420,10 @@ async def coach_profile_setup_post(
                     gym_ids = [gid.strip() for gid in selected_gym_ids.split(",") if gid.strip()]
                     if gym_ids:
                         # Supprimer les anciennes associations
-                        user_supabase.table("coach_gyms").delete().eq("coach_id", user["id"]).execute()
+                        user_supabase.table("coach_gyms").delete().eq("coach_id", user_id).execute()
                         
                         # Ajouter les nouvelles associations
-                        gym_data = [{"coach_id": user["id"], "gym_id": gym_id} for gym_id in gym_ids]
+                        gym_data = [{"coach_id": user_id, "gym_id": gym_id} for gym_id in gym_ids]
                         user_supabase.table("coach_gyms").insert(gym_data).execute()
                 
                 # Redirection vers le dashboard après succès
