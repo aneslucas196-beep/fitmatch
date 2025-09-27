@@ -26,11 +26,11 @@
     "selected_gyms": []
   },
   "limamanes12@gmail.com": {
-    "full_name": "Anas",
+    "full_name": "anas",
     "gender": "homme",
     "role": "coach",
-    "country_code": "BE",
-    "password": "Anasking1234!",
+    "country_code": "AM",
+    "password": "Anasking1234",
     "coach_gender_preference": null,
     "selected_gyms": null
   },
@@ -42,5 +42,26 @@
     "password": "Anasking1234!",
     "coach_gender_preference": "femme",
     "selected_gyms": []
+  },
+  "demo@example.com": {
+    "id": "demo_user",
+    "email": "demo@example.com",
+    "role": "coach",
+    "profile_completed": true,
+    "full_name": "anes lucas",
+    "bio": "efzefaef",
+    "city": "elancourt ",
+    "instagram_url": "https://www.instagram.com/gazo_officiel/",
+    "price_from": 90,
+    "radius_km": 25
+  },
+  "limamanes@gmail.com": {
+    "full_name": "anas",
+    "gender": "homme",
+    "role": "coach",
+    "country_code": "AM",
+    "password": "Anasking1234!",
+    "coach_gender_preference": null,
+    "selected_gyms": null
   }
 }

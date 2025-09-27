@@ -310,17 +310,34 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
     
     # Mode démo si pas de Supabase
     if not supabase_anon:
-        if session_token == "demo_token":
-            # Charger les données utilisateur depuis le stockage persistant
+        if session_token.startswith("demo_"):
+            # Extraire l'email depuis le token unique
+            from utils import load_demo_users
+            import hashlib
+            
+            # Charger tous les utilisateurs démo
+            all_demo_users = load_demo_users()
+            
+            # Trouver l'utilisateur correspondant à ce token
+            for email, user_data in all_demo_users.items():
+                expected_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+                if session_token == expected_token:
+                    # Utilisateur trouvé
+                    user_data["_access_token"] = session_token
+                    return user_data
+            
+            # Token démo non reconnu
+            print(f"❌ Token démo non reconnu: {session_token}")
+            return None
+        elif session_token == "demo_token":
+            # Support pour l'ancien token (rétrocompatibilité)
             from utils import get_demo_user
             demo_user = get_demo_user("demo@example.com")
             
             if demo_user:
-                # Utiliser les données sauvegardées
                 demo_user["_access_token"] = session_token
                 return demo_user
             else:
-                # Utilisateur par défaut si pas de données sauvegardées
                 return {
                     "id": "demo_user", 
                     "email": "demo@example.com", 
@@ -886,9 +903,12 @@ async def verify_otp_submit(
                 redirect_url = "/client/home"
                 
             response = RedirectResponse(url=redirect_url, status_code=303)
+            # Créer un token unique pour cet utilisateur en mode démo
+            import hashlib
+            unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
             response.set_cookie(
                 key="session_token",
-                value="demo_token",
+                value=unique_token,
                 httponly=True,
                 secure=False,  # True en production
                 samesite="lax"
@@ -1131,9 +1151,12 @@ async def login_submit(
             print(f"✅ Connexion démo réussie - Redirection vers {redirect_url} (rôle: {role})")
             
             response = RedirectResponse(url=redirect_url, status_code=303)
+            # Créer un token unique pour cet utilisateur en mode démo
+            import hashlib
+            unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
             response.set_cookie(
                 key="session_token",
-                value="demo_token",
+                value=unique_token,
                 httponly=True,
                 secure=False,  # True en production
                 samesite="lax"
