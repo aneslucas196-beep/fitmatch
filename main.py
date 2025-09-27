@@ -1453,7 +1453,27 @@ async def coach_profile_setup_post(
             
             # Mettre à jour l'utilisateur et sauvegarder dans le stockage persistant
             from utils import save_demo_user
-            user_email = user.get("email", "demo@example.com")
+            
+            # CORRECTION : Récupérer l'email réel depuis le token
+            import hashlib
+            session_token = user.get("_access_token", "")
+            user_email = "demo@example.com"  # Fallback par défaut
+            
+            # Si c'est un token démo, extraire l'email correspondant
+            if session_token.startswith("demo_"):
+                from utils import load_demo_users
+                all_demo_users = load_demo_users()
+                
+                # Trouver l'email correspondant à ce token
+                for email, user_data in all_demo_users.items():
+                    expected_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+                    if session_token == expected_token:
+                        user_email = email
+                        print(f"✅ Email extrait du token: {user_email}")
+                        break
+            
+            print(f"🔧 Mode démo - Sauvegarde profil pour: {user_email}")
+            
             updated_user = {
                 "id": user.get("id", user_email),  # Utiliser email comme ID si pas d'ID
                 "email": user_email,
