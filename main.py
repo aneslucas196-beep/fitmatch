@@ -1440,10 +1440,11 @@ async def coach_profile_setup_post(
             
             # Mettre à jour l'utilisateur et sauvegarder dans le stockage persistant
             from utils import save_demo_user
+            user_email = user.get("email", "demo@example.com")
             updated_user = {
-                "id": user.get("id", user.get("email", "demo_user")),  # Utiliser email comme ID si pas d'ID
-                "email": user["email"],
-                "role": user["role"],
+                "id": user.get("id", user_email),  # Utiliser email comme ID si pas d'ID
+                "email": user_email,
+                "role": user.get("role", "coach"),
                 "profile_completed": True,
                 "full_name": full_name,
                 "bio": bio,
@@ -1454,7 +1455,7 @@ async def coach_profile_setup_post(
             }
             
             # Sauvegarder les modifications dans le stockage persistant
-            save_demo_user(user["email"], updated_user)
+            save_demo_user(user_email, updated_user)
             print(f"✅ Données utilisateur démo sauvegardées avec profile_completed=True")
             
             # Redirection vers le dashboard après succès
