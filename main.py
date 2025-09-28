@@ -2243,6 +2243,27 @@ async def search_gyms_near_location(
             "gyms": []
         }
 
+# Route pour la page de recherche de salles Google Maps
+@app.get("/gyms/finder")
+async def gym_finder_page(request: Request, user = Depends(get_current_user)):
+    """Page de recherche de salles avec Google Maps integration."""
+    import os
+    
+    google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    if not google_maps_api_key:
+        # En mode de développement, rediriger vers une page d'erreur
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "error": "Configuration Google Maps manquante. Contactez l'administrateur.",
+            "user": user
+        }, status_code=500)
+    
+    return templates.TemplateResponse("gym_finder.html", {
+        "request": request,
+        "user": user,
+        "google_maps_api_key": google_maps_api_key
+    })
+
 # Route pour les images uploadées (si pas d'utilisation directe de Supabase Storage)
 @app.get("/images/{image_path:path}")
 async def serve_image(image_path: str):

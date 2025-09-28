@@ -51,11 +51,23 @@
         </p>
     </div>
 
-    <!-- Lien vers recherche -->
-    <div class="text-center mt-4">
-        <a href="/search" class="text-gray-500 hover:text-gray-700 text-sm">
-            Ou rechercher des coachs sans s'inscrire
-        </a>
+    <!-- Liens vers outils de recherche -->
+    <div class="text-center mt-8">
+        <div class="bg-gray-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Outils de recherche</h3>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/search" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium">
+                    🔍 Rechercher des coachs
+                </a>
+                <a href="/gyms/finder" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium">
+                    🏢 Trouver une salle de sport
+                </a>
+                <a href="/gyms/worldwide" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium">
+                    🌍 Base mondiale des salles
+                </a>
+            </div>
+            <p class="text-gray-500 text-sm mt-3">Accessible sans inscription</p>
+        </div>
     </div>
 </div>
 {% endblock %}
