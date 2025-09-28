@@ -428,6 +428,34 @@
       
       placesService = new google.maps.places.PlacesService(map);
 
+      // TEST IMMÉDIAT - Vérifier si Places API fonctionne
+      console.log("🧪 TEST API PLACES - Recherche test à Paris...");
+      const testReq = {
+        location: new google.maps.LatLng(48.8566, 2.3522),
+        radius: 5000,
+        keyword: 'restaurant'
+      };
+      
+      placesService.nearbySearch(testReq, (results, status) => {
+        console.log(`🧪 TEST RÉSULTAT - Status: ${status}`);
+        if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+          console.log(`✅ API PLACES FONCTIONNE - ${results.length} restaurants trouvés`);
+          console.log(`📋 Premiers résultats:`, results.slice(0, 3).map(r => r.name));
+        } else {
+          console.error(`❌ API PLACES NE FONCTIONNE PAS - Status: ${status}`);
+          console.error(`❌ Possible problème:`, {
+            status: status,
+            results: results ? results.length : 'null',
+            solutions: [
+              "Quota API dépassé",
+              "Clé API invalide ou expirée", 
+              "Billing non activé",
+              "Places API désactivée"
+            ]
+          });
+        }
+      });
+
       // Autocomplete sur l'input adresse
       const countrySel = document.getElementById('country');
       const addr = document.getElementById('address');
