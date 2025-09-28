@@ -315,75 +315,98 @@
       const radius = parseInt(document.getElementById('radius').value, 10);
       console.log(`🔍 RECHERCHE SALLES - Centre: ${center.lat}, ${center.lng} - Rayon: ${radius}m`);
       
-      // TEST DIRECT - Recherche simple avec un large radius
-      const testRequest = {
-        location: new google.maps.LatLng(center.lat, center.lng),
-        radius: Math.max(radius, 10000), // Au moins 10km
-        keyword: 'gym fitness sport salle basic fit musculation'
-      };
-      
-      console.log(`🎯 TEST RECHERCHE DIRECTE:`, testRequest);
-      currentRequest = testRequest;
-      
-      placesService.nearbySearch(testRequest, (results, status, pagination) => {
-        console.log(`📊 RÉSULTAT TEST - Status: ${status}`);
-        console.log(`📊 Nombre de résultats: ${results ? results.length : 0}`);
-        
-        if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
-          console.log(`✅ SALLES TROUVÉES:`, results.map(r => r.name));
-          
-          // Trier par distance
-          results.sort((a,b) => {
-            const da = kmDist(center, { lat:a.geometry.location.lat(), lng:a.geometry.location.lng() });
-            const db = kmDist(center, { lat:b.geometry.location.lat(), lng:b.geometry.location.lng() });
-            return da - db;
-          });
-
-          renderResults(results, append);
-          if (!append) {
-            addMarkers(results);
-          }
-
-          // Gestion pagination
-          if (pagination && pagination.hasNextPage) {
-            nextPageToken = pagination;
-            document.getElementById('more').classList.remove('hidden');
-          } else {
-            nextPageToken = null;
-            document.getElementById('more').classList.add('hidden');
-          }
-        } else {
-          console.error(`❌ AUCUN RÉSULTAT - Status: ${status}`);
-          console.error(`❌ Détails erreur:`, {
-            status: status,
-            center: center,
-            radius: radius,
-            results: results
-          });
-          
-          // RECHERCHE DE SECOURS - Types larges
-          console.log(`🚨 RECHERCHE DE SECOURS - Types larges...`);
-          
-          const backupRequest = {
-            location: new google.maps.LatLng(center.lat, center.lng),
-            radius: 20000, // 20km
-            type: ['establishment']
-          };
-          
-          placesService.nearbySearch(backupRequest, (backupResults, backupStatus) => {
-            console.log(`🆘 RECHERCHE DE SECOURS - Status: ${backupStatus}, Résultats: ${backupResults ? backupResults.length : 0}`);
-            
-            if (backupStatus === google.maps.places.PlacesServiceStatus.OK && backupResults && backupResults.length > 0) {
-              console.log(`🆘 ÉTABLISSEMENTS TROUVÉS (pour test):`, backupResults.slice(0, 5).map(r => r.name));
-            }
-            
-            hideLoading();
-            if (!append) {
-              document.getElementById('no-results').classList.remove('hidden');
-              document.getElementById('more').classList.add('hidden');
-            }
-          });
+      // RECHERCHE TOUTES SALLES DU MONDE - Multiple searches
+      const searches = [
+        // Recherche 1: Type GYM officiel
+        {
+          location: new google.maps.LatLng(center.lat, center.lng),
+          radius: radius,
+          type: ['gym']
+        },
+        // Recherche 2: Centres de fitness généraux
+        {
+          location: new google.maps.LatLng(center.lat, center.lng),
+          radius: radius,
+          keyword: 'fitness center sport club'
+        },
+        // Recherche 3: Salles de musculation
+        {
+          location: new google.maps.LatLng(center.lat, center.lng),
+          radius: radius,
+          keyword: 'musculation bodybuilding weightlifting'
+        },
+        // Recherche 4: Grandes chaînes françaises
+        {
+          location: new google.maps.LatLng(center.lat, center.lng),
+          radius: radius,
+          keyword: 'Basic Fit Orange Bleue Fitness Park'
+        },
+        // Recherche 5: Autres chaînes
+        {
+          location: new google.maps.LatLng(center.lat, center.lng),
+          radius: radius,
+          keyword: 'Keep Cool Neoness CMG Sports Club'
+        },
+        // Recherche 6: Sports de combat et yoga
+        {
+          location: new google.maps.LatLng(center.lat, center.lng),
+          radius: radius,
+          keyword: 'yoga pilates crossfit boxing martial arts'
         }
+      ];
+      
+      let allResults = [];
+      let searchesCompleted = 0;
+      
+      searches.forEach((searchReq, index) => {
+        console.log(`📡 Recherche ${index + 1}/6:`, searchReq);
+        
+        placesService.nearbySearch(searchReq, (results, status, pagination) => {
+          searchesCompleted++;
+          console.log(`📋 Recherche ${index + 1} - Status: ${status}, Résultats: ${results ? results.length : 0}`);
+          
+          if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+            // Éviter les doublons par place_id
+            results.forEach(place => {
+              if (!allResults.find(existing => existing.place_id === place.place_id)) {
+                allResults.push(place);
+              }
+            });
+          }
+          
+          // Quand toutes les recherches sont terminées
+          if (searchesCompleted === searches.length) {
+            console.log(`✅ TOUTES RECHERCHES TERMINÉES - Total: ${allResults.length} salles uniques trouvées`);
+            
+            if (allResults.length === 0) {
+              console.error(`❌ AUCUNE SALLE TROUVÉE dans ${searches.length} recherches`);
+              hideLoading();
+              if (!append) {
+                document.getElementById('no-results').classList.remove('hidden');
+                document.getElementById('more').classList.add('hidden');
+              }
+              return;
+            }
+
+            // Trier par distance
+            allResults.sort((a,b) => {
+              const da = kmDist(center, { lat:a.geometry.location.lat(), lng:a.geometry.location.lng() });
+              const db = kmDist(center, { lat:b.geometry.location.lat(), lng:b.geometry.location.lng() });
+              return da - db;
+            });
+
+            console.log(`🏆 TOP 10 SALLES:`, allResults.slice(0, 10).map(r => `${r.name} (${kmDist(center, {lat: r.geometry.location.lat(), lng: r.geometry.location.lng()}).toFixed(1)}km)`));
+
+            renderResults(allResults, append);
+            if (!append) {
+              addMarkers(allResults);
+            }
+
+            // Masquer pagination pour les recherches multiples
+            document.getElementById('more').classList.add('hidden');
+            nextPageToken = null;
+          }
+        });
       });
     }
 
