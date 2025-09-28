@@ -313,82 +313,77 @@
       if (!append) showLoading();
 
       const radius = parseInt(document.getElementById('radius').value, 10);
-      console.log(`🔍 Recherche salles - Centre: ${center.lat}, ${center.lng} - Rayon: ${radius}m`);
+      console.log(`🔍 RECHERCHE SALLES - Centre: ${center.lat}, ${center.lng} - Rayon: ${radius}m`);
       
-      // Essayer plusieurs types de recherche
-      const searches = [
-        {
-          location: new google.maps.LatLng(center.lat, center.lng),
-          radius: radius,
-          type: ['gym']
-        },
-        {
-          location: new google.maps.LatLng(center.lat, center.lng),
-          radius: radius,
-          keyword: 'Basic Fit'
-        },
-        {
-          location: new google.maps.LatLng(center.lat, center.lng),
-          radius: radius,
-          keyword: 'fitness club sport'
-        },
-        {
-          location: new google.maps.LatLng(center.lat, center.lng),
-          radius: radius,
-          keyword: 'musculation salle de sport'
-        }
-      ];
+      // TEST DIRECT - Recherche simple avec un large radius
+      const testRequest = {
+        location: new google.maps.LatLng(center.lat, center.lng),
+        radius: Math.max(radius, 10000), // Au moins 10km
+        keyword: 'gym fitness sport salle basic fit musculation'
+      };
       
-      let allResults = [];
-      let searchesCompleted = 0;
+      console.log(`🎯 TEST RECHERCHE DIRECTE:`, testRequest);
+      currentRequest = testRequest;
       
-      searches.forEach((searchReq, index) => {
-        console.log(`📡 Recherche ${index + 1}: `, searchReq);
-        currentRequest = searchReq;
+      placesService.nearbySearch(testRequest, (results, status, pagination) => {
+        console.log(`📊 RÉSULTAT TEST - Status: ${status}`);
+        console.log(`📊 Nombre de résultats: ${results ? results.length : 0}`);
         
-        placesService.nearbySearch(searchReq, (results, status, pagination) => {
-          searchesCompleted++;
-          console.log(`📋 Recherche ${index + 1} - Status: ${status}, Résultats: ${results ? results.length : 0}`);
+        if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+          console.log(`✅ SALLES TROUVÉES:`, results.map(r => r.name));
           
-          if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
-            // Éviter les doublons
-            results.forEach(place => {
-              if (!allResults.find(existing => existing.place_id === place.place_id)) {
-                allResults.push(place);
-              }
-            });
+          // Trier par distance
+          results.sort((a,b) => {
+            const da = kmDist(center, { lat:a.geometry.location.lat(), lng:a.geometry.location.lng() });
+            const db = kmDist(center, { lat:b.geometry.location.lat(), lng:b.geometry.location.lng() });
+            return da - db;
+          });
+
+          renderResults(results, append);
+          if (!append) {
+            addMarkers(results);
           }
-          
-          // Quand toutes les recherches sont terminées
-          if (searchesCompleted === searches.length) {
-            console.log(`✅ Toutes recherches terminées - Total: ${allResults.length} salles trouvées`);
-            
-            if (allResults.length === 0) {
-              hideLoading();
-              if (!append) {
-                document.getElementById('no-results').classList.remove('hidden');
-                document.getElementById('more').classList.add('hidden');
-              }
-              return;
-            }
 
-            // Trier par distance
-            allResults.sort((a,b) => {
-              const da = kmDist(center, { lat:a.geometry.location.lat(), lng:a.geometry.location.lng() });
-              const db = kmDist(center, { lat:b.geometry.location.lat(), lng:b.geometry.location.lng() });
-              return da - db;
-            });
-
-            renderResults(allResults, append);
-            if (!append) {
-              addMarkers(allResults);
-            }
-
-            // Pour la simplicité, on n'utilise pas la pagination avec plusieurs recherches
-            document.getElementById('more').classList.add('hidden');
+          // Gestion pagination
+          if (pagination && pagination.hasNextPage) {
+            nextPageToken = pagination;
+            document.getElementById('more').classList.remove('hidden');
+          } else {
             nextPageToken = null;
+            document.getElementById('more').classList.add('hidden');
           }
-        });
+        } else {
+          console.error(`❌ AUCUN RÉSULTAT - Status: ${status}`);
+          console.error(`❌ Détails erreur:`, {
+            status: status,
+            center: center,
+            radius: radius,
+            results: results
+          });
+          
+          // RECHERCHE DE SECOURS - Types larges
+          console.log(`🚨 RECHERCHE DE SECOURS - Types larges...`);
+          
+          const backupRequest = {
+            location: new google.maps.LatLng(center.lat, center.lng),
+            radius: 20000, // 20km
+            type: ['establishment']
+          };
+          
+          placesService.nearbySearch(backupRequest, (backupResults, backupStatus) => {
+            console.log(`🆘 RECHERCHE DE SECOURS - Status: ${backupStatus}, Résultats: ${backupResults ? backupResults.length : 0}`);
+            
+            if (backupStatus === google.maps.places.PlacesServiceStatus.OK && backupResults && backupResults.length > 0) {
+              console.log(`🆘 ÉTABLISSEMENTS TROUVÉS (pour test):`, backupResults.slice(0, 5).map(r => r.name));
+            }
+            
+            hideLoading();
+            if (!append) {
+              document.getElementById('no-results').classList.remove('hidden');
+              document.getElementById('more').classList.add('hidden');
+            }
+          });
+        }
       });
     }
 
@@ -440,9 +435,12 @@
       goBtn.addEventListener('click', async () => {
         goBtn.disabled = true;
         document.getElementById('no-results').classList.add('hidden');
+        document.getElementById('results').innerHTML = '';
 
-        // CORRECTION : Toujours géocoder si une adresse est saisie
+        // GÉOCODAGE AMÉLIORÉ avec logs
         if (addr.value && addr.value.trim()) {
+          console.log(`🌍 GÉOCODAGE de: "${addr.value.trim()}"`);
+          
           try {
             const geocoder = new google.maps.Geocoder();
             const request = {
@@ -450,25 +448,36 @@
               componentRestrictions: countrySel.value ? { country: countrySel.value } : {}
             };
             
+            console.log(`📡 Requête géocodage:`, request);
+            
             geocoder.geocode(request, (results, status) => {
+              console.log(`📍 Géocodage - Status: ${status}`);
+              console.log(`📍 Résultats géocodage:`, results);
+              
               if (status === 'OK' && results && results[0]) {
                 const location = results[0].geometry.location;
                 center = { lat: location.lat(), lng: location.lng() };
+                console.log(`✅ POSITION TROUVÉE: ${center.lat}, ${center.lng}`);
+                console.log(`📍 Adresse: ${results[0].formatted_address}`);
+                
                 map.setCenter(center); 
                 map.setZoom(13);
+              } else {
+                console.error(`❌ ÉCHEC GÉOCODAGE - Status: ${status}`);
               }
               
               doNearbySearch(false);
-              setTimeout(() => { goBtn.disabled = false; }, 1500);
+              setTimeout(() => { goBtn.disabled = false; }, 2000);
             });
           } catch(e) { 
-            console.warn('Geocode error', e);
+            console.error('❌ ERREUR GÉOCODAGE:', e);
             doNearbySearch(false);
-            setTimeout(() => { goBtn.disabled = false; }, 1500);
+            setTimeout(() => { goBtn.disabled = false; }, 2000);
           }
         } else {
+          console.log(`🔍 RECHERCHE SANS GÉOCODAGE (position actuelle)`);
           doNearbySearch(false);
-          setTimeout(() => { goBtn.disabled = false; }, 1500);
+          setTimeout(() => { goBtn.disabled = false; }, 2000);
         }
       });
 
