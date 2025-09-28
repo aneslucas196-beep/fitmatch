@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Trouver une salle près de chez moi</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 0; }
+    header, #searchbar { padding: 12px 16px; }
+    #searchbar { display: grid; gap: 8px; grid-template-columns: 120px 1fr 140px 130px 120px; align-items: center; }
+    #searchbar > * { height: 40px; }
+    #searchbar input, #searchbar select { padding: 8px; }
+    #go { background:#16a34a; color:#fff; border:0; border-radius:8px; cursor:pointer; }
+    #go:disabled { opacity:.6; cursor:default; }
+    #map { height: 55vh; width: 100%; }
+    #results { padding: 12px 16px; display: grid; gap: 10px; }
+    .card { border:1px solid #e5e7eb; border-radius:10px; padding:12px; }
+    .title { font-weight:600; }
+    .meta { color:#555; font-size:14px; }
+    #more { margin: 8px 16px 16px; padding:10px 14px; border:1px solid #d1d5db; border-radius:8px; background:#fff; cursor:pointer; }
+    @media (max-width: 900px) { #searchbar { grid-template-columns: 1fr 1fr; } #map{height: 45vh;} }
+  </style>
+</head>
+<body>
+  <header><h2>🔍 Trouver une salle de sport près de chez moi</h2></header>
+
+  <div id="searchbar">
+    <select id="country">
+      <option value="">(Tous pays)</option>
+      <option value="FR" selected>France</option>
+      <option value="CH">Suisse</option>
+      <option value="DE">Allemagne</option>
+      <option value="BE">Belgique</option>
+      <option value="AE">Émirats (Dubai)</option>
+    </select>
+
+    <input id="address" placeholder="Adresse / ville / code postal" />
+    <select id="radius">
+      <option value="3000">3 km</option>
+      <option value="5000" selected>5 km</option>
+      <option value="10000">10 km</option>
+      <option value="20000">20 km</option>
+    </select>
+
+    <select id="lang">
+      <option value="fr" selected>Français</option>
+      <option value="en">English</option>
+      <option value="de">Deutsch</option>
+    </select>
+
+    <button id="go">Chercher</button>
+  </div>
+
+  <div id="map"></div>
+  <div id="results"></div>
+  <button id="more" style="display:none">Voir plus de résultats</button>
+
+  <script>
+    let map, placesService, autocomplete, center, markers = [];
+    let nextPageToken = null;
+    let currentRequest = null;
+
+    function kmDist(a, b) {
+      const R = 6371, dLat = (b.lat - a.lat) * Math.PI/180, dLng = (b.lng - a.lng) * Math.PI/180;
+      const s1 = Math.sin(dLat/2), s2 = Math.sin(dLng/2);
+      const A = s1*s1 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*s2*s2;
+      return R * 2 * Math.atan2(Math.sqrt(A), Math.sqrt(1-A));
+    }
+
+    function clearMarkers() { markers.forEach(m => m.setMap(null)); markers = []; }
+
+    function renderResults(list) {
+      const container = document.getElementById('results');
+      container.innerHTML = "";
+      list.forEach(p => {
+        const d = kmDist(center, { lat: p.geometry.location.lat(), lng: p.geometry.location.lng() });
+        const card = document.createElement('div'); card.className = 'card';
+        card.innerHTML = `
+          <div class="title">${p.name}</div>
+          <div class="meta">
+            ${p.vicinity || p.formatted_address || ''}<br/>
+            ${p.rating ? `⭐ ${p.rating} (${p.user_ratings_total || 0}) · ` : ''}${d.toFixed(1)} km
+          </div>`;
+        container.appendChild(card);
+      });
+    }
+
+    function addMarkers(list) {
+      clearMarkers();
+      list.forEach(p => {
+        const m = new google.maps.Marker({ map, position: p.geometry.location, title: p.name });
+        markers.push(m);
+      });
+    }
+
+    function doNearbySearch(append=false) {
+      const radius = parseInt(document.getElementById('radius').value, 10);
+      const req = {
+        location: new google.maps.LatLng(center.lat, center.lng),
+        radius,
+        type: ['gym'],
+        keyword: 'fitness musculation crossfit'
+      };
+      currentRequest = req;
+
+      placesService.nearbySearch(req, (results, status, pagination) => {
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
+          document.getElementById('results').innerHTML = "<div class='meta'>Aucune salle trouvée.</div>";
+          document.getElementById('more').style.display = 'none';
+          return;
+        }
+        // Trier par distance
+        results.sort((a,b) => {
+          const da = kmDist(center, { lat:a.geometry.location.lat(), lng:a.geometry.location.lng() });
+          const db = kmDist(center, { lat:b.geometry.location.lat(), lng:b.geometry.location.lng() });
+          return da - db;
+        });
+
+        if (!append) { renderResults(results); addMarkers(results); }
+        else {
+          // append
+          const container = document.getElementById('results');
+          results.forEach(p => {
+            const d = kmDist(center, { lat: p.geometry.location.lat(), lng: p.geometry.location.lng() });
+            const card = document.createElement('div'); card.className = 'card';
+            card.innerHTML = `<div class="title">${p.name}</div>
+              <div class="meta">${p.vicinity || p.formatted_address || ''}<br/>${p.rating ? `⭐ ${p.rating} (${p.user_ratings_total || 0}) · ` : ''}${d.toFixed(1)} km</div>`;
+            container.appendChild(card);
+          });
+          // ne pas re-placer les marqueurs pour les pages suivantes (simple)
+        }
+
+        nextPageToken = pagination && pagination.hasNextPage ? pagination.nextPage() && pagination : null;
+        // Hack Google : il faut attendre ~2s pour que pagination.nextPage fonctionne
+        document.getElementById('more').style.display = nextPageToken ? 'block' : 'none';
+      });
+    }
+
+    function initMap() {
+      const defaultCenter = { lat: 48.8566, lng: 2.3522 }; // Paris
+      center = defaultCenter;
+
+      map = new google.maps.Map(document.getElementById('map'), { center, zoom: 12 });
+      placesService = new google.maps.places.PlacesService(map);
+
+      // Autocomplete sur l'input adresse
+      const countrySel = document.getElementById('country');
+      const addr = document.getElementById('address');
+      const langSel = document.getElementById('lang');
+
+      const acOptions = { fields: ['geometry', 'formatted_address'] };
+      autocomplete = new google.maps.places.Autocomplete(addr, acOptions);
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place?.geometry?.location) {
+          center = { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() };
+          map.setCenter(center); map.setZoom(13);
+        }
+      });
+
+      // Restreindre l’Autocomplétion au pays choisi
+      countrySel.addEventListener('change', () => {
+        const v = countrySel.value;
+        autocomplete.setComponentRestrictions(v ? { country: [v] } : {});
+      });
+
+      // Bouton Chercher
+      const goBtn = document.getElementById('go');
+      goBtn.addEventListener('click', async () => {
+        goBtn.disabled = true;
+
+        // Si l'utilisateur n'a pas choisi via Autocomplete, géocoder l'adresse entrée
+        if (addr.value && (!center || center === defaultCenter)) {
+          try {
+            const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addr.value)}${countrySel.value ? `&components=country:${countrySel.value}` : ''}&key=${GOOGLE_API_KEY}`;
+            const r = await fetch(url);
+            const g = await r.json();
+            if (g.status === 'OK' && g.results && g.results[0]) {
+              const loc = g.results[0].geometry.location;
+              center = { lat: loc.lat, lng: loc.lng };
+              map.setCenter(center); map.setZoom(13);
+            }
+          } catch(e) { console.warn('Geocode fallback error', e); }
+        }
+
+        doNearbySearch(false);
+        // délai pour permettre la pagination de Google
+        setTimeout(() => { goBtn.disabled = false; }, 1500);
+      });
+
+      // Bouton Voir plus
+      document.getElementById('more').addEventListener('click', () => {
+        // pagination.nextPage est déjà “bindée” par Google; on rappelle doNearbySearch via le callback interne
+        // Petite astuce : relancer une recherche append après ~2s
+        setTimeout(() => doNearbySearch(true), 2000);
+      });
+    }
+
+    // Astuce: injecter la clé depuis un <script> avant celui de Maps
+    const GOOGLE_API_KEY = "YOUR_API_KEY"; // Replit peut l’injecter si besoin
+    window.initMap = initMap;
+  </script>
+
+  <!-- Charge Maps JS + Places. Remplace YOUR_API_KEY -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&language=fr&region=FR&callback=initMap" async defer></script>
+</body>
+</html>

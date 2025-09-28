@@ -1,10 +1,18 @@
 {
   "anaslimeme830@gmail.com": {
-    "full_name": "anas",
-    "gender": "homme",
+    "id": "anaslimeme830@gmail.com",
+    "email": "anaslimeme830@gmail.com",
     "role": "coach",
-    "country_code": "AZ",
+    "profile_completed": true,
+    "full_name": "anes lucas",
+    "bio": "y(rtgrt",
+    "city": "elancourt ",
+    "instagram_url": "https://www.instagram.com/gazo_officiel/",
+    "price_from": 10,
+    "radius_km": 25,
     "password": "Anasking1234!",
+    "gender": "homme",
+    "country_code": "AZ",
     "coach_gender_preference": null,
     "selected_gyms": null
   },
@@ -40,11 +48,16 @@
     "role": "coach",
     "profile_completed": true,
     "full_name": "ANAAS ",
-    "bio": "regerg",
+    "bio": "rtbrtbr",
     "city": "elancourt ",
     "instagram_url": "https://www.instagram.com/gazo_officiel/",
     "price_from": 40,
-    "radius_km": 10
+    "radius_km": 10,
+    "password": "Anasking1234!",
+    "gender": "homme",
+    "country_code": "AW",
+    "coach_gender_preference": null,
+    "selected_gyms": null
   },
   "demo@example.com": {
     "id": "demo@example.com",
@@ -66,5 +79,14 @@
     "password": "Anasking1234!",
     "coach_gender_preference": null,
     "selected_gyms": null
+  },
+  "mejedjaoued@gmail.com": {
+    "full_name": "majed ",
+    "gender": "homme",
+    "role": "client",
+    "country_code": "AS",
+    "password": "Anasking1234!",
+    "coach_gender_preference": "homme",
+    "selected_gyms": []
   }
 }
