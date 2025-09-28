@@ -313,44 +313,82 @@
       if (!append) showLoading();
 
       const radius = parseInt(document.getElementById('radius').value, 10);
-      const req = {
-        location: new google.maps.LatLng(center.lat, center.lng),
-        radius,
-        type: ['gym'],
-        keyword: 'fitness musculation crossfit'
-      };
-      currentRequest = req;
-
-      placesService.nearbySearch(req, (results, status, pagination) => {
-        if (status !== google.maps.places.PlacesServiceStatus.OK || !results || results.length === 0) {
-          hideLoading();
-          if (!append) {
-            document.getElementById('no-results').classList.remove('hidden');
-            document.getElementById('more').classList.add('hidden');
+      console.log(`🔍 Recherche salles - Centre: ${center.lat}, ${center.lng} - Rayon: ${radius}m`);
+      
+      // Essayer plusieurs types de recherche
+      const searches = [
+        {
+          location: new google.maps.LatLng(center.lat, center.lng),
+          radius: radius,
+          type: ['gym']
+        },
+        {
+          location: new google.maps.LatLng(center.lat, center.lng),
+          radius: radius,
+          keyword: 'Basic Fit'
+        },
+        {
+          location: new google.maps.LatLng(center.lat, center.lng),
+          radius: radius,
+          keyword: 'fitness club sport'
+        },
+        {
+          location: new google.maps.LatLng(center.lat, center.lng),
+          radius: radius,
+          keyword: 'musculation salle de sport'
+        }
+      ];
+      
+      let allResults = [];
+      let searchesCompleted = 0;
+      
+      searches.forEach((searchReq, index) => {
+        console.log(`📡 Recherche ${index + 1}: `, searchReq);
+        currentRequest = searchReq;
+        
+        placesService.nearbySearch(searchReq, (results, status, pagination) => {
+          searchesCompleted++;
+          console.log(`📋 Recherche ${index + 1} - Status: ${status}, Résultats: ${results ? results.length : 0}`);
+          
+          if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+            // Éviter les doublons
+            results.forEach(place => {
+              if (!allResults.find(existing => existing.place_id === place.place_id)) {
+                allResults.push(place);
+              }
+            });
           }
-          return;
-        }
+          
+          // Quand toutes les recherches sont terminées
+          if (searchesCompleted === searches.length) {
+            console.log(`✅ Toutes recherches terminées - Total: ${allResults.length} salles trouvées`);
+            
+            if (allResults.length === 0) {
+              hideLoading();
+              if (!append) {
+                document.getElementById('no-results').classList.remove('hidden');
+                document.getElementById('more').classList.add('hidden');
+              }
+              return;
+            }
 
-        // Trier par distance
-        results.sort((a,b) => {
-          const da = kmDist(center, { lat:a.geometry.location.lat(), lng:a.geometry.location.lng() });
-          const db = kmDist(center, { lat:b.geometry.location.lat(), lng:b.geometry.location.lng() });
-          return da - db;
+            // Trier par distance
+            allResults.sort((a,b) => {
+              const da = kmDist(center, { lat:a.geometry.location.lat(), lng:a.geometry.location.lng() });
+              const db = kmDist(center, { lat:b.geometry.location.lat(), lng:b.geometry.location.lng() });
+              return da - db;
+            });
+
+            renderResults(allResults, append);
+            if (!append) {
+              addMarkers(allResults);
+            }
+
+            // Pour la simplicité, on n'utilise pas la pagination avec plusieurs recherches
+            document.getElementById('more').classList.add('hidden');
+            nextPageToken = null;
+          }
         });
-
-        renderResults(results, append);
-        if (!append) {
-          addMarkers(results);
-        }
-
-        // Gestion de la pagination
-        if (pagination && pagination.hasNextPage) {
-          nextPageToken = pagination;
-          document.getElementById('more').classList.remove('hidden');
-        } else {
-          nextPageToken = null;
-          document.getElementById('more').classList.add('hidden');
-        }
       });
     }
 
