@@ -403,12 +403,12 @@
         goBtn.disabled = true;
         document.getElementById('no-results').classList.add('hidden');
 
-        // Si l'utilisateur n'a pas choisi via Autocomplete, géocoder l'adresse entrée
-        if (addr.value && (!center || (center.lat === 48.8566 && center.lng === 2.3522))) {
+        // CORRECTION : Toujours géocoder si une adresse est saisie
+        if (addr.value && addr.value.trim()) {
           try {
             const geocoder = new google.maps.Geocoder();
             const request = {
-              address: addr.value,
+              address: addr.value.trim(),
               componentRestrictions: countrySel.value ? { country: countrySel.value } : {}
             };
             
@@ -437,10 +437,38 @@
       // Bouton Voir plus
       document.getElementById('more').addEventListener('click', () => {
         if (nextPageToken && nextPageToken.hasNextPage) {
-          document.getElementById('more').disabled = true;
+          const moreBtn = document.getElementById('more');
+          moreBtn.disabled = true;
+          moreBtn.textContent = '⏳ Chargement...';
+          
           // Google nécessite un délai de ~2s pour la pagination
           setTimeout(() => {
-            nextPageToken.nextPage();
+            placesService.nearbySearch(currentRequest, (results, status, pagination) => {
+              if (status !== google.maps.places.PlacesServiceStatus.OK || !results || results.length === 0) {
+                moreBtn.style.display = 'none';
+                return;
+              }
+
+              // Trier par distance
+              results.sort((a,b) => {
+                const da = kmDist(center, { lat:a.geometry.location.lat(), lng:a.geometry.location.lng() });
+                const db = kmDist(center, { lat:b.geometry.location.lat(), lng:b.geometry.location.lng() });
+                return da - db;
+              });
+
+              // CORRECTION : Ajouter les résultats (append=true)
+              renderResults(results, true);
+
+              // Gestion de la pagination suivante
+              if (pagination && pagination.hasNextPage) {
+                nextPageToken = pagination;
+                moreBtn.disabled = false;
+                moreBtn.textContent = '📍 Voir plus de résultats';
+              } else {
+                nextPageToken = null;
+                moreBtn.style.display = 'none';
+              }
+            });
           }, 2000);
         }
       });
