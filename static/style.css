@@ -58,7 +58,7 @@ body {
 /* === Hero Section === */
 .hero {
   height: 100vh;
-  background: url("https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1800&q=80") center center/cover no-repeat;
+  background: url("/static/hero-background.jpg") center center/cover no-repeat;
   position: relative;
   display: flex;
   justify-content: center;
@@ -218,5 +218,111 @@ body {
   .bottom-input input {
     font-size: 14px;
     padding: 10px 12px;
+  }
+}
+
+/* === Discover Coachs Section === */
+.discover-coachs {
+  background: #f8f8f8;
+  padding: 80px 20px;
+}
+
+.discover-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 60px;
+}
+
+.discover-image {
+  flex: 1;
+  max-width: 550px;
+}
+
+.discover-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 15px;
+  object-fit: cover;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.discover-text {
+  flex: 1;
+  color: #333;
+}
+
+.discover-text h2 {
+  font-size: 38px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+  line-height: 1.2;
+}
+
+.discover-text p {
+  font-size: 17px;
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 30px;
+}
+
+.btn-discover {
+  display: inline-block;
+  background: #1a1a1a;
+  color: white;
+  padding: 15px 35px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-discover:hover {
+  background: #00C77B;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 199, 123, 0.3);
+}
+
+/* Responsive pour la section Discover Coachs */
+@media (max-width: 968px) {
+  .discover-container {
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .discover-image {
+    max-width: 100%;
+  }
+
+  .discover-text h2 {
+    font-size: 32px;
+  }
+
+  .discover-text p {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .discover-coachs {
+    padding: 60px 20px;
+  }
+
+  .discover-text h2 {
+    font-size: 28px;
+  }
+
+  .discover-text p {
+    font-size: 15px;
+  }
+
+  .btn-discover {
+    padding: 12px 30px;
+    font-size: 15px;
   }
 }
