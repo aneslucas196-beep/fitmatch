@@ -218,10 +218,7 @@ GYMS_DATABASE = [
     {"id": "forest_hill_menilmontant", "name": "Forest Hill Ménilmontant", "chain": "Forest Hill", "lat": 48.8642, "lng": 2.3855, "address": "17 rue Boyer, 75020 Paris", "city": "Paris"},
 
     # HAUTS-DE-SEINE (92)
-    {"id": "neoness_defense", "name": "Neoness La Défense", "chain": "Neoness", "lat": 48.8922, "lng": 2.2359, "address": "CNIT, 92800 Puteaux", "city": "Puteaux"},
-    {"id": "cmg_neuilly", "name": "CMG Sports Club One Neuilly", "chain": "CMG Sports Club", "lat": 48.8846, "lng": 2.2686, "address": "12 rue Madeleine Michelis, 92200 Neuilly-sur-Seine", "city": "Neuilly-sur-Seine"},
-    {"id": "fitness_park_boulogne", "name": "Fitness Park Boulogne", "chain": "Fitness Park", "lat": 48.8392, "lng": 2.2402, "address": "133 route de la Reine, 92100 Boulogne-Billancourt", "city": "Boulogne-Billancourt"},
-    {"id": "keep_cool_issy", "name": "Keep Cool Issy-les-Moulineaux", "chain": "Keep Cool", "lat": 48.8267, "lng": 2.2725, "address": "2 rue Rouget de Lisle, 92130 Issy-les-Moulineaux", "city": "Issy-les-Moulineaux"},
+    {"id": "bf_issy", "name": "Basic-Fit Issy-les-Moulineaux", "chain": "Basic-Fit", "lat": 48.8247, "lng": 2.2725, "address": "2 rue Rouget de Lisle, 92130 Issy-les-Moulineaux", "city": "Issy-les-Moulineaux"},
 
     # SEINE-SAINT-DENIS (93)
     {"id": "basic_fit_bobigny", "name": "Basic-Fit Bobigny", "chain": "Basic-Fit", "lat": 48.9127, "lng": 2.4494, "address": "Centre Commercial Bobigny 2, 93000 Bobigny", "city": "Bobigny"},
