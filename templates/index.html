@@ -1,73 +1,45 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitMatch - Réservez en salle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
 
-{% block title %}Inscription - Coach Fitness{% endblock %}
-
-{% block content %}
-<div class="text-center mb-8">
-    <h1 class="text-4xl font-bold text-gray-900 mb-4">Bienvenue sur Coach Fitness</h1>
-    <p class="text-xl text-gray-600">Choisissez votre type de compte pour commencer</p>
-</div>
-
-<div class="max-w-4xl mx-auto">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- Option Client -->
-        <div class="bg-white rounded-lg shadow-lg p-8 text-center hover:shadow-xl transition duration-300 border-2 border-transparent hover:border-blue-500">
-            <div class="text-6xl mb-6">🏃‍♂️</div>
-            <h2 class="text-2xl font-bold text-gray-900 mb-4">Je suis un Client</h2>
-            <p class="text-gray-600 mb-6">Je cherche un coach fitness pour m'accompagner dans mes objectifs</p>
-            <ul class="text-left text-gray-600 mb-6 space-y-2">
-                <li>✓ Trouvez des coachs près de chez vous</li>
-                <li>✓ Consultez les profils et spécialités</li>
-                <li>✓ Réservez vos séances en ligne</li>
-                <li>✓ Suivez votre progression</li>
-            </ul>
-            <a href="/signup?role=client" class="bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 transition duration-200 font-medium inline-block">
-                S'inscrire comme Client
-            </a>
-        </div>
-
-        <!-- Option Coach -->
-        <div class="bg-white rounded-lg shadow-lg p-8 text-center hover:shadow-xl transition duration-300 border-2 border-transparent hover:border-green-500">
-            <div class="text-6xl mb-6">💪</div>
-            <h2 class="text-2xl font-bold text-gray-900 mb-4">Je suis un Coach</h2>
-            <p class="text-gray-600 mb-6">Je veux proposer mes services de coaching fitness</p>
-            <ul class="text-left text-gray-600 mb-6 space-y-2">
-                <li>✓ Créez votre profil professionnel</li>
-                <li>✓ Gérez vos disponibilités</li>
-                <li>✓ Présentez vos transformations</li>
-                <li>✓ Développez votre clientèle</li>
-            </ul>
-            <a href="/signup?role=coach" class="bg-green-600 text-white px-8 py-3 rounded-md hover:bg-green-700 transition duration-200 font-medium inline-block">
-                S'inscrire comme Coach
-            </a>
-        </div>
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="logo">FitMatch</div>
+    <div class="nav-buttons">
+      <a href="/signup?role=coach" class="btn-coach">Je suis un coach</a>
+      <a href="/login" class="btn-compte">Mon compte</a>
     </div>
+  </header>
 
-    <!-- Lien connexion -->
-    <div class="text-center mt-8">
-        <p class="text-gray-600">
-            Vous avez déjà un compte ? 
-            <a href="/login" class="text-blue-600 hover:text-blue-800 font-medium">Se connecter</a>
-        </p>
-    </div>
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="overlay"></div>
+    <div class="content">
+      <h1>Réservez en salle</h1>
+      <p>Simple • Immédiat • 24h/24</p>
 
-    <!-- Liens vers outils de recherche -->
-    <div class="text-center mt-8">
-        <div class="bg-gray-50 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Outils de recherche</h3>
-            <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <a href="/search" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium">
-                    🔍 Rechercher des coachs
-                </a>
-                <a href="/gyms/finder" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium">
-                    🏢 Trouver une salle de sport
-                </a>
-                <a href="/gyms/worldwide" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium">
-                    🌍 Base mondiale des salles
-                </a>
-            </div>
-            <p class="text-gray-500 text-sm mt-3">Accessible sans inscription</p>
+      <div class="search-box">
+        <div class="top-inputs">
+          <input type="text" placeholder="Nom du coach, prestations (muscu, cardio...)" />
+          <input type="text" placeholder="Adresse, ville..." />
         </div>
+        <div class="bottom-input">
+          <input type="text" placeholder="Quelle salle ?" />
+          <button class="btn-search">Rechercher</button>
+        </div>
+      </div>
     </div>
-</div>
-{% endblock %}
+  </section>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>

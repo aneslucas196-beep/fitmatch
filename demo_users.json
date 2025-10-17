@@ -34,11 +34,19 @@
     "selected_gyms": []
   },
   "limamanes12@gmail.com": {
-    "full_name": "anes lucas",
-    "gender": "homme",
+    "id": "limamanes12@gmail.com",
+    "email": "limamanes12@gmail.com",
     "role": "coach",
-    "country_code": "AU",
+    "profile_completed": true,
+    "full_name": "zazakj",
+    "bio": "efezfze",
+    "city": "paris",
+    "instagram_url": "",
+    "price_from": 20,
+    "radius_km": 10,
     "password": "Anasking1234!",
+    "gender": "homme",
+    "country_code": "AZ",
     "coach_gender_preference": null,
     "selected_gyms": null
   },
