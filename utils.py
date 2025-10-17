@@ -114,6 +114,10 @@ def get_supabase_anon_client():
     """
     Crée un client Supabase anonyme (respecte RLS).
     """
+    # FORCER MODE DÉMO - Désactiver Supabase temporairement
+    print("🔧 Mode démo activé - Supabase désactivé")
+    return None
+    
     try:
         from supabase import create_client, Client
         
