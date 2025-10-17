@@ -1295,6 +1295,95 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
         print(f"Erreur recherche par zone: {e}")
         return []
 
+def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> List[Dict]:
+    """
+    Recherche les salles de sport via Google Places API (New).
+    Retourne une liste de salles avec leurs infos complètes.
+    """
+    try:
+        import requests
+        
+        api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+        if not api_key:
+            print("⚠️ GOOGLE_MAPS_API_KEY non configurée")
+            return []
+        
+        # Convertir radius_km en mètres (max 50000m pour Places API)
+        radius_meters = min(radius_km * 1000, 50000)
+        
+        # URL de l'API Places (New) - Nearby Search
+        url = "https://places.googleapis.com/v1/places:searchNearby"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": api_key,
+            "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.types,places.businessStatus"
+        }
+        
+        payload = {
+            "includedTypes": ["gym"],
+            "maxResultCount": 20,
+            "locationRestriction": {
+                "circle": {
+                    "center": {
+                        "latitude": lat,
+                        "longitude": lng
+                    },
+                    "radius": radius_meters
+                }
+            }
+        }
+        
+        print(f"🔍 Recherche Google Places API autour de ({lat}, {lng}) - rayon {radius_km}km")
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        
+        if response.status_code != 200:
+            print(f"❌ Erreur Google Places API: {response.status_code} - {response.text}")
+            return []
+        
+        data = response.json()
+        places = data.get("places", [])
+        
+        results = []
+        for place in places:
+            # Vérifier que c'est ouvert
+            if place.get("businessStatus") != "OPERATIONAL":
+                continue
+            
+            location = place.get("location", {})
+            lat_place = location.get("latitude")
+            lng_place = location.get("longitude")
+            
+            if not lat_place or not lng_place:
+                continue
+            
+            # Calculer la distance réelle
+            distance = haversine_distance(lat, lng, lat_place, lng_place)
+            
+            gym_result = {
+                "id": f"google_{place.get('id', '')}",
+                "name": place.get("displayName", {}).get("text", "Salle de sport"),
+                "address": place.get("formattedAddress", "Adresse non disponible"),
+                "lat": lat_place,
+                "lng": lng_place,
+                "chain": "Google Places",
+                "distance_km": round(distance, 1),
+                "coach_count": 0,
+                "source": "Google Places API"
+            }
+            results.append(gym_result)
+        
+        # Trier par distance
+        results.sort(key=lambda x: x["distance_km"])
+        
+        print(f"✅ Google Places API: {len(results)} salles trouvées")
+        return results
+        
+    except Exception as e:
+        print(f"❌ Erreur Google Places API: {e}")
+        return []
+
 def search_gyms_by_location(lat: float, lng: float, radius_km: int = 25) -> List[Dict]:
     """
     Recherche les salles dans un rayon donné.

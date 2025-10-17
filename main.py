@@ -56,6 +56,7 @@ from utils import (
     add_coach_gym,
     remove_coach_gym,
     search_gyms_by_location,
+    search_gyms_google_places,
     search_gyms_by_zone,
     get_coaches_by_gym,
     # Géolocalisation et pays
@@ -1815,6 +1816,8 @@ async def search_gyms_by_location_api(
     """
     try:
         results = []
+        search_lat = None
+        search_lng = None
         
         if q:
             # 🎯 NOUVEAU: Détection automatique des recherches par zone/arrondissement
@@ -1826,11 +1829,31 @@ async def search_gyms_by_location_api(
                 # Recherche classique par géocodage + rayon
                 geocoded = geocode_address(q)
                 if geocoded:
-                    results = search_gyms_by_location(
-                        geocoded["lat"], 
-                        geocoded["lng"], 
-                        radius_km
-                    )
+                    search_lat = geocoded["lat"]
+                    search_lng = geocoded["lng"]
+                    
+                    # 🆕 PRIORITÉ 1: Google Places API
+                    google_results = search_gyms_google_places(search_lat, search_lng, radius_km)
+                    
+                    # PRIORITÉ 2: Base de données locale
+                    local_results = search_gyms_by_location(search_lat, search_lng, radius_km)
+                    
+                    # Fusionner les résultats (Google Places en priorité)
+                    results = google_results + local_results
+                    
+                    # Dédupliquer par nom + adresse similaire
+                    seen_gyms = set()
+                    unique_results = []
+                    for gym in results:
+                        # Créer une clé unique basée sur nom + début de l'adresse
+                        key = f"{gym['name'].lower()[:30]}_{gym.get('address', '')[:30].lower()}"
+                        if key not in seen_gyms:
+                            seen_gyms.add(key)
+                            unique_results.append(gym)
+                    
+                    results = unique_results
+                    # Trier par distance
+                    results.sort(key=lambda x: x.get("distance_km", 999))
                 else:
                     # Recherche par nom dans GYMS_DATABASE si géocodage échoue
                     for gym in GYMS_DATABASE:
@@ -1844,7 +1867,25 @@ async def search_gyms_by_location_api(
         
         elif lat is not None and lng is not None:
             # Recherche par coordonnées
-            results = search_gyms_by_location(lat, lng, radius_km)
+            search_lat = lat
+            search_lng = lng
+            
+            # 🆕 Combiner Google Places + base locale
+            google_results = search_gyms_google_places(search_lat, search_lng, radius_km)
+            local_results = search_gyms_by_location(search_lat, search_lng, radius_km)
+            
+            # Fusionner et dédupliquer
+            results = google_results + local_results
+            seen_gyms = set()
+            unique_results = []
+            for gym in results:
+                key = f"{gym['name'].lower()[:30]}_{gym.get('address', '')[:30].lower()}"
+                if key not in seen_gyms:
+                    seen_gyms.add(key)
+                    unique_results.append(gym)
+            
+            results = unique_results
+            results.sort(key=lambda x: x.get("distance_km", 999))
         
         else:
             return {
