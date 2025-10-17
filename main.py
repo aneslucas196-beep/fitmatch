@@ -508,6 +508,16 @@ async def gym_search_page(request: Request):
     """Page de recherche de salles de sport avec géolocalisation."""
     return templates.TemplateResponse("gym_search.html", {"request": request})
 
+@app.get("/gyms-map", response_class=HTMLResponse)
+async def gyms_map_page(request: Request, address: str = ""):
+    """Page de recherche de salles avec Google Maps."""
+    google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
+    return templates.TemplateResponse("gyms_map.html", {
+        "request": request,
+        "address": address,
+        "google_maps_api_key": google_maps_api_key
+    })
+
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription."""

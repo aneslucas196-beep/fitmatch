@@ -11,10 +11,15 @@ document.addEventListener('DOMContentLoaded', function() {
       const addressValue = addressInput ? addressInput.value.trim() : '';
       const gymValue = gymInput ? gymInput.value.trim() : '';
 
-      // Rediriger vers la page de recherche avec les paramètres
+      // Si une adresse est saisie, rediriger vers la carte des salles
+      if (addressValue) {
+        window.location.href = `/gyms-map?address=${encodeURIComponent(addressValue)}`;
+        return;
+      }
+
+      // Sinon, rediriger vers la page de recherche classique
       const params = new URLSearchParams();
       if (coachValue) params.append('coach', coachValue);
-      if (addressValue) params.append('location', addressValue);
       if (gymValue) params.append('gym', gymValue);
 
       window.location.href = `/search?${params.toString()}`;

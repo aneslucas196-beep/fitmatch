@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salles de Sport - FitMatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+    }
+
+    body {
+      background: #f5f5f5;
+    }
+
+    .navbar {
+      background: #fff;
+      padding: 20px 60px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      color: #000;
+    }
+
+    .nav-buttons a {
+      margin-left: 15px;
+      padding: 10px 20px;
+      background: #e50914;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: 0.3s;
+    }
+
+    .nav-buttons a:hover {
+      background: #b20810;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+
+    .search-header {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .search-header h1 {
+      font-size: 24px;
+      margin-bottom: 15px;
+      color: #1a1a1a;
+    }
+
+    .search-form {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search-form input {
+      flex: 1;
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+
+    .search-form button {
+      padding: 12px 30px;
+      background: #e50914;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .search-form button:hover {
+      background: #b20810;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      height: calc(100vh - 250px);
+    }
+
+    .gyms-list {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .gym-card {
+      padding: 15px;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .gym-card:hover {
+      border-color: #e50914;
+      box-shadow: 0 4px 12px rgba(229, 9, 20, 0.1);
+    }
+
+    .gym-card h3 {
+      font-size: 18px;
+      color: #1a1a1a;
+      margin-bottom: 8px;
+    }
+
+    .gym-card p {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    .gym-card .distance {
+      color: #e50914;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    #map {
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      height: 100%;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+
+    @media (max-width: 968px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      #map {
+        height: 400px;
+      }
+
+      .navbar {
+        padding: 15px 20px;
+      }
+
+      .search-form {
+        flex-direction: column;
+      }
+
+      .search-form button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">FitMatch</div>
+    <div class="nav-buttons">
+      <a href="/">Accueil</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="search-header">
+      <h1>Trouvez une salle de sport près de chez vous</h1>
+      <form class="search-form" id="searchForm">
+        <input 
+          type="text" 
+          id="addressInput" 
+          placeholder="Entrez une adresse, ville ou code postal (ex: 78990, Paris...)" 
+          value="{{ address }}"
+          required
+        />
+        <button type="submit">Rechercher</button>
+      </form>
+    </div>
+
+    <div class="content-grid">
+      <div class="gyms-list" id="gymsList">
+        <div class="no-results">Entrez une adresse pour rechercher des salles de sport</div>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <script>
+    let map;
+    let markers = [];
+    const gymsData = [];
+
+    function initMap() {
+      const defaultCenter = { lat: 48.8566, lng: 2.3522 };
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: defaultCenter,
+        zoom: 12,
+        styles: [
+          {
+            featureType: "poi",
+            elementType: "labels",
+            stylers: [{ visibility: "off" }]
+          }
+        ]
+      });
+
+      const address = "{{ address }}";
+      if (address) {
+        searchGyms(address);
+      }
+    }
+
+    async function searchGyms(address) {
+      try {
+        const response = await fetch(`/api/gyms/search?q=${encodeURIComponent(address)}&radius_km=25`);
+        const data = await response.json();
+
+        if (data.gyms && data.gyms.length > 0) {
+          displayGyms(data.gyms);
+          displayMarkers(data.gyms);
+        } else {
+          document.getElementById('gymsList').innerHTML = '<div class="no-results">Aucune salle trouvée dans cette zone. Essayez une autre adresse.</div>';
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+        document.getElementById('gymsList').innerHTML = '<div class="no-results">Erreur lors de la recherche. Veuillez réessayer.</div>';
+      }
+    }
+
+    function displayGyms(gyms) {
+      const gymsList = document.getElementById('gymsList');
+      gymsList.innerHTML = '';
+
+      gyms.forEach((gym, index) => {
+        const card = document.createElement('div');
+        card.className = 'gym-card';
+        card.innerHTML = `
+          <h3>${gym.name}</h3>
+          <p>${gym.address}</p>
+          ${gym.distance_km ? `<p class="distance">📍 ${gym.distance_km.toFixed(1)} km</p>` : ''}
+        `;
+        card.onclick = () => focusOnGym(index);
+        gymsList.appendChild(card);
+      });
+    }
+
+    function displayMarkers(gyms) {
+      markers.forEach(marker => marker.setMap(null));
+      markers = [];
+
+      if (gyms.length === 0) return;
+
+      const bounds = new google.maps.LatLngBounds();
+
+      gyms.forEach((gym, index) => {
+        const marker = new google.maps.Marker({
+          position: { lat: gym.lat, lng: gym.lng },
+          map: map,
+          title: gym.name,
+          label: {
+            text: String(index + 1),
+            color: 'white',
+            fontWeight: 'bold'
+          },
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillColor: '#e50914',
+            fillOpacity: 1,
+            strokeColor: 'white',
+            strokeWeight: 2,
+            scale: 12
+          }
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div style="padding: 10px; font-family: Poppins, sans-serif;">
+              <h3 style="margin: 0 0 8px 0; font-size: 16px;">${gym.name}</h3>
+              <p style="margin: 0; color: #666; font-size: 14px;">${gym.address}</p>
+              ${gym.distance_km ? `<p style="margin: 5px 0 0 0; color: #e50914; font-weight: 600; font-size: 13px;">📍 ${gym.distance_km.toFixed(1)} km</p>` : ''}
+            </div>
+          `
+        });
+
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+
+        markers.push(marker);
+        bounds.extend(marker.position);
+      });
+
+      map.fitBounds(bounds);
+    }
+
+    function focusOnGym(index) {
+      if (markers[index]) {
+        map.setCenter(markers[index].getPosition());
+        map.setZoom(15);
+        google.maps.event.trigger(markers[index], 'click');
+      }
+    }
+
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const address = document.getElementById('addressInput').value;
+      if (address) {
+        window.location.href = `/gyms-map?address=${encodeURIComponent(address)}`;
+      }
+    });
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap" async defer></script>
+</body>
+</html>
