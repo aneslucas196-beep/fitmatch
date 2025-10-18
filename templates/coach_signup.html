@@ -144,6 +144,62 @@
     display:inline-block; margin-top:12px; color:#2a6b52; font-size:14px;
     text-decoration:underline; text-underline-offset:3px;
   }
+
+  /* === Section Split === */
+  .fm-split{
+    background:var(--fm-bg);
+    padding:clamp(40px,6vw,80px) 20px;
+    font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    color:var(--fm-text);
+  }
+  .fm-split__wrap{
+    max-width:1200px; margin:0 auto;
+    display:grid; gap:48px;
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+  @media (max-width: 980px){
+    .fm-split__wrap{ grid-template-columns:1fr; }
+  }
+
+  /* Colonne gauche */
+  .fm-split__left h2{
+    font-size:clamp(26px,4.2vw,40px);
+    line-height:1.12; margin:0 0 8px;
+  }
+  .fm-lead{ color:var(--fm-muted); margin:0 0 18px; }
+  .fm-divider{
+    height:1px; background:var(--fm-line);
+    margin:18px 0;
+  }
+  .fm-split__left h3{ margin:0 0 6px; font-size:20px; }
+  .fm-split__left p{ margin:0 0 8px; color:#2a3138; }
+
+  .fm-btn{
+    display:inline-block; margin-top:16px;
+    padding:12px 18px; border-radius:12px;
+    background:var(--fm-accent); color:#041d12; font-weight:700;
+    text-decoration:none; transition:.2s transform, .2s box-shadow;
+    box-shadow:0 8px 24px rgba(0,199,123,.25);
+  }
+  .fm-btn:hover{ transform:translateY(-2px); box-shadow:0 14px 30px rgba(0,199,123,.35); }
+
+  /* Colonne droite (étapes) */
+  .fm-steps{
+    list-style:none; padding:0; margin:0;
+    display:flex; flex-direction:column; gap:18px;
+  }
+  .fm-steps li{
+    display:grid; grid-template-columns:auto 1fr;
+    gap:16px; padding:16px; border-radius:14px;
+    background:var(--fm-card); border:1px solid var(--fm-line);
+  }
+  .fm-step__num{
+    align-self:flex-start;
+    font-weight:700; color:#a9b3be; font-size:18px; min-width:38px;
+  }
+  .fm-step__content h4{ margin:0 0 6px; font-size:18px; }
+  .fm-step__content ul{ margin:0; padding-left:16px; color:#2a3138; }
+  .fm-step__content ul li{ margin:4px 0; }
 </style>
 </head>
 <body>
@@ -206,6 +262,115 @@
       <a class="fm-hero__linkClient" href="/signup?role=client">
         Je suis un client — je souhaite réserver un coach
       </a>
+    </div>
+  </div>
+</section>
+
+<section class="fm-split">
+  <div class="fm-split__wrap">
+    <!-- Colonne gauche -->
+    <div class="fm-split__left">
+      <h2>Attire plus de clients et gagne une crédibilité incontestable dans le fitness</h2>
+      <p class="fm-lead">Deviens le coach que les clients choisissent en toute confiance.</p>
+
+      <div class="fm-divider"></div>
+
+      <h3>Deviens inoubliable</h3>
+      <p>Avec FitMatch, ton profil inspire confiance, met en avant tes transformations, tes avis ⭐ et tes spécialités. Tu laisses une empreinte durable auprès de tes clients.</p>
+
+      <div class="fm-divider"></div>
+
+      <h3>Adapté à ton marché</h3>
+      <p>Ton profil est optimisé pour toucher directement ton audience cible : musculation, perte de poids, prise de masse, coaching femme… FitMatch met en avant tes points forts là où tes clients t'attendent.</p>
+
+      <div class="fm-divider"></div>
+
+      <h3>Apparais comme un coach haut de gamme</h3>
+      <p>Sois perçu comme un professionnel crédible et premium, avec un profil clair, des photos pro, et une présence uniforme sur toutes les plateformes.</p>
+
+      <div class="fm-divider"></div>
+
+      <h3>Une image qui dure dans le temps</h3>
+      <p>Ton profil FitMatch ne vieillit pas. Avec tes avis, tes résultats et tes mises à jour simples, tu construis une réputation solide pour le long terme.</p>
+
+      <div class="fm-divider"></div>
+
+      <h3>Satisfaction garantie, 100% sans risque</h3>
+      <p>Ton succès est notre priorité. Si FitMatch ne t'apporte pas de valeur, tu peux arrêter ton abonnement à tout moment, sans frais cachés.</p>
+
+      <a href="/signup?role=coach" class="fm-btn">Découvrir gratuitement</a>
+    </div>
+
+    <!-- Colonne droite : titres numérotés -->
+    <div class="fm-split__right">
+      <ol class="fm-steps">
+        <li>
+          <div class="fm-step__num">01</div>
+          <div class="fm-step__content">
+            <h4>Plateforme de visibilité</h4>
+            <ul>
+              <li>Référencement sur FitMatch & mobile</li>
+              <li>Page profil optimisée (avis, résultats, spécialités)</li>
+              <li>CTA "Réserver" partout</li>
+            </ul>
+          </div>
+        </li>
+        <li>
+          <div class="fm-step__num">02</div>
+          <div class="fm-step__content">
+            <h4>Agenda connecté</h4>
+            <ul>
+              <li>Créneaux, durées & lieux paramétrables</li>
+              <li>Rappels e-mail/SMS aux clients</li>
+              <li>Liste d'attente intelligente</li>
+            </ul>
+          </div>
+        </li>
+        <li>
+          <div class="fm-step__num">03</div>
+          <div class="fm-step__content">
+            <h4>Confiance & crédibilité</h4>
+            <ul>
+              <li>Avis vérifiés & transformations</li>
+              <li>Badges de spécialités</li>
+              <li>Note moyenne visible ⭐</li>
+            </ul>
+          </div>
+        </li>
+        <li>
+          <div class="fm-step__num">04</div>
+          <div class="fm-step__content">
+            <h4>Sans engagement</h4>
+            <ul>
+              <li>Abonnement mensuel, stop à tout moment</li>
+              <li>0% de commission sur tes séances</li>
+              <li>Support réactif</li>
+            </ul>
+          </div>
+        </li>
+        <li>
+          <div class="fm-step__num">05</div>
+          <div class="fm-step__content">
+            <h4>Paiement simplifié</h4>
+            <ul>
+              <li>En ligne ou sur place (au choix)</li>
+              <li>Reçus automatiques</li>
+              <li>Historique des réservations</li>
+            </ul>
+          </div>
+        </li>
+        <li>
+          <div class="fm-step__num">06</div>
+          <div class="fm-step__content">
+            <h4>Croissance durable</h4>
+            <ul>
+              <li>Stats & suivi des performances</li>
+              <li>Relances des clients inactifs</li>
+              <li>Outils promo intégrés</li>
+            </ul>
+          </div>
+        </li>
+      </ol>
     </div>
   </div>
 </section>
