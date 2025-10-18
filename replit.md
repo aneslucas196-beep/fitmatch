@@ -6,6 +6,16 @@ Coach Fitness is a comprehensive fitness coach marketplace platform built with F
 
 The platform includes a worldwide gym database with all gyms globally, OpenStreetMap integration, country selection, and geographic search capabilities. It features a modern, motivating client dashboard and comprehensive search functionalities for finding both coaches and gyms based on location and preferences.
 
+## Recent Changes (October 2025)
+
+### Google Places API - Worldwide Gym Search
+- **Global Gym Search**: Integration of Google Places API for worldwide gym discovery
+- **New API Endpoint**: `/api/gyms/worldwide-search` for international gym autocomplete
+- **Coach Onboarding Enhancement**: Coaches can now add any gym in the world to their profile (not just French gyms)
+- **Text Search Integration**: Uses Google Places Text Search API for flexible query matching
+- **Updated Coach Profile Setup**: Modified autocomplete to search globally with 3-character minimum
+- **API Key Management**: Configured `GOOGLE_PLACES_API_KEY` for secure access to Google services
+
 ## Recent Changes (September 2025)
 
 ### Client Dashboard Transformation
