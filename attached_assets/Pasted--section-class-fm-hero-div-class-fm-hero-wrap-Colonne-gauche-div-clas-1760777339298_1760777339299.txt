@@ -1,0 +1,54 @@
+<section class="fm-hero">
+  <div class="fm-hero__wrap">
+    <!-- Colonne gauche -->
+    <div class="fm-hero__left">
+      <h1>La plateforme n°1 pour gérer ton activité de coaching sportif</h1>
+
+      <p class="fm-hero__lead">
+        50 000 coachs font confiance à la référence du coaching, utilisée par
+        <strong>14&nbsp;millions d’utilisateurs</strong>.
+      </p>
+
+      <ul class="fm-hero__checks">
+        <li>Agenda intelligent pour gérer tes réservations</li>
+        <li>Suivi client simplifié et professionnel</li>
+        <li>Sans engagement ni commission</li>
+        <li>Paiement facile et sécurisé</li>
+      </ul>
+
+      <div class="fm-hero__rating">
+        ⭐ <strong>4,8/5</strong> sur FitTrust
+      </div>
+
+      <!-- Petite photo motivante sous la note -->
+      <div class="fm-hero__motivation">
+        <img
+          src="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=80"
+          alt="Coachs motivés s’entraînant — Rejoignez FitMatch"
+        />
+        <span>Rejoins les coachs qui font grandir leur activité avec FitMatch</span>
+      </div>
+    </div>
+
+    <!-- Colonne droite -->
+    <div class="fm-hero__right">
+      <a class="fm-hero__card" href="/signup?role=coach">
+        <div class="fm-hero__icon" aria-hidden="true">
+          <!-- icône haltère -->
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <path d="M3 10h2v4H3v-4Zm16 0h2v4h-2v-4ZM7 8h2v8H7V8Zm8 0h2v8h-2V8Zm-4 3h2v2h-2v-2Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="fm-hero__cardBody">
+          <div class="fm-hero__cardTitle">Coach sportif</div>
+          <div class="fm-hero__cardDesc">Crée ton profil et deviens visible dès aujourd’hui</div>
+        </div>
+        <div class="fm-hero__arrow" aria-hidden="true">→</div>
+      </a>
+
+      <a class="fm-hero__linkClient" href="/signup?role=client">
+        Je suis un client — je souhaite réserver un coach
+      </a>
+    </div>
+  </div>
+</section>

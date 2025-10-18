@@ -524,6 +524,11 @@ async def partner_page(request: Request):
     """Page Devenir partenaire FitMatch Pro."""
     return templates.TemplateResponse("partner.html", {"request": request})
 
+@app.get("/coach-signup", response_class=HTMLResponse)
+async def coach_signup_page(request: Request):
+    """Page d'inscription coach avec hero section."""
+    return templates.TemplateResponse("coach_signup.html", {"request": request})
+
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription."""
