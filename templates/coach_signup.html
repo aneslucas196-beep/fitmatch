@@ -200,6 +200,64 @@
   .fm-step__content h4{ margin:0 0 6px; font-size:18px; }
   .fm-step__content ul{ margin:0; padding-left:16px; color:#2a3138; }
   .fm-step__content ul li{ margin:4px 0; }
+
+  /* === Section Dark Stats === */
+  .fitmatch-dark {
+    background-color: #0d0d0d;
+    color: #ffffff;
+    text-align: center;
+    padding: 100px 20px;
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .fitmatch-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 20px;
+  }
+
+  .fitmatch-subtitle {
+    color: #a0a0a0;
+    font-size: 17px;
+    max-width: 700px;
+    margin: 0 auto 60px;
+    line-height: 1.6;
+  }
+
+  .fitmatch-stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 40px;
+  }
+
+  .fitmatch-box {
+    flex: 1 1 250px;
+    background: #1a1a1a;
+    border: 1px solid #222;
+    border-radius: 10px;
+    padding: 40px 25px;
+    box-shadow: 0 0 20px rgba(0, 255, 100, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .fitmatch-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 30px rgba(0, 255, 150, 0.15);
+  }
+
+  .fitmatch-box h3 {
+    color: #00ff7f;
+    font-size: 30px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .fitmatch-box p {
+    color: #d1d1d1;
+    font-size: 15px;
+  }
 </style>
 </head>
 <body>
@@ -262,6 +320,28 @@
       <a class="fm-hero__linkClient" href="/signup?role=client">
         Je suis un client — je souhaite réserver un coach
       </a>
+    </div>
+  </div>
+</section>
+
+<section class="fitmatch-dark">
+  <h2 class="fitmatch-title">La plateforme n°1 pour gérer ton activité de coaching sportif</h2>
+  <p class="fitmatch-subtitle">
+    50 000 coachs font confiance à la référence du coaching, utilisée par plus de 14 millions d'utilisateurs.
+  </p>
+
+  <div class="fitmatch-stats">
+    <div class="fitmatch-box">
+      <h3>+14 Millions</h3>
+      <p>d'utilisateurs</p>
+    </div>
+    <div class="fitmatch-box">
+      <h3>+50 000</h3>
+      <p>coachs inscrits</p>
+    </div>
+    <div class="fitmatch-box">
+      <h3>50%</h3>
+      <p>des réservations faites hors horaires d'ouverture</p>
     </div>
   </div>
 </section>
