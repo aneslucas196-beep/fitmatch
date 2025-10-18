@@ -519,6 +519,11 @@ async def gyms_map_page(request: Request, address: str = ""):
         "google_maps_api_key": google_maps_api_key
     })
 
+@app.get("/partner", response_class=HTMLResponse)
+async def partner_page(request: Request):
+    """Page Devenir partenaire FitMatch Pro."""
+    return templates.TemplateResponse("partner.html", {"request": request})
+
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription."""
