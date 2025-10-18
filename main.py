@@ -57,6 +57,7 @@ from utils import (
     remove_coach_gym,
     search_gyms_by_location,
     search_gyms_google_places,
+    search_gyms_worldwide_autocomplete,
     search_gyms_by_zone,
     get_coaches_by_gym,
     # Géolocalisation et pays
@@ -1918,10 +1919,45 @@ async def search_gyms_by_location_api(
             "gyms": []
         }
 
+@app.get("/api/gyms/worldwide-search")
+async def search_gyms_worldwide(q: str):
+    """
+    🌍 NOUVEAU: Recherche MONDIALE de salles via Google Places API.
+    Permet aux coachs et clients de chercher n'importe quelle salle dans le monde.
+    Paramètres: q = nom de salle, adresse, ville, pays...
+    """
+    try:
+        print(f"🌍 RECHERCHE MONDIALE: {q}")
+        
+        if len(q.strip()) < 3:
+            return {
+                "success": True,
+                "gyms": [],
+                "message": "Tapez au moins 3 caractères"
+            }
+        
+        # Utiliser la nouvelle fonction de recherche mondiale
+        results = search_gyms_worldwide_autocomplete(q)
+        
+        return {
+            "success": True,
+            "gyms": results,
+            "count": len(results),
+            "message": f"{len(results)} salle(s) trouvée(s) dans le monde"
+        }
+        
+    except Exception as e:
+        print(f"❌ Erreur recherche mondiale: {e}")
+        return {
+            "success": False,
+            "message": "Erreur lors de la recherche mondiale",
+            "gyms": []
+        }
+
 @app.get("/api/gyms/suggestions")
 async def get_gym_suggestions(q: str):
     """
-    NOUVEAU ENDPOINT COACH : Recherche TOUTES les salles de France pour l'autocomplétion coach.
+    ENDPOINT COACH : Recherche TOUTES les salles de France pour l'autocomplétion coach.
     Utilise l'API Data ES (7951 salles de musculation + 4125 salles collectives).
     Paramètres: q = nom partiel de salle ou ville
     """

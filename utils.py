@@ -1295,6 +1295,78 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
         print(f"Erreur recherche par zone: {e}")
         return []
 
+def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
+    """
+    Recherche MONDIALE de salles de sport via Google Places Autocomplete (Text Search).
+    Permet aux coachs et clients de chercher n'importe quelle salle dans le monde.
+    """
+    try:
+        import requests
+        
+        # Utiliser GOOGLE_PLACES_API_KEY (nouvelle clé fournie)
+        api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
+        if not api_key:
+            print("⚠️ GOOGLE_PLACES_API_KEY non configurée")
+            return []
+        
+        if len(query.strip()) < 3:
+            return []
+        
+        # URL de l'API Places (New) - Text Search pour recherche mondiale
+        url = "https://places.googleapis.com/v1/places:searchText"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": api_key,
+            "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.types,places.internationalPhoneNumber"
+        }
+        
+        payload = {
+            "textQuery": f"{query} gym fitness",
+            "maxResultCount": 20,
+            "includedType": "gym"
+        }
+        
+        print(f"🌍 Recherche mondiale Google Places: '{query}'")
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=15)
+        
+        if response.status_code != 200:
+            print(f"❌ Erreur Google Places API: {response.status_code} - {response.text}")
+            return []
+        
+        data = response.json()
+        places = data.get("places", [])
+        
+        results = []
+        for place in places:
+            location = place.get("location", {})
+            lat_place = location.get("latitude")
+            lng_place = location.get("longitude")
+            
+            if not lat_place or not lng_place:
+                continue
+            
+            gym_result = {
+                "id": f"google_worldwide_{place.get('id', '')}",
+                "name": place.get("displayName", {}).get("text", "Salle de sport"),
+                "address": place.get("formattedAddress", "Adresse non disponible"),
+                "lat": lat_place,
+                "lng": lng_place,
+                "phone": place.get("internationalPhoneNumber", ""),
+                "chain": "Google Places (Mondial)",
+                "source": "Google Places Worldwide",
+                "coach_count": 0
+            }
+            results.append(gym_result)
+        
+        print(f"✅ {len(results)} salles trouvées dans le monde pour '{query}'")
+        return results
+        
+    except Exception as e:
+        print(f"❌ Erreur recherche mondiale Google Places: {e}")
+        return []
+
 def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> List[Dict]:
     """
     Recherche les salles de sport via Google Places API (New).
@@ -1303,9 +1375,9 @@ def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> Li
     try:
         import requests
         
-        api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+        api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
         if not api_key:
-            print("⚠️ GOOGLE_MAPS_API_KEY non configurée")
+            print("⚠️ GOOGLE_PLACES_API_KEY non configurée")
             return []
         
         # Convertir radius_km en mètres (max 50000m pour Places API)
