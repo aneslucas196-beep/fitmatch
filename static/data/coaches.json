@@ -150,5 +150,26 @@
     "gyms": ["bf_elancourt"],
     "instagram_url": "https://instagram.com/hugo_muscle",
     "availability_today": false
+  },
+  {
+    "id": "c_anas",
+    "full_name": "ANAS",
+    "photo": "/static/coach-anas.jpg",
+    "verified": true,
+    "rating": 4.8,
+    "reviews_count": 45,
+    "city": "Maurepas",
+    "postal_code": "78310",
+    "lat": 48.7631,
+    "lng": 1.9189,
+    "bio": "Coach sportif certifié spécialisé en musculation et développement musculaire. Programmes personnalisés adaptés à vos objectifs.",
+    "specialties": ["musculation", "force", "prise de masse"],
+    "price_from": 40,
+    "radius_km": 10,
+    "gyms": ["fp_maurepas"],
+    "instagram_url": "",
+    "availability_today": true,
+    "public": true,
+    "status": "active"
   }
 ]

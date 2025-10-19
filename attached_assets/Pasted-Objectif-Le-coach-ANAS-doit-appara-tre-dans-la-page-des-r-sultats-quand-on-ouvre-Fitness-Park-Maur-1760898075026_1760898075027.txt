@@ -1,0 +1,130 @@
+Objectif : Le coach ANAS doit apparaître dans la page des résultats quand on ouvre Fitness Park Maurepas ou qu’on cherche le CP 78310.
+
+À faire :
+
+Ouvre les fichiers contenant les données gyms et coaches (souvent data/gyms.json et data/coaches.json).
+
+Ajoute/garantis ces entrées (ou mets à jour si elles existent) :
+
+// gyms.json (doit contenir ceci)
+{
+  "id": "g_maurepas",
+  "name": "Fitness Park Maurepas",
+  "city": "Maurepas",
+  "postal_code": "78310",
+  "address": "Avenue Jean Jaurès, 78310 Maurepas"
+}
+
+// coaches.json (doit contenir ceci)
+{
+  "id": "c_anas",
+  "name": "Anas Coach",
+  "photo": "/img/anas.jpg",
+  "specialty": "Musculation",
+  "gyms": ["g_maurepas"],       // ← IMPORTANT : lier à la salle
+  "city": "Maurepas",
+  "postal_code": "78310",
+  "public": true,
+  "status": "active",
+  "rating": 4.8
+}
+
+
+Dans le module qui charge les données (ex: data.ts, store.js, ou similaire), colle ces helpers et la correction de mapping juste après le chargement:
+
+// === Helpers de normalisation & debug ===
+function normalize(s) {
+  return (s || '')
+    .toString()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim();
+}
+function logBlock(title, payload) {
+  console.log(`\n==== ${title} ====`);
+  try { console.log(JSON.stringify(payload, null, 2)); } catch { console.log(payload); }
+}
+
+// === Après avoir chargé `gyms` et `coaches` ===
+const gymsById = Object.fromEntries(gyms.map(g => [g.id, g]));
+const gymIdByName = Object.fromEntries(gyms.map(g => [normalize(g.name), g.id]));
+const gymIdByCP   = Object.fromEntries(gyms.map(g => [normalize(g.postal_code), g.id]));
+
+// Sécuriser / corriger coach.gyms (accepte ID ou nom de salle)
+// Et forcer la cohérence publique/active par défaut
+coaches.forEach(c => {
+  if (!Array.isArray(c.gyms)) c.gyms = [];
+  c.gyms = c.gyms.map(g => {
+    const n = normalize(g);
+    if (gymsById[g]) return g;                     // déjà un ID
+    if (gymIdByName[n]) return gymIdByName[n];     // nom → ID
+    if (gymIdByCP[n])   return gymIdByCP[n];       // CP  → ID
+    return g; // fallback (sera filtré si inconnu)
+  });
+  if (c.public === undefined) c.public = true;
+  if (!c.status) c.status = 'active';
+});
+
+// Vérif présence ANAS & salle Maurepas
+const anas = coaches.find(c => c.id === 'c_anas' || normalize(c.name) === 'anas coach');
+const gMaurepas = gyms.find(g => g.id === 'g_maurepas' || normalize(g.name) === 'fitness park maurepas');
+
+logBlock('CHECK_ENTITIES', {
+  anas_exists: !!anas,
+  gMaurepas_exists: !!gMaurepas,
+  anas_gyms: anas?.gyms
+});
+
+
+Remplace/installe la fonction qui retourne les coachs d’une salle par ID :
+
+export function getCoachesForGym(gymId, opts = {}) {
+  const { specialty = null } = opts;
+  const res = coaches
+    .filter(c => c && c.public && c.status === 'active')
+    .filter(c => Array.isArray(c.gyms) && c.gyms.some(id => normalize(id) === normalize(gymId)))
+    .filter(c => !specialty || normalize(c.specialty) === normalize(specialty));
+
+  logBlock('RESULT_FOR_GYM', {
+    gymId,
+    specialty,
+    count: res.length,
+    coach_ids: res.map(c => c.id)
+  });
+  return res;
+}
+
+
+Dans la page résultats / “Voir les coachs”, assure-toi qu’on passe l’ID de la salle et pas le nom :
+
+// Quand l’utilisateur clique sur “Voir les coachs” d’une salle
+const gymId = selectedGym.id;  // ex: 'g_maurepas'
+const specialty = filters?.specialty || null;
+const list = getCoachesForGym(gymId, { specialty });
+renderCoaches(list);
+
+
+(Optionnel utile) Ajoute un panneau debug discret en bas de la page pour voir ce que l’app a compris :
+
+function attachDebugPanel({ gym, list }) {
+  const el = document.createElement('div');
+  el.style.cssText = 'margin:24px 0;padding:12px;border:1px dashed #aaa;border-radius:8px;font-size:12px;opacity:.8';
+  el.innerHTML = `
+    <strong>DEBUG</strong> — gymId: <code>${gym?.id || '-'}</code>, gymName: <code>${gym?.name || '-'}</code><br/>
+    Coachs: ${list.map(c => `${c.id} (${c.name})`).join(', ') || '—'}
+  `;
+  document.body.appendChild(el);
+}
+
+// après avoir obtenu la liste
+attachDebugPanel({ gym: selectedGym, list });
+
+
+Critères d’acceptation :
+
+Dans la console, CHECK_ENTITIES doit montrer anas_exists: true, gMaurepas_exists: true et anas_gyms contenant "g_maurepas".
+
+RESULT_FOR_GYM.coach_ids doit inclure c_anas.
+
+La carte ANAS apparaît avec Marie/Thomas/Sophie/Camille lors de la recherche “Fitness Park Maurepas” ou 78310.

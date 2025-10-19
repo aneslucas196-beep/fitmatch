@@ -16,11 +16,52 @@ class SearchService {
       
       this.gyms = await gymsResponse.json();
       this.coaches = await coachesResponse.json();
+      
+      // Normalisation et validation des données
+      this.normalizeData();
+      
       this.loaded = true;
+      
+      // Debug: vérifier les données chargées
+      if (window.SearchDebug) {
+        window.SearchDebug.verifyDataLoaded(this.gyms, this.coaches);
+      }
     } catch (error) {
       console.error('Erreur chargement données:', error);
       throw new Error('Impossible de charger les données');
     }
+  }
+
+  normalizeData() {
+    // Créer des index pour faciliter la recherche
+    const gymsById = Object.fromEntries(this.gyms.map(g => [g.id, g]));
+    const gymIdByName = Object.fromEntries(
+      this.gyms.map(g => [this.normalizeString(g.name), g.id])
+    );
+    const gymIdByCP = Object.fromEntries(
+      this.gyms.map(g => [g.postal_code, g.id])
+    );
+
+    // Sécuriser les données des coaches
+    this.coaches.forEach(c => {
+      // S'assurer que gyms est un array
+      if (!Array.isArray(c.gyms)) c.gyms = [];
+      
+      // Convertir les noms de salles en IDs si nécessaire
+      c.gyms = c.gyms.map(g => {
+        const normalized = this.normalizeString(g);
+        if (gymsById[g]) return g;                    // Déjà un ID
+        if (gymIdByName[normalized]) return gymIdByName[normalized]; // Nom → ID
+        if (gymIdByCP[g]) return gymIdByCP[g];        // CP → ID
+        return g; // Fallback
+      });
+      
+      // Valeurs par défaut
+      if (c.public === undefined) c.public = true;
+      if (!c.status) c.status = 'active';
+    });
+    
+    console.log(`✅ Données normalisées: ${this.gyms.length} salles, ${this.coaches.length} coaches`);
   }
 
   autocomplete(query, type = 'all') {

@@ -125,15 +125,9 @@ class SearchApp {
       return;
     }
     
-    // Si code postal seul (sans spécialité) → Afficher les salles de ce CP
+    // Si seulement une adresse/ville (sans spécialité et pas un CP) → Rediriger vers Google Maps des salles
     const isPostalCode = /^\d{5}$/.test(addressQuery);
-    if (addressQuery && !specialtyQuery && isPostalCode) {
-      await this.searchGymsByPostalCode(addressQuery);
-      return;
-    }
-    
-    // Si seulement une adresse/ville (sans spécialité) → Rediriger vers Google Maps des salles
-    if (addressQuery && !specialtyQuery) {
+    if (addressQuery && !specialtyQuery && !isPostalCode) {
       window.location.href = `/gyms-map?address=${encodeURIComponent(addressQuery)}`;
       return;
     }
