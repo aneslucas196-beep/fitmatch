@@ -1,0 +1,177 @@
+Assure la donnée (2 fichiers)
+data/gyms.json
+
+Ajoute/valide cette entrée (ou adapte si elle existe) :
+
+{
+  "id": "fitness-park-maurepas",
+  "name": "Fitness Park Maurepas",
+  "city": "Maurepas",
+  "postal_code": "78310",
+  "address": "Avenue Jean Jaurès, 78310 Maurepas"
+}
+
+data/coaches.json
+
+Ajoute/valide le coach ANAS (exemple) :
+
+{
+  "id": "c_anas",
+  "name": "Anas Coach",
+  "specialty": "Musculation",
+  "gyms": ["fitness-park-maurepas"],   // <-- bien l'ID ci-dessus !
+  "public": true,
+  "status": "active",
+  "price_from": 40,
+  "rating": 4.8
+}
+
+
+⚠️ Très important : dans gyms du coach, mets l’ID (fitness-park-maurepas), pas “Fitness Park Maurepas” en texte.
+
+2) Remplace la logique de recherche (1 fichier)
+
+Dans ton fichier de page résultats (souvent search.js / search.ts ou un bloc <script> sur search.html), remplace le code de recherche par ceci :
+
+// === HOTFIX FITMATCH — recherche coachs par salle ===
+
+// utilitaire pour normaliser/slugifier
+function slug(s){
+  return (s||'')
+    .toString()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu,'')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'');
+}
+
+function norm(s){
+  return (s||'')
+    .toString()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu,'')
+    .toLowerCase()
+    .trim();
+}
+
+// Suppose que tu as ces tableaux globaux chargés avant : window.GYMS, window.COACHES
+// Si tes noms diffèrent, adapte ici :
+const GYMS    = window.GYMS || [];
+const COACHES = window.COACHES || [];
+
+// Index des salles
+const gymById      = Object.fromEntries(GYMS.map(g => [g.id, g]));
+const gymIdByName  = Object.fromEntries(GYMS.map(g => [norm(g.name), g.id]));
+const gymIdByCP    = Object.fromEntries(GYMS.map(g => [String(g.postal_code||'').trim(), g.id]));
+const gymIdBySlug  = Object.fromEntries(GYMS.map(g => [slug(g.name), g.id]));
+
+// Sélectionne une salle à partir d’un paramètre URL (id/slug/nom/cp)
+function resolveGymIdFromUrl(){
+  const q = new URLSearchParams(location.search);
+  // priorités : gym (id) > slug > name > cp
+  const pGym  = q.get('gym');         // ex: fitness-park-maurepas
+  const pSlug = q.get('slug');        // si tu envoies un slug
+  const pName = q.get('name');        // nom texte
+  const pCP   = q.get('cp');          // 78310
+
+  if (pGym && gymById[pGym]) return pGym;
+  if (pSlug && gymIdBySlug[pSlug]) return gymIdBySlug[pSlug];
+  if (pName && gymIdByName[norm(pName)]) return gymIdByName[norm(pName)];
+  if (pCP && gymIdByCP[pCP]) return gymIdByCP[pCP];
+  return null;
+}
+
+// Normalise les gyms des coachs (accepte id / nom / cp / slug)
+function normalizeCoachGyms(){
+  COACHES.forEach(c=>{
+    if (!Array.isArray(c.gyms)) c.gyms = [];
+    c.gyms = c.gyms.map(g => {
+      if (gymById[g]) return g;                              // déjà un id
+      const n = norm(g);
+      if (gymIdByName[n]) return gymIdByName[n];            // nom -> id
+      const s = slug(g);
+      if (gymIdBySlug[s]) return gymIdBySlug[s];            // slug -> id
+      if (gymIdByCP[g]) return gymIdByCP[g];                // cp   -> id
+      return g; // inconnu (on laissera tomber après)
+    });
+    if (c.public === undefined) c.public = true;
+    if (!c.status) c.status = 'active';
+  });
+}
+
+// Retourne les coachs pour une salle (sans pagination/filtre caché)
+function getCoachesForGym(gymId, { specialty = null } = {}){
+  const list = COACHES
+    .filter(c => c && c.status === 'active' && c.public !== false)
+    .filter(c => Array.isArray(c.gyms) && c.gyms.includes(gymId))
+    .filter(c => !specialty || norm(c.specialty) === norm(specialty));
+
+  // Hotfix : forcer la présence d'ANAS si relié à la salle
+  const anas = COACHES.find(c => c.id === 'c_anas');
+  if (anas && anas.gyms && anas.gyms.includes(gymId) && !list.some(c => c.id === 'c_anas')) {
+    list.push(anas);
+  }
+  return list;
+}
+
+// Rendu très simple (adapte les classes si besoin)
+function renderCoaches(list){
+  const root = document.getElementById('coach-results');
+  if (!root) return;
+  root.innerHTML = list.map(c => `
+    <div class="coach-card" data-coach-id="${c.id}">
+      <div class="coach-name">${c.name}</div>
+      <div class="coach-spec">${c.specialty||''}</div>
+      <div class="coach-price">À partir de ${c.price_from? c.price_from + '€' : '—'}</div>
+      <a class="btn" href="/coach/profile?id=${encodeURIComponent(c.id)}">Voir le profil</a>
+    </div>
+  `).join('');
+
+  // Debug visible
+  const dbg = document.getElementById('coach-debug');
+  if (dbg) {
+    dbg.textContent = `DEBUG gymId=${currentGymId} | coaches=[${list.map(c=>c.id).join(', ')}]`;
+  }
+}
+
+// ==== Exécution ====
+normalizeCoachGyms();
+const currentGymId = resolveGymIdFromUrl();
+
+// Si pas de gym dans l’URL, on prend celle tapée dans un input “salle” (optionnel)
+if (!currentGymId) {
+  const typed = (document.getElementById('gym-input')?.value || '').trim();
+  const fallback = gymIdByName[norm(typed)] || gymIdBySlug[slug(typed)] || gymIdByCP[typed] || null;
+  window._gymFallbackId = fallback;
+}
+
+const gymIdToUse = currentGymId || window._gymFallbackId;
+if (gymIdToUse) {
+  const result = getCoachesForGym(gymIdToUse, { specialty: null }); // pas de filtre spécialité au début
+  renderCoaches(result);
+} else {
+  // pas de salle résolue : on n'affiche rien / ou message
+  const root = document.getElementById('coach-results');
+  if (root) root.innerHTML = `<p>Aucune salle sélectionnée.</p>`;
+}
+
+
+Dans ta page HTML des résultats, assure-toi d’avoir ces deux éléments :
+
+<div id="coach-results"></div>
+<pre id="coach-debug" style="margin-top:12px;padding:8px;border:1px dashed #aaa;border-radius:6px;font-size:12px;opacity:.8;"></pre>
+
+3) Comment tester tout de suite
+
+Ouvre la page résultats avec un paramètre simple :
+/search.html?gym=fitness-park-maurepas
+(ou l’équivalent de ta route)
+
+Fais un hard refresh : Ctrl+F5 (ou Cmd+Shift+R).
+
+Regarde le bloc DEBUG en bas : tu dois voir
+DEBUG gymId=fitness-park-maurepas | coaches=[..., c_anas, ...]
+
+Tu dois voir la carte ANAS dans la liste.
