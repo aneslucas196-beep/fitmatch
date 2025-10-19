@@ -94,12 +94,25 @@
     "selected_gyms": null
   },
   "mejedjaoued@gmail.com": {
-    "full_name": "majed ",
+    "id": "mejedjaoued@gmail.com",
+    "email": "mejedjaoued@gmail.com",
+    "role": "coach",
+    "profile_completed": true,
+    "full_name": "zazakj",
+    "bio": "dzgzefze",
+    "city": "qnaq",
+    "instagram_url": "",
+    "price_from": 40,
+    "radius_km": 10,
+    "specialties": [
+      "musculation"
+    ],
+    "selected_gym_ids": "google_worldwide_ChIJQ72x1zaD5kcRQlqvEwUXty0",
+    "selected_gyms_data": "[{\"id\":\"google_worldwide_ChIJQ72x1zaD5kcRQlqvEwUXty0\",\"name\":\"Fitness Park Maurepas\",\"address\":\"Centre Commercial Pariwest, Rdpt Laurent Schwartz, 78310 Maurepas, France\",\"city\":\"\",\"lat\":48.7593384,\"lng\":1.9204497999999999,\"chain\":\"Google Places (Mondial)\",\"source\":\"Google Places Worldwide\",\"display_name\":\"Fitness Park Maurepas - Centre Commercial Pariwest, Rdpt Laurent Schwartz, 78310 Maurepas, France\"}]",
+    "password": "Anasking12345!",
     "gender": "homme",
-    "role": "client",
-    "country_code": "AS",
-    "password": "Anasking1234!",
-    "coach_gender_preference": "homme",
-    "selected_gyms": []
+    "country_code": "AU",
+    "coach_gender_preference": null,
+    "selected_gyms": null
   }
 }
