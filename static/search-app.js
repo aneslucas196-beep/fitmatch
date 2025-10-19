@@ -142,31 +142,47 @@ class SearchApp {
       let results = [];
       let resultType = '';
       
-      if (gymQuery) {
-        if (this.selectedGym && this.selectedGym.type === 'gym') {
-          const coaches = searchService.searchCoachesByGym(this.selectedGym.value);
+      // Priorité 1: Si une salle spécifique est sélectionnée → Afficher ses coachs
+      if (this.selectedGym && this.selectedGym.type === 'gym') {
+        const coaches = searchService.searchCoachesByGym(this.selectedGym.value);
+        results = coaches;
+        resultType = 'coaches';
+        
+        // Récupérer la position de la salle pour le tri par distance
+        const gym = searchService.gyms.find(g => g.id === this.selectedGym.value);
+        if (gym) {
+          this.userLocation = { lat: gym.lat, lng: gym.lng };
+          this.resultsTitle.textContent = `Coachs chez ${gym.name}`;
+        } else {
+          this.resultsTitle.textContent = 'Coachs trouvés';
+        }
+      }
+      // Priorité 2: Si code postal dans "Quelle salle" → Afficher les salles
+      else if (gymQuery && /^\d{5}$/.test(gymQuery)) {
+        const gyms = searchService.searchGymsByPostalCode(gymQuery);
+        results = gyms;
+        resultType = 'gyms';
+        this.resultsTitle.textContent = 'Salles trouvées';
+      }
+      // Priorité 3: Si nom de salle tapé → Rechercher salles correspondantes
+      else if (gymQuery) {
+        const gyms = searchService.searchGymsByName(gymQuery);
+        if (gyms.length === 1) {
+          // Si une seule salle trouvée → Afficher directement ses coachs
+          const coaches = searchService.searchCoachesByGym(gyms[0].id);
           results = coaches;
           resultType = 'coaches';
-          this.resultsTitle.textContent = 'Coachs trouvés';
-        } else if (/^\d{5}$/.test(gymQuery)) {
-          const gyms = searchService.searchGymsByPostalCode(gymQuery);
+          this.userLocation = { lat: gyms[0].lat, lng: gyms[0].lng };
+          this.resultsTitle.textContent = `Coachs chez ${gyms[0].name}`;
+        } else {
+          // Plusieurs salles → Les lister
           results = gyms;
           resultType = 'gyms';
           this.resultsTitle.textContent = 'Salles trouvées';
-        } else {
-          const gyms = searchService.searchGymsByName(gymQuery);
-          if (gyms.length === 1) {
-            const coaches = searchService.searchCoachesByGym(gyms[0].id);
-            results = coaches;
-            resultType = 'coaches';
-            this.resultsTitle.textContent = 'Coachs trouvés';
-          } else {
-            results = gyms;
-            resultType = 'gyms';
-            this.resultsTitle.textContent = 'Salles trouvées';
-          }
         }
-      } else if (addressQuery) {
+      }
+      // Priorité 4: Recherche par adresse/ville uniquement
+      else if (addressQuery) {
         if (this.selectedAddress && this.selectedAddress.type === 'city') {
           results = searchService.searchCoachesByCity(this.selectedAddress.value);
           const cityGym = searchService.gyms.find(g => 
