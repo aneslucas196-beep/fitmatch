@@ -1,0 +1,74 @@
+Implémente sur la page d’accueil FitMatch une recherche avec 2 champs :
+
+Adresse / Ville
+
+Quelle salle
+
+Comportements :
+
+Adresse/Ville : si l’utilisateur saisit une ville (“Élancourt”) ou un code postal (“78990”) et valide, afficher tous les coachs qui entraînent dans cette zone.
+Cartes coach = photo (64px), nom, ⭐ note, badges spécialités (max 3), “Salles : …” (max 2, puis “+X”). Clic → page profil (bio, spécialités, salles, tarifs, avis, bouton Réserver).
+
+Quelle salle : si l’utilisateur saisit le nom d’une salle (“Basic-Fit Élancourt” / “Fitness Park Maurepas”) → afficher tous les coachs de cette salle + lien Voir la fiche salle (adresse, carte, horaires, liste des coachs).
+Si l’utilisateur saisit un code postal (“78990”) → afficher toutes les salles de ce CP (cartes salle). Clic sur une salle → afficher les coachs de cette salle.
+
+Auto-complétion :
+
+Dès 2 caractères, proposer suggestions typées avec icônes :
+🏙️ ville, 🏷️ code postal, 🏋️ salle.
+
+Debounce 300 ms.
+
+Filtres rapides au-dessus des résultats : Aujourd’hui, ≤ 5 km, Prix ≤ 50€.
+Tri par défaut : coach vérifié > note ⭐ > nb d’avis. Sélecteur “Trier par : Pertinence | Note | Distance”.
+
+États :
+
+Skeleton loading (6 cartes).
+
+Vide : message + boutons “Étendre à 5 km” / “Changer de date”.
+
+Erreur : message court + “Réessayer”.
+
+Tech attendu :
+
+HTML/CSS/JS (vanilla) ou React si projet configuré.
+
+Créer un service de recherche modulaire, lisant temporairement dans deux fichiers JSON (gyms.json, coaches.json) avec la structure fournie ci-dessous, prêt à être remplacé par une API plus tard.
+
+Gérer URL query (?city=Elancourt, ?cp=78990, ?salle=basic-fit-elancourt) pour partage/rechargement.
+
+Règles de filtrage (pseudo) :
+
+Ville/CP → gyms filtrés (city ILIKE ou postal_code ==), puis coachs liés.
+
+Salle → gym par name ILIKE, puis coachs liés.
+
+Salle avec CP → lister gyms par postal_code, clic salle → coachs.
+
+Données de test (mock) : (fichiers gyms.json et coaches.json)
+[coller les JSON fournis ci-dessous]
+
+Design :
+
+Mobile-first, cartes propres, contrastes AA.
+
+Cartes coach : bouton “Voir profil”.
+
+Cartes salle : bouton “Voir les coachs”.
+
+Section résultats sous les champs, avec titres “Coachs trouvés” / “Salles trouvées”.
+
+Critères d’acceptation :
+
+“Élancourt” dans Adresse/Ville → coachs de la zone affichés.
+
+“78990” dans Adresse/Ville → coachs des salles du 78990.
+
+“Basic-Fit Élancourt” dans Quelle salle → coachs de cette salle + lien fiche salle.
+
+“78990” dans Quelle salle → salles de ce CP, clic sur une salle → coachs de cette salle.
+
+Auto-complétion opérationnelle.
+
+États vide/chargement/erreur gérés.

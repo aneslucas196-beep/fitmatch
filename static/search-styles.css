@@ -1,0 +1,464 @@
+.input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-dropdown.show {
+  display: block;
+}
+
+.autocomplete-item {
+  padding: 12px 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.2s;
+}
+
+.autocomplete-item:hover {
+  background: #f5f5f5;
+}
+
+.autocomplete-item .icon {
+  font-size: 18px;
+}
+
+.autocomplete-item .label {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+}
+
+.results-section {
+  padding: 60px 20px;
+  background: #f8f9fa;
+  min-height: 400px;
+}
+
+.results-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.filters-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.filters-left {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.filter-btn:hover {
+  border-color: #e50914;
+  color: #e50914;
+}
+
+.filter-btn.active {
+  background: #e50914;
+  color: white;
+  border-color: #e50914;
+}
+
+.filters-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filters-right label {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.filters-right select {
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.results-header {
+  margin-bottom: 30px;
+}
+
+.results-header h2 {
+  font-size: 28px;
+  margin-bottom: 10px;
+  color: #1a1a1a;
+}
+
+.results-header p {
+  font-size: 16px;
+  color: #666;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.coach-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+}
+
+.coach-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.coach-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.coach-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e0e0e0;
+}
+
+.coach-info {
+  flex: 1;
+}
+
+.coach-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.coach-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.verified-badge {
+  background: #4caf50;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.coach-rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+}
+
+.star {
+  color: #ffc107;
+}
+
+.reviews {
+  color: #666;
+  font-size: 13px;
+}
+
+.coach-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.specialty-badge {
+  background: #f0f0f0;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.coach-gyms {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.gym-name {
+  color: #e50914;
+  font-weight: 500;
+}
+
+.more-gyms {
+  background: #e0e0e0;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.coach-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.coach-price {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.coach-price span {
+  font-size: 14px;
+  font-weight: 400;
+  color: #666;
+}
+
+.btn-view-profile {
+  padding: 10px 20px;
+  background: #e50914;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-view-profile:hover {
+  background: #b8070f;
+}
+
+.gym-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+}
+
+.gym-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.gym-photo {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gym-content {
+  padding: 20px;
+}
+
+.gym-name-row {
+  margin-bottom: 10px;
+}
+
+.gym-name-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 5px;
+}
+
+.gym-chain {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.gym-address {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.gym-hours {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.btn-view-gym {
+  padding: 10px 20px;
+  background: #e50914;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+  width: 100%;
+}
+
+.btn-view-gym:hover {
+  background: #b8070f;
+}
+
+.loading-state {
+  margin-top: 30px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.skeleton-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  height: 250px;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.empty-state,
+.error-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon,
+.error-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.empty-state h3,
+.error-state h3 {
+  font-size: 24px;
+  margin-bottom: 10px;
+  color: #1a1a1a;
+}
+
+.empty-state p,
+.error-state p {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.empty-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  padding: 12px 24px;
+  background: white;
+  border: 2px solid #e50914;
+  color: #e50914;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+  background: #e50914;
+  color: white;
+}
+
+.btn-primary {
+  padding: 12px 24px;
+  background: #e50914;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-primary:hover {
+  background: #b8070f;
+}
+
+@media (max-width: 768px) {
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filters-left,
+  .filters-right {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .filters-right select {
+    flex: 1;
+  }
+}

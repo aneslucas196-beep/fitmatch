@@ -8,10 +8,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/search-styles.css">
 </head>
 <body>
 
-  <!-- Navbar -->
   <header class="navbar">
     <div class="logo">FitMatch</div>
     <div class="nav-buttons">
@@ -20,7 +20,6 @@
     </div>
   </header>
 
-  <!-- Hero Section -->
   <section class="hero">
     <div class="overlay"></div>
     <div class="content">
@@ -29,18 +28,87 @@
 
       <div class="search-box">
         <div class="top-inputs">
-          <input type="text" placeholder="Nom du coach, prestations (muscu, cardio...)" />
-          <input type="text" placeholder="Adresse, ville..." />
+          <div class="input-wrapper">
+            <input 
+              type="text" 
+              id="addressInput" 
+              placeholder="Adresse, ville, code postal..." 
+              autocomplete="off"
+            />
+            <div id="addressAutocomplete" class="autocomplete-dropdown"></div>
+          </div>
         </div>
         <div class="bottom-input">
-          <input type="text" placeholder="Quelle salle ?" />
-          <button class="btn-search">Rechercher</button>
+          <div class="input-wrapper">
+            <input 
+              type="text" 
+              id="gymInput" 
+              placeholder="Quelle salle ?" 
+              autocomplete="off"
+            />
+            <div id="gymAutocomplete" class="autocomplete-dropdown"></div>
+          </div>
+          <button class="btn-search" id="searchBtn">Rechercher</button>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Découvrez nos Coachs Section -->
+  <section id="resultsSection" class="results-section" style="display: none;">
+    <div class="results-container">
+      <div id="filtersBar" class="filters-bar">
+        <div class="filters-left">
+          <button class="filter-btn" data-filter="today">Aujourd'hui</button>
+          <button class="filter-btn" data-filter="5km">≤ 5 km</button>
+          <button class="filter-btn" data-filter="price50">Prix ≤ 50€</button>
+        </div>
+        <div class="filters-right">
+          <label>Trier par :</label>
+          <select id="sortSelect">
+            <option value="relevance">Pertinence</option>
+            <option value="rating">Note</option>
+            <option value="distance">Distance</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="resultsHeader" class="results-header">
+        <h2 id="resultsTitle"></h2>
+        <p id="resultsCount"></p>
+      </div>
+
+      <div id="loadingState" class="loading-state">
+        <div class="skeleton-grid">
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card"></div>
+        </div>
+      </div>
+
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="empty-icon">🔍</div>
+        <h3>Aucun résultat trouvé</h3>
+        <p>Essayez de modifier votre recherche</p>
+        <div class="empty-actions">
+          <button class="btn-secondary" onclick="expandRadius()">Étendre à 10 km</button>
+          <button class="btn-secondary" onclick="clearFilters()">Changer de critères</button>
+        </div>
+      </div>
+
+      <div id="errorState" class="error-state" style="display: none;">
+        <div class="error-icon">⚠️</div>
+        <h3>Une erreur est survenue</h3>
+        <p>Impossible de charger les résultats</p>
+        <button class="btn-primary" onclick="retrySearch()">Réessayer</button>
+      </div>
+
+      <div id="resultsGrid" class="results-grid"></div>
+    </div>
+  </section>
+
   <section class="discover-coachs">
     <div class="discover-container">
       <div class="discover-image">
@@ -54,7 +122,6 @@
     </div>
   </section>
 
-  <!-- FitMatch Stats Section -->
   <section class="fitmatch-stats">
     <h2>Tu es coach sportif ? Découvre la puissance de FitMatch !</h2>
     <p class="subtitle">
@@ -89,6 +156,8 @@
     </div>
   </section>
 
+  <script src="/static/search-service.js"></script>
+  <script src="/static/search-app.js"></script>
   <script src="/static/script.js"></script>
 </body>
 </html>
