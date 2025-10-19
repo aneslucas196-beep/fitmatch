@@ -14,7 +14,7 @@
     "specialties": ["musculation", "nutrition", "cardio"],
     "price_from": 60,
     "radius_km": 25,
-    "gyms": ["bf_elancourt", "fp_maurepas", "bf_plaisir"],
+    "gyms": ["bf_elancourt", "fitness-park-maurepas", "bf_plaisir"],
     "instagram_url": "https://instagram.com/marie_fit",
     "availability_today": true
   },
@@ -52,7 +52,7 @@
     "specialties": ["yoga", "pilates", "stretching"],
     "price_from": 50,
     "radius_km": 20,
-    "gyms": ["fp_maurepas", "bf_elancourt"],
+    "gyms": ["fitness-park-maurepas", "bf_elancourt"],
     "instagram_url": "https://instagram.com/sophie_yoga",
     "availability_today": true
   },
@@ -168,7 +168,7 @@
     "bio": "Coach sportif certifié spécialisé en musculation et développement musculaire. Programmes personnalisés adaptés à vos objectifs.",
     "price_from": 40,
     "radius_km": 10,
-    "gyms": ["g_maurepas"],
+    "gyms": ["fitness-park-maurepas"],
     "instagram_url": "",
     "availability_today": true,
     "public": true,

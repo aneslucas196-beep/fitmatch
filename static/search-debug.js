@@ -31,7 +31,7 @@ function verifyDataLoaded(gyms, coaches) {
   
   const gMaurepas = gyms?.find(g => 
     normalize(g.name) === 'fitness park maurepas' || 
-    g.id === 'fp_maurepas'
+    g.id === 'fitness-park-maurepas'
   );
 
   debugLog('CHECK_ENTITIES', {

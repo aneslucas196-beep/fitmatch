@@ -13,10 +13,10 @@
     "photo": "/static/gym-basicfit.jpg"
   },
   {
-    "id": "fp_maurepas",
+    "id": "fitness-park-maurepas",
     "name": "Fitness Park Maurepas",
     "chain": "Fitness Park",
-    "address": "Route Nationale 10",
+    "address": "Avenue Jean Jaurès",
     "city": "Maurepas",
     "postal_code": "78310",
     "lat": 48.7631,
@@ -102,17 +102,5 @@
     "phone": "01 42 72 33 44",
     "hours": "Lun-Ven 6h-23h, Sam-Dim 8h-20h",
     "photo": "/static/gym-cmg.jpg"
-  },
-  {
-    "id": "g_maurepas",
-    "name": "Fitness Park Maurepas",
-    "city": "Maurepas",
-    "postal_code": "78310",
-    "address": "Avenue Jean Jaurès, 78310 Maurepas",
-    "lat": 48.7631,
-    "lng": 1.9189,
-    "phone": "01 30 50 22 11",
-    "hours": "Lun-Ven 6h-23h, Sam-Dim 8h-20h",
-    "photo": "/static/gym-fitnesspark.jpg"
   }
 ]
