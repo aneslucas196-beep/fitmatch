@@ -148,6 +148,32 @@ body {
   border-color: #e50914;
 }
 
+/* === Specialty Select === */
+.specialty-select {
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  color: #333;
+  background: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.specialty-select:hover {
+  border-color: #999;
+}
+
+.specialty-select:focus {
+  border-color: #e50914;
+}
+
+.specialty-select option {
+  padding: 10px;
+}
+
 .bottom-input {
   display: flex;
   gap: 10px;

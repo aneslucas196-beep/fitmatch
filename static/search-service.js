@@ -181,6 +181,14 @@ class SearchService {
   filterCoaches(coaches, filters = {}) {
     let filtered = [...coaches];
 
+    if (filters.specialty) {
+      filtered = filtered.filter(c => 
+        c.specialties && c.specialties.some(spec => 
+          this.normalizeString(spec).includes(this.normalizeString(filters.specialty))
+        )
+      );
+    }
+
     if (filters.availableToday) {
       filtered = filtered.filter(c => c.availability_today);
     }
@@ -225,7 +233,8 @@ class SearchService {
     return str
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[-_]/g, ' ');
   }
 }
 

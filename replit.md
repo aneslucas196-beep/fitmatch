@@ -8,15 +8,20 @@ The platform includes a worldwide gym database with all gyms globally, OpenStree
 
 ## Recent Changes (October 2025)
 
-### Homepage Search System - Dual-Field Coach & Gym Discovery
+### Homepage Search System - Location & Specialty Discovery
 - **Dual Search Interface**: Homepage now features two specialized search fields
   - "Adresse/Ville" field: Search coaches by city or postal code
-  - "Quelle salle" field: Search gyms or coaches by gym name
-- **Smart Autocomplete**: Real-time suggestions with 300ms debounce
+  - "Quelle spécialité" dropdown: Filter coaches by training activity (musculation, boxe, MMA, yoga, etc.)
+- **Smart Autocomplete**: Real-time location suggestions with 300ms debounce
   - City suggestions (🏙️ icon)
   - Postal code suggestions (🏷️ icon)
-  - Gym name suggestions (🏋️ icon)
   - Minimum 2 characters to trigger, max 10 suggestions
+- **Specialty Selection**: 16 pre-defined sports activities available
+  - 💪 Musculation, 🥊 Boxe, 🥋 MMA, 🏋️ CrossFit
+  - 🧘 Yoga, 🤸 Pilates, ❤️ Cardio, ⚡ HIIT
+  - 🏊 Natation, 🏃 Fitness, ⚽ Préparation physique
+  - 🥋 Sport de combat, 🤸 Stretching, 💪 Functional Training
+  - 📉 Perte de poids, 🥗 Nutrition
 - **Coach Cards Display**: Professional coach cards with complete information
   - 64px circular profile photo
   - Coach name with verified badge (✓) for certified coaches
@@ -40,8 +45,8 @@ The platform includes a worldwide gym database with all gyms globally, OpenStree
   - "Distance" - Geographic proximity using Haversine calculation
 - **Search Logic**:
   - City/Postal Code in "Adresse/Ville" → Shows coaches training in that area
-  - Postal Code in "Quelle salle" → Lists all gyms in that area, click gym → coaches
-  - Gym name in "Quelle salle" → Shows coaches at that specific gym
+  - Specialty selection → Filters coaches by chosen activity (musculation, yoga, etc.)
+  - Combined search → Location + Specialty filters work together
 - **UI States Management**:
   - Skeleton loading state (6 animated placeholder cards)
   - Empty state with "Aucun résultat" message and retry options

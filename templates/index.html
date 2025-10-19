@@ -40,13 +40,25 @@
         </div>
         <div class="bottom-input">
           <div class="input-wrapper">
-            <input 
-              type="text" 
-              id="gymInput" 
-              placeholder="Quelle salle ?" 
-              autocomplete="off"
-            />
-            <div id="gymAutocomplete" class="autocomplete-dropdown"></div>
+            <select id="specialtySelect" class="specialty-select">
+              <option value="">Quelle spécialité ?</option>
+              <option value="musculation">💪 Musculation</option>
+              <option value="boxe">🥊 Boxe</option>
+              <option value="mma">🥋 MMA</option>
+              <option value="crossfit">🏋️ CrossFit</option>
+              <option value="yoga">🧘 Yoga</option>
+              <option value="pilates">🤸 Pilates</option>
+              <option value="cardio">❤️ Cardio</option>
+              <option value="hiit">⚡ HIIT</option>
+              <option value="natation">🏊 Natation</option>
+              <option value="fitness">🏃 Fitness</option>
+              <option value="preparation-physique">⚽ Préparation physique</option>
+              <option value="sport-de-combat">🥋 Sport de combat</option>
+              <option value="stretching">🤸 Stretching</option>
+              <option value="functional-training">💪 Functional Training</option>
+              <option value="perte-de-poids">📉 Perte de poids</option>
+              <option value="nutrition">🥗 Nutrition</option>
+            </select>
           </div>
           <button class="btn-search" id="searchBtn">Rechercher</button>
         </div>
@@ -158,6 +170,5 @@
 
   <script src="/static/search-service.js"></script>
   <script src="/static/search-app.js"></script>
-  <script src="/static/script.js"></script>
 </body>
 </html>

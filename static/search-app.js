@@ -1,10 +1,9 @@
 class SearchApp {
   constructor() {
     this.addressInput = document.getElementById('addressInput');
-    this.gymInput = document.getElementById('gymInput');
+    this.specialtySelect = document.getElementById('specialtySelect');
     this.searchBtn = document.getElementById('searchBtn');
     this.addressAutocomplete = document.getElementById('addressAutocomplete');
-    this.gymAutocomplete = document.getElementById('gymAutocomplete');
     this.resultsSection = document.getElementById('resultsSection');
     this.resultsGrid = document.getElementById('resultsGrid');
     this.resultsTitle = document.getElementById('resultsTitle');
@@ -16,13 +15,13 @@ class SearchApp {
     
     this.debounceTimers = {};
     this.selectedAddress = null;
-    this.selectedGym = null;
     this.currentResults = [];
     this.userLocation = null;
     this.currentFilters = {
       availableToday: false,
       maxDistance: null,
-      maxPrice: null
+      maxPrice: null,
+      specialty: null
     };
     
     this.init();
@@ -44,17 +43,9 @@ class SearchApp {
       this.handleAutocomplete(this.addressInput, this.addressAutocomplete, 'address');
     });
     
-    this.gymInput.addEventListener('input', () => {
-      this.handleAutocomplete(this.gymInput, this.gymAutocomplete, 'gym');
-    });
-    
     this.searchBtn.addEventListener('click', () => this.performSearch());
     
     this.addressInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.performSearch();
-    });
-    
-    this.gymInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') this.performSearch();
     });
     
@@ -124,65 +115,25 @@ class SearchApp {
   
   hideAllAutocomplete() {
     this.addressAutocomplete.classList.remove('show');
-    this.gymAutocomplete.classList.remove('show');
   }
   
   async performSearch() {
     const addressQuery = this.addressInput.value.trim();
-    const gymQuery = this.gymInput.value.trim();
+    const specialtyQuery = this.specialtySelect.value;
     
-    if (!addressQuery && !gymQuery) {
+    if (!addressQuery && !specialtyQuery) {
       return;
     }
     
     this.showLoading();
-    this.updateURL(addressQuery, gymQuery);
+    this.updateURL(addressQuery, specialtyQuery);
     
     try {
       let results = [];
-      let resultType = '';
+      let resultType = 'coaches';
       
-      // Priorité 1: Si une salle spécifique est sélectionnée → Afficher ses coachs
-      if (this.selectedGym && this.selectedGym.type === 'gym') {
-        const coaches = searchService.searchCoachesByGym(this.selectedGym.value);
-        results = coaches;
-        resultType = 'coaches';
-        
-        // Récupérer la position de la salle pour le tri par distance
-        const gym = searchService.gyms.find(g => g.id === this.selectedGym.value);
-        if (gym) {
-          this.userLocation = { lat: gym.lat, lng: gym.lng };
-          this.resultsTitle.textContent = `Coachs chez ${gym.name}`;
-        } else {
-          this.resultsTitle.textContent = 'Coachs trouvés';
-        }
-      }
-      // Priorité 2: Si code postal dans "Quelle salle" → Afficher les salles
-      else if (gymQuery && /^\d{5}$/.test(gymQuery)) {
-        const gyms = searchService.searchGymsByPostalCode(gymQuery);
-        results = gyms;
-        resultType = 'gyms';
-        this.resultsTitle.textContent = 'Salles trouvées';
-      }
-      // Priorité 3: Si nom de salle tapé → Rechercher salles correspondantes
-      else if (gymQuery) {
-        const gyms = searchService.searchGymsByName(gymQuery);
-        if (gyms.length === 1) {
-          // Si une seule salle trouvée → Afficher directement ses coachs
-          const coaches = searchService.searchCoachesByGym(gyms[0].id);
-          results = coaches;
-          resultType = 'coaches';
-          this.userLocation = { lat: gyms[0].lat, lng: gyms[0].lng };
-          this.resultsTitle.textContent = `Coachs chez ${gyms[0].name}`;
-        } else {
-          // Plusieurs salles → Les lister
-          results = gyms;
-          resultType = 'gyms';
-          this.resultsTitle.textContent = 'Salles trouvées';
-        }
-      }
-      // Priorité 4: Recherche par adresse/ville uniquement
-      else if (addressQuery) {
+      // Recherche par adresse/ville
+      if (addressQuery) {
         if (this.selectedAddress && this.selectedAddress.type === 'city') {
           results = searchService.searchCoachesByCity(this.selectedAddress.value);
           const cityGym = searchService.gyms.find(g => 
@@ -206,7 +157,20 @@ class SearchApp {
             this.userLocation = { lat: cityGym.lat, lng: cityGym.lng };
           }
         }
-        resultType = 'coaches';
+      } else {
+        // Si pas d'adresse, prendre tous les coachs
+        results = searchService.coaches;
+      }
+      
+      // Filtrer par spécialité si sélectionnée
+      if (specialtyQuery) {
+        this.currentFilters.specialty = specialtyQuery;
+        const specialtyLabel = this.specialtySelect.options[this.specialtySelect.selectedIndex].text.replace(/^[^\s]+\s/, '');
+        this.resultsTitle.textContent = addressQuery 
+          ? `Coachs ${specialtyLabel}` 
+          : `Coachs ${specialtyLabel}`;
+      } else {
+        this.currentFilters.specialty = null;
         this.resultsTitle.textContent = 'Coachs trouvés';
       }
       
@@ -245,22 +209,12 @@ class SearchApp {
     this.resultsCount.textContent = `${results.length} résultat${results.length > 1 ? 's' : ''}`;
     
     this.resultsGrid.innerHTML = results.map(item => {
-      if (type === 'coaches') {
-        return this.createCoachCard(item);
-      } else {
-        return this.createGymCard(item);
-      }
+      return this.createCoachCard(item);
     }).join('');
     
     this.resultsGrid.querySelectorAll('.coach-card').forEach((card, index) => {
       card.addEventListener('click', () => {
         window.location.href = `/coach/${results[index].id}`;
-      });
-    });
-    
-    this.resultsGrid.querySelectorAll('.gym-card').forEach((card, index) => {
-      card.addEventListener('click', () => {
-        this.searchGymCoaches(results[index]);
       });
     });
   }
@@ -312,28 +266,6 @@ class SearchApp {
     `;
   }
   
-  createGymCard(gym) {
-    return `
-      <div class="gym-card">
-        <img src="${gym.photo}" alt="${gym.name}" class="gym-photo">
-        <div class="gym-content">
-          <div class="gym-name-row">
-            <h3 class="gym-name-text">${gym.name}</h3>
-            <p class="gym-chain">${gym.chain}</p>
-          </div>
-          <p class="gym-address">📍 ${gym.address}</p>
-          <p class="gym-hours">🕐 ${gym.hours}</p>
-          <button class="btn-view-gym">Voir les coachs</button>
-        </div>
-      </div>
-    `;
-  }
-  
-  searchGymCoaches(gym) {
-    this.gymInput.value = gym.name;
-    this.selectedGym = { type: 'gym', value: gym.id, label: gym.name };
-    this.performSearch();
-  }
   
   handleFilterClick(btn) {
     btn.classList.toggle('active');
@@ -378,7 +310,7 @@ class SearchApp {
     this.errorState.style.display = 'block';
   }
   
-  updateURL(addressQuery, gymQuery) {
+  updateURL(addressQuery, specialtyQuery) {
     const params = new URLSearchParams();
     if (addressQuery) {
       if (/^\d{5}$/.test(addressQuery)) {
@@ -387,8 +319,8 @@ class SearchApp {
         params.set('city', addressQuery);
       }
     }
-    if (gymQuery) {
-      params.set('salle', gymQuery);
+    if (specialtyQuery) {
+      params.set('specialty', specialtyQuery);
     }
     
     const newURL = params.toString() ? `?${params.toString()}` : window.location.pathname;
@@ -399,7 +331,7 @@ class SearchApp {
     const params = new URLSearchParams(window.location.search);
     const city = params.get('city');
     const cp = params.get('cp');
-    const salle = params.get('salle');
+    const specialty = params.get('specialty');
     
     if (city) {
       this.addressInput.value = city;
@@ -408,11 +340,11 @@ class SearchApp {
       this.addressInput.value = cp;
     }
     
-    if (salle) {
-      this.gymInput.value = salle;
+    if (specialty) {
+      this.specialtySelect.value = specialty;
     }
     
-    if (city || cp || salle) {
+    if (city || cp || specialty) {
       setTimeout(() => this.performSearch(), 100);
     }
   }
@@ -432,11 +364,15 @@ function clearFilters() {
     app.currentFilters = {
       availableToday: false,
       maxDistance: null,
-      maxPrice: null
+      maxPrice: null,
+      specialty: null
     };
     document.querySelectorAll('.filter-btn').forEach(btn => {
       btn.classList.remove('active');
     });
+    if (app.specialtySelect) {
+      app.specialtySelect.value = '';
+    }
     app.applySortAndFilters();
   }
 }
