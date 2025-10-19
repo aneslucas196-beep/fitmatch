@@ -2088,9 +2088,11 @@ async def search_gyms_by_location_api(
         # 🆕 Recherche par code postal
         if postal_code:
             print(f"🔍 Recherche salles par code postal: {postal_code}")
-            # Charger les salles depuis le JSON statique
             import json
             import os
+            import re
+            
+            # 1. Charger les salles depuis le JSON statique
             gyms_file = os.path.join("static", "data", "gyms.json")
             if os.path.exists(gyms_file):
                 with open(gyms_file, 'r', encoding='utf-8') as f:
@@ -2103,6 +2105,56 @@ async def search_gyms_by_location_api(
                             gym_result = gym.copy()
                             gym_result["coach_count"] = len(coaches_in_gym)
                             results.append(gym_result)
+            
+            # 2. AUSSI charger les salles Google Places depuis les profils des coaches
+            demo_users = load_demo_users()
+            google_gyms_seen = set()
+            
+            for email, user_data in demo_users.items():
+                if user_data.get("role") == "coach" and user_data.get("profile_completed"):
+                    selected_gyms_data = user_data.get("selected_gyms_data", "[]")
+                    try:
+                        if isinstance(selected_gyms_data, str):
+                            selected_gyms = json.loads(selected_gyms_data)
+                        else:
+                            selected_gyms = selected_gyms_data if isinstance(selected_gyms_data, list) else []
+                        
+                        for gym in selected_gyms:
+                            if isinstance(gym, dict) and gym.get("id", "").startswith("google_worldwide_"):
+                                gym_id = gym.get("id")
+                                
+                                # Éviter les doublons
+                                if gym_id in google_gyms_seen:
+                                    continue
+                                
+                                # Extraire le code postal de l'adresse Google Places
+                                address = gym.get("address", "")
+                                # Chercher un pattern "78310" dans l'adresse
+                                cp_match = re.search(r'\b(\d{5})\b', address)
+                                
+                                if cp_match and cp_match.group(1) == postal_code:
+                                    google_gyms_seen.add(gym_id)
+                                    
+                                    # Compter les coachs dans cette salle
+                                    coaches_in_gym = get_coaches_by_gym_id(gym_id)
+                                    
+                                    gym_result = {
+                                        "id": gym_id,
+                                        "name": gym.get("name", "Salle de sport"),
+                                        "chain": gym.get("chain", "Google Places"),
+                                        "address": address,
+                                        "city": gym.get("city", ""),
+                                        "postal_code": postal_code,
+                                        "lat": gym.get("lat"),
+                                        "lng": gym.get("lng"),
+                                        "phone": gym.get("phone", "Non disponible"),
+                                        "hours": gym.get("hours", "Horaires non disponibles"),
+                                        "photo": "/static/gym-default.jpg",
+                                        "coach_count": len(coaches_in_gym)
+                                    }
+                                    results.append(gym_result)
+                    except:
+                        continue
             
             print(f"✅ {len(results)} salles trouvées pour le code postal {postal_code}")
             return {
