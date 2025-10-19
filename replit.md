@@ -44,9 +44,9 @@ The platform includes a worldwide gym database with all gyms globally, OpenStree
   - "Note" - Pure rating-based sorting with review count tie-breaker
   - "Distance" - Geographic proximity using Haversine calculation
 - **Search Logic**:
-  - City/Postal Code in "Adresse/Ville" → Shows coaches training in that area
-  - Specialty selection → Filters coaches by chosen activity (musculation, yoga, etc.)
-  - Combined search → Location + Specialty filters work together
+  - **Adresse seule** → Redirects to /gyms-map showing all gyms on Google Maps
+  - **Spécialité seule** → Shows all coaches with that specialty
+  - **Adresse + Spécialité** → Shows coaches in that area with that specialty
 - **UI States Management**:
   - Skeleton loading state (6 animated placeholder cards)
   - Empty state with "Aucun résultat" message and retry options

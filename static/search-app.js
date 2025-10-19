@@ -125,6 +125,12 @@ class SearchApp {
       return;
     }
     
+    // Si seulement une adresse (sans spécialité) → Rediriger vers Google Maps des salles
+    if (addressQuery && !specialtyQuery) {
+      window.location.href = `/gyms-map?address=${encodeURIComponent(addressQuery)}`;
+      return;
+    }
+    
     this.showLoading();
     this.updateURL(addressQuery, specialtyQuery);
     
@@ -132,7 +138,7 @@ class SearchApp {
       let results = [];
       let resultType = 'coaches';
       
-      // Recherche par adresse/ville
+      // Recherche par adresse/ville + spécialité
       if (addressQuery) {
         if (this.selectedAddress && this.selectedAddress.type === 'city') {
           results = searchService.searchCoachesByCity(this.selectedAddress.value);
@@ -162,7 +168,7 @@ class SearchApp {
         results = searchService.coaches;
       }
       
-      // Filtrer par spécialité si sélectionnée
+      // Filtrer par spécialité (obligatoire à ce stade)
       if (specialtyQuery) {
         this.currentFilters.specialty = specialtyQuery;
         const specialtyLabel = this.specialtySelect.options[this.specialtySelect.selectedIndex].text.replace(/^[^\s]+\s/, '');
