@@ -1492,6 +1492,7 @@ async def coach_profile_setup_post(
     radius_km: int = Form(25),
     specialties: List[str] = Form([]),
     selected_gym_ids: Optional[str] = Form(""),
+    selected_gyms_data: Optional[str] = Form(""),
     user = Depends(require_coach_role)
 ):
     """Traitement du formulaire d'onboarding coach."""
@@ -1548,7 +1549,8 @@ async def coach_profile_setup_post(
             print(f"   - Nom: {full_name}")
             print(f"   - Ville: {city}")
             print(f"   - Spécialités: {specialties}")
-            print(f"   - Salles: {selected_gym_ids}")
+            print(f"   - Salles IDs: {selected_gym_ids}")
+            print(f"   - Salles data: {selected_gyms_data[:100] if selected_gyms_data else 'None'}...")
             
             # Mettre à jour l'utilisateur et sauvegarder dans le stockage persistant
             from utils import save_demo_user
@@ -1587,6 +1589,9 @@ async def coach_profile_setup_post(
                 "instagram_url": instagram_url,
                 "price_from": price_from,
                 "radius_km": radius_km,
+                "specialties": specialties,  # ✅ Sauvegarder les spécialités
+                "selected_gym_ids": selected_gym_ids,  # ✅ Sauvegarder les IDs des salles
+                "selected_gyms_data": selected_gyms_data,  # ✅ Sauvegarder les détails complets des salles
                 # PRÉSERVER les données d'inscription existantes
                 "password": existing_user.get("password"),  # ✅ Conserver le mot de passe !
                 "gender": existing_user.get("gender"),

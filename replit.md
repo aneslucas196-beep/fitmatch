@@ -8,6 +8,23 @@ The platform includes a worldwide gym database with all gyms globally, OpenStree
 
 ## Recent Changes (October 2025)
 
+### Coach Profile Data Persistence Fix - Critical Bug Resolution
+- **Bug Fixed**: Coach profile data now persists correctly when returning to edit profile
+- **Issue**: Previously, when coaches filled their profile and clicked "Finaliser mon profil", data was saved. However, when returning via "Gérer mon profil", all entered data (including gyms and specialties) disappeared
+- **Solution Implemented**:
+  - Backend now loads saved coach data in demo mode when returning to profile setup page
+  - Specialties are properly saved and restored from user profile
+  - Gym selections now stored with complete details (name, address, coordinates) in `selected_gyms_data` JSON field
+  - JavaScript pre-loads saved gyms and specialties on page load
+  - All profile fields (basic info, specialties, gyms, radius) now persist across sessions
+- **Technical Changes**:
+  - Added `selected_gyms_data` field to store complete gym objects (not just IDs)
+  - Modified GET `/coach/profile-setup` to return existing profile data in demo mode
+  - Enhanced JavaScript to parse and display saved gyms from JSON storage
+  - Profile data now includes: full_name, bio, city, instagram_url, price_from, radius_km, specialties, selected_gyms_data
+
+## Recent Changes (October 2025)
+
 ### Homepage Search System - Location & Specialty Discovery
 - **Dual Search Interface**: Homepage now features two specialized search fields
   - "Adresse/Ville" field: Search coaches by city or postal code

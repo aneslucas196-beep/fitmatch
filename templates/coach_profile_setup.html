@@ -208,6 +208,8 @@
                     
                     <!-- Input hidden pour stocker les IDs des salles sélectionnées -->
                     <input type="hidden" name="selected_gym_ids" id="selected_gym_ids" value="">
+                    <!-- Input hidden pour stocker les détails complets des salles (JSON) -->
+                    <input type="hidden" name="selected_gyms_data" id="selected_gyms_data" value="">
                 </div>
 
                 <!-- Boutons d'action -->
@@ -234,7 +236,22 @@
 let selectedGyms = [];
 let allSuggestions = [];
 
+// ✅ Charger les salles sauvegardées au chargement de la page
+{% if coach and coach.selected_gyms_data %}
+try {
+    selectedGyms = JSON.parse('{{ coach.selected_gyms_data | replace("'", "\\'") | safe }}');
+    console.log('✅ Salles chargées depuis le profil:', selectedGyms.length);
+} catch (e) {
+    console.error('❌ Erreur lors du chargement des salles:', e);
+    selectedGyms = [];
+}
+{% endif %}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Afficher les salles sauvegardées au chargement
+    if (selectedGyms.length > 0) {
+        updateSelectedGymsList();
+    }
     const gymInput = document.getElementById('gym-search-input');
     const suggestionsDiv = document.getElementById('gym-suggestions');
     const addBtn = document.getElementById('add-gym-btn');
@@ -357,11 +374,13 @@ function hideSuggestions() {
 
 function updateSelectedGymsList() {
     const container = document.getElementById('current-gyms');
-    const hiddenInput = document.getElementById('selected_gym_ids');
+    const hiddenInputIds = document.getElementById('selected_gym_ids');
+    const hiddenInputData = document.getElementById('selected_gyms_data');
     
     if (selectedGyms.length === 0) {
         container.innerHTML = '<div class="text-gray-500 text-center py-4 border border-gray-200 rounded-lg border-dashed">Aucun lieu ajouté pour le moment</div>';
-        hiddenInput.value = '';
+        hiddenInputIds.value = '';
+        hiddenInputData.value = '';
         return;
     }
     
@@ -378,8 +397,9 @@ function updateSelectedGymsList() {
         </div>
     `).join('');
     
-    // Mettre à jour l'input hidden avec les IDs
-    hiddenInput.value = selectedGyms.map(g => g.id).join(',');
+    // ✅ Mettre à jour les inputs hidden avec les IDs ET les données complètes
+    hiddenInputIds.value = selectedGyms.map(g => g.id).join(',');
+    hiddenInputData.value = JSON.stringify(selectedGyms);
 }
 
 function removeGym(gymId) {
