@@ -33,30 +33,26 @@ class SearchService {
   }
 
   normalizeData() {
+    // Helper de normalisation
+    const norm = (s) => (s || '').toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+    
     // Créer des index pour faciliter la recherche
     const gymsById = Object.fromEntries(this.gyms.map(g => [g.id, g]));
-    const gymIdByName = Object.fromEntries(
-      this.gyms.map(g => [this.normalizeString(g.name), g.id])
-    );
-    const gymIdByCP = Object.fromEntries(
-      this.gyms.map(g => [g.postal_code, g.id])
-    );
+    const idByName = Object.fromEntries(this.gyms.map(g => [norm(g.name), g.id]));
+    const idByCP = Object.fromEntries(this.gyms.map(g => [norm(g.postal_code), g.id]));
 
-    // Sécuriser les données des coaches
+    // Sécuriser & remapper coach.gyms (accepte id, nom salle, CP)
     this.coaches.forEach(c => {
-      // S'assurer que gyms est un array
       if (!Array.isArray(c.gyms)) c.gyms = [];
       
-      // Convertir les noms de salles en IDs si nécessaire
       c.gyms = c.gyms.map(g => {
-        const normalized = this.normalizeString(g);
-        if (gymsById[g]) return g;                    // Déjà un ID
-        if (gymIdByName[normalized]) return gymIdByName[normalized]; // Nom → ID
-        if (gymIdByCP[g]) return gymIdByCP[g];        // CP → ID
-        return g; // Fallback
+        if (gymsById[g]) return g;                    // Déjà un id
+        const n = norm(g);
+        if (idByName[n]) return idByName[n];          // Nom → id
+        if (idByCP[n]) return idByCP[n];              // CP  → id
+        return g;
       });
       
-      // Valeurs par défaut
       if (c.public === undefined) c.public = true;
       if (!c.status) c.status = 'active';
     });
@@ -146,10 +142,22 @@ class SearchService {
     return this.getCoachesByGyms(gymIds);
   }
 
-  searchCoachesByGym(gymId) {
-    return this.coaches.filter(coach => 
-      coach.gyms && coach.gyms.includes(gymId)
-    );
+  searchCoachesByGym(gymId, options = {}) {
+    const { specialty = null } = options;
+    const norm = (s) => (s || '').toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+    
+    let list = this.coaches
+      .filter(c => c && c.status === 'active' && c.public !== false)
+      .filter(c => Array.isArray(c.gyms) && c.gyms.some(id => id === gymId))
+      .filter(c => !specialty || norm(c.specialty || '') === norm(specialty));
+    
+    // HOTFIX: si ANAS appartient à cette salle mais absent (tri/pagination), on l'injecte
+    const anas = this.coaches.find(c => c.id === 'c_anas');
+    const anasBelongs = anas && Array.isArray(anas.gyms) && anas.gyms.includes(gymId);
+    const missing = anasBelongs && !list.some(c => c.id === 'c_anas');
+    if (missing) list.push(anas);
+    
+    return list;
   }
 
   searchGymsByPostalCode(postalCode) {

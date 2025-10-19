@@ -1,0 +1,103 @@
+Contexte : je veux voir ANAS parmi les coachs pour Fitness Park Maurepas (g_maurepas) et pour la recherche CP 78310.
+Merci d’appliquer ce patch dans le code de recherche/rendu (fichiers data/*.json, search*.js/ts, et la page “coachs trouvés”).
+
+1) Vérifier/ajouter la DATA (gyms & coaches)
+
+Dans data/gyms.json, garantir l’entrée :
+
+{
+  "id": "g_maurepas",
+  "name": "Fitness Park Maurepas",
+  "city": "Maurepas",
+  "postal_code": "78310",
+  "address": "Avenue Jean Jaurès, 78310 Maurepas"
+}
+
+
+Dans data/coaches.json, garantir l’entrée :
+
+{
+  "id": "c_anas",
+  "name": "Anas Coach",
+  "specialty": "Musculation",
+  "gyms": ["g_maurepas"],
+  "city": "Maurepas",
+  "postal_code": "78310",
+  "public": true,
+  "status": "active",
+  "rating": 4.8
+}
+
+2) Normalisation & mapping au chargement
+
+Après le chargement des JSON (gyms, coaches), ajouter :
+
+function norm(s){return (s||'').toString().normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase().trim();}
+const gymsById   = Object.fromEntries(gyms.map(g=>[g.id,g]));
+const idByName   = Object.fromEntries(gyms.map(g=>[norm(g.name),g.id]));
+const idByCP     = Object.fromEntries(gyms.map(g=>[norm(g.postal_code),g.id]));
+
+// sécuriser & remapper coach.gyms (accepte id, nom salle, CP)
+coaches.forEach(c=>{
+  if(!Array.isArray(c.gyms)) c.gyms=[];
+  c.gyms=c.gyms.map(g=>{
+    if(gymsById[g]) return g;                 // déjà un id
+    const n=norm(g);
+    if(idByName[n]) return idByName[n];       // nom → id
+    if(idByCP[n])   return idByCP[n];         // CP  → id
+    return g;
+  });
+  if(c.public===undefined) c.public=true;
+  if(!c.status) c.status='active';
+});
+
+3) Fonction de recherche (désactive filtres piégeux)
+
+Remplacer la fonction qui récupère les coachs d’une salle par :
+
+export function getCoachesForGym(gymId,{specialty=null}={}){
+  const list=coaches
+    .filter(c=>c && c.status==='active' && c.public!==false)
+    .filter(c=>Array.isArray(c.gyms) && c.gyms.some(id=>id===gymId))
+    .filter(c=>!specialty || norm(c.specialty)===norm(specialty));
+
+  // HOTFIX: si ANAS appartient à cette salle mais absent (tri/pagination), on l’injecte
+  const anas=coaches.find(c=>c.id==='c_anas');
+  const anasBelongs=anas && Array.isArray(anas.gyms) && anas.gyms.includes(gymId);
+  const missing=anasBelongs && !list.some(c=>c.id==='c_anas');
+  if(missing) list.push(anas);
+
+  // désactiver toute pagination stricte ici (laisser le composant UI paginer après)
+  return list; // pas de slice() ici
+}
+
+4) Passage de l’ID salle (pas le nom)
+
+Dans la page “Voir les coachs” :
+
+const gymId = selectedGym.id;              // ex: 'g_maurepas'
+const specialty = filters?.specialty || null;
+const coachesForGym = getCoachesForGym(gymId,{specialty});
+renderCoaches(coachesForGym);
+
+5) Debug visible en bas de page
+
+Ajouter après renderCoaches(...) :
+
+(function debugPanel(){
+  const gp = document.createElement('pre');
+  gp.style.cssText='margin:16px 0;padding:12px;border:1px dashed #aaa;border-radius:8px;font-size:12px;opacity:.8;white-space:pre-wrap';
+  const ids=coachesForGym.map(c=>c.id).join(', ');
+  gp.textContent=`DEBUG — gymId=${gymId} | coaches: ${ids}`;
+  document.body.appendChild(gp);
+})();
+
+6) Critères d’acceptation
+
+coaches.json contient c_anas avec "gyms":["g_maurepas"].
+
+Sur la page des coachs de Fitness Park Maurepas, ANAS apparaît (même si la liste est triée/paginée).
+
+En bas, le debug affiche coaches: ... c_anas ....
+
+IMPORTANT : faire un hard refresh (Ctrl/Cmd+Shift+R) après build, sinon l’ancien JS en cache masque le patch.

@@ -257,6 +257,32 @@ class SearchApp {
           window.location.href = `/coach/${results[index].id}`;
         });
       });
+      
+      // Panneau de debug
+      this.addDebugPanel(results, type);
+    }
+  }
+  
+  addDebugPanel(results, type) {
+    // Supprimer l'ancien panneau s'il existe
+    const oldPanel = document.getElementById('debug-panel');
+    if (oldPanel) oldPanel.remove();
+    
+    // Créer le panneau de debug
+    const panel = document.createElement('pre');
+    panel.id = 'debug-panel';
+    panel.style.cssText = 'margin:16px 0;padding:12px;border:1px dashed #aaa;border-radius:8px;font-size:12px;opacity:.8;white-space:pre-wrap;background:#f5f5f5;';
+    
+    const ids = results.map(c => c.id).join(', ');
+    const addressQuery = this.addressInput.value.trim();
+    const specialty = this.specialtySelect.value;
+    
+    panel.textContent = `DEBUG — Type: ${type} | Recherche: ${addressQuery || 'N/A'} | Spécialité: ${specialty || 'N/A'}\nCoaches trouvés (${results.length}): ${ids}`;
+    
+    // Insérer après la section des résultats
+    const resultsSection = document.getElementById('resultsSection');
+    if (resultsSection) {
+      resultsSection.appendChild(panel);
     }
   }
   
