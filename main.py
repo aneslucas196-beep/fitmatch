@@ -1468,6 +1468,11 @@ async def coach_profile_setup_get(request: Request, user = Depends(require_coach
                 profile_completed = coach_data.get("profile_completed", False)
         except Exception as e:
             print(f"❌ Erreur lors de la récupération du profil: {e}")
+    else:
+        # Mode démo - Charger les données depuis l'utilisateur connecté
+        coach_data = user
+        profile_completed = user.get("profile_completed", False)
+        print(f"🔧 Mode démo - Chargement des données du profil pour {user.get('email', 'coach')}")
     
     return templates.TemplateResponse("coach_profile_setup.html", {
         "request": request,
