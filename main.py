@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from typing import Optional, List
+from typing import Optional, List, Dict
 import uvicorn
 import jwt
 import os
@@ -609,6 +609,48 @@ async def gyms_map_page(request: Request, address: str = "", radius_km: int = 25
         "address": address,
         "radius_km": radius_km,
         "google_maps_api_key": google_maps_api_key
+    })
+
+@app.get("/gym/{gym_id}", response_class=HTMLResponse)
+async def gym_detail_page(request: Request, gym_id: str):
+    """
+    Page publique affichant une salle et tous ses coachs.
+    🆕 Utilisé par le flow: Client cherche par CP → voit salles → clique → voit coachs
+    """
+    # Charger les infos de la salle
+    import json, os
+    gym_info = None
+    gyms_file = os.path.join("static", "data", "gyms.json")
+    if os.path.exists(gyms_file):
+        with open(gyms_file, 'r', encoding='utf-8') as f:
+            all_gyms = json.load(f)
+            gym_info = next((g for g in all_gyms if g["id"] == gym_id), None)
+    
+    if not gym_info:
+        # Salle non trouvée
+        return templates.TemplateResponse("404.html", {
+            "request": request,
+            "message": "Cette salle n'existe pas."
+        }, status_code=404)
+    
+    # Charger les coachs de cette salle
+    coaches = get_coaches_by_gym_id(gym_id)
+    
+    # Trier par : vérifiés → note → nb d'avis
+    coaches_sorted = sorted(
+        coaches,
+        key=lambda c: (
+            -int(c.get("verified", False)),
+            -c.get("rating", 0),
+            -c.get("reviews_count", 0)
+        )
+    )
+    
+    return templates.TemplateResponse("gym_coaches.html", {
+        "request": request,
+        "gym": gym_info,
+        "coaches": coaches_sorted,
+        "coach_count": len(coaches_sorted)
     })
 
 @app.get("/partner", response_class=HTMLResponse)
