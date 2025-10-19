@@ -1,0 +1,121 @@
+Objectif : Le coach ANAS doit apparaître quand on ouvre la salle Fitness Park Maurepas (id attendu g_maurepas) ou quand on cherche par 78310.
+
+Ajoute un script de debug (dans le même fichier que la recherche, ou un fichier debug.js importé) :
+
+// DEBUG HELPERS – à coller
+function normalize(s) {
+  return (s || '').toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+}
+
+function debugLog(title, payload) {
+  console.log(`\n==== ${title} ====`);
+  console.log(JSON.stringify(payload, null, 2));
+}
+
+
+Vérifie les données chargées (dans le code qui charge coaches et gyms) :
+
+// Après chargement des JSON
+debugLog('GYMS_COUNT', { count: gyms?.length });
+debugLog('COACHES_COUNT', { count: coaches?.length });
+
+// Vérifie ANAS + la salle
+const anas = coaches?.find(c => normalize(c.name) === 'anas coach' || c.id === 'c_anas');
+const gMaurepas = gyms?.find(g => normalize(g.name) === 'fitness park maurepas' || g.id === 'g_maurepas');
+debugLog('ANAS_FOUND', anas || null);
+debugLog('GYM_MAUREPAS_FOUND', gMaurepas || null);
+
+// Sanity checks
+if (anas) {
+  debugLog('ANAS_GYMS_FIELD', anas.gyms || null);
+  if (!Array.isArray(anas.gyms)) console.warn('ANAS.gyms is not an array!');
+}
+
+
+Corrige la fonction qui récupère les coachs d’une salle (remplace/ajuste ta fonction existante) :
+
+function getCoachesForGym(gymId, opts = {}) {
+  const { specialty = null } = opts;
+
+  const result = coaches
+    .filter(c => c && (c.public !== false))               // public true par défaut
+    .filter(c => (c.status || 'active') === 'active')     // status par défaut "active"
+    .filter(c => Array.isArray(c.gyms) && c.gyms.some(g => normalize(g) === normalize(gymId)))
+    .filter(c => !specialty || normalize(c.specialty) === normalize(specialty));
+
+  debugLog('RESULT_FOR_GYM', { gymId, specialty, count: result.length, ids: result.map(c => c.id) });
+  return result;
+}
+
+
+Tolère si coach.gyms contient des noms de salles au lieu d’IDs
+(conversion silencieuse au chargement des données) :
+
+// À exécuter après le chargement des JSON
+const gymsByName = Object.fromEntries(gyms.map(g => [normalize(g.name), g.id]));
+const allGymIds = new Set(gyms.map(g => g.id));
+
+coaches.forEach(c => {
+  if (!Array.isArray(c.gyms)) c.gyms = [];
+  c.gyms = c.gyms.map(g => {
+    const ng = normalize(g);
+    // si déjà un id connu
+    if (allGymIds.has(g)) return g;
+    // si c'est un nom, map vers l'id
+    if (gymsByName[ng]) return gymsByName[ng];
+    return g; // fallback
+  });
+});
+
+
+Route/console de debug pour Maurepas (utile dans preview) :
+
+// Exemple pour une app Express ; sinon, affiche via console dans ton handler existant
+// app.get('/__debug/maurepas', (req, res) => {
+(() => {
+  const gym = gyms.find(g => normalize(g.name) === 'fitness park maurepas' || g.id === 'g_maurepas');
+  const list = gym ? getCoachesForGym(gym.id) : [];
+  debugLog('DEBUG_ROUTE_MAUREPAS', { gym, coaches: list.map(c => ({ id: c.id, name: c.name, gyms: c.gyms })) });
+  // res.json({ gym, coaches: list });
+})(); // ← auto-run en preview
+
+
+Sur la page “coachs de la salle”, assure-toi d’appeler avec l’ID :
+
+// Quand on clique sur "Voir les coachs"
+const gymId = selectedGym.id; // ex. 'g_maurepas'
+const specialty = currentFilters?.specialty || null;
+const coachesForGym = getCoachesForGym(gymId, { specialty });
+// render(coachesForGym);
+
+
+Critères d’acceptation (test auto) :
+
+ANAS apparaît dans RESULT_FOR_GYM.ids quand gymId === 'g_maurepas'.
+
+Le log ANAS_GYMS_FIELD montre une array contenant 'g_maurepas' (après conversion si besoin).
+
+La page “Fitness Park Maurepas” liste ANAS avec les autres.
+
+Si ça ne s’affiche toujours pas
+
+Regarde la console :
+
+ANAS_FOUND est-il null ? → son nom/ID ne correspond pas.
+
+GYM_MAUREPAS_FOUND est-il null ? → nom/id de la salle différent.
+
+ANAS_GYMS_FIELD ne contient pas g_maurepas ? → la liaison n’existe pas (corrige la data).
+
+RESULT_FOR_GYM.count = 0 ? → filtre specialty actif, ou public/status mal réglés.
+
+Modèle de données (mets-le si besoin)
+// gyms.json
+[
+  {"id":"g_maurepas","name":"Fitness Park Maurepas","city":"Maurepas","postal_code":"78310","address":"Avenue Jean Jaurès, 78310 Maurepas"}
+]
+
+// coaches.json
+[
+  {"id":"c_anas","name":"Anas Coach","specialty":"Musculation","gyms":["g_maurepas"],"city":"Maurepas","postal_code":"78310","public":true,"status":"active"}
+]
