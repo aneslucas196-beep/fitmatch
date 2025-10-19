@@ -81,6 +81,54 @@ def load_coaches_from_json() -> List[Dict]:
             return json.load(f)
     return []
 
+def get_gym_by_id(gym_id: str) -> Optional[Dict]:
+    """Récupère les infos d'une salle par son ID (locale JSON ou Google Places)."""
+    import json
+    import os
+    
+    # 1. Chercher dans les salles locales (gyms.json)
+    gyms_file = os.path.join("static", "data", "gyms.json")
+    if os.path.exists(gyms_file):
+        with open(gyms_file, 'r', encoding='utf-8') as f:
+            local_gyms = json.load(f)
+            gym = next((g for g in local_gyms if g["id"] == gym_id), None)
+            if gym:
+                return gym
+    
+    # 2. Si c'est un ID Google Places, chercher dans les selected_gyms_data des coaches
+    if gym_id.startswith("google_worldwide_"):
+        demo_users = load_demo_users()
+        for email, user_data in demo_users.items():
+            if user_data.get("role") == "coach":
+                selected_gyms_data = user_data.get("selected_gyms_data", "[]")
+                try:
+                    if isinstance(selected_gyms_data, str):
+                        selected_gyms = json.loads(selected_gyms_data)
+                    else:
+                        selected_gyms = selected_gyms_data if isinstance(selected_gyms_data, list) else []
+                    
+                    # Chercher cette salle dans les gyms de ce coach
+                    for gym in selected_gyms:
+                        if isinstance(gym, dict) and gym.get("id") == gym_id:
+                            # Formater pour correspondre au format des salles locales
+                            return {
+                                "id": gym.get("id"),
+                                "name": gym.get("name", "Salle de sport"),
+                                "address": gym.get("address", ""),
+                                "city": gym.get("city", ""),
+                                "postal_code": "",  # Google Places n'a pas toujours le CP
+                                "lat": gym.get("lat"),
+                                "lng": gym.get("lng"),
+                                "chain": gym.get("chain", "Google Places"),
+                                "phone": gym.get("phone", "Non disponible"),
+                                "hours": gym.get("hours", "Horaires non disponibles"),
+                                "photo": "/static/gym-default.jpg"
+                            }
+                except:
+                    continue
+    
+    return None
+
 def get_coaches_by_gym_id(gym_id: str) -> List[Dict]:
     """Récupère tous les coachs d'une salle spécifique depuis le JSON ET la base de données."""
     # 1. Charger les coachs de test depuis JSON
@@ -684,15 +732,10 @@ async def gym_detail_page(request: Request, gym_id: str):
     """
     Page publique affichant une salle et tous ses coachs.
     🆕 Utilisé par le flow: Client cherche par CP → voit salles → clique → voit coachs
+    ✨ Support des salles locales (JSON) ET Google Places (worldwide)
     """
-    # Charger les infos de la salle
-    import json, os
-    gym_info = None
-    gyms_file = os.path.join("static", "data", "gyms.json")
-    if os.path.exists(gyms_file):
-        with open(gyms_file, 'r', encoding='utf-8') as f:
-            all_gyms = json.load(f)
-            gym_info = next((g for g in all_gyms if g["id"] == gym_id), None)
+    # Charger les infos de la salle (locale ou Google Places)
+    gym_info = get_gym_by_id(gym_id)
     
     if not gym_info:
         # Salle non trouvée
