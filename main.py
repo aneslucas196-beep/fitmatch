@@ -70,6 +70,23 @@ from supabase_auth_service import signup_with_supabase_email_confirmation, resen
 
 app = FastAPI()
 
+# Helper function pour charger les coaches depuis JSON
+def load_coaches_from_json() -> List[Dict]:
+    """Charge les coaches depuis le fichier JSON statique."""
+    import json
+    import os
+    coaches_file = os.path.join("static", "data", "coaches.json")
+    if os.path.exists(coaches_file):
+        with open(coaches_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+def get_coaches_by_gym_id(gym_id: str) -> List[Dict]:
+    """Récupère tous les coachs d'une salle spécifique depuis le JSON."""
+    coaches = load_coaches_from_json()
+    # Filtrer les coaches qui ont ce gym_id dans leur liste "gyms"
+    return [coach for coach in coaches if gym_id in coach.get("gyms", [])]
+
 # Configuration sécurisée - plus de stockage local, utilisation de Supabase Storage uniquement
 
 # Configuration pour upload d'images
@@ -1903,18 +1920,46 @@ async def search_gyms_by_location_api(
     q: Optional[str] = None,
     lat: Optional[float] = None,
     lng: Optional[float] = None,
-    radius_km: int = 25
+    radius_km: int = 25,
+    postal_code: Optional[str] = None
 ):
     """
-    Recherche de salles par localisation ou nom.
-    Paramètres: q (nom/adresse) OU lat,lng + radius_km
+    Recherche de salles par localisation, nom ou code postal.
+    Paramètres: q (nom/adresse) OU lat,lng + radius_km OU postal_code
     """
     try:
         results = []
         search_lat = None
         search_lng = None
         
-        if q:
+        # 🆕 Recherche par code postal
+        if postal_code:
+            print(f"🔍 Recherche salles par code postal: {postal_code}")
+            # Charger les salles depuis le JSON statique
+            import json
+            import os
+            gyms_file = os.path.join("static", "data", "gyms.json")
+            if os.path.exists(gyms_file):
+                with open(gyms_file, 'r', encoding='utf-8') as f:
+                    all_gyms = json.load(f)
+                    # Filtrer par code postal
+                    for gym in all_gyms:
+                        if gym.get("postal_code") == postal_code:
+                            # Compter les coachs dans cette salle
+                            coaches_in_gym = get_coaches_by_gym_id(gym["id"])
+                            gym_result = gym.copy()
+                            gym_result["coach_count"] = len(coaches_in_gym)
+                            results.append(gym_result)
+            
+            print(f"✅ {len(results)} salles trouvées pour le code postal {postal_code}")
+            return {
+                "success": True,
+                "gyms": results,
+                "count": len(results),
+                "search_type": "postal_code"
+            }
+        
+        elif q:
             # 🎯 NOUVEAU: Détection automatique des recherches par zone/arrondissement
             zone_results = search_gyms_by_zone(q)
             if zone_results:
@@ -2198,32 +2243,47 @@ async def get_gym_coaches(gym_address: str):
 async def get_gym_coaches_by_id(gym_id: str):
     """
     Récupère tous les coachs disponibles dans une salle par ID.
-    Fonctionne avec gym_id statiques (GYMS_DATABASE) et dynamiques (coach_gym_X).
+    🆕 NOUVEAU: Charge depuis static/data/coaches.json + tri par vérification, note, avis.
     """
     try:
         print(f"🔍 Recherche coaches pour gym_id: {gym_id}")
         
-        # Utiliser directement le nouveau système unifié basé sur gym_id
-        coaches = get_coaches_by_gym(gym_id)
+        # 🆕 Charger depuis le JSON statique
+        coaches = get_coaches_by_gym_id(gym_id)
         
-        # Récupérer les infos de la gym si disponible (optionnel)
+        # 🆕 Trier par : vérifiés → note → nb d'avis
+        coaches_sorted = sorted(
+            coaches,
+            key=lambda c: (
+                -int(c.get("verified", False)),  # Vérifiés en premier (True=1, False=0, inverse pour desc)
+                -c.get("rating", 0),  # Note décroissante
+                -c.get("reviews_count", 0)  # Nombre d'avis décroissant
+            )
+        )
+        
+        # Récupérer les infos de la gym depuis le JSON
+        import json, os
         gym_info = None
-        gym = next((g for g in GYMS_DATABASE if g["id"] == gym_id), None)
-        if gym:
-            gym_info = gym
+        gyms_file = os.path.join("static", "data", "gyms.json")
+        if os.path.exists(gyms_file):
+            with open(gyms_file, 'r', encoding='utf-8') as f:
+                all_gyms = json.load(f)
+                gym_info = next((g for g in all_gyms if g["id"] == gym_id), None)
         
-        print(f"📊 Résultat pour {gym_id}: {len(coaches)} coaches trouvés")
+        print(f"📊 Résultat pour {gym_id}: {len(coaches_sorted)} coaches trouvés")
         
         return {
             "success": True,
-            "coaches": coaches,
-            "count": len(coaches),
+            "coaches": coaches_sorted,
+            "count": len(coaches_sorted),
             "gym_id": gym_id,
-            "gym_info": gym_info  # Infos de la gym si statique, sinon None
+            "gym_info": gym_info
         }
         
     except Exception as e:
         print(f"❌ Erreur récupération coachs pour gym_id '{gym_id}': {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "success": False,
             "message": "Erreur lors de la récupération des coachs",
