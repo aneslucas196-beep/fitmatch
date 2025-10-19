@@ -8,6 +8,57 @@ The platform includes a worldwide gym database with all gyms globally, OpenStree
 
 ## Recent Changes (October 2025)
 
+### Homepage Search System - Dual-Field Coach & Gym Discovery
+- **Dual Search Interface**: Homepage now features two specialized search fields
+  - "Adresse/Ville" field: Search coaches by city or postal code
+  - "Quelle salle" field: Search gyms or coaches by gym name
+- **Smart Autocomplete**: Real-time suggestions with 300ms debounce
+  - City suggestions (🏙️ icon)
+  - Postal code suggestions (🏷️ icon)
+  - Gym name suggestions (🏋️ icon)
+  - Minimum 2 characters to trigger, max 10 suggestions
+- **Coach Cards Display**: Professional coach cards with complete information
+  - 64px circular profile photo
+  - Coach name with verified badge (✓) for certified coaches
+  - Star rating (⭐) with review count
+  - Specialty badges (max 3 displayed: musculation, cardio, yoga, etc.)
+  - Associated gyms (max 2 shown + "+X" for additional)
+  - Price per session with "Voir profil" button
+- **Gym Cards Display**: Comprehensive gym information cards
+  - Gym photo with gradient placeholder
+  - Gym name and chain affiliation
+  - Full address with 📍 icon
+  - Opening hours with 🕐 icon
+  - "Voir les coachs" button to view trainers at that gym
+- **Advanced Filtering**: Three quick-filter buttons above results
+  - "Aujourd'hui" - Show only coaches available today
+  - "≤ 5 km" - Filter coaches within 5km radius
+  - "Prix ≤ 50€" - Show coaches with sessions ≤50€
+- **Multi-Criteria Sorting**: Sort selector with three options
+  - "Pertinence" - Verified status > Rating > Review count (default)
+  - "Note" - Pure rating-based sorting with review count tie-breaker
+  - "Distance" - Geographic proximity using Haversine calculation
+- **Search Logic**:
+  - City/Postal Code in "Adresse/Ville" → Shows coaches training in that area
+  - Postal Code in "Quelle salle" → Lists all gyms in that area, click gym → coaches
+  - Gym name in "Quelle salle" → Shows coaches at that specific gym
+- **UI States Management**:
+  - Skeleton loading state (6 animated placeholder cards)
+  - Empty state with "Aucun résultat" message and retry options
+  - Error state with retry button
+  - Results grid with responsive layout
+- **URL Parameter Support**: Shareable search URLs
+  - `?city=Elancourt` - Search by city name
+  - `?cp=78990` - Search by postal code
+  - `?salle=basic-fit-elancourt` - Search by gym
+  - Parameters persist on page reload
+- **Data Structure**: Modular JSON-based data layer
+  - `static/data/gyms.json` - 8 test gyms with full details
+  - `static/data/coaches.json` - 8 test coaches with ratings, specialties, gym associations
+  - `static/search-service.js` - Reusable search service with filtering, sorting, distance calculation
+  - `static/search-app.js` - Main application logic with autocomplete, state management
+  - Easy migration path to backend API (drop-in replacement architecture)
+
 ### Google Places API - Worldwide Gym Search
 - **Global Gym Search**: Integration of Google Places API for worldwide gym discovery
 - **New API Endpoint**: `/api/gyms/worldwide-search` for international gym autocomplete
