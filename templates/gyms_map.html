@@ -205,10 +205,10 @@
           required
         />
         <select id="radiusSelect" style="padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; background: white; cursor: pointer;">
-          <option value="5">5 km</option>
-          <option value="10">10 km</option>
-          <option value="25" selected>25 km</option>
-          <option value="50">50 km</option>
+          <option value="5" {% if radius_km == 5 %}selected{% endif %}>5 km</option>
+          <option value="10" {% if radius_km == 10 %}selected{% endif %}>10 km</option>
+          <option value="25" {% if radius_km == 25 %}selected{% endif %}>25 km</option>
+          <option value="50" {% if radius_km == 50 %}selected{% endif %}>50 km</option>
         </select>
         <button type="submit">Rechercher</button>
       </form>
@@ -342,8 +342,9 @@
     document.getElementById('searchForm').addEventListener('submit', function(e) {
       e.preventDefault();
       const address = document.getElementById('addressInput').value;
+      const radius = document.getElementById('radiusSelect').value;
       if (address) {
-        window.location.href = `/gyms-map?address=${encodeURIComponent(address)}`;
+        window.location.href = `/gyms-map?address=${encodeURIComponent(address)}&radius_km=${radius}`;
       }
     });
   </script>

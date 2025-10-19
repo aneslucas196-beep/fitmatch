@@ -511,12 +511,13 @@ async def gym_search_page(request: Request):
     return templates.TemplateResponse("gym_search.html", {"request": request})
 
 @app.get("/gyms-map", response_class=HTMLResponse)
-async def gyms_map_page(request: Request, address: str = ""):
+async def gyms_map_page(request: Request, address: str = "", radius_km: int = 25):
     """Page de recherche de salles avec Google Maps."""
     google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
     return templates.TemplateResponse("gyms_map.html", {
         "request": request,
         "address": address,
+        "radius_km": radius_km,
         "google_maps_api_key": google_maps_api_key
     })
 
