@@ -468,9 +468,81 @@ async def search_coaches(
     request: Request,
     specialty: Optional[str] = None,
     city: str = "",
+    gym: Optional[str] = None,
     radius_km: int = 25
 ):
-    """Recherche de coachs avec géolocalisation."""
+    """Recherche de coachs avec géolocalisation ou par salle."""
+    
+    # Si on cherche par salle spécifique
+    if gym:
+        # Créer des coachs de démo pour cette salle
+        coaches = [
+            {
+                "id": 1,
+                "full_name": "Sophie Martin",
+                "bio": f"Coach sportive certifiée entraînant à {gym}",
+                "specialties": ["Musculation", "Cardio", "Perte de poids"],
+                "experience_years": 5,
+                "price_from": 45,
+                "rating": 4.8,
+                "verified": True,
+                "photo": "/static/coach-sophie.jpg",
+                "gym": gym,
+                "distance": 0.0,
+                "city": gym.split(" - ")[-1] if " - " in gym else "À cette salle"
+            },
+            {
+                "id": 2,
+                "full_name": "Thomas Dubois",
+                "bio": f"Expert en fitness à {gym}",
+                "specialties": ["CrossFit", "Functional Training", "Nutrition"],
+                "experience_years": 7,
+                "price_from": 55,
+                "rating": 4.9,
+                "verified": True,
+                "photo": "/static/coach-thomas.jpg",
+                "gym": gym,
+                "distance": 0.0,
+                "city": gym.split(" - ")[-1] if " - " in gym else "À cette salle"
+            },
+            {
+                "id": 3,
+                "full_name": "Marie Leclerc",
+                "bio": f"Coach bien-être et remise en forme à {gym}",
+                "specialties": ["Yoga", "Pilates", "Stretching"],
+                "experience_years": 4,
+                "price_from": 40,
+                "rating": 4.7,
+                "verified": False,
+                "photo": "/static/coach-marie.jpg",
+                "gym": gym,
+                "distance": 0.0,
+                "city": gym.split(" - ")[-1] if " - " in gym else "À cette salle"
+            },
+            {
+                "id": 4,
+                "full_name": "Camille Rousseau",
+                "bio": f"Spécialiste en préparation physique à {gym}",
+                "specialties": ["Préparation physique", "Sport de combat", "HIIT"],
+                "experience_years": 6,
+                "price_from": 50,
+                "rating": 4.8,
+                "verified": True,
+                "photo": "/static/coach-camille.jpg",
+                "gym": gym,
+                "distance": 0.0,
+                "city": gym.split(" - ")[-1] if " - " in gym else "À cette salle"
+            }
+        ]
+        
+        return templates.TemplateResponse("results.html", {
+            "request": request,
+            "coaches": coaches,
+            "specialty": None,
+            "city": "",
+            "gym": gym,
+            "radius_km": radius_km
+        })
     
     # Géocoder la ville
     coords = geocode_city(city) if city else None
@@ -487,6 +559,7 @@ async def search_coaches(
         "coaches": coaches,
         "specialty": specialty,
         "city": city,
+        "gym": None,
         "radius_km": radius_km
     })
 
