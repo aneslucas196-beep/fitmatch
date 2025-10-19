@@ -8,6 +8,40 @@ The platform includes a worldwide gym database with all gyms globally, OpenStree
 
 ## Recent Changes (October 2025)
 
+### Public Gym Pages - Coach Discovery by Location
+- **Feature**: Clients can now discover coaches by searching gyms using postal codes (no login required)
+- **Complete User Flow**: 
+  1. User searches by postal code on homepage (e.g., "78990")
+  2. System displays all gyms in that postal code
+  3. User clicks "Voir les coachs" on any gym card
+  4. Public gym page shows all coaches training at that location
+- **New Backend Route**: `GET /gym/{gym_id}` displays gym details + all coaches
+  - Gym information: name, address, hours, phone
+  - Coach cards sorted by: verified status → rating → review count
+  - 404 handling for non-existent gyms with helpful error page
+- **Enhanced Homepage Search**:
+  - **Postal code only** → Displays gym cards with "Voir les coachs" button
+  - **City/address only** → Redirects to /gyms-map (Google Maps view)
+  - **Address + Specialty** → Shows filtered coach results
+- **Gym Cards on Homepage**:
+  - 180px photo with gradient placeholder (🏋️)
+  - Gym name + chain affiliation
+  - Full address with location icon (📍)
+  - Opening hours with clock icon (🕐)
+  - "Voir les coachs" CTA button linking to `/gym/{gym_id}`
+- **Technical Implementation**:
+  - `searchGymsByPostalCode()` function calls `/api/gyms/search?postal_code=X`
+  - `createGymCard()` generates responsive gym cards
+  - New CSS styles in `search-styles.css` for gym cards (.gym-card, .gym-photo, .gym-info-row)
+  - Template `gym_coaches.html` displays gym header + coach grid
+- **Data Flow**:
+  - Backend loads gym from `static/data/gyms.json`
+  - Coaches filtered by gym ID from `static/data/coaches.json`
+  - Frontend displays results with proper fallbacks (empty state, 404)
+- **Tested & Verified**: 
+  - Basic-Fit Élancourt (78990) correctly shows 4 coaches
+  - Fitness Park Maurepas (78310) correctly shows 2 coaches
+
 ### Coach Profile Data Persistence Fix - Critical Bug Resolution
 - **Bug Fixed**: Coach profile data now persists correctly when returning to edit profile
 - **Issue**: Previously, when coaches filled their profile and clicked "Finaliser mon profil", data was saved. However, when returning via "Gérer mon profil", all entered data (including gyms and specialties) disappeared
