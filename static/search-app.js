@@ -125,7 +125,14 @@ class SearchApp {
       return;
     }
     
-    // Si seulement une adresse (sans spécialité) → Rediriger vers Google Maps des salles
+    // Si code postal seul (sans spécialité) → Afficher les salles de ce CP
+    const isPostalCode = /^\d{5}$/.test(addressQuery);
+    if (addressQuery && !specialtyQuery && isPostalCode) {
+      await this.searchGymsByPostalCode(addressQuery);
+      return;
+    }
+    
+    // Si seulement une adresse/ville (sans spécialité) → Rediriger vers Google Maps des salles
     if (addressQuery && !specialtyQuery) {
       window.location.href = `/gyms-map?address=${encodeURIComponent(addressQuery)}`;
       return;
@@ -189,6 +196,30 @@ class SearchApp {
     }
   }
   
+  async searchGymsByPostalCode(postalCode) {
+    this.showLoading();
+    this.updateURL(postalCode, null);
+    
+    try {
+      // Appeler l'API backend pour récupérer les salles du code postal
+      const response = await fetch(`/api/gyms/search?postal_code=${postalCode}`);
+      if (!response.ok) {
+        throw new Error('Erreur lors de la recherche des salles');
+      }
+      
+      const data = await response.json();
+      const gyms = data.gyms || [];
+      
+      this.resultsTitle.textContent = `Salles de sport à ${postalCode}`;
+      this.currentResults = { data: gyms, type: 'gyms' };
+      this.displayResults(gyms, 'gyms');
+      
+    } catch (error) {
+      console.error('Erreur recherche salles:', error);
+      this.showError();
+    }
+  }
+  
   applySortAndFilters() {
     let results = [...this.currentResults.data];
     
@@ -214,15 +245,25 @@ class SearchApp {
     
     this.resultsCount.textContent = `${results.length} résultat${results.length > 1 ? 's' : ''}`;
     
-    this.resultsGrid.innerHTML = results.map(item => {
-      return this.createCoachCard(item);
-    }).join('');
-    
-    this.resultsGrid.querySelectorAll('.coach-card').forEach((card, index) => {
-      card.addEventListener('click', () => {
-        window.location.href = `/coach/${results[index].id}`;
+    if (type === 'gyms') {
+      // Afficher les cartes de salles
+      this.resultsGrid.innerHTML = results.map(item => {
+        return this.createGymCard(item);
+      }).join('');
+      
+      // Pas de click handler global pour les salles, le bouton a son propre lien
+    } else {
+      // Afficher les cartes de coachs (par défaut)
+      this.resultsGrid.innerHTML = results.map(item => {
+        return this.createCoachCard(item);
+      }).join('');
+      
+      this.resultsGrid.querySelectorAll('.coach-card').forEach((card, index) => {
+        card.addEventListener('click', () => {
+          window.location.href = `/coach/${results[index].id}`;
+        });
       });
-    });
+    }
   }
   
   createCoachCard(coach) {
@@ -267,6 +308,37 @@ class SearchApp {
             ${coach.price_from}€ <span>/ séance</span>
           </div>
           <button class="btn-view-profile">Voir profil</button>
+        </div>
+      </div>
+    `;
+  }
+  
+  createGymCard(gym) {
+    return `
+      <div class="gym-card">
+        <div class="gym-photo">
+          ${gym.photo ? `<img src="${gym.photo}" alt="${gym.name}">` : '<div class="gym-photo-placeholder">🏋️</div>'}
+        </div>
+        
+        <div class="gym-content">
+          <h3 class="gym-name">${gym.name}</h3>
+          ${gym.chain ? `<p class="gym-chain">${gym.chain}</p>` : ''}
+          
+          <div class="gym-info-row">
+            <span class="gym-icon">📍</span>
+            <span class="gym-address">${gym.address}, ${gym.city} ${gym.postal_code}</span>
+          </div>
+          
+          ${gym.hours ? `
+          <div class="gym-info-row">
+            <span class="gym-icon">🕐</span>
+            <span class="gym-hours">${gym.hours}</span>
+          </div>
+          ` : ''}
+          
+          <a href="/gym/${gym.id}" class="btn-view-coaches">
+            Voir les coachs
+          </a>
         </div>
       </div>
     `;
