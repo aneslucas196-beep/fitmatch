@@ -82,10 +82,78 @@ def load_coaches_from_json() -> List[Dict]:
     return []
 
 def get_coaches_by_gym_id(gym_id: str) -> List[Dict]:
-    """Récupère tous les coachs d'une salle spécifique depuis le JSON."""
-    coaches = load_coaches_from_json()
-    # Filtrer les coaches qui ont ce gym_id dans leur liste "gyms"
-    return [coach for coach in coaches if gym_id in coach.get("gyms", [])]
+    """Récupère tous les coachs d'une salle spécifique depuis le JSON ET la base de données."""
+    # 1. Charger les coachs de test depuis JSON
+    coaches_from_json = load_coaches_from_json()
+    json_coaches = [coach for coach in coaches_from_json if gym_id in coach.get("gyms", [])]
+    
+    # 2. Récupérer le nom de la salle pour matching
+    gym_name = None
+    gyms_file = os.path.join("static", "data", "gyms.json")
+    if os.path.exists(gyms_file):
+        with open(gyms_file, 'r', encoding='utf-8') as f:
+            all_gyms = json.load(f)
+            gym_info = next((g for g in all_gyms if g["id"] == gym_id), None)
+            if gym_info:
+                gym_name = gym_info.get("name", "").lower().strip()
+    
+    # 3. Charger les VRAIS coachs depuis la base de données demo
+    real_coaches = []
+    demo_users = load_demo_users()
+    
+    for email, user_data in demo_users.items():
+        # Vérifier si c'est un coach avec profil complété
+        if user_data.get("role") == "coach" and user_data.get("profile_completed"):
+            # selected_gyms_data est stocké en STRING JSON, il faut le parser
+            selected_gyms_data = user_data.get("selected_gyms_data", "[]")
+            
+            # Parser le JSON string
+            try:
+                if isinstance(selected_gyms_data, str):
+                    selected_gyms = json.loads(selected_gyms_data)
+                else:
+                    selected_gyms = selected_gyms_data if isinstance(selected_gyms_data, list) else []
+            except:
+                selected_gyms = []
+            
+            # Vérifier si ce coach entraîne dans cette salle (match par ID ou par NOM)
+            gym_match = False
+            gym_ids = []
+            
+            for gym in selected_gyms:
+                if isinstance(gym, dict):
+                    gym_ids.append(gym.get("id", ""))
+                    
+                    # Match par ID direct
+                    if gym.get("id") == gym_id:
+                        gym_match = True
+                        break
+                    
+                    # Match par nom de salle (pour compatibilité Google Places vs JSON local)
+                    if gym_name and gym.get("name", "").lower().strip() == gym_name:
+                        gym_match = True
+                        break
+            
+            if gym_match:
+                # Construire un objet coach pour l'affichage
+                coach_obj = {
+                    "id": email.replace("@", "_").replace(".", "_"),  # ID unique basé sur email
+                    "full_name": user_data.get("full_name", "Coach"),
+                    "photo": user_data.get("photo", "/static/default-avatar.jpg"),
+                    "verified": user_data.get("verified", False),
+                    "rating": user_data.get("rating", 5.0),
+                    "reviews_count": user_data.get("reviews_count", 0),
+                    "specialties": user_data.get("specialties", []),
+                    "price_from": user_data.get("price_from", 50),
+                    "bio": user_data.get("bio", ""),
+                    "city": user_data.get("city", ""),
+                    "gyms": gym_ids  # Liste des IDs de salles
+                }
+                real_coaches.append(coach_obj)
+    
+    # 4. Combiner les deux listes
+    all_coaches = json_coaches + real_coaches
+    return all_coaches
 
 # Configuration sécurisée - plus de stockage local, utilisation de Supabase Storage uniquement
 
