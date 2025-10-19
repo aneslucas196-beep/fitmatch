@@ -75,11 +75,16 @@
     }
 
     .search-form input {
-      flex: 1;
+      flex: 2;
       padding: 12px 15px;
       border: 1px solid #ddd;
       border-radius: 8px;
       font-size: 15px;
+    }
+    
+    .search-form select {
+      flex: 0.5;
+      min-width: 100px;
     }
 
     .search-form button {
@@ -199,6 +204,12 @@
           value="{{ address }}"
           required
         />
+        <select id="radiusSelect" style="padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; background: white; cursor: pointer;">
+          <option value="5">5 km</option>
+          <option value="10">10 km</option>
+          <option value="25" selected>25 km</option>
+          <option value="50">50 km</option>
+        </select>
         <button type="submit">Rechercher</button>
       </form>
     </div>
@@ -238,7 +249,8 @@
 
     async function searchGyms(address) {
       try {
-        const response = await fetch(`/api/gyms/search?q=${encodeURIComponent(address)}&radius_km=25`);
+        const radius = document.getElementById('radiusSelect').value;
+        const response = await fetch(`/api/gyms/search?q=${encodeURIComponent(address)}&radius_km=${radius}`);
         const data = await response.json();
 
         if (data.gyms && data.gyms.length > 0) {

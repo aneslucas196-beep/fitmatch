@@ -15,6 +15,8 @@ The platform includes a worldwide gym database with all gyms globally, OpenStree
 - **Text Search Integration**: Uses Google Places Text Search API for flexible query matching
 - **Updated Coach Profile Setup**: Modified autocomplete to search globally with 3-character minimum
 - **API Key Management**: Configured `GOOGLE_PLACES_API_KEY` for secure access to Google services
+- **Flexible Radius Options**: Users can now search gyms with 5km, 10km, 25km, or 50km radius
+- **Coach Intervention Radius**: Coaches can set their service area from 5km to 100km
 
 ## Recent Changes (September 2025)
 
