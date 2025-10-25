@@ -278,8 +278,9 @@
           ${gym.distance_km ? `<p class="distance">📍 ${gym.distance_km.toFixed(1)} km</p>` : ''}
           <button class="view-coaches-btn" style="margin-top: 10px; padding: 8px 16px; background: #e50914; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Voir les coachs</button>
         `;
+        // ✅ FIX: Redirection vers /gym/{id} au lieu de /search?gym=
         card.onclick = () => {
-          window.location.href = `/search?gym=${encodeURIComponent(gym.name)}`;
+          window.location.href = `/gym/${gym.id}`;
         };
         gymsList.appendChild(card);
       });
