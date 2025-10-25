@@ -606,67 +606,9 @@ async def search_coaches(
 ):
     """Recherche de coachs avec géolocalisation ou par salle."""
     
-    # Si on cherche par salle spécifique
+    # Si on cherche par salle spécifique - charger les VRAIS coaches
     if gym:
-        # Créer des coachs de démo pour cette salle
-        coaches = [
-            {
-                "id": 1,
-                "full_name": "Sophie Martin",
-                "bio": f"Coach sportive certifiée entraînant à {gym}",
-                "specialties": ["Musculation", "Cardio", "Perte de poids"],
-                "experience_years": 5,
-                "price_from": 45,
-                "rating": 4.8,
-                "verified": True,
-                "photo": "/static/coach-sophie.jpg",
-                "gym": gym,
-                "distance": 0.0,
-                "city": gym.split(" - ")[-1] if " - " in gym else "À cette salle"
-            },
-            {
-                "id": 2,
-                "full_name": "Thomas Dubois",
-                "bio": f"Expert en fitness à {gym}",
-                "specialties": ["CrossFit", "Functional Training", "Nutrition"],
-                "experience_years": 7,
-                "price_from": 55,
-                "rating": 4.9,
-                "verified": True,
-                "photo": "/static/coach-thomas.jpg",
-                "gym": gym,
-                "distance": 0.0,
-                "city": gym.split(" - ")[-1] if " - " in gym else "À cette salle"
-            },
-            {
-                "id": 3,
-                "full_name": "Marie Leclerc",
-                "bio": f"Coach bien-être et remise en forme à {gym}",
-                "specialties": ["Yoga", "Pilates", "Stretching"],
-                "experience_years": 4,
-                "price_from": 40,
-                "rating": 4.7,
-                "verified": False,
-                "photo": "/static/coach-marie.jpg",
-                "gym": gym,
-                "distance": 0.0,
-                "city": gym.split(" - ")[-1] if " - " in gym else "À cette salle"
-            },
-            {
-                "id": 4,
-                "full_name": "Camille Rousseau",
-                "bio": f"Spécialiste en préparation physique à {gym}",
-                "specialties": ["Préparation physique", "Sport de combat", "HIIT"],
-                "experience_years": 6,
-                "price_from": 50,
-                "rating": 4.8,
-                "verified": True,
-                "photo": "/static/coach-camille.jpg",
-                "gym": gym,
-                "distance": 0.0,
-                "city": gym.split(" - ")[-1] if " - " in gym else "À cette salle"
-            }
-        ]
+        coaches = get_coaches_by_gym_id(gym)
         
         return templates.TemplateResponse("results.html", {
             "request": request,
@@ -681,11 +623,31 @@ async def search_coaches(
     coords = geocode_city(city) if city else None
     user_lat, user_lng = coords if coords else (None, None)
     
-    # Rechercher les coachs
-    if supabase_anon:
-        coaches = search_coaches_supabase(supabase_anon, specialty, user_lat, user_lng, radius_km)
-    else:
-        coaches = search_coaches_mock(specialty, user_lat, user_lng, radius_km)
+    # Rechercher les coachs - VRAIS coaches depuis la base de données
+    from utils import load_demo_users
+    demo_users = load_demo_users()
+    coaches = []
+    
+    for email, user_data in demo_users.items():
+        if user_data.get("role") == "coach" and user_data.get("profile_completed"):
+            coaches.append({
+                "id": email.replace("@", "_").replace(".", "_"),
+                "email": email,
+                "full_name": user_data.get("full_name", "Coach"),
+                "bio": user_data.get("bio", ""),
+                "city": user_data.get("city", ""),
+                "specialties": user_data.get("specialties", []),
+                "price_from": user_data.get("price_from", 50),
+                "rating": 4.5,
+                "reviews_count": 10,
+                "verified": True,
+                "photo": user_data.get("photo", "/static/default-avatar.jpg"),
+                "distance": 0.0
+            })
+    
+    # Filtrer par spécialité si demandé
+    if specialty:
+        coaches = [c for c in coaches if specialty.lower() in [s.lower() for s in c.get("specialties", [])]]
     
     return templates.TemplateResponse("results.html", {
         "request": request,
@@ -2067,6 +2029,83 @@ async def remove_coach_gym_location(
 # ======================================
 # ENDPOINTS API CLIENT - RECHERCHE SALLES
 # ======================================
+
+@app.get("/api/coaches")
+async def get_all_coaches_api(
+    gym_id: Optional[str] = None,
+    specialty: Optional[str] = None,
+    postal_code: Optional[str] = None
+):
+    """
+    🔥 NOUVEAU: Retourne les VRAIS coaches depuis la base de données (demo_users.json).
+    
+    Paramètres:
+    - gym_id: Filtrer par salle (ex: "fitness-park-maurepas")
+    - specialty: Filtrer par spécialité (ex: "musculation")
+    - postal_code: Filtrer par code postal
+    """
+    try:
+        coaches = []
+        
+        # Si filtrage par salle
+        if gym_id:
+            coaches = get_coaches_by_gym_id(gym_id)
+        else:
+            # Charger TOUS les vrais coaches
+            from utils import load_demo_users
+            demo_users = load_demo_users()
+            
+            for email, user_data in demo_users.items():
+                # Ne prendre que les coaches avec profil complété
+                if user_data.get("role") == "coach" and user_data.get("profile_completed"):
+                    coaches.append({
+                        "id": email.replace("@", "_").replace(".", "_"),
+                        "email": email,
+                        "full_name": user_data.get("full_name", "Coach"),
+                        "bio": user_data.get("bio", ""),
+                        "city": user_data.get("city", ""),
+                        "specialties": user_data.get("specialties", []),
+                        "price_from": user_data.get("price_from", 50),
+                        "rating": 4.5,  # Valeur par défaut
+                        "reviews_count": 10,  # Valeur par défaut
+                        "verified": True,
+                        "photo": user_data.get("photo", "/static/default-avatar.jpg"),
+                        "instagram_url": user_data.get("instagram_url", ""),
+                        "gyms": user_data.get("selected_gym_ids", "").split(",") if user_data.get("selected_gym_ids") else []
+                    })
+            
+            # Filtrer par spécialité si demandé
+            if specialty:
+                coaches = [c for c in coaches if specialty.lower() in [s.lower() for s in c.get("specialties", [])]]
+            
+            # Filtrer par code postal si demandé
+            if postal_code:
+                # Pour chaque coach, vérifier si une de ses salles est dans ce code postal
+                coaches_filtered = []
+                gyms_file = os.path.join("static", "data", "gyms.json")
+                if os.path.exists(gyms_file):
+                    with open(gyms_file, 'r', encoding='utf-8') as f:
+                        all_gyms = json.load(f)
+                        gyms_in_postal = [g["id"] for g in all_gyms if g.get("postal_code") == postal_code]
+                        
+                        for coach in coaches:
+                            if any(gym_id in coach.get("gyms", []) for gym_id in gyms_in_postal):
+                                coaches_filtered.append(coach)
+                        coaches = coaches_filtered
+        
+        return {
+            "success": True,
+            "count": len(coaches),
+            "coaches": coaches
+        }
+    
+    except Exception as e:
+        print(f"❌ Erreur API /api/coaches: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "coaches": []
+        }
 
 @app.get("/api/gyms/search")
 async def search_gyms_by_location_api(
