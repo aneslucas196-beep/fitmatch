@@ -1434,7 +1434,7 @@ def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> Li
             distance = haversine_distance(lat, lng, lat_place, lng_place)
             
             gym_result = {
-                "id": f"google_{place.get('id', '')}",
+                "id": f"google_worldwide_{place.get('id', '')}",
                 "name": place.get("displayName", {}).get("text", "Salle de sport"),
                 "address": place.get("formattedAddress", "Adresse non disponible"),
                 "lat": lat_place,
