@@ -11,16 +11,26 @@ class SearchService {
     try {
       const [gymsResponse, coachesResponse] = await Promise.all([
         fetch('/static/data/gyms.json'),
-        fetch('/static/data/coaches.json')
+        fetch('/api/coaches')  // ✅ NOUVEAU : Charger les VRAIS coaches depuis l'API
       ]);
       
       this.gyms = await gymsResponse.json();
-      this.coaches = await coachesResponse.json();
+      const coachesData = await coachesResponse.json();
+      
+      // ✅ L'API retourne { success: true, coaches: [...] }
+      if (coachesData.success && Array.isArray(coachesData.coaches)) {
+        this.coaches = coachesData.coaches;
+      } else {
+        console.warn('⚠️ Format API inattendu, utilisation fallback');
+        this.coaches = [];
+      }
       
       // Normalisation et validation des données
       this.normalizeData();
       
       this.loaded = true;
+      
+      console.log(`✅ Données chargées: ${this.gyms.length} salles, ${this.coaches.length} coaches RÉELS`);
       
       // Debug: vérifier les données chargées
       if (window.SearchDebug) {
@@ -43,18 +53,27 @@ class SearchService {
 
     // Sécuriser & remapper coach.gyms (accepte id, nom salle, CP)
     this.coaches.forEach(c => {
+      // ✅ Support du format API: les coaches de l'API peuvent avoir 'gyms' comme array de strings
       if (!Array.isArray(c.gyms)) c.gyms = [];
       
       c.gyms = c.gyms.map(g => {
-        if (gymsById[g]) return g;                    // Déjà un id
+        if (gymsById[g]) return g;                    // Déjà un id valide
         const n = norm(g);
         if (idByName[n]) return idByName[n];          // Nom → id
         if (idByCP[n]) return idByCP[n];              // CP  → id
-        return g;
+        return g;                                      // Garder les IDs Google Places (google_worldwide_...)
       });
       
       if (c.public === undefined) c.public = true;
       if (!c.status) c.status = 'active';
+      
+      // ✅ Normaliser le format pour compatibilité frontend
+      if (!c.full_name && c.name) c.full_name = c.name;
+      if (!c.specialties && c.specialty) c.specialties = [c.specialty];
+      if (!Array.isArray(c.specialties)) c.specialties = [];
+      if (!c.photo) c.photo = '/static/default-avatar.jpg';
+      if (!c.rating) c.rating = 4.5;
+      if (!c.reviews_count) c.reviews_count = 0;
     });
     
     console.log(`✅ Données normalisées: ${this.gyms.length} salles, ${this.coaches.length} coaches`);

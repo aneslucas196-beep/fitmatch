@@ -726,6 +726,11 @@ async def gym_detail_page(request: Request, gym_id: str):
         "coach_count": len(coaches_sorted)
     })
 
+@app.get("/test-coaches", response_class=HTMLResponse)
+async def test_coaches_page(request: Request):
+    """Page de test pour vérifier que les VRAIS coaches sont chargés."""
+    return templates.TemplateResponse("test_coaches.html", {"request": request})
+
 @app.get("/partner", response_class=HTMLResponse)
 async def partner_page(request: Request):
     """Page Devenir partenaire FitMatch Pro."""
