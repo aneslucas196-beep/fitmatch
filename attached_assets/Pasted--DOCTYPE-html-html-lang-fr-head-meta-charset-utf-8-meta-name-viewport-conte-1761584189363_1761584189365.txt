@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FitMatch — FAQ</title>
+  <style>
+    :root{
+      --text:#111;
+      --muted:#6b7280; /* gris doux comme Planity */
+      --border:#e5e7eb;
+      --bg:#ffffff;
+      --accent:#111;   /* pas de vert ici, style Planity full noir/blanc */
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--text);font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
+    .wrap{max-width: 960px; margin: 56px auto; padding: 0 20px;}
+    h1{
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 700;
+      letter-spacing:-0.02em;
+      text-align:center;
+      margin: 8px 0 32px;
+    }
+    .sub{
+      text-align:center;
+      color:var(--muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    /* Ligne fine comme séparateur sous l’onglet "FAQ" façon Planity */
+    .tabline{
+      display:flex; justify-content:center; margin-bottom: 24px;
+    }
+    .tabline span{
+      height:2px; width:48px; background:var(--accent); border-radius:2px;
+    }
+
+    .faq{
+      border-top:1px solid var(--border);
+    }
+    .item{
+      border-bottom:1px solid var(--border);
+    }
+
+    .btn{
+      appearance:none; border:0; background:transparent; width:100%;
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 20px 8px;
+      cursor:pointer; text-align:left;
+      font-size: clamp(16px, 2.2vw, 20px);
+      font-weight: 500; color:var(--text);
+    }
+    .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
+
+    .chev{
+      flex:0 0 auto; width:20px; height:20px; display:inline-grid; place-items:center;
+      transition: transform .2s ease;
+      color:var(--muted);
+    }
+    .item.open .chev{ transform: rotate(90deg); color:var(--text); }
+
+    .panel{
+      overflow:hidden;
+      max-height:0;
+      transition:max-height .25s ease;
+    }
+    .panel-inner{
+      padding: 0 8px 20px 8px;
+      color:var(--muted);
+      line-height:1.6;
+      font-size:16px;
+    }
+    ul{margin:10px 0 0 20px; padding:0}
+    ul li{margin:6px 0}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="tabline" aria-hidden="true"><span></span></div>
+    <h1>Les questions fréquentes</h1>
+    <p class="sub">Tout sur FitMatch, la plateforme qui connecte les clients et les coachs sportifs.</p>
+
+    <section class="faq" role="list">
+      <!-- 1 -->
+      <article class="item" role="listitem">
+        <button class="btn" aria-expanded="false">
+          <span>Qu’est-ce que FitMatch&nbsp;?</span>
+          <span class="chev" aria-hidden="true">›</span>
+        </button>
+        <div class="panel" hidden>
+          <div class="panel-inner">
+            FitMatch est une plateforme qui met en relation des clients et des coachs sportifs
+            proches d’eux (par ville, code postal ou salle). Les clients comparent les profils,
+            consultent les spécialités, avis et transformations, puis réservent un créneau
+            directement avec le coach.
+          </div>
+        </div>
+      </article>
+
+      <!-- 2 -->
+      <article class="item" role="listitem">
+        <button class="btn" aria-expanded="false">
+          <span>Comment réserver une séance sur FitMatch&nbsp;?</span>
+          <span class="chev" aria-hidden="true">›</span>
+        </button>
+        <div class="panel" hidden>
+          <div class="panel-inner">
+            1) Sur la page d’accueil, entre ta <strong>ville</strong>, ton <strong>code postal</strong> ou ta <strong>salle</strong> (ex.&nbsp;“Fitness Park Maurepas”).<br/>
+            2) Filtre par spécialité si besoin (musculation, perte de poids, etc.).<br/>
+            3) Ouvre le <strong>profil du coach</strong>, choisis un créneau dans son agenda et confirme la réservation.
+          </div>
+        </div>
+      </article>
+
+      <!-- 3 -->
+      <article class="item" role="listitem">
+        <button class="btn" aria-expanded="false">
+          <span>Est-ce que je dois payer en ligne sur FitMatch&nbsp;?</span>
+          <span class="chev" aria-hidden="true">›</span>
+        </button>
+        <div class="panel" hidden>
+          <div class="panel-inner">
+            Pour l’instant, le paiement en ligne n’est pas activé. Tu <strong>règles directement le coach</strong>
+            <strong>en espèces</strong> ou par <strong>virement</strong>, <em>avant ou après</em> la séance, selon les modalités
+            indiquées sur son profil. FitMatch n’encaisse aucune commission pour le moment.
+          </div>
+        </div>
+      </article>
+
+      <!-- 4 -->
+      <article class="item" role="listitem">
+        <button class="btn" aria-expanded="false">
+          <span>Le paiement en ligne sera-t-il disponible plus tard&nbsp;?</span>
+          <span class="chev" aria-hidden="true">›</span>
+        </button>
+        <div class="panel" hidden>
+          <div class="panel-inner">
+            Oui. L’option <strong>paiement en ligne sécurisé</strong> (avec protection anti-no-show) arrive prochainement.
+            Nous la déploierons progressivement par pays et par salle partenaire.
+          </div>
+        </div>
+      </article>
+
+      <!-- 5 -->
+      <article class="item" role="listitem">
+        <button class="btn" aria-expanded="false">
+          <span>Comment gérer mes rendez-vous sur FitMatch&nbsp;?</span>
+          <span class="chev" aria-hidden="true">›</span>
+        </button>
+        <div class="panel" hidden>
+          <div class="panel-inner">
+            Après réservation, tu reçois une confirmation par e-mail (et bientôt SMS). Tu peux
+            <strong>consulter, modifier ou annuler</strong> depuis “Mes réservations”. Des rappels sont envoyés
+            automatiquement avant ta séance.
+          </div>
+        </div>
+      </article>
+
+      <!-- 6 -->
+      <article class="item" role="listitem">
+        <button class="btn" aria-expanded="false">
+          <span>Comment faire apparaître mon profil de coach sur FitMatch&nbsp;?</span>
+          <span class="chev" aria-hidden="true">›</span>
+        </button>
+        <div class="panel" hidden>
+          <div class="panel-inner">
+            Crée un compte via <strong>“Inscription” → “Je suis coach”</strong>, complète ton profil (bio, spécialités,
+            photos, tarifs) et <strong>ajoute les salles où tu coaches</strong> (ex.&nbsp;Fitness Park Maurepas).
+            Tu seras alors visible pour tous les clients qui recherchent par <em>ville / code postal / salle</em>.
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    // Accordéon minimal façon Planity (flèche qui pivote + panneau qui se déplie)
+    const items = document.querySelectorAll('.item');
+
+    items.forEach(item => {
+      const btn = item.querySelector('.btn');
+      const panel = item.querySelector('.panel');
+
+      btn.addEventListener('click', () => {
+        const isOpen = item.classList.contains('open');
+
+        // Ferme les autres
+        items.forEach(i => {
+          i.classList.remove('open');
+          const p = i.querySelector('.panel');
+          const b = i.querySelector('.btn');
+          p.style.maxHeight = 0;
+          p.hidden = true;
+          b.setAttribute('aria-expanded', 'false');
+        });
+
+        // Ouvre celui cliqué
+        if (!isOpen) {
+          item.classList.add('open');
+          panel.hidden = false;
+          panel.style.maxHeight = panel.scrollHeight + 'px';
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    // Support ouverture initiale via hash (optionnel)
+    if (location.hash) {
+      const target = document.querySelector(location.hash);
+      if (target && target.classList.contains('item')) {
+        target.querySelector('.btn').click();
+        target.scrollIntoView({behavior:'smooth', block:'start'});
+      }
+    }
+
+    // Recalcule la hauteur au redimensionnement
+    window.addEventListener('resize', () => {
+      document.querySelectorAll('.item.open .panel').forEach(p => {
+        p.style.maxHeight = p.scrollHeight + 'px';
+      });
+    });
+  </script>
+</body>
+</html>
