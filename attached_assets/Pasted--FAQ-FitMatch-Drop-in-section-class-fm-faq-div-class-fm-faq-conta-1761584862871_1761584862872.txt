@@ -1,0 +1,132 @@
+<!-- ====== FAQ FitMatch (Drop-in) ====== -->
+<section class="fm-faq">
+  <div class="fm-faq__container">
+    <h2 class="fm-faq__title">Les questions fréquentes</h2>
+
+    <!-- Item 1 -->
+    <details class="fm-acc">
+      <summary>
+        <span>Qu’est-ce que FitMatch&nbsp;?</span>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.12 9.29a1 1 0 0 1 1.41 0L12 11.76l2.47-2.47a1 1 0 1 1 1.41 1.41l-3.18 3.18a1.5 1.5 0 0 1-2.12 0L8.12 10.7a1 1 0 0 1 0-1.41z"/></svg>
+      </summary>
+      <div class="fm-acc__content">
+        FitMatch est une plateforme qui met en relation des clients et des coachs sportifs
+        proches de chez eux. Les clients cherchent par ville/code postal ou par salle,
+        comparent les profils (spécialités, avis, photos, tarifs) et réservent un créneau.
+      </div>
+    </details>
+
+    <!-- Item 2 -->
+    <details class="fm-acc">
+      <summary>
+        <span>Comment réserver une séance sur FitMatch&nbsp;?</span>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M8.12 9.29a1 1 0 0 1 1.41 0L12 11.76l2.47-2.47a1 1 0 1 1 1.41 1.41l-3.18 3.18a1.5 1.5 0 0 1-2.12 0L8.12 10.7a1 1 0 0 1 0-1.41z"/></svg>
+      </summary>
+      <div class="fm-acc__content">
+        1) Saisis une <b>adresse / code postal</b> ou choisis une <b>salle</b>.<br>
+        2) Filtre par spécialité (musculation, perte de poids, etc.).<br>
+        3) Ouvre un profil, choisis un créneau et envoie ta demande de réservation.
+      </div>
+    </details>
+
+    <!-- Item 3 -->
+    <details class="fm-acc">
+      <summary>
+        <span>Est-ce que je dois payer en ligne sur FitMatch&nbsp;?</span>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M8.12 9.29a1 1 0 0 1 1.41 0L12 11.76l2.47-2.47a1 1 0 1 1 1.41 1.41l-3.18 3.18a1.5 1.5 0 0 1-2.12 0L8.12 10.7a1 1 0 0 1 0-1.41z"/></svg>
+      </summary>
+      <div class="fm-acc__content">
+        <b>Pour l’instant, non.</b> Le paiement se fait directement avec le coach :
+        en <b>espèces</b> ou par <b>virement</b>, avant ou après la séance selon ce qui est
+        convenu avec lui.
+      </div>
+    </details>
+
+    <!-- Item 4 -->
+    <details class="fm-acc">
+      <summary>
+        <span>Le paiement en ligne sera-t-il disponible plus tard&nbsp;?</span>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M8.12 9.29a1 1 0 0 1 1.41 0L12 11.76l2.47-2.47a1 1 0 1 1 1.41 1.41l-3.18 3.18a1.5 1.5 0 0 1-2.12 0L8.12 10.7a1 1 0 0 1 0-1.41z"/></svg>
+      </summary>
+      <div class="fm-acc__content">
+        Oui. Nous préparons un module de <b>paiement sécurisé</b> (CB/wallet) avec
+        <b>caution / séquestre</b> pour protéger clients et coachs.
+      </div>
+    </details>
+
+    <!-- Item 5 -->
+    <details class="fm-acc">
+      <summary>
+        <span>Comment gérer mes rendez-vous sur FitMatch&nbsp;?</span>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M8.12 9.29a1 1 0 0 1 1.41 0L12 11.76l2.47-2.47a1 1 0 1 1 1.41 1.41l-3.18 3.18a1.5 1.5 0 0 1-2.12 0L8.12 10.7a1 1 0 0 1 0-1.41z"/></svg>
+      </summary>
+      <div class="fm-acc__content">
+        Depuis ton espace, tu peux <b>confirmer</b>, <b>déplacer</b> ou <b>annuler</b> les
+        séances. Des rappels e-mail/SMS peuvent être envoyés avant la séance.
+      </div>
+    </details>
+
+    <!-- Item 6 -->
+    <details class="fm-acc">
+      <summary>
+        <span>Comment faire apparaître mon profil de coach sur FitMatch&nbsp;?</span>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M8.12 9.29a1 1 0 0 1 1.41 0L12 11.76l2.47-2.47a1 1 0 1 1 1.41 1.41l-3.18 3.18a1.5 1.5 0 0 1-2.12 0L8.12 10.7a1 1 0 0 1 0-1.41z"/></svg>
+      </summary>
+      <div class="fm-acc__content">
+        Inscris-toi <b>comme coach</b>, complète ton profil (spécialités, photos, tarifs,
+        salles où tu coaches). Tu seras visible dès qu’un client recherche dans ta zone ou
+        clique sur l’une de tes salles.
+      </div>
+    </details>
+  </div>
+</section>
+
+<style>
+  :root{
+    --fm-bg:#ffffff; --fm-text:#111827; --fm-muted:#6b7280;
+    --fm-border:#e5e7eb; --fm-primary:#111827; --fm-radius:14px;
+  }
+  .fm-faq{background:var(--fm-bg); padding:56px 16px;}
+  .fm-faq__container{max-width:960px; margin:0 auto;}
+  .fm-faq__title{
+    font-size: clamp(28px, 3vw, 36px);
+    font-weight:700; color:var(--fm-text);
+    text-align:left; margin:0 0 20px;
+  }
+  .fm-acc{
+    border-top:1px solid var(--fm-border);
+    padding:0;
+  }
+  .fm-acc:last-of-type{border-bottom:1px solid var(--fm-border);}
+  .fm-acc > summary{
+    list-style:none; cursor:pointer; display:flex; align-items:center;
+    justify-content:space-between; gap:16px; padding:22px 8px;
+    font-size:18px; font-weight:600; color:var(--fm-text);
+  }
+  .fm-acc > summary::-webkit-details-marker{display:none}
+  .fm-acc .chev{
+    width:22px; height:22px; flex:0 0 22px; fill:var(--fm-muted);
+    transform:rotate(-90deg); transition:transform .2s ease;
+  }
+  .fm-acc[open] .chev{transform:rotate(0deg); fill:var(--fm-primary);}
+  .fm-acc__content{
+    color:var(--fm-muted); font-size:16px; line-height:1.6;
+    padding:0 8px 22px; animation:fm-slide .2s ease;
+  }
+  @keyframes fm-slide{from{opacity:.2; transform:translateY(-4px)} to{opacity:1; transform:none}}
+  /* Optionnel: léger hover comme Planity */
+  .fm-acc > summary:hover{background:#fafafa; border-radius:8px}
+</style>
+
+<script>
+  // Fermer les autres items quand on en ouvre un (comportement type accordéon)
+  document.addEventListener('click', (e)=>{
+    const sm = e.target.closest('.fm-acc > summary');
+    if(!sm) return;
+    const cur = sm.parentElement;
+    document.querySelectorAll('.fm-acc[open]').forEach(d=>{
+      if(d!==cur) d.removeAttribute('open');
+    });
+  });
+</script>
+<!-- ====== /FAQ FitMatch ====== -->
