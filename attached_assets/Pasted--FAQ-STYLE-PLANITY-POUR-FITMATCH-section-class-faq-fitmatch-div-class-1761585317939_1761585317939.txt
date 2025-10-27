@@ -1,0 +1,118 @@
+<!-- ====== FAQ STYLE PLANITY POUR FITMATCH ====== -->
+<section class="faq-fitmatch">
+  <div class="faq-container">
+    <h2 class="faq-title">Les questions fréquentes</h2>
+
+    <details class="faq-item">
+      <summary>Qu’est-ce que FitMatch ?</summary>
+      <div class="faq-content">
+        FitMatch est une plateforme qui met en relation les <b>clients</b> et les <b>coachs sportifs</b> proches de chez eux. 
+        Tu peux chercher par ville, code postal ou salle, consulter les profils (avis, spécialités, tarifs) et réserver ta séance.
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Comment réserver une séance sur FitMatch ?</summary>
+      <div class="faq-content">
+        1️⃣ Entre ton <b>code postal</b> ou le nom de ta <b>salle</b>.<br>
+        2️⃣ Choisis la <b>spécialité</b> (musculation, perte de poids, etc.).<br>
+        3️⃣ Clique sur le coach qui t’intéresse et réserve directement ta séance.
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Est-ce que je dois payer en ligne sur FitMatch ?</summary>
+      <div class="faq-content">
+        💸 <b>Pas encore !</b> Pour l’instant, le paiement se fait directement avec le coach, 
+        en <b>espèces</b> ou par <b>virement</b>, avant ou après la séance.
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Le paiement en ligne sera-t-il disponible plus tard ?</summary>
+      <div class="faq-content">
+        ✅ Oui, bientôt tu pourras payer <b>en ligne</b> directement depuis FitMatch 
+        via un <b>système sécurisé</b> (carte ou portefeuille digital).
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Comment gérer mes séances sur FitMatch ?</summary>
+      <div class="faq-content">
+        Depuis ton espace personnel, tu peux <b>voir</b>, <b>modifier</b> ou <b>annuler</b> tes séances. 
+        Tu reçois aussi des rappels automatiques avant chaque rendez-vous.
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary>Comment faire apparaître mon profil de coach sur FitMatch ?</summary>
+      <div class="faq-content">
+        Inscris-toi en tant que <b>coach</b>, complète ton profil (spécialités, photos, tarifs, salles où tu coaches). 
+        Tu seras visible dès qu’un client recherche dans ta zone ou clique sur ta salle.
+      </div>
+    </details>
+  </div>
+</section>
+
+<style>
+/* ===== STYLE PLANITY ===== */
+.faq-fitmatch {
+  background-color: #fff;
+  color: #222;
+  padding: 60px 20px;
+  font-family: 'Inter', sans-serif;
+}
+.faq-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+.faq-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 25px;
+  text-align: left;
+}
+.faq-item {
+  border-top: 1px solid #ddd;
+  padding: 0;
+}
+.faq-item:last-of-type {
+  border-bottom: 1px solid #ddd;
+}
+.faq-item summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 17px;
+  font-weight: 500;
+  padding: 18px 0;
+  color: #111;
+  position: relative;
+  transition: color 0.2s ease;
+}
+.faq-item summary::after {
+  content: "›";
+  font-size: 22px;
+  color: #777;
+  transition: transform 0.3s ease;
+}
+.faq-item[open] summary::after {
+  transform: rotate(90deg);
+  color: #111;
+}
+.faq-content {
+  color: #555;
+  padding: 0 0 15px 0;
+  line-height: 1.6;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.faq-item summary:hover {
+  color: #000;
+}
+</style>

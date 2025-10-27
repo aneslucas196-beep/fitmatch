@@ -517,85 +517,83 @@ body {
 .fm-card-desc{color: var(--fm-muted); font-size:14px;}
 .fm-card-arrow{font-size:22px; color:#98a6b7}
 
-/* === FAQ Section === */
-.fm-faq {
-  background: #ffffff;
-  padding: 56px 16px;
+/* === FAQ Section - Style Planity === */
+.faq-fitmatch {
+  background-color: #fff;
+  color: #222;
+  padding: 60px 20px;
+  font-family: 'Inter', sans-serif;
 }
 
-.fm-faq__container {
-  max-width: 960px;
+.faq-container {
+  max-width: 900px;
   margin: 0 auto;
 }
 
-.fm-faq__title {
-  font-size: clamp(28px, 3vw, 36px);
-  font-weight: 700;
-  color: #111827;
+.faq-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 25px;
   text-align: left;
-  margin: 0 0 20px;
 }
 
-.fm-acc {
-  border-top: 1px solid #e5e7eb;
+.faq-item {
+  border-top: 1px solid #ddd;
   padding: 0;
 }
 
-.fm-acc:last-of-type {
-  border-bottom: 1px solid #e5e7eb;
+.faq-item:last-of-type {
+  border-bottom: 1px solid #ddd;
 }
 
-.fm-acc > summary {
+.faq-item summary {
   list-style: none;
   cursor: pointer;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 22px 8px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
+  align-items: center;
+  font-size: 17px;
+  font-weight: 500;
+  padding: 18px 0;
+  color: #111;
+  position: relative;
+  transition: color 0.2s ease;
 }
 
-.fm-acc > summary::-webkit-details-marker {
-  display: none;
+.faq-item summary::after {
+  content: "›";
+  font-size: 22px;
+  color: #777;
+  transition: transform 0.3s ease;
 }
 
-.fm-acc .chev {
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
-  fill: #6b7280;
-  transform: rotate(-90deg);
-  transition: transform 0.2s ease;
+.faq-item[open] summary::after {
+  transform: rotate(90deg);
+  color: #111;
 }
 
-.fm-acc[open] .chev {
-  transform: rotate(0deg);
-  fill: #111827;
-}
-
-.fm-acc__content {
-  color: #6b7280;
-  font-size: 16px;
+.faq-content {
+  color: #555;
+  padding: 0 0 15px 0;
   line-height: 1.6;
-  padding: 0 8px 22px;
-  animation: fm-slide 0.2s ease;
+  animation: fadeIn 0.2s ease;
 }
 
-@keyframes fm-slide {
+@keyframes fadeIn {
   from {
-    opacity: 0.2;
-    transform: translateY(-4px);
+    opacity: 0;
+    transform: translateY(-5px);
   }
   to {
     opacity: 1;
-    transform: none;
+    transform: translateY(0);
   }
 }
 
-.fm-acc > summary:hover {
-  background: #fafafa;
-  border-radius: 8px;
+.faq-item summary:hover {
+  color: #000;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
 }
