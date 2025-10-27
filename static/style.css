@@ -518,52 +518,52 @@ body {
 .fm-card-arrow{font-size:22px; color:#98a6b7}
 
 /* === FAQ Section - Style Planity === */
-.faq-fitmatch {
+.faq-section {
   background-color: #fff;
   color: #222;
-  padding: 60px 20px;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
+  padding: 80px 20px;
+  display: flex;
+  justify-content: center;
 }
 
 .faq-container {
-  max-width: 900px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 750px;
 }
 
 .faq-title {
   font-size: 2rem;
   font-weight: 600;
-  margin-bottom: 25px;
-  text-align: left;
+  text-align: center;
+  margin-bottom: 40px;
+  color: #222;
 }
 
 .faq-item {
-  border-top: 1px solid #ddd;
-  padding: 0;
+  border-top: 1px solid #e5e5e5;
 }
 
 .faq-item:last-of-type {
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #e5e5e5;
 }
 
 .faq-item summary {
-  list-style: none;
   cursor: pointer;
+  list-style: none;
+  padding: 18px 0;
+  font-size: 17px;
+  color: #111;
+  font-weight: 500;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 17px;
-  font-weight: 500;
-  padding: 18px 0;
-  color: #111;
-  position: relative;
-  transition: color 0.2s ease;
 }
 
 .faq-item summary::after {
   content: "›";
-  font-size: 22px;
-  color: #777;
+  font-size: 20px;
+  color: #888;
   transition: transform 0.3s ease;
 }
 
@@ -573,8 +573,9 @@ body {
 }
 
 .faq-content {
+  padding: 0 0 20px 0;
   color: #555;
-  padding: 0 0 15px 0;
+  font-size: 15px;
   line-height: 1.6;
   animation: fadeIn 0.2s ease;
 }
@@ -582,16 +583,12 @@ body {
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(-5px);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.faq-item summary:hover {
-  color: #000;
 }
 
 .faq-item summary::-webkit-details-marker {
