@@ -312,6 +312,7 @@ async def auth_exception_handler(request: Request, exc: HTTPException):
 # Configuration des templates et fichiers statiques
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/attached_assets", StaticFiles(directory="attached_assets"), name="attached_assets")
 
 # Client Supabase anonyme (si disponible)
 supabase_anon = get_supabase_anon_client()

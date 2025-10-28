@@ -35,7 +35,7 @@ Preferred communication style: Simple, everyday language.
     - **Public Gym Pages**: Allows discovery of coaches by searching gyms via postal codes, even without login.
 - **Client Dashboard**: Redesigned home page with fitness-inspired gradient background, dynamic motivational quotes, visual progress bar, upcoming workout sessions, and badge system.
 - **FAQ Section**: Homepage includes a Planity-style FAQ section using native HTML5 `<details>` for accordion functionality.
-- **Email Reminder Section**: Added to `/coach-signup` page, featuring an iPhone mockup and highlighting automatic email reminders and flexible cancellation.
+- **Email Reminder Section**: Added to `/coach-signup` page, featuring an iPhone showing Gmail app with FitMatch reminder email. Image served via /attached_assets directory. Highlights automatic email reminders, instant confirmation, and flexible cancellation policy.
 
 ### System Design Choices
 - **Modular Data**: JSON-based data layer for gyms and coaches, designed for easy migration to a backend API.
