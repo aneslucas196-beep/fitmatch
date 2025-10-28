@@ -727,97 +727,6 @@ async def gym_detail_page(request: Request, gym_id: str):
         "coach_count": len(coaches_sorted)
     })
 
-@app.get("/coach/{coach_id}", response_class=HTMLResponse)
-async def coach_profile_page(request: Request, coach_id: str):
-    """
-    Page publique du profil d'un coach avec toutes ses informations,
-    salles d'entraînement, calendrier et avis clients.
-    """
-    # Charger le coach depuis JSON
-    coaches = load_coaches_from_json()
-    coach = None
-    
-    # Chercher par ID numérique ou string
-    for c in coaches:
-        if str(c.get("id")) == str(coach_id):
-            coach = c
-            break
-    
-    # Si pas trouvé dans JSON, chercher dans les utilisateurs démo
-    if not coach:
-        demo_users = load_demo_users()
-        for email, user_data in demo_users.items():
-            if user_data.get("role") == "coach" and str(user_data.get("id", "")) == str(coach_id):
-                # Construire un objet coach depuis les données utilisateur
-                coach = {
-                    "id": user_data.get("id"),
-                    "full_name": user_data.get("full_name", "Coach"),
-                    "photo": user_data.get("photo", "/static/coach-default.jpg"),
-                    "verified": user_data.get("verified", False),
-                    "rating": user_data.get("rating", 4.5),
-                    "reviews_count": user_data.get("reviews_count", 0),
-                    "city": user_data.get("city", ""),
-                    "bio": user_data.get("bio", ""),
-                    "specialties": user_data.get("specialties", []),
-                    "price_from": user_data.get("price_from", 50),
-                    "gyms": user_data.get("gyms", []),
-                    "instagram_url": user_data.get("instagram_url", ""),
-                    "tiktok_url": user_data.get("tiktok_url", "")
-                }
-                break
-    
-    if not coach:
-        # Coach non trouvé
-        return templates.TemplateResponse("404.html", {
-            "request": request,
-            "message": "Ce coach n'existe pas."
-        }, status_code=404)
-    
-    # Charger les salles du coach
-    gym_ids = coach.get("gyms", [])
-    gyms = []
-    for gym_id in gym_ids:
-        gym_info = get_gym_by_id(gym_id)
-        if gym_info:
-            gyms.append(gym_info)
-    
-    # Générer quelques avis fictifs basés sur la note du coach
-    reviews = []
-    if coach.get("reviews_count", 0) > 0:
-        sample_reviews = [
-            {
-                "author": "Marie L.",
-                "rating": 5,
-                "comment": "Excellent coach ! J'ai atteint mes objectifs en 3 mois. Très professionnel et à l'écoute.",
-                "date": "Il y a 2 semaines"
-            },
-            {
-                "author": "Thomas D.",
-                "rating": 5,
-                "comment": "Super accompagnement, je recommande vivement. Les séances sont bien structurées.",
-                "date": "Il y a 1 mois"
-            },
-            {
-                "author": "Sophie M.",
-                "rating": 4,
-                "comment": "Très bon coach, motivant et pédagogue. J'ai progressé rapidement.",
-                "date": "Il y a 2 mois"
-            }
-        ]
-        # Prendre un échantillon d'avis basé sur le nombre total
-        reviews = sample_reviews[:min(3, coach.get("reviews_count", 0))]
-    
-    # Déterminer si le coach a des disponibilités configurées
-    has_availability = coach.get("availability_today", True)
-    
-    return templates.TemplateResponse("coach_profile.html", {
-        "request": request,
-        "coach": coach,
-        "gyms": gyms,
-        "reviews": reviews,
-        "has_availability": has_availability
-    })
-
 @app.get("/test-coaches", response_class=HTMLResponse)
 async def test_coaches_page(request: Request):
     """Page de test pour vérifier que les VRAIS coaches sont chargés."""
@@ -1958,34 +1867,6 @@ async def coach_transformations_add(
             return RedirectResponse(url=f"/coach/portal?error=Erreur lors de l'upload: {str(e)}", status_code=303)
     
     return RedirectResponse(url="/coach/portal", status_code=303)
-
-# Route pour profil de coach - définie APRÈS /coach/portal pour éviter les conflits
-@app.get("/coach/{coach_id}", response_class=HTMLResponse)
-async def coach_profile(request: Request, coach_id: str):
-    """Affichage du profil d'un coach."""
-    
-    # Récupérer le coach
-    if supabase_anon:
-        coach = get_coach_by_id_supabase(supabase_anon, coach_id)
-        transformations = get_transformations_by_coach_supabase(supabase_anon, coach_id)
-    else:
-        # Convertir en int pour les données mock si nécessaire
-        try:
-            coach_id_int = int(coach_id)
-            coach = get_coach_by_id_mock(coach_id_int)
-            transformations = get_transformations_by_coach_mock(coach_id_int)
-        except ValueError:
-            coach = None
-            transformations = []
-    
-    if not coach:
-        raise HTTPException(status_code=404, detail="Coach non trouvé")
-    
-    return templates.TemplateResponse("coach.html", {
-        "request": request,
-        "coach": coach,
-        "transformations": transformations
-    })
 
 # ======================================
 # ENDPOINTS API COACH - GESTION DES LIEUX
