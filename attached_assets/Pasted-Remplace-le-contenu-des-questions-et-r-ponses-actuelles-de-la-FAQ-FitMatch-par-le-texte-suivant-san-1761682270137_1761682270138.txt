@@ -1,0 +1,32 @@
+Remplace le contenu des questions et réponses actuelles de la FAQ FitMatch par le texte suivant, sans changer le design, le style, ni la structure HTML.
+
+Les nouvelles questions/réponses doivent être exactement celles-ci :
+
+Comment fonctionne FitMatch pour mes clients ?
+Les clients trouvent facilement un coach sportif près de chez eux, selon la salle ou la ville de leur choix.
+Ils peuvent consulter les profils, lire les avis et réserver une séance directement en ligne depuis FitMatch.
+
+Est-ce que FitMatch va m’apporter de nouveaux clients ?
+Oui. FitMatch met en avant votre profil auprès de milliers de sportifs actifs dans votre région.
+Grâce au référencement local et aux avis clients, votre visibilité augmente et vous recevez des réservations régulières.
+
+Combien coûte l’abonnement à FitMatch Pro ?
+FitMatch Pro est sans engagement ni commission.
+Vous payez un abonnement fixe pour bénéficier de toutes les fonctionnalités et être visible sur la plateforme.
+
+L’abonnement FitMatch est-il rentable pour un coach ?
+Oui, dès vos premières réservations, l’abonnement est déjà rentabilisé.
+De nombreux coachs déclarent remplir leurs créneaux rapidement grâce à FitMatch.
+
+Comment se passe la mise en place de mon profil sur FitMatch ?
+C’est très simple. Vous créez votre compte en quelques minutes, ajoutez vos spécialités, vos salles d’entraînement et vos photos.
+Votre profil est ensuite validé et visible publiquement sur FitMatch.
+
+Que faites-vous de mes données personnelles ?
+Vos données sont protégées et utilisées uniquement pour la gestion de votre compte et vos réservations.
+FitMatch respecte la confidentialité et ne partage jamais vos informations sans votre accord.
+
+Puis-je connecter mes réseaux sociaux à mon profil FitMatch ?
+Oui ! Sur votre profil FitMatch, vous pouvez ajouter le lien vers votre compte Instagram, TikTok ou autre réseau social.
+Les clients peuvent ainsi voir vos transformations, vos publications et l’ambiance de vos coachings.
+De plus, vous pouvez mettre le lien FitMatch dans votre bio Instagram pour que vos abonnés voient vos salles, vos créneaux et réservent directement.
