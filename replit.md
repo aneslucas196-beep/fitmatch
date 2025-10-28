@@ -44,6 +44,15 @@ Preferred communication style: Simple, everyday language.
   - Responsive grid layout: 3 columns on desktop, 2 on tablet, 1 on mobile
   - Clean, minimal design with soft shadows and rounded corners
   - Images from Unsplash for coach photos
+- **FAQ Section**: Added to `/coach-signup` page at the bottom
+  - Title: "Les questions fréquentes"
+  - 7 questions covering: platform overview, booking process, payment (current & future), session management, coach profile setup, social media integration
+  - Native HTML5 `<details>` element for accordion functionality
+  - Chevron animation on open/close (CSS-only)
+  - JavaScript accordion behavior (auto-close other items when opening one)
+  - Planity-style design with clean borders, rounded corners, smooth animations
+  - Responsive padding adjustments for mobile
+  - Badge "Bientôt" on future payment question
 
 ### System Design Choices
 - **Modular Data**: JSON-based data layer for gyms and coaches, designed for easy migration to a backend API.

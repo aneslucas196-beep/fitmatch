@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FitMatch – FAQ</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --text:#1a1a1a;
+      --muted:#6b7280;          /* gris soft pour le texte secondaire */
+      --divider:#e5e7eb;        /* gris clair pour les séparateurs */
+      --accent:#10b981;         /* vert FitMatch (tu peux ajuster) */
+    }
+
+    /* Reset + base */
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;line-height:1.5}
+    img{max-width:100%;display:block}
+
+    /* Conteneur centré façon Planity */
+    .section{
+      max-width: 960px;
+      margin: 56px auto;
+      padding: 0 16px;
+    }
+
+    .title{
+      text-align:center;
+      font-size: clamp(28px, 3.6vw, 40px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 8px 0 28px;
+    }
+
+    /* Bloc FAQ */
+    .faq{
+      background:#fff;
+      border-radius: 12px;
+      border: 1px solid var(--divider);
+      box-shadow: 0 1px 0 rgba(0,0,0,.04);
+      overflow:hidden;
+    }
+
+    /* Chaque item utilise <details> pour l’accessibilité */
+    details{
+      border-top: 1px solid var(--divider);
+      background:#fff;
+    }
+    details:first-of-type{ border-top: none; }
+
+    summary{
+      list-style: none;
+      cursor: pointer;
+      padding: 20px 56px 20px 20px;
+      font-size: 18px;
+      font-weight: 600;
+      outline: none;
+      position: relative;
+      user-select: none;
+    }
+    /* Chevron à droite */
+    summary::after{
+      content:"";
+      position:absolute;
+      top: 50%;
+      right: 18px;
+      width: 10px;
+      height: 10px;
+      border-right: 2px solid var(--muted);
+      border-bottom: 2px solid var(--muted);
+      transform: translateY(-50%) rotate(-45deg);
+      transition: transform .2s ease;
+    }
+    details[open] summary::after{
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+    .answer{
+      padding: 0 20px 20px;
+      color: var(--muted);
+      font-size: 16px;
+      animation: fade .18s ease;
+    }
+    .answer p{ margin: 10px 0; }
+    .answer ul{ margin: 8px 0 0 18px; padding:0 }
+    .answer li{ margin: 4px 0 }
+
+    @keyframes fade{ from{opacity:.7} to{opacity:1} }
+
+    /* Badge / mise en avant légère si besoin */
+    .pill{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius:999px;
+      background: rgba(16,185,129,.1);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+
+    /* Responsive : resserrer les paddings sur mobile */
+    @media (max-width:640px){
+      summary{ padding: 18px 48px 18px 16px; font-size: 17px; }
+      .answer{ padding: 0 16px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <section class="section">
+    <h2 class="title">Les questions fréquentes</h2>
+
+    <div class="faq" role="list">
+      <!-- 1 -->
+      <details>
+        <summary>Qu’est-ce que FitMatch ?</summary>
+        <div class="answer">
+          <p><strong>FitMatch</strong> est la plateforme qui met en relation des clients avec des coachs sportifs
+            proches d’eux, dans leurs salles préférées. Les clients recherchent par <em>ville</em>, <em>code postal</em>
+            ou <em>salle (Basic-Fit, Fitness Park, etc.)</em>, consultent les profils des coachs et réservent un créneau
+            en quelques clics.</p>
+        </div>
+      </details>
+
+      <!-- 2 -->
+      <details>
+        <summary>Comment réserver une séance sur FitMatch ?</summary>
+        <div class="answer">
+          <ul>
+            <li>Entre ta <strong>ville / code postal</strong> ou choisis directement une <strong>salle</strong>.</li>
+            <li>Sélectionne une <strong>spécialité</strong> (musculation, perte de poids, etc.).</li>
+            <li>Choisis un <strong>coach</strong>, un <strong>créneau</strong> et confirme ta réservation.</li>
+            <li>Tu reçois un <strong>email de confirmation</strong> et un rappel automatique avant la séance.</li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- 3 -->
+      <details>
+        <summary>Est-ce que je dois payer en ligne sur FitMatch ?</summary>
+        <div class="answer">
+          <p><strong>Pour l’instant, non.</strong> Le paiement se fait directement au coach
+            <strong>en espèces</strong> ou par <strong>virement</strong>, sur place <em>avant</em> ou <em>après</em>
+            la séance selon ce qui est convenu avec lui.</p>
+        </div>
+      </details>
+
+      <!-- 4 -->
+      <details>
+        <summary>Le paiement en ligne sera-t-il disponible plus tard ? <span class="pill">Bientôt</span></summary>
+        <div class="answer">
+          <p>Oui. Nous déployons prochainement un règlement en ligne sécurisé (carte ou portefeuille digital),
+            avec reçu automatique et annulation gérée directement depuis ton compte.</p>
+        </div>
+      </details>
+
+      <!-- 5 -->
+      <details>
+        <summary>Comment gérer mes séances sur FitMatch ?</summary>
+        <div class="answer">
+          <p>Dans ton <strong>espace client</strong>, tu peux :</p>
+          <ul>
+            <li>Consulter tes réservations et leurs détails,</li>
+            <li><strong>Modifier/annuler</strong> selon la politique du coach,</li>
+            <li>Recevoir des <strong>rappels</strong> automatiques et des notifications importantes.</li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- 6 -->
+      <details>
+        <summary>Comment faire apparaître mon profil de coach sur FitMatch ?</summary>
+        <div class="answer">
+          <ul>
+            <li>Va sur <strong>S’inscrire &rarr; Coach</strong> et complète ton profil (bio, photos, tarifs).</li>
+            <li>Choisis tes <strong>salles d’entraînement</strong> et tes <strong>spécialités</strong>.</li>
+            <li>Ouvre ton <strong>agenda</strong> : tes créneaux deviennent réservable par les clients.</li>
+          </ul>
+        </div>
+      </details>
+
+      <!-- 7 (bonus réseaux sociaux) -->
+      <details>
+        <summary>Puis-je connecter mes réseaux sociaux à mon profil FitMatch ?</summary>
+        <div class="answer">
+          <p>Oui ! Ajoute les liens vers ton <strong>Instagram</strong>, TikTok ou autres réseaux sur ton profil.
+            Les clients peuvent voir <strong>tes transformations</strong>, ton style de coaching et te découvrir.</p>
+          <p>En plus, place ton <strong>lien FitMatch</strong> dans ta bio pour que tes abonnés
+            <strong>voient tes salles</strong> et <strong>réservent directement</strong>.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <script>
+    // Fermer automatiquement les autres items quand on en ouvre un (comportement type “accordion”)
+    const items = document.querySelectorAll('.faq details');
+    items.forEach((d) => {
+      d.addEventListener('toggle', () => {
+        if (d.open) {
+          items.forEach((other) => { if (other !== d) other.removeAttribute('open'); });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
