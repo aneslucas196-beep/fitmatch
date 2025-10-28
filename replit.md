@@ -36,6 +36,14 @@ Preferred communication style: Simple, everyday language.
 - **Client Dashboard**: Redesigned home page with fitness-inspired gradient background, dynamic motivational quotes, visual progress bar, upcoming workout sessions, and badge system.
 - **FAQ Section**: Homepage includes a Planity-style FAQ section using native HTML5 `<details>` for accordion functionality.
 - **Email Reminder Section**: Added to `/coach-signup` page, featuring an iPhone showing Gmail app with FitMatch reminder email. Image served via /attached_assets directory. Highlights automatic email reminders, instant confirmation, and flexible cancellation policy.
+- **Testimonials Section**: Coach testimonials section added to `/coach-signup` page
+  - Title: "Ils coachent avec FitMatch"
+  - 3 coach testimonial cards: Laura Martin (Fitness Park Maurepas), Anas B. (Basic-Fit Élancourt), Mehdi K. (Fitness Park Trappes)
+  - Each card includes: coach photo, name, gym location, 5-star rating, testimonial quote, specialty tags
+  - Instagram credibility boost section with SVG icon
+  - Responsive grid layout: 3 columns on desktop, 2 on tablet, 1 on mobile
+  - Clean, minimal design with soft shadows and rounded corners
+  - Images from Unsplash for coach photos
 
 ### System Design Choices
 - **Modular Data**: JSON-based data layer for gyms and coaches, designed for easy migration to a backend API.
