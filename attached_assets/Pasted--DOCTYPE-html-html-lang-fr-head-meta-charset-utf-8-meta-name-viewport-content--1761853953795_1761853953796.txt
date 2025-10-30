@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Réserver une séance • FitMatch</title>
+<style>
+  :root{
+    --bg:#f6f7f8;--card:#ffffff;--text:#1f2937;--muted:#6b7280;
+    --brand:#10b981;--brand-weak:#e6f9f2;--border:#e5e7eb;--danger:#ef4444;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;}
+  .wrap{max-width:1100px;margin:40px auto;padding:0 16px}
+  h1{font-size:28px;margin:0 0 18px;color:var(--text)}
+  .sub{color:var(--muted);margin-bottom:18px}
+  .board{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:0 4px 14px rgba(0,0,0,.04)}
+
+  /* header */
+  .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px}
+  .range{font-weight:600;color:var(--text)}
+  .nav{display:flex;gap:8px}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn.ghost{background:#fff}
+  .hint{color:var(--muted);font-size:14px;margin-left:8px}
+
+  /* grid */
+  .grid{overflow:auto;border-top:1px solid var(--border)}
+  table{border-collapse:separate;border-spacing:0;width:100%;min-width:880px}
+  thead th{position:sticky;top:0;background:var(--card);z-index:2;padding:14px;border-bottom:1px solid var(--border);text-align:center}
+  thead small{display:block;color:var(--muted);font-weight:500}
+  tbody td{padding:6px;border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
+  tbody tr:last-child td{border-bottom:0}
+  tbody td:first-child{position:sticky;left:0;background:var(--card);z-index:1;border-right:1px solid var(--border);text-align:right;padding-right:10px;color:var(--muted);font-weight:600;width:80px}
+
+  .slot{display:flex;align-items:center;justify-content:center;
+        height:42px;border-radius:10px;border:1px solid var(--border);
+        cursor:pointer;background:#fff;transition:.15s}
+  .slot:hover{box-shadow:0 0 0 3px var(--brand-weak)}
+  .slot.disabled{background:#f3f4f6;color:#9ca3af;border-style:dashed;cursor:not-allowed}
+  .slot.busy{background:#fff0f0;border-color:#ffd1d1;color:#b91c1c}
+  .slot.selected{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 0 0 3px var(--brand-weak)}
+
+  /* footer */
+  .footer{display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:12px;flex-wrap:wrap}
+  .pill{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);border-radius:999px;padding:8px 12px;color:var(--text)}
+  .pill .dot{width:10px;height:10px;border-radius:50%}
+  .dot.free{background:var(--brand)}
+  .dot.busy{background:var(--danger)}
+  .dot.off{background:#9ca3af}
+
+  .confirm{display:flex;align-items:center;gap:10px}
+  .recap{color:var(--text);font-weight:600}
+  .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.2s}
+  .toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Réserver une séance</h1>
+    <div class="sub">Choisis un créneau disponible pour <strong id="coachName">Coach Demo</strong>.</div>
+
+    <div class="board">
+      <div class="head">
+        <div class="range" id="rangeText"></div>
+        <div class="nav">
+          <button class="btn" id="prevWeek">◀ Semaine préc.</button>
+          <button class="btn" id="nextWeek">Semaine suiv. ▶</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <table>
+          <thead>
+            <tr id="daysHead"><th></th></tr>
+          </thead>
+          <tbody id="gridBody"></tbody>
+        </table>
+      </div>
+
+      <div class="footer">
+        <div class="legend">
+          <span class="pill"><span class="dot free"></span>Disponible</span>
+          <span class="pill"><span class="dot busy"></span>Occupé</span>
+          <span class="pill"><span class="dot off"></span>Indispo</span>
+        </div>
+        <div class="confirm">
+          <div class="recap" id="recap">Aucun créneau sélectionné</div>
+          <button class="btn primary" id="confirmBtn" disabled>Confirmer la séance</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Réservation confirmée ✅</div>
+
+<script>
+/* === CONFIG === */
+const COACH_ID = "c_demo";         // ➜ remplace par l’ID réel
+const GYM_ID   = "g_demo";          // ➜ optionnel
+const SLOT_MINUTES = 30;
+const DAY_START = "10:00";          // 10h -> modifiable
+const DAY_END   = "19:00";          // 19h -> modifiable
+
+/* === HELPERS === */
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,"0");
+const fmtDate = d => `${d.toLocaleDateString('fr-FR',{weekday:'short'})} ${pad(d.getDate())} ${d.toLocaleDateString('fr-FR',{month:'short'})}`;
+const toISO = (d) => d.toISOString();
+function addMinutes(date, m){ const d=new Date(date); d.setMinutes(d.getMinutes()+m); return d; }
+function setTime(base, hhmm){const [h,m]=hhmm.split(':').map(Number);const d=new Date(base);d.setHours(h,m,0,0);return d;}
+function between(date, start, end){return date>=start && date<end;}
+
+/* === MOCK API (remplace ces 3 fonctions par tes vraies routes) === */
+async function fetchAvailability(coachId, fromISO, toISO){
+  // renvoie des intervalles disponibles (UTC ISO)
+  const from=new Date(fromISO), to=new Date(toISO);
+  const items=[];
+  for(let d=new Date(from); d<=to; d.setDate(d.getDate()+1)){
+    // tous les jours mêmes tranches (10:00-13:00, 14:00-18:00)
+    const s1=setTime(d, "10:00"), e1=setTime(d,"13:00");
+    const s2=setTime(d, "14:00"), e2=setTime(d,"18:00");
+    items.push({start:s1.toISOString(), end:e1.toISOString()});
+    items.push({start:s2.toISOString(), end:e2.toISOString()});
+  }
+  return items;
+}
+async function fetchBookings(coachId, fromISO, toISO){
+  // créneaux déjà pris (exemple)
+  return [
+    // un créneau pris demain à 11:00-11:30
+    (()=>{const d=new Date(); d.setDate(d.getDate()+1);
+      const s=setTime(d,"11:00"); const e=addMinutes(s,SLOT_MINUTES);
+      return {start:s.toISOString(), end:e.toISOString()}
+    })()
+  ];
+}
+async function createBooking(payload){
+  // appelle ton POST /api/bookings ici
+  console.log("BOOKING ▶", payload);
+  await new Promise(r=>setTimeout(r,400)); // petite latence
+  return {ok:true,id:"bk_"+Math.random().toString(36).slice(2)};
+}
+
+/* === STATE === */
+let weekOffset = 0;
+let selection = null; // {start, end, dayIndex}
+
+/* === RENDER === */
+async function renderWeek(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = new Date(today); start.setDate(start.getDate() + (weekOffset*7));
+  const end = new Date(start); end.setDate(end.getDate()+6);
+
+  // header dates
+  $("#rangeText").textContent =
+    `${start.toLocaleDateString('fr-FR')} – ${end.toLocaleDateString('fr-FR')}`;
+
+  const headRow = $("#daysHead");
+  headRow.innerHTML = "<th></th>";
+  const days = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(start); d.setDate(d.getDate()+i);
+    days.push(d);
+    const th = document.createElement("th");
+    th.innerHTML = `<div>${fmtDate(d)}<small>${d.getFullYear()}</small></div>`;
+    headRow.appendChild(th);
+  }
+
+  // slots axis
+  const times = [];
+  let cursor = setTime(start, DAY_START);
+  const dayEnd = setTime(start, DAY_END);
+  while(cursor < dayEnd){
+    times.push(cursor.toTimeString().slice(0,5));
+    cursor = addMinutes(cursor, SLOT_MINUTES);
+  }
+
+  // fetch data
+  const avail = await fetchAvailability(COACH_ID, start.toISOString(), end.toISOString());
+  const bookings = await fetchBookings(COACH_ID, start.toISOString(), end.toISOString());
+  const body = $("#gridBody"); body.innerHTML = "";
+
+  // function to check status for given date+time
+  function statusFor(dtStart){
+    const dtEnd = addMinutes(dtStart, SLOT_MINUTES);
+    // past
+    if(dtStart < new Date()) return "disabled";
+    // inside availability?
+    const inAvail = avail.some(a=>{
+      const s=new Date(a.start), e=new Date(a.end);
+      return between(dtStart,s,e) && dtEnd<=e;
+    });
+    if(!inAvail) return "disabled";
+    // busy?
+    const isBusy = bookings.some(b=>{
+      const s=new Date(b.start), e=new Date(b.end);
+      return !(dtEnd<=s || dtStart>=e); // overlap
+    });
+    return isBusy ? "busy" : "free";
+  }
+
+  // build rows
+  times.forEach(time=>{
+    const tr = document.createElement("tr");
+    const th = document.createElement("td");
+    th.textContent = time;
+    tr.appendChild(th);
+
+    days.forEach((d,dayIndex)=>{
+      const td = document.createElement("td");
+      const slotStart = setTime(d, time);
+      const st = statusFor(slotStart);
+      const btn = document.createElement("div");
+      btn.className = `slot ${st}`;
+      btn.textContent = time;
+
+      if(st==="free"){
+        btn.addEventListener("click", ()=>{
+          // clear previous
+          document.querySelectorAll(".slot.selected").forEach(el=>el.classList.remove("selected"));
+          btn.classList.add("selected");
+          selection = {
+            start: slotStart,
+            end: addMinutes(slotStart,SLOT_MINUTES),
+            dayIndex
+          };
+          $("#recap").textContent =
+            `Séance le ${d.toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'})} à ${time}`;
+          $("#confirmBtn").disabled = false;
+        });
+      }
+
+      td.appendChild(btn);
+      tr.appendChild(td);
+    });
+
+    body.appendChild(tr);
+  });
+
+  // reset if week changed
+  selection = null;
+  $("#recap").textContent = "Aucun créneau sélectionné";
+  $("#confirmBtn").disabled = true;
+}
+
+$("#prevWeek").addEventListener("click", ()=>{ weekOffset--; renderWeek(); });
+$("#nextWeek").addEventListener("click", ()=>{ weekOffset++; renderWeek(); });
+
+$("#confirmBtn").addEventListener("click", async ()=>{
+  if(!selection) return;
+  const payload = {
+    coachId: COACH_ID,
+    gymId: GYM_ID,
+    startsAt: toISO(selection.start),
+    endsAt: toISO(selection.end),
+    source: "fitmatch"
+  };
+  const res = await createBooking(payload);
+  if(res?.ok){
+    showToast("Réservation confirmée ✅");
+    // recharger la semaine pour marquer le créneau en “occupé”
+    renderWeek();
+  }else{
+    showToast("Erreur de réservation ❌");
+  }
+});
+
+function showToast(msg){
+  const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+/* boot */
+renderWeek();
+</script>
+</body>
+</html>

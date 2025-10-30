@@ -1980,6 +1980,173 @@ async def view_coach_profile(request: Request, coach_id: str):
     })
 
 # ======================================
+# SYSTÈME DE RÉSERVATION
+# ======================================
+
+@app.get("/coach/{coach_id}/book", response_class=HTMLResponse)
+async def booking_page(request: Request, coach_id: str):
+    """Page de réservation pour un coach."""
+    # Charger les infos du coach (même logique que view_coach_profile)
+    coaches = load_coaches_from_json()
+    
+    coach = None
+    try:
+        coach_id_int = int(coach_id)
+        coach = next((c for c in coaches if c.get("id") == coach_id_int), None)
+    except ValueError:
+        coach = next((c for c in coaches if str(c.get("id")) == coach_id), None)
+    
+    if not coach:
+        if supabase_anon:
+            try:
+                response = supabase_anon.table("profiles").select("*").eq("user_id", coach_id).single().execute()
+                if response.data:
+                    coach = response.data
+            except Exception as e:
+                print(f"Coach non trouvé dans Supabase: {e}")
+        
+        if not coach:
+            from utils import load_demo_users
+            demo_users = load_demo_users()
+            for email, user_data in demo_users.items():
+                encoded_email = email.replace("@", "_").replace(".", "_")
+                if user_data.get("role") == "coach" and (str(user_data.get("id")) == coach_id or user_data.get("email") == coach_id or encoded_email == coach_id):
+                    coach = user_data
+                    break
+    
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trouvé")
+    
+    if not coach.get("photo"):
+        coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
+    
+    return templates.TemplateResponse("booking.html", {
+        "request": request,
+        "coach": coach
+    })
+
+@app.get("/api/bookings/availability")
+async def get_availability(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
+    """Récupère les disponibilités d'un coach pour une période donnée."""
+    # Pour l'instant, retourner des disponibilités par défaut (10h-13h et 14h-18h tous les jours)
+    try:
+        from_dt = datetime.fromisoformat(from_date.replace('Z', '+00:00'))
+        to_dt = datetime.fromisoformat(to_date.replace('Z', '+00:00'))
+        
+        availability = []
+        current = from_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        while current <= to_dt:
+            # Disponibilité matin: 10h-13h
+            morning_start = current.replace(hour=10, minute=0)
+            morning_end = current.replace(hour=13, minute=0)
+            availability.append({
+                "start": morning_start.isoformat(),
+                "end": morning_end.isoformat()
+            })
+            
+            # Disponibilité après-midi: 14h-18h
+            afternoon_start = current.replace(hour=14, minute=0)
+            afternoon_end = current.replace(hour=18, minute=0)
+            availability.append({
+                "start": afternoon_start.isoformat(),
+                "end": afternoon_end.isoformat()
+            })
+            
+            current += timedelta(days=1)
+        
+        return availability
+    except Exception as e:
+        print(f"Erreur lors de la récupération des disponibilités: {e}")
+        return []
+
+@app.get("/api/bookings")
+async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
+    """Récupère les réservations existantes d'un coach."""
+    # Charger depuis demo_users.json
+    try:
+        demo_users = load_demo_users()
+        
+        # Chercher le coach par ID
+        coach_email = None
+        for email, user_data in demo_users.items():
+            encoded_email = email.replace("@", "_").replace(".", "_")
+            if user_data.get("role") == "coach" and (str(user_data.get("id")) == coach_id or user_data.get("email") == coach_id or encoded_email == coach_id):
+                coach_email = email
+                break
+        
+        if not coach_email:
+            return []
+        
+        # Récupérer les réservations
+        bookings = demo_users.get(coach_email, {}).get("bookings", [])
+        
+        # Filtrer par période
+        from_dt = datetime.fromisoformat(from_date.replace('Z', '+00:00'))
+        to_dt = datetime.fromisoformat(to_date.replace('Z', '+00:00'))
+        
+        filtered_bookings = []
+        for booking in bookings:
+            booking_start = datetime.fromisoformat(booking["start"].replace('Z', '+00:00'))
+            if from_dt <= booking_start <= to_dt:
+                filtered_bookings.append(booking)
+        
+        return filtered_bookings
+    except Exception as e:
+        print(f"Erreur lors de la récupération des réservations: {e}")
+        return []
+
+@app.post("/api/bookings")
+async def create_booking(request: Request):
+    """Crée une nouvelle réservation."""
+    try:
+        data = await request.json()
+        coach_id = data.get("coach_id")
+        starts_at = data.get("starts_at")
+        ends_at = data.get("ends_at")
+        
+        if not coach_id or not starts_at or not ends_at:
+            raise HTTPException(status_code=400, detail="Données manquantes")
+        
+        # Charger les utilisateurs
+        demo_users = load_demo_users()
+        
+        # Trouver le coach
+        coach_email = None
+        for email, user_data in demo_users.items():
+            encoded_email = email.replace("@", "_").replace(".", "_")
+            if user_data.get("role") == "coach" and (str(user_data.get("id")) == coach_id or user_data.get("email") == coach_id or encoded_email == coach_id):
+                coach_email = email
+                break
+        
+        if not coach_email:
+            raise HTTPException(status_code=404, detail="Coach non trouvé")
+        
+        # Créer la réservation
+        booking = {
+            "id": str(uuid.uuid4()),
+            "start": starts_at,
+            "end": ends_at,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        # Ajouter aux réservations du coach
+        if "bookings" not in demo_users[coach_email]:
+            demo_users[coach_email]["bookings"] = []
+        
+        demo_users[coach_email]["bookings"].append(booking)
+        
+        # Sauvegarder
+        save_demo_user(coach_email, demo_users[coach_email])
+        
+        return {"ok": True, "id": booking["id"]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Erreur lors de la création de la réservation: {e}")
+        raise HTTPException(status_code=500, detail="Erreur lors de la création de la réservation")
+
+# ======================================
 # ENDPOINTS API COACH - GESTION DES LIEUX
 # ======================================
 
