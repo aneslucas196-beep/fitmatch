@@ -1944,12 +1944,18 @@ async def view_coach_profile(request: Request, coach_id: str):
             from utils import load_demo_users
             demo_users = load_demo_users()
             for email, user_data in demo_users.items():
-                if user_data.get("role") == "coach" and (str(user_data.get("id")) == coach_id or user_data.get("email") == coach_id):
+                # Encoder l'email pour comparer avec coach_id (format: email@domain.com -> email_domain_com)
+                encoded_email = email.replace("@", "_").replace(".", "_")
+                if user_data.get("role") == "coach" and (str(user_data.get("id")) == coach_id or user_data.get("email") == coach_id or encoded_email == coach_id):
                     coach = user_data
                     break
     
     if not coach:
         raise HTTPException(status_code=404, detail="Coach non trouvé")
+    
+    # Assurer qu'il y a une photo par défaut
+    if not coach.get("photo") or coach.get("photo") == "":
+        coach["photo"] = "/static/default-avatar.jpg"
     
     # Récupérer les salles associées au coach
     gyms = []
