@@ -33,6 +33,12 @@ Preferred communication style: Simple, everyday language.
     - **Sorting**: Options for "Pertinence", "Note", and "Distance".
     - **Logic**: Handles various search combinations (address only, specialty only, address + specialty).
     - **Public Gym Pages**: Allows discovery of coaches by searching gyms via postal codes, even without login.
+- **Coach Profile Pages**: Public profile pages accessible via `/coach/{coach_id}` with Planity-style minimalist design (white background, Inter font, clean layout):
+    - **Header**: Large profile photo (128px circular), full name with verified badge, rating with review count, city location, and pricing
+    - **Sections**: Specialties with emoji badges, biography ("À propos"), gym locations with addresses, Instagram link with gradient button
+    - **Navigation**: Back button to return to previous page
+    - **Data Sources**: Loads from coaches.json, Supabase profiles, or demo_users with automatic fallback
+    - **Responsive Design**: Mobile-friendly layout with proper spacing and typography
 - **Client Dashboard**: Redesigned home page with fitness-inspired gradient background, dynamic motivational quotes, visual progress bar, upcoming workout sessions, and badge system.
 - **FAQ Section**: Homepage includes a Planity-style FAQ section using native HTML5 `<details>` for accordion functionality.
 - **Email Reminder Section**: Added to `/coach-signup` page, featuring an iPhone showing Gmail app with FitMatch reminder email. Image served via /attached_assets directory. Highlights automatic email reminders, instant confirmation, and flexible cancellation policy.

@@ -1909,6 +1909,71 @@ async def coach_transformations_add(
     return RedirectResponse(url="/coach/portal", status_code=303)
 
 # ======================================
+# ROUTE PUBLIQUE - PROFIL DU COACH
+# ======================================
+
+@app.get("/coach/{coach_id}", response_class=HTMLResponse)
+async def view_coach_profile(request: Request, coach_id: str):
+    """Affiche le profil public d'un coach."""
+    
+    # Charger tous les coaches
+    coaches = load_coaches_from_json()
+    
+    # Trouver le coach par ID (convertir en int si nécessaire)
+    coach = None
+    try:
+        coach_id_int = int(coach_id)
+        coach = next((c for c in coaches if c.get("id") == coach_id_int), None)
+    except ValueError:
+        # Si l'ID n'est pas un nombre, chercher par chaîne
+        coach = next((c for c in coaches if str(c.get("id")) == coach_id), None)
+    
+    # Si coach non trouvé dans JSON, essayer de charger depuis demo_users
+    if not coach:
+        user_supabase = None
+        if supabase_anon:
+            try:
+                response = supabase_anon.table("profiles").select("*").eq("user_id", coach_id).single().execute()
+                if response.data:
+                    coach = response.data
+            except Exception as e:
+                print(f"Coach non trouvé dans Supabase: {e}")
+        
+        # Sinon, charger depuis demo_users
+        if not coach:
+            from utils import load_demo_users
+            demo_users = load_demo_users()
+            for email, user_data in demo_users.items():
+                if user_data.get("role") == "coach" and (str(user_data.get("id")) == coach_id or user_data.get("email") == coach_id):
+                    coach = user_data
+                    break
+    
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trouvé")
+    
+    # Récupérer les salles associées au coach
+    gyms = []
+    if coach.get("gyms"):
+        # Pour les coaches du JSON
+        for gym_id in coach.get("gyms", []):
+            gym_data = get_gym_by_id(gym_id)
+            if gym_data:
+                gyms.append(gym_data)
+    elif coach.get("selected_gyms_data"):
+        # Pour les coaches avec selected_gyms_data (format JSON string)
+        try:
+            import json
+            gyms = json.loads(coach.get("selected_gyms_data"))
+        except:
+            pass
+    
+    return templates.TemplateResponse("coach_profile.html", {
+        "request": request,
+        "coach": coach,
+        "gyms": gyms
+    })
+
+# ======================================
 # ENDPOINTS API COACH - GESTION DES LIEUX
 # ======================================
 

@@ -121,7 +121,7 @@
         {% endif %}
 
         <!-- Réseaux sociaux -->
-        {% if coach.instagram_url %}
+        {% if coach.instagram_url and (coach.instagram_url.startswith('http://') or coach.instagram_url.startswith('https://')) %}
         <div class="mb-12">
             <h2 class="text-xl font-bold text-gray-900 mb-4">Réseaux sociaux</h2>
             <a href="{{ coach.instagram_url }}" 
