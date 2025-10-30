@@ -264,25 +264,6 @@
 
 <!-- Scripts pour l'autocomplétion des salles et l'aperçu photo -->
 <script>
-// Aperçu de la photo de profil
-document.addEventListener('DOMContentLoaded', function() {
-    const photoInput = document.getElementById('profile_photo');
-    const photoPreview = document.getElementById('profile-photo-preview');
-    
-    if (photoInput) {
-        photoInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    photoPreview.innerHTML = `<img src="${e.target.result}" alt="Aperçu" class="w-full h-full object-cover">`;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-});
-
 let selectedGyms = [];
 let allSuggestions = [];
 
@@ -298,6 +279,29 @@ try {
 {% endif %}
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ========================================
+    // APERÇU DE LA PHOTO DE PROFIL
+    // ========================================
+    const photoInput = document.getElementById('profile_photo');
+    const photoPreview = document.getElementById('profile-photo-preview');
+    
+    if (photoInput && photoPreview) {
+        photoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    photoPreview.innerHTML = `<img src="${event.target.result}" alt="Aperçu" class="w-full h-full object-cover">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        console.log('✅ Aperçu photo de profil activé');
+    }
+    
+    // ========================================
+    // GESTION DES SALLES
+    // ========================================
     // Afficher les salles sauvegardées au chargement
     if (selectedGyms.length > 0) {
         updateSelectedGymsList();

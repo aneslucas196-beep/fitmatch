@@ -24,7 +24,7 @@ Preferred communication style: Simple, everyday language.
 - **UI/UX Decisions**: Modern, minimalist design inspired by Planity, utilizing the Inter font family, clean white backgrounds, subtle borders, and a professional color scheme. Features a motivating client dashboard with progress tracking and achievement badges.
 
 ### Feature Specifications
-- **Coach Onboarding**: Comprehensive 4-section setup form (basic info, zone, specialties, gym locations) with profile completion tracking and redirection logic. Includes worldwide gym selection autocomplete via Google Places API.
+- **Coach Onboarding**: Comprehensive 4-section setup form (basic info with profile photo upload, zone, specialties, gym locations) with profile completion tracking and redirection logic. Includes worldwide gym selection autocomplete via Google Places API. Profile photo upload with live preview, processed via Pillow (original + thumbnail), stored in Supabase Storage or locally in /attached_assets/profile_photos for demo mode.
 - **Search & Discovery**:
     - **Homepage Search**: Dual interface for "Adresse/Ville" and "Spécialité" with smart autocomplete for locations.
     - **Coach Cards**: Professional display with photo, name, verified badge, rating, specialties, associated gyms, and pricing.
