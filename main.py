@@ -187,7 +187,7 @@ def get_coaches_by_gym_id(gym_id: str) -> List[Dict]:
                 coach_obj = {
                     "id": email.replace("@", "_").replace(".", "_"),  # ID unique basé sur email
                     "full_name": user_data.get("full_name", "Coach"),
-                    "photo": user_data.get("photo", "/static/default-avatar.jpg"),
+                    "photo": user_data.get("profile_photo_url", user_data.get("photo", "/static/default-avatar.jpg")),
                     "verified": user_data.get("verified", False),
                     "rating": user_data.get("rating", 5.0),
                     "reviews_count": user_data.get("reviews_count", 0),
@@ -1953,9 +1953,9 @@ async def view_coach_profile(request: Request, coach_id: str):
     if not coach:
         raise HTTPException(status_code=404, detail="Coach non trouvé")
     
-    # Assurer qu'il y a une photo par défaut
-    if not coach.get("photo") or coach.get("photo") == "":
-        coach["photo"] = "/static/default-avatar.jpg"
+    # Assurer qu'il y a une photo (profile_photo_url ou photo, sinon défaut)
+    if not coach.get("photo"):
+        coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
     
     # Récupérer les salles associées au coach
     gyms = []
