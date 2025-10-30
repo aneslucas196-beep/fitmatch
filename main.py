@@ -2045,12 +2045,14 @@ async def get_availability(coach_id: str, from_date: str = Query(..., alias="fro
                 "end": morning_end.isoformat()
             })
             
-            # Disponibilité après-midi: 14h-18h
+            # Disponibilité après-midi/soir: 14h-00h (minuit)
             afternoon_start = current.replace(hour=14, minute=0)
-            afternoon_end = current.replace(hour=18, minute=0)
+            # Pour minuit, on va jusqu'à la fin du jour
+            next_day = current + timedelta(days=1)
+            midnight = next_day.replace(hour=0, minute=0)
             availability.append({
                 "start": afternoon_start.isoformat(),
-                "end": afternoon_end.isoformat()
+                "end": midnight.isoformat()
             })
             
             current += timedelta(days=1)
