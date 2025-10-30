@@ -1631,6 +1631,7 @@ async def coach_profile_setup_post(
     specialties: List[str] = Form([]),
     selected_gym_ids: Optional[str] = Form(""),
     selected_gyms_data: Optional[str] = Form(""),
+    profile_photo: Optional[UploadFile] = File(None),
     user = Depends(require_coach_role)
 ):
     """Traitement du formulaire d'onboarding coach."""
@@ -1640,6 +1641,40 @@ async def coach_profile_setup_post(
     success_message = None
     
     try:
+        # Gérer l'upload de la photo de profil
+        profile_photo_url = None
+        if profile_photo and profile_photo.filename:
+            try:
+                photo_content = await profile_photo.read()
+                user_id = user.get("id", user.get("email", "demo_user"))
+                
+                if user_supabase:
+                    # Mode Supabase - Upload vers Supabase Storage
+                    original_content, thumb_content, filename = process_image_for_upload(photo_content, str(user_id))
+                    profile_photo_url = await upload_to_supabase_storage(user_supabase, original_content, f"profile_{filename}")
+                    
+                    if not profile_photo_url:
+                        error_message = "Erreur lors de l'upload de la photo de profil."
+                else:
+                    # Mode démo - Stocker localement dans attached_assets
+                    import os
+                    os.makedirs("attached_assets/profile_photos", exist_ok=True)
+                    
+                    # Traiter l'image
+                    original_content, thumb_content, filename = process_image_for_upload(photo_content, str(user_id))
+                    
+                    # Sauvegarder localement
+                    local_path = f"attached_assets/profile_photos/{filename.replace('/', '_')}"
+                    with open(local_path, "wb") as f:
+                        f.write(original_content)
+                    
+                    profile_photo_url = f"/attached_assets/profile_photos/{filename.replace('/', '_')}"
+                    print(f"✅ Photo sauvegardée localement: {profile_photo_url}")
+                    
+            except Exception as e:
+                print(f"❌ Erreur lors du traitement de la photo: {e}")
+                error_message = f"Erreur lors du traitement de la photo: {str(e)}"
+        
         if user_supabase:
             # Mode Supabase - Préparer les données de profil
             profile_data = {
@@ -1651,6 +1686,10 @@ async def coach_profile_setup_post(
                 "radius_km": radius_km,
                 "profile_completed": True  # Marquer le profil comme complété
             }
+            
+            # Ajouter l'URL de la photo si elle a été uploadée
+            if profile_photo_url:
+                profile_data["profile_photo_url"] = profile_photo_url
             
             # Mettre à jour le profil principal
             user_id = user.get("id", user.get("email", "demo_user"))
@@ -1730,6 +1769,7 @@ async def coach_profile_setup_post(
                 "specialties": specialties,  # ✅ Sauvegarder les spécialités
                 "selected_gym_ids": selected_gym_ids,  # ✅ Sauvegarder les IDs des salles
                 "selected_gyms_data": selected_gyms_data,  # ✅ Sauvegarder les détails complets des salles
+                "profile_photo_url": profile_photo_url or existing_user.get("profile_photo_url"),  # ✅ Sauvegarder la photo
                 # PRÉSERVER les données d'inscription existantes
                 "password": existing_user.get("password"),  # ✅ Conserver le mot de passe !
                 "gender": existing_user.get("gender"),
