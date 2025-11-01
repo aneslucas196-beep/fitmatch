@@ -2025,6 +2025,13 @@ async def booking_page(request: Request, coach_id: str):
         "coach": coach
     })
 
+@app.get("/reservation", response_class=HTMLResponse)
+async def reservation_page(request: Request):
+    """Page de confirmation de réservation avec identification."""
+    return templates.TemplateResponse("reservation.html", {
+        "request": request
+    })
+
 @app.get("/api/bookings/availability")
 async def get_availability(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
     """Récupère les disponibilités d'un coach pour une période donnée."""
