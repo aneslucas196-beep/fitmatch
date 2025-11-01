@@ -95,7 +95,7 @@ function saveRedirectUrl(){
 
 function goToSignup(){
   saveRedirectUrl();
-  location.href = '/signup';
+  location.href = '/static/signup.html';
 }
 
 function goToLogin(){
