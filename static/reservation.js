@@ -76,10 +76,12 @@ dlg.addEventListener('cancel', (e)=>{ e.preventDefault(); dlg.close(); });
 // ===== ÉTAPE 3 — IDENTIFICATION =====
 const LS_USER_KEY = 'fitmatch.user';
 const idCard = $('#step-3-identification');
+const guestCard = $('#guestCard');
 const form = $('#signupForm');
 const summary = $('#id-summary');
 const fullNameOut = $('#idFullName');
 const emailOut = $('#idEmail');
+const btnShowSignup = $('#btnShowSignup');
 const btnEdit = $('#btnEdit');
 const btnLogout = $('#btnLogout');
 const btnCreate = $('#btnCreate');
@@ -88,18 +90,26 @@ const btnCreate = $('#btnCreate');
 function renderIdentification(){
   const uRaw = localStorage.getItem(LS_USER_KEY);
   if(!uRaw){
-    // Pas identifié → montrer formulaire
+    // Pas identifié → montrer boutons guest
     summary.classList.add('hidden');
-    form.classList.remove('hidden');
+    form.classList.add('hidden');
+    guestCard.classList.remove('hidden');
     return;
   }
   const user = JSON.parse(uRaw);
   fullNameOut.textContent = user.fullName || '—';
   emailOut.textContent = user.email || '—';
-  // Identifié → cacher formulaire, montrer résumé
+  // Identifié → cacher tout sauf résumé
   form.classList.add('hidden');
+  guestCard.classList.add('hidden');
   summary.classList.remove('hidden');
 }
+
+// Afficher le formulaire au clic sur "Créer mon compte"
+btnShowSignup.addEventListener('click', ()=>{
+  guestCard.classList.add('hidden');
+  form.classList.remove('hidden');
+});
 
 // Fake call API (remplace par ton vrai POST si dispo)
 async function signupViaAPI(payload){
@@ -142,8 +152,8 @@ form.addEventListener('submit', async (e)=>{
 });
 
 btnEdit.addEventListener('click', ()=>{
-  form.classList.remove('hidden');
   summary.classList.add('hidden');
+  form.classList.remove('hidden');
 });
 
 btnLogout.addEventListener('click', ()=>{

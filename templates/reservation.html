@@ -119,8 +119,21 @@
         </div>
       </div>
 
-      <!-- Formulaire (visible si pas encore identifié) -->
-      <form id="signupForm" class="id-form card">
+      <!-- Boutons initiaux -->
+      <div class="card" id="guestCard">
+        <div class="section" style="margin-bottom:8px;font-weight:700">Nouveau sur FitMatch ?</div>
+        <div class="actions" style="margin-bottom:18px">
+          <button class="btn btn-outline" id="btnShowSignup">Créer mon compte</button>
+        </div>
+        <div class="muted small" style="text-align:center;margin:8px 0;">ou</div>
+        <div class="section" style="margin:10px 0 8px;font-weight:700">Vous avez déjà utilisé FitMatch ?</div>
+        <div class="actions">
+          <a class="btn btn-primary" href="/login">Se connecter</a>
+        </div>
+      </div>
+
+      <!-- Formulaire (caché par défaut) -->
+      <form id="signupForm" class="id-form card hidden">
         <div class="grid">
           <div class="field">
             <label for="fullName">Nom complet *</label>
