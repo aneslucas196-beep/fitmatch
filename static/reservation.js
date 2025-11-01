@@ -124,7 +124,7 @@ async function signupViaAPI(payload){
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
   if(!$('#acceptCgu').checked){
-    alert('Merci d'accepter les CGU pour continuer.');
+    alert("Merci d'accepter les CGU pour continuer.");
     return;
   }
   const fullName = $('#fullName').value.trim();
@@ -144,7 +144,7 @@ form.addEventListener('submit', async (e)=>{
     // Optionnel : faire défiler jusqu'à l'étape 3
     idCard.scrollIntoView({ behavior:'smooth', block:'start' });
   }catch(err){
-    alert("Impossible de créer le compte. Réessaie.");
+    alert("Impossible de créer le compte. Réessayez.");
   }finally{
     btnCreate.disabled = false;
     btnCreate.textContent = 'Créer mon compte';
