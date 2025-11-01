@@ -2032,13 +2032,6 @@ async def reservation_page(request: Request):
         "request": request
     })
 
-@app.get("/signup-quick", response_class=HTMLResponse)
-async def signup_quick_page(request: Request):
-    """Page d'inscription rapide (nom + email uniquement)."""
-    return templates.TemplateResponse("signup_quick.html", {
-        "request": request
-    })
-
 @app.get("/api/bookings/availability")
 async def get_availability(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
     """Récupère les disponibilités d'un coach pour une période donnée."""
