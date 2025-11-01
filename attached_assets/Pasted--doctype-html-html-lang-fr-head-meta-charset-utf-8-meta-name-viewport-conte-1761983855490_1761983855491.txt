@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FitMatch – Réserver la séance</title>
+  <style>
+    :root{
+      --text:#111; --muted:#6b7280; --border:#e5e7eb; --bg:#f7f7f7;
+      --primary:#111; --primary-fg:#fff;
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:720px;margin:32px auto;padding:0 16px}
+    h1{font-size:28px;line-height:1.2;margin:6px 0 20px;text-align:left}
+    .step{margin:18px 0}
+    .step > .title{font-size:20px;font-weight:700;margin:0 0 10px}
+    .card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:14px}
+    .muted{color:var(--muted)}
+    .price{font-weight:700}
+    .actions{display:flex;gap:12px;flex-wrap:wrap}
+    .btn{appearance:none;border:0;cursor:pointer;border-radius:12px;padding:14px 18px;font-weight:600}
+    .btn-primary{background:var(--primary);color:var(--primary-fg)}
+    .btn-outline{background:#fff;border:1px solid var(--border);color:var(--text)}
+    .between{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    a.link{color:#2563eb;text-decoration:none;font-weight:600}
+    .section{margin-top:12px}
+    .small{font-size:14px}
+    /* dialog */
+    dialog{border:0;border-radius:16px;width:min(520px,95vw);padding:0;overflow:hidden}
+    .dlg-head{padding:14px 16px;border-bottom:1px solid var(--border);font-weight:700}
+    .dlg-body{padding:16px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+    .slot{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;text-align:center;cursor:pointer}
+    .slot.is-selected{outline:2px solid #111}
+    .dlg-actions{padding:14px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+    @media (max-width:520px){ h1{font-size:24px} .title{font-size:18px} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Réserver la séance</h1>
+
+    <!-- Step 1 -->
+    <section class="step">
+      <p class="title">1. Prestation sélectionnée</p>
+      <div class="card">
+        <div class="row">
+          <div>
+            <div id="serviceName" style="font-weight:700">Séance musculation</div>
+            <div class="muted small">
+              avec <span id="coachName">Coach Anas</span> — <span id="gymName">BasicFit Élancourt</span>
+            </div>
+          </div>
+        </div>
+        <div class="section row">
+          <span class="pill"><span id="duration">60</span> min</span>
+          <span class="pill price"><span id="price">40</span> €</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 2 -->
+    <section class="step">
+      <p class="title between">
+        <span>2. Date et heure sélectionnées</span>
+        <a class="link" href="#" id="btnModify">Modifier</a>
+      </p>
+      <div class="card">
+        <div class="between">
+          <div>
+            <div id="dateLabel" style="font-weight:700">Mardi 4 novembre 2025</div>
+            <div class="muted small">à <span id="timeLabel">13:30</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="step">
+      <p class="title">3. Identification</p>
+      <div class="card">
+        <div class="section" style="margin-bottom:8px;font-weight:700">Nouveau sur FitMatch ?</div>
+        <div class="actions" style="margin-bottom:18px">
+          <a class="btn btn-outline" href="/signup">Créer mon compte</a>
+        </div>
+        <div class="muted small" style="text-align:center;margin:8px 0;">ou</div>
+        <div class="section" style="margin:10px 0 8px;font-weight:700">Vous avez déjà utilisé FitMatch ?</div>
+        <div class="actions">
+          <a class="btn btn-primary" href="/login">Se connecter</a>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Dialog Modifier -->
+  <dialog id="dlg">
+    <div class="dlg-head">Modifier la date & l’heure</div>
+    <div class="dlg-body">
+      <label class="small muted">Date</label>
+      <input id="inpDate" type="date" style="display:block;margin:6px 0 14px;padding:12px;border:1px solid var(--border);border-radius:10px;width:100%">
+
+      <label class="small muted">Créneau</label>
+      <div id="slots" class="grid"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn btn-outline" id="cancelDlg">Annuler</button>
+      <button class="btn btn-primary" id="saveDlg">Valider</button>
+    </div>
+  </dialog>
+
+  <script src="./reservation.js"></script>
+</body>
+</html>
