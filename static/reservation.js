@@ -75,6 +75,7 @@ dlg.addEventListener('cancel', (e)=>{ e.preventDefault(); dlg.close(); });
 
 // ===== ÉTAPE 3 — IDENTIFICATION =====
 const LS_USER_KEY = 'fitmatch.user';
+const LS_OTP_KEY = 'fitmatch.otp';
 const idCard = $('#step-3-identification');
 const guestCard = $('#guestCard');
 const form = $('#signupForm');
@@ -138,11 +139,10 @@ form.addEventListener('submit', async (e)=>{
   try{
     await signupViaAPI({ fullName, email, password });
     // Sauvegarde session locale
-    localStorage.setItem(LS_USER_KEY, JSON.stringify({ fullName, email }));
-    // Revenir au même écran (réservation) et afficher l'identité
-    renderIdentification();
-    // Optionnel : faire défiler jusqu'à l'étape 3
-    idCard.scrollIntoView({ behavior:'smooth', block:'start' });
+    localStorage.setItem(LS_USER_KEY, JSON.stringify({ fullName, email, verified: false }));
+    // Envoyer le code OTP et ouvrir l'overlay
+    await sendOtpEmail(email);
+    openEmailVerification();
   }catch(err){
     alert("Impossible de créer le compte. Réessayez.");
   }finally{
@@ -163,3 +163,91 @@ btnLogout.addEventListener('click', ()=>{
 
 // Premier rendu
 renderIdentification();
+
+// ===== VÉRIFICATION EMAIL =====
+const overlay = $('#email-verify-overlay');
+const evEmail = $('#evEmailHint');
+const evCode = $('#evCode');
+const evSubmit = $('#evSubmit');
+const evResend = $('#evResend');
+const evEdit = $('#evEditEmail');
+const evLogout2 = $('#evLogout');
+const evToast = $('#evToast');
+
+function showOverlay(){ overlay.classList.remove('hidden'); }
+function hideOverlay(){ overlay.classList.add('hidden'); }
+function toast(msg){ evToast.textContent = msg; evToast.classList.remove('hidden'); setTimeout(()=>evToast.classList.add('hidden'), 3500); }
+
+function generateCode(){ return ('' + Math.floor(100000 + Math.random()*900000)); }
+function saveOtp(email, code){
+  const expiresAt = Date.now() + 5*60*1000;
+  localStorage.setItem(LS_OTP_KEY, JSON.stringify({ email, code, expiresAt }));
+}
+function getOtp(){ try{ return JSON.parse(localStorage.getItem(LS_OTP_KEY)||'null'); }catch{ return null; } }
+function clearOtp(){ localStorage.removeItem(LS_OTP_KEY); }
+
+async function sendOtpEmail(email){
+  const code = generateCode();
+  saveOtp(email, code);
+  console.log('%c[DEV] Code OTP envoyé à ' + email + ' : ' + code, 'color: #16a34a; font-weight:700;');
+  toast('Code envoyé à ' + email + ' (vérifie ta boîte mail).');
+}
+
+async function verifyOtpEmail(email, code){
+  const otp = getOtp();
+  if(!otp || otp.email !== email) throw new Error("Aucun code actif pour cet e-mail.");
+  if(Date.now() > otp.expiresAt) throw new Error("Le code a expiré. Renvoyez-le.");
+  if(otp.code !== code) throw new Error("Code incorrect.");
+}
+
+function openEmailVerification(){
+  const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
+  if(!u || !u.email){ return; }
+  evEmail.textContent = u.email;
+  evCode.value = '';
+  showOverlay();
+}
+
+evResend.addEventListener('click', async ()=>{
+  const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
+  if(!u) return;
+  try{
+    await sendOtpEmail(u.email);
+  }catch(e){ toast("Impossible d'envoyer le code. Réessaie."); }
+});
+
+evEdit.addEventListener('click', ()=>{
+  hideOverlay();
+  guestCard.classList.add('hidden');
+  form.classList.remove('hidden');
+  summary.classList.add('hidden');
+  toast('Tu peux modifier ton e-mail puis recréer ton compte.');
+});
+
+evLogout2.addEventListener('click', ()=>{
+  localStorage.removeItem(LS_USER_KEY);
+  clearOtp();
+  hideOverlay();
+  renderIdentification();
+});
+
+evSubmit.addEventListener('click', async ()=>{
+  const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
+  if(!u) return;
+  const code = evCode.value.trim();
+  if(code.length !== 6){ toast('Entre le code à 6 chiffres.'); return; }
+
+  evSubmit.disabled = true; evSubmit.textContent = 'Vérification…';
+  try{
+    await verifyOtpEmail(u.email, code);
+    localStorage.setItem(LS_USER_KEY, JSON.stringify({ ...u, verified:true }));
+    clearOtp();
+    hideOverlay();
+    renderIdentification();
+    toast('Adresse e-mail vérifiée ✅');
+  }catch(e){
+    toast(e.message || 'Code invalide.');
+  }finally{
+    evSubmit.disabled = false; evSubmit.textContent = 'Enregistrer';
+  }
+});

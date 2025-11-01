@@ -47,9 +47,14 @@ Preferred communication style: Simple, everyday language.
         2. **Date & Time**: Selected date/time with "Modifier" link that opens native `<dialog>` for date/time adjustments (date picker + time slot grid from 09:00-20:00)
         3. **Identification**: Autonomous signup form with name, email, password, and CGU checkbox. After submission:
             - Validates fields and CGU acceptance
-            - Stores user in localStorage.fitmatch.user (fallback until API integration)
-            - Replaces form with identity summary showing "Identifié: [Name] / [Email]" with "Modifier" (return to form) and "Se déconnecter" (logout) buttons
+            - Stores user in localStorage.fitmatch.user with verified:false flag
+            - **Email Verification Flow**: Generates 6-digit OTP code, displays overlay with verification screen
+            - User enters code, clicks "Enregistrer" to verify email
+            - Options: "Recevoir le code à nouveau" (resend), "Modifier l'e-mail" (edit), "Se déconnecter" (logout)
+            - After successful verification: updates user.verified=true, hides overlay, displays identity summary
+            - Identity summary shows "Identifié: [Name] / [Email]" with "Modifier" and "Se déconnecter" buttons
             - Clean white Planity-style design with responsive grid (2 cols desktop, 1 col mobile)
+            - OTP stored in localStorage.fitmatch.otp with 5-minute expiration
     - **URL Parameters**: Dynamic data passed via query strings (coach, service, duration, price, gym, date, time) with intelligent fallback to default values
     - **Persistence**: Bookings stored in demo_users.json with conflict detection
     - **Mobile-First**: Responsive design with native HTML5 elements for optimal mobile UX

@@ -1,0 +1,203 @@
+<!-- ========= DIALOG / ÉCRAN DE VÉRIFICATION PAR E-MAIL ========= -->
+<div id="email-verify-overlay" class="ev-overlay hidden">
+  <div class="ev-card">
+    <h3>Confirmation par e-mail</h3>
+    <p id="evMessage">
+      Merci de saisir le code de confirmation envoyé à <b id="evEmailHint">—</b>.<br>
+      <button class="ev-link" id="evEditEmail">Modifier l’e-mail</button>
+    </p>
+
+    <input id="evCode" class="ev-input" inputmode="numeric" maxlength="6"
+           placeholder="Code de vérification — Exemple : 123456" />
+
+    <div class="ev-actions">
+      <button id="evResend" class="ev-link">Recevoir le code à nouveau</button>
+    </div>
+
+    <button id="evSubmit" class="ev-primary">Enregistrer</button>
+    <button id="evLogout" class="ev-secondary">Se déconnecter</button>
+
+    <div id="evToast" class="ev-toast hidden"></div>
+  </div>
+</div>
+
+<style>
+  /* Overlay */
+  .ev-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.35);
+    display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px; }
+  .ev-overlay.hidden{ display:none; }
+  .ev-card{ width:min(560px, 100%); background:#fff; border:1px solid #e9ecef; border-radius:14px;
+    padding:22px 20px; box-shadow:0 10px 30px rgba(0,0,0,.08); }
+  .ev-card h3{ margin:0 0 10px; font-size:22px; }
+  .ev-card p{ margin:0 0 12px; color:#374151; }
+  .ev-link{ background:none; border:0; color:#2563eb; cursor:pointer; padding:0; font-size:14px; }
+  .ev-input{ width:100%; height:48px; border:1px solid #dfe3e6; border-radius:12px; padding:10px 14px;
+    font-size:16px; margin:8px 0 10px; }
+  .ev-input:focus{ border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.1); outline:none; }
+  .ev-actions{ display:flex; justify-content:flex-end; margin:4px 0 12px; }
+  .ev-primary{ width:100%; height:48px; border:0; border-radius:12px; background:#111; color:#fff;
+    font-weight:600; font-size:16px; cursor:pointer; }
+  .ev-secondary{ width:100%; height:44px; margin-top:8px; border:1px solid #e5e7eb; border-radius:12px;
+    background:#fff; color:#111; font-weight:600; cursor:pointer; }
+  .ev-toast{ margin-top:10px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:10px;
+    padding:10px 12px; font-size:14px; color:#374151; }
+  .ev-toast.hidden{ display:none; }
+</style>
+
+<script>
+/**
+ * Vérification par e-mail — FitMatch
+ * - Utilise localStorage si l’API n’est pas prête (mode démo)
+ * - S’intègre avec fitmatch.user (déjà créé lors de l’inscription)
+ */
+
+const LS_USER_KEY = 'fitmatch.user';
+const LS_OTP_KEY  = 'fitmatch.otp'; // { email, code, expiresAt }
+
+const overlay   = document.getElementById('email-verify-overlay');
+const evEmail   = document.getElementById('evEmailHint');
+const evCode    = document.getElementById('evCode');
+const evSubmit  = document.getElementById('evSubmit');
+const evResend  = document.getElementById('evResend');
+const evEdit    = document.getElementById('evEditEmail');
+const evLogout  = document.getElementById('evLogout');
+const evToast   = document.getElementById('evToast');
+
+/* —— Helpers UI —— */
+function showOverlay(){ overlay.classList.remove('hidden'); }
+function hideOverlay(){ overlay.classList.add('hidden'); }
+function toast(msg){ evToast.textContent = msg; evToast.classList.remove('hidden'); setTimeout(()=>evToast.classList.add('hidden'), 3500); }
+
+/* —— OTP côté front (fallback) —— */
+function generateCode(){ return ('' + Math.floor(100000 + Math.random()*900000)); }
+function saveOtp(email, code){
+  const expiresAt = Date.now() + 5*60*1000; // 5 minutes
+  localStorage.setItem(LS_OTP_KEY, JSON.stringify({ email, code, expiresAt }));
+}
+function getOtp(){ try{ return JSON.parse(localStorage.getItem(LS_OTP_KEY)||'null'); }catch{ return null; } }
+function clearOtp(){ localStorage.removeItem(LS_OTP_KEY); }
+
+/* —— Envoi OTP —— */
+async function sendOtpEmail(email){
+  // === OPTION A : API réelle ===
+  // const res = await fetch('/api/send-otp-email', {
+  //   method:'POST', headers:{'Content-Type':'application/json'},
+  //   body: JSON.stringify({ email })
+  // });
+  // if(!res.ok) throw new Error('Envoi OTP impossible');
+
+  // === OPTION B : Fallback local (démo) ===
+  const code = generateCode();
+  saveOtp(email, code);
+  console.log('%c[DEV] Code OTP envoyé à ' + email + ' : ' + code, 'color: #16a34a; font-weight:700;');
+  toast('Code envoyé à ' + email + ' (vérifie ta boîte mail).');
+}
+
+/* —— Vérification OTP —— */
+async function verifyOtpEmail(email, code){
+  // === OPTION A : API réelle ===
+  // const res = await fetch('/api/verify-otp', {
+  //   method:'POST', headers:{'Content-Type':'application/json'},
+  //   body: JSON.stringify({ email, code })
+  // });
+  // if(!res.ok) throw new Error('Code invalide');
+
+  // === OPTION B : Fallback local ===
+  const otp = getOtp();
+  if(!otp || otp.email !== email) throw new Error("Aucun code actif pour cet e-mail.");
+  if(Date.now() > otp.expiresAt) throw new Error("Le code a expiré. Renvoyez-le.");
+  if(otp.code !== code) throw new Error("Code incorrect.");
+  // ok
+}
+
+/* —— Flux principal —— */
+function openEmailVerification(){
+  const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
+  if(!u || !u.email){ return; }
+  evEmail.textContent = u.email;
+  evCode.value = '';
+  showOverlay();
+}
+
+evResend.addEventListener('click', async ()=>{
+  const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
+  if(!u) return;
+  try{
+    await sendOtpEmail(u.email);
+  }catch(e){ toast('Impossible d’envoyer le code. Réessaie.'); }
+});
+
+evEdit.addEventListener('click', ()=>{
+  // On ferme l’overlay et on ré-affiche le formulaire d’inscription
+  hideOverlay();
+  const form = document.getElementById('signupForm');
+  const summary = document.getElementById('id-summary');
+  if(form && summary){ summary.classList.add('hidden'); form.classList.remove('hidden'); }
+  toast('Tu peux modifier ton e-mail puis recréer ton compte.');
+});
+
+evLogout.addEventListener('click', ()=>{
+  localStorage.removeItem(LS_USER_KEY);
+  clearOtp();
+  hideOverlay();
+  // Ré-afficher le formulaire si présent
+  const form = document.getElementById('signupForm');
+  const summary = document.getElementById('id-summary');
+  if(form && summary){ summary.classList.remove('hidden'); summary.classList.add('hidden'); }
+  location.reload();
+});
+
+evSubmit.addEventListener('click', async ()=>{
+  const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
+  if(!u) return;
+  const code = evCode.value.trim();
+  if(code.length !== 6){ toast('Entre le code à 6 chiffres.'); return; }
+
+  evSubmit.disabled = true; evSubmit.textContent = 'Vérification…';
+  try{
+    await verifyOtpEmail(u.email, code);
+    // MAJ utilisateur → vérifié
+    localStorage.setItem(LS_USER_KEY, JSON.stringify({ ...u, verified:true }));
+    clearOtp();
+    hideOverlay();
+
+    // Rafraîchir l’affichage Identification si présent
+    if(typeof renderIdentification === 'function'){ renderIdentification(); }
+    toast('Adresse e-mail vérifiée ✅');
+  }catch(e){
+    toast(e.message || 'Code invalide.');
+  }finally{
+    evSubmit.disabled = false; evSubmit.textContent = 'Enregistrer';
+  }
+});
+
+/* —— Hooke l’inscription existante : envoyer OTP après “Créer mon compte” —— */
+/* Si tu utilises le code d’inscription que je t’ai donné précédemment,
+   ajoute ce listener APRÈS avoir stocké fitmatch.user */
+(function attachAfterSignup(){
+  const originalSignup = window.signupViaAPI;
+  // Décore la fonction si elle existe
+  if(typeof originalSignup === 'function'){
+    window.signupViaAPI = async function(payload){
+      const res = await originalSignup(payload); // crée le compte (API ou local)
+      try{
+        const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
+        if(u && u.email){
+          await sendOtpEmail(u.email);
+          openEmailVerification();
+        }
+      }catch{}
+      return res;
+    };
+  }else{
+    // Si pas de fonction globale, on ouvre quand même après création locale
+    document.addEventListener('fitmatch:signup:done', async ()=>{
+      const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
+      if(u && u.email){
+        await sendOtpEmail(u.email);
+        openEmailVerification();
+      }
+    });
+  }
+})();
+</script>
