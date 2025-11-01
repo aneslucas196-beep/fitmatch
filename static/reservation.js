@@ -72,3 +72,60 @@ $('#saveDlg').onclick = () => {
 
 // Accessibilité : fermer dialog avec ESC
 dlg.addEventListener('cancel', (e)=>{ e.preventDefault(); dlg.close(); });
+
+// ===== AUTHENTIFICATION =====
+const AUTH_KEY = 'fm_user';
+
+function getUser(){
+  try { 
+    return JSON.parse(localStorage.getItem(AUTH_KEY)); 
+  } catch(e) { 
+    return null; 
+  }
+}
+
+function logout(){
+  localStorage.removeItem(AUTH_KEY);
+  location.reload();
+}
+
+function saveRedirectUrl(){
+  sessionStorage.setItem('redirect_to', location.pathname + location.search + location.hash);
+}
+
+function goToSignup(){
+  saveRedirectUrl();
+  location.href = '/signup';
+}
+
+function goToLogin(){
+  saveRedirectUrl();
+  location.href = '/login';
+}
+
+function renderIdentification(){
+  const user = getUser();
+  const idLogged = $('#id-logged');
+  const idGuest = $('#id-guest');
+  
+  if(user && user.email){
+    // Affiche Nom + Email, cache les boutons
+    $('#id-name').textContent = user.name || 'Compte FitMatch';
+    $('#id-email').textContent = user.email;
+    
+    idLogged.classList.remove('hide');
+    idGuest.classList.add('hide');
+  } else {
+    // Version non connectée
+    idLogged.classList.add('hide');
+    idGuest.classList.remove('hide');
+  }
+}
+
+// Event listeners
+$('#btn-signup').addEventListener('click', goToSignup);
+$('#btn-login').addEventListener('click', goToLogin);
+$('#btn-logout').addEventListener('click', logout);
+
+// Init
+renderIdentification();

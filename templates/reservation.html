@@ -37,6 +37,13 @@
     .slot{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;text-align:center;cursor:pointer}
     .slot.is-selected{outline:2px solid #111}
     .dlg-actions{padding:14px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+    .hide{display:none !important}
+    .id-card{display:flex;flex-direction:column;gap:8px}
+    .id-name{font-weight:700;font-size:16px}
+    .id-email{color:var(--muted);font-size:14px}
+    .id-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+    .divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--muted);font-size:14px}
+    .divider::before,.divider::after{content:"";height:1px;flex:1;background:var(--border)}
     @media (max-width:520px){ h1{font-size:24px} .title{font-size:18px} }
   </style>
 </head>
@@ -82,15 +89,28 @@
     <!-- Step 3 -->
     <section class="step">
       <p class="title">3. Identification</p>
-      <div class="card">
+      
+      <!-- Version CONNECTÉ -->
+      <div class="card hide" id="id-logged">
+        <div class="id-card">
+          <span class="id-name" id="id-name">—</span>
+          <span class="id-email" id="id-email">—</span>
+          <div class="id-actions">
+            <button class="btn btn-outline" id="btn-logout">Se déconnecter</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Version NON CONNECTÉ -->
+      <div class="card" id="id-guest">
         <div class="section" style="margin-bottom:8px;font-weight:700">Nouveau sur FitMatch ?</div>
         <div class="actions" style="margin-bottom:18px">
-          <a class="btn btn-outline" href="/signup">Créer mon compte</a>
+          <button class="btn btn-outline" id="btn-signup">Créer mon compte</button>
         </div>
-        <div class="muted small" style="text-align:center;margin:8px 0;">ou</div>
+        <div class="divider">ou</div>
         <div class="section" style="margin:10px 0 8px;font-weight:700">Vous avez déjà utilisé FitMatch ?</div>
         <div class="actions">
-          <a class="btn btn-primary" href="/login">Se connecter</a>
+          <button class="btn btn-primary" id="btn-login">Se connecter</button>
         </div>
       </div>
     </section>
