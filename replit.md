@@ -45,11 +45,7 @@ Preferred communication style: Simple, everyday language.
     - **Reservation Confirmation** (`/reservation`): Planity-style confirmation page (white background, max-width 720px, centered) with 3-section layout:
         1. **Service Summary**: Coach name, session type, duration (60 min), price (40€), gym location
         2. **Date & Time**: Selected date/time with "Modifier" link that opens native `<dialog>` for date/time adjustments (date picker + time slot grid from 09:00-20:00)
-        3. **Identification**: Dynamic section that shows either:
-            - **Non-authenticated state**: Dual CTAs ("Créer mon compte" button saves URL to sessionStorage and redirects to `/static/signup.html`, "Se connecter" link to `/login`)
-            - **Authenticated state**: Displays user's full name and email from localStorage.fm_user (no buttons)
-    - **Quick Signup** (`/static/signup.html`): Lightweight signup page capturing name and email, stores in localStorage.fm_user as JSON {name, email}, automatically redirects back to reservation page with preserved URL parameters
-    - **Client-Side Auth Flow**: localStorage.fm_user stores user session, sessionStorage.redirect_to preserves reservation URL during signup, renderUser() function toggles UI between guest/authenticated states
+        3. **Identification**: Dual CTAs for new users ("Créer mon compte" → /signup) and returning users ("Se connecter" → /login)
     - **URL Parameters**: Dynamic data passed via query strings (coach, service, duration, price, gym, date, time) with intelligent fallback to default values
     - **Persistence**: Bookings stored in demo_users.json with conflict detection
     - **Mobile-First**: Responsive design with native HTML5 elements for optimal mobile UX

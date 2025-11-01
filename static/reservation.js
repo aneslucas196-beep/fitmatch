@@ -72,39 +72,3 @@ $('#saveDlg').onclick = () => {
 
 // Accessibilité : fermer dialog avec ESC
 dlg.addEventListener('cancel', (e)=>{ e.preventDefault(); dlg.close(); });
-
-// === AUTHENTIFICATION ===
-function getUser(){
-  try {
-    return JSON.parse(localStorage.getItem('fm_user'));
-  } catch(e) {
-    return null;
-  }
-}
-
-function renderUser(){
-  const user = getUser();
-  const userCard = $('#userCard');
-  const guestCard = $('#guestCard');
-  
-  if(user && user.email){
-    // Afficher nom + email
-    $('#userName').textContent = user.name || 'Utilisateur';
-    $('#userEmail').textContent = user.email;
-    userCard.classList.remove('hide');
-    guestCard.classList.add('hide');
-  } else {
-    // Afficher boutons signup/login
-    userCard.classList.add('hide');
-    guestCard.classList.remove('hide');
-  }
-}
-
-// Bouton signup : sauvegarder l'URL actuelle avant redirection
-$('#btnSignup').addEventListener('click', ()=>{
-  sessionStorage.setItem('redirect_to', location.pathname + location.search);
-  location.href = '/static/signup.html';
-});
-
-// Init
-renderUser();
