@@ -37,6 +37,10 @@
     .slot{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;text-align:center;cursor:pointer}
     .slot.is-selected{outline:2px solid #111}
     .dlg-actions{padding:14px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+    .hide{display:none !important}
+    .user-info{display:flex;flex-direction:column;gap:6px}
+    .user-name{font-weight:700;font-size:16px}
+    .user-email{color:var(--muted);font-size:14px}
     @media (max-width:520px){ h1{font-size:24px} .title{font-size:18px} }
   </style>
 </head>
@@ -82,10 +86,20 @@
     <!-- Step 3 -->
     <section class="step">
       <p class="title">3. Identification</p>
-      <div class="card">
+      
+      <!-- Utilisateur connecté -->
+      <div class="card hide" id="userCard">
+        <div class="user-info">
+          <span class="user-name" id="userName">—</span>
+          <span class="user-email" id="userEmail">—</span>
+        </div>
+      </div>
+
+      <!-- Utilisateur non connecté -->
+      <div class="card" id="guestCard">
         <div class="section" style="margin-bottom:8px;font-weight:700">Nouveau sur FitMatch ?</div>
         <div class="actions" style="margin-bottom:18px">
-          <a class="btn btn-outline" href="/signup">Créer mon compte</a>
+          <button class="btn btn-outline" id="btnSignup">Créer mon compte</button>
         </div>
         <div class="muted small" style="text-align:center;margin:8px 0;">ou</div>
         <div class="section" style="margin:10px 0 8px;font-weight:700">Vous avez déjà utilisé FitMatch ?</div>
