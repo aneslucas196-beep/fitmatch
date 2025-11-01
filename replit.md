@@ -39,6 +39,16 @@ Preferred communication style: Simple, everyday language.
     - **Navigation**: Back button to return to previous page
     - **Data Sources**: Loads from coaches.json, Supabase profiles, or demo_users with automatic fallback
     - **Responsive Design**: Mobile-friendly layout with proper spacing and typography
+- **Booking System**: Complete reservation flow with calendar interface and confirmation page:
+    - **Calendar Interface** (`/coach/{coach_id}/book`): Weekly grid view with 30-minute time slots from 10:00 to 00:00 (midnight), visual indicators for available/busy/disabled slots, real-time availability checking via API, and session selection with instant feedback
+    - **Availability Windows**: Morning sessions (10:00-13:00) and afternoon/evening sessions (14:00-00:00) every day
+    - **Reservation Confirmation** (`/reservation`): Planity-style confirmation page (white background, max-width 720px, centered) with 3-section layout:
+        1. **Service Summary**: Coach name, session type, duration (60 min), price (40€), gym location
+        2. **Date & Time**: Selected date/time with "Modifier" link that opens native `<dialog>` for date/time adjustments (date picker + time slot grid from 09:00-20:00)
+        3. **Authentication**: Dual CTAs for new users ("Créer mon compte" → /signup) and returning users ("Se connecter" → /login)
+    - **URL Parameters**: Dynamic data passed via query strings (coach, service, duration, price, gym, date, time) with intelligent fallback to default values
+    - **Persistence**: Bookings stored in demo_users.json with conflict detection
+    - **Mobile-First**: Responsive design with native HTML5 elements for optimal mobile UX
 - **Client Dashboard**: Redesigned home page with fitness-inspired gradient background, dynamic motivational quotes, visual progress bar, upcoming workout sessions, and badge system.
 - **FAQ Section**: Homepage includes a Planity-style FAQ section using native HTML5 `<details>` for accordion functionality.
 - **Email Reminder Section**: Added to `/coach-signup` page, featuring an iPhone showing Gmail app with FitMatch reminder email. Image served via /attached_assets directory. Highlights automatic email reminders, instant confirmation, and flexible cancellation policy.
