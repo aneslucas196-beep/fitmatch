@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Créer mon compte - FitMatch</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#f9fafb;padding:20px}
+    .container{max-width:480px;margin:40px auto;background:#fff;border-radius:16px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+    h1{font-size:28px;font-weight:700;margin-bottom:8px}
+    .subtitle{color:#6b7280;margin-bottom:32px;font-size:15px}
+    label{display:block;font-weight:600;margin-bottom:6px;font-size:14px}
+    input{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;margin-bottom:20px;font-family:inherit}
+    input:focus{outline:2px solid #111;border-color:#111}
+    .btn{width:100%;padding:14px;border:none;border-radius:10px;font-weight:600;font-size:16px;cursor:pointer;background:#111;color:#fff}
+    .btn:hover{background:#333}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Créer mon compte</h1>
+    <p class="subtitle">Rejoignez FitMatch en quelques secondes</p>
+    
+    <form id="signupForm">
+      <label for="name">Nom complet</label>
+      <input type="text" id="name" name="name" required placeholder="Jean Dupont">
+      
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required placeholder="jean@exemple.fr">
+      
+      <button type="submit" class="btn">Créer mon compte</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('signupForm');
+    
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      
+      if(!name || !email) return;
+      
+      // Sauvegarder dans localStorage
+      localStorage.setItem('fm_user', JSON.stringify({ name, email }));
+      
+      // Récupérer l'URL de redirection sauvegardée
+      const redirectUrl = sessionStorage.getItem('redirect_to') || '/reservation';
+      sessionStorage.removeItem('redirect_to');
+      
+      // Rediriger
+      window.location.href = redirectUrl;
+    });
+  </script>
+</body>
+</html>
