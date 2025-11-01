@@ -47,6 +47,7 @@ Preferred communication style: Simple, everyday language.
         2. **Date & Time**: Selected date/time with "Modifier" link that opens native `<dialog>` for date/time adjustments (date picker + time slot grid from 09:00-20:00)
         3. **Authentication**: Dual CTAs for new users ("Créer mon compte" → /signup) and returning users ("Se connecter" → /login)
     - **URL Parameters**: Dynamic data passed via query strings (coach, service, duration, price, gym, date, time) with intelligent fallback to default values
+    - **Client-Side Authentication**: Lightweight auth flow using localStorage.fm_user (stores {name, email}) with sessionStorage.redirect_to for post-signup navigation. Signup page at /static/signup.html captures user info and redirects back to reservation. Logout button clears storage and reloads page.
     - **Persistence**: Bookings stored in demo_users.json with conflict detection
     - **Mobile-First**: Responsive design with native HTML5 elements for optimal mobile UX
 - **Client Dashboard**: Redesigned home page with fitness-inspired gradient background, dynamic motivational quotes, visual progress bar, upcoming workout sessions, and badge system.
