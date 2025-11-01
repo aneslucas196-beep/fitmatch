@@ -142,5 +142,23 @@
     "country_code": "AU",
     "coach_gender_preference": null,
     "selected_gyms": null
+  },
+  "brawstar79@gmail.com": {
+    "full_name": "anaslima",
+    "gender": "homme",
+    "role": "client",
+    "country_code": "AQ",
+    "password": "Anasking1234!",
+    "coach_gender_preference": "aucune",
+    "selected_gyms": []
+  },
+  "bawstar79@gmail.com": {
+    "full_name": "anaslima",
+    "gender": "homme",
+    "role": "client",
+    "country_code": "AQ",
+    "password": "Anasking1234!",
+    "coach_gender_preference": "aucune",
+    "selected_gyms": []
   }
 }

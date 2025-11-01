@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FitMatch – Réserver la séance</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    /* Style propre type Planity */
+    :root { --bg:#f7f7f8; --card:#ffffff; --txt:#111; --muted:#6b7280; --primary:#111; --radius:14px; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto; background:var(--bg); color:var(--txt); }
+    .container { max-width:720px; margin:32px auto 120px; padding:0 16px; }
+    .section { background:var(--card); border-radius:var(--radius); box-shadow:0 1px 0 rgba(0,0,0,.06); margin:16px 0; overflow:hidden; }
+    .section h2 { margin:0; padding:18px 20px; font-size:22px; border-bottom:1px solid #eee; }
+    .row { padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .row + .row { border-top:1px solid #eee; }
+    .muted { color:var(--muted); font-size:14px; }
+    .pill { display:inline-block; padding:6px 10px; background:#f2f4f7; border-radius:999px; font-size:13px; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 18px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; font-weight:600; }
+    .btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .btn.block { width:100%; }
+    .id-card { display:flex; flex-direction:column; gap:6px; }
+    .id-name { font-weight:700; font-size:16px; }
+    .id-email { color:var(--muted); font-size:14px; }
+    .id-actions { display:flex; gap:10px; margin-top:12px; }
+    .hide { display:none !important; }
+    .divider { display:flex; align-items:center; gap:12px; margin:18px 0; color:var(--muted); }
+    .divider::before, .divider::after { content:""; height:1px; flex:1; background:#e5e7eb; }
+    footer.sticky { position:fixed; left:0; right:0; bottom:0; background:var(--card); border-top:1px solid #e5e7eb; padding:16px; }
+    .footer-inner { max-width:720px; margin:0 auto; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- 1. Prestation -->
+    <section class="section">
+      <h2>1. Prestation sélectionnée</h2>
+      <div class="row">
+        <div>
+          <div style="font-weight:600;">Séance Musculation – Coaching</div>
+          <div class="muted">45 min • 40 €</div>
+        </div>
+        <button class="btn" type="button">Modifier</button>
+      </div>
+    </section>
+
+    <!-- 2. Date & heure -->
+    <section class="section">
+      <h2>2. Date et heure sélectionnées</h2>
+      <div class="row">
+        <div>
+          <div style="font-weight:600;">mardi 4 novembre 2025</div>
+          <div class="muted">à 13:30</div>
+        </div>
+        <button class="btn" type="button">Modifier</button>
+      </div>
+    </section>
+
+    <!-- 3. Identification -->
+    <section class="section" id="identification">
+      <h2>3. Identification</h2>
+
+      <!-- Version CONNECTÉ -->
+      <div class="row" id="id-logged" class="hide">
+        <div class="id-card">
+          <span class="id-name" id="id-name">—</span>
+          <span class="id-email" id="id-email">—</span>
+          <div class="id-actions">
+            <button class="btn" id="btn-edit">Modifier mes infos</button>
+            <button class="btn" id="btn-logout">Se déconnecter</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Version NON CONNECTÉ -->
+      <div class="row" id="id-guest">
+        <div>
+          <div style="font-weight:600;">Connectez-vous pour finaliser votre réservation</div>
+          <div class="muted">Vous conserverez votre créneau sélectionné.</div>
+        </div>
+      </div>
+      <div class="row" id="id-guest-actions">
+        <button class="btn" id="btn-signup">Créer mon compte</button>
+        <button class="btn" id="btn-login">Se connecter</button>
+      </div>
+      <div class="divider" id="id-divider">ou</div>
+      <div class="row" id="id-for-other" >
+        <button class="btn block">Prendre ce RDV pour un proche</button>
+      </div>
+    </section>
+  </div>
+
+  <footer class="sticky">
+    <div class="footer-inner">
+      <button class="btn primary block" id="btn-confirm">Confirmer</button>
+    </div>
+  </footer>
+
+  <script>
+    // -------------------------------
+    // Mini utilitaires d’auth
+    // -------------------------------
+    const KEY = 'fm_user';
+
+    function getUser(){
+      try { return JSON.parse(localStorage.getItem(KEY)); }
+      catch(e){ return null; }
+    }
+    function setUser(user){
+      localStorage.setItem(KEY, JSON.stringify(user));
+    }
+    function logout(){
+      localStorage.removeItem(KEY);
+      location.reload();
+    }
+    function go(path){
+      // mémorise l’URL courante pour le retour post-auth
+      sessionStorage.setItem('redirect_to', location.pathname + location.search + location.hash);
+      location.href = path;
+    }
+
+    // -------------------------------
+    // Rendu identification
+    // -------------------------------
+    function renderIdentification(){
+      const user = getUser();
+      const idLogged = document.getElementById('id-logged');
+      const idGuest  = document.getElementById('id-guest');
+      const idGuestActions = document.getElementById('id-guest-actions');
+      const idDivider = document.getElementById('id-divider');
+
+      if(user && user.email){
+        // Affiche Nom + Email, cache les boutons
+        document.getElementById('id-name').textContent = user.name || 'Compte FitMatch';
+        document.getElementById('id-email').textContent = user.email;
+
+        idLogged.classList.remove('hide');
+        idGuest.classList.add('hide');
+        idGuestActions.classList.add('hide');
+        idDivider.classList.add('hide');
+      } else {
+        // Version non connectée
+        idLogged.classList.add('hide');
+        idGuest.classList.remove('hide');
+        idGuestActions.classList.remove('hide');
+        idDivider.classList.remove('hide');
+      }
+    }
+
+    // -------------------------------
+    // Actions
+    // -------------------------------
+    document.getElementById('btn-signup').addEventListener('click', ()=> go('/signup.html'));
+    document.getElementById('btn-login').addEventListener('click',  ()=> go('/login.html'));
+    document.getElementById('btn-logout').addEventListener('click', logout);
+    document.getElementById('btn-edit').addEventListener('click', ()=> go('/account.html'));
+    document.getElementById('btn-confirm').addEventListener('click', ()=>{
+      alert('✅ Réservation confirmée (démo).');
+    });
+
+    // Init
+    renderIdentification();
+  </script>
+</body>
+</html>
