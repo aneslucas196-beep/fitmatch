@@ -72,3 +72,84 @@ $('#saveDlg').onclick = () => {
 
 // Accessibilité : fermer dialog avec ESC
 dlg.addEventListener('cancel', (e)=>{ e.preventDefault(); dlg.close(); });
+
+// ===== ÉTAPE 3 — IDENTIFICATION =====
+const LS_USER_KEY = 'fitmatch.user';
+const idCard = $('#step-3-identification');
+const form = $('#signupForm');
+const summary = $('#id-summary');
+const fullNameOut = $('#idFullName');
+const emailOut = $('#idEmail');
+const btnEdit = $('#btnEdit');
+const btnLogout = $('#btnLogout');
+const btnCreate = $('#btnCreate');
+
+// Rendu selon l'état (connecté ou pas)
+function renderIdentification(){
+  const uRaw = localStorage.getItem(LS_USER_KEY);
+  if(!uRaw){
+    // Pas identifié → montrer formulaire
+    summary.classList.add('hidden');
+    form.classList.remove('hidden');
+    return;
+  }
+  const user = JSON.parse(uRaw);
+  fullNameOut.textContent = user.fullName || '—';
+  emailOut.textContent = user.email || '—';
+  // Identifié → cacher formulaire, montrer résumé
+  form.classList.add('hidden');
+  summary.classList.remove('hidden');
+}
+
+// Fake call API (remplace par ton vrai POST si dispo)
+async function signupViaAPI(payload){
+  // Si tu as une API réelle, dé-commente et adapte :
+  // const res = await fetch('/api/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  // if(!res.ok) throw new Error('Inscription échouée');
+  // return await res.json();
+  // Fallback local : on "crée" l'utilisateur côté navigateur
+  return new Promise((resolve)=> setTimeout(()=> resolve({ ok:true }), 300));
+}
+
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if(!$('#acceptCgu').checked){
+    alert('Merci d'accepter les CGU pour continuer.');
+    return;
+  }
+  const fullName = $('#fullName').value.trim();
+  const email = $('#email').value.trim();
+  const password = $('#password').value;
+  if(!fullName || !email || !password){ return; }
+
+  btnCreate.disabled = true;
+  btnCreate.textContent = 'Création du compte…';
+
+  try{
+    await signupViaAPI({ fullName, email, password });
+    // Sauvegarde session locale
+    localStorage.setItem(LS_USER_KEY, JSON.stringify({ fullName, email }));
+    // Revenir au même écran (réservation) et afficher l'identité
+    renderIdentification();
+    // Optionnel : faire défiler jusqu'à l'étape 3
+    idCard.scrollIntoView({ behavior:'smooth', block:'start' });
+  }catch(err){
+    alert("Impossible de créer le compte. Réessaie.");
+  }finally{
+    btnCreate.disabled = false;
+    btnCreate.textContent = 'Créer mon compte';
+  }
+});
+
+btnEdit.addEventListener('click', ()=>{
+  form.classList.remove('hidden');
+  summary.classList.add('hidden');
+});
+
+btnLogout.addEventListener('click', ()=>{
+  localStorage.removeItem(LS_USER_KEY);
+  renderIdentification();
+});
+
+// Premier rendu
+renderIdentification();

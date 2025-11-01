@@ -45,7 +45,11 @@ Preferred communication style: Simple, everyday language.
     - **Reservation Confirmation** (`/reservation`): Planity-style confirmation page (white background, max-width 720px, centered) with 3-section layout:
         1. **Service Summary**: Coach name, session type, duration (60 min), price (40€), gym location
         2. **Date & Time**: Selected date/time with "Modifier" link that opens native `<dialog>` for date/time adjustments (date picker + time slot grid from 09:00-20:00)
-        3. **Identification**: Dual CTAs for new users ("Créer mon compte" → /signup) and returning users ("Se connecter" → /login)
+        3. **Identification**: Autonomous signup form with name, email, password, and CGU checkbox. After submission:
+            - Validates fields and CGU acceptance
+            - Stores user in localStorage.fitmatch.user (fallback until API integration)
+            - Replaces form with identity summary showing "Identifié: [Name] / [Email]" with "Modifier" (return to form) and "Se déconnecter" (logout) buttons
+            - Clean white Planity-style design with responsive grid (2 cols desktop, 1 col mobile)
     - **URL Parameters**: Dynamic data passed via query strings (coach, service, duration, price, gym, date, time) with intelligent fallback to default values
     - **Persistence**: Bookings stored in demo_users.json with conflict detection
     - **Mobile-First**: Responsive design with native HTML5 elements for optimal mobile UX

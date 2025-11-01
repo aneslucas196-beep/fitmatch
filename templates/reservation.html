@@ -37,6 +37,26 @@
     .slot{padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;text-align:center;cursor:pointer}
     .slot.is-selected{outline:2px solid #111}
     .dlg-actions{padding:14px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+    .hidden{display:none !important}
+    .id-form .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .id-form .field{display:flex;flex-direction:column}
+    .id-form .field label{font-size:13px;color:#555;margin-bottom:6px}
+    .id-form input[type="text"],.id-form input[type="email"],.id-form input[type="password"]{height:44px;border:1px solid #dfe3e6;border-radius:10px;padding:10px 12px;font-size:15px;outline:none;background:#fff}
+    .id-form input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.08)}
+    .cgu{display:flex;align-items:center;gap:8px;margin:14px 0 10px;font-size:14px;color:#444}
+    .cgu a{color:#111;text-decoration:underline}
+    .btn-create{width:100%;height:48px;border:0;border-radius:12px;background:#111;color:#fff;font-weight:600;font-size:16px;cursor:pointer}
+    .btn-create:disabled{opacity:.6;cursor:not-allowed}
+    .small-note{margin:10px 0 0;font-size:12px;color:#6b7280}
+    .id-row{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:#fafafa}
+    .id-label{font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+    .id-name{font-weight:700;font-size:15px}
+    .id-email{font-size:14px;color:#374151}
+    .id-actions{display:flex;align-items:center;gap:8px}
+    .btn-link{background:transparent;border:0;color:#2563eb;cursor:pointer;padding:6px 8px;font-size:14px}
+    .btn-link.danger{color:#b91c1c}
+    .sep{color:#9ca3af}
+    @media (max-width:720px){.id-form .grid{grid-template-columns:1fr}}
     @media (max-width:520px){ h1{font-size:24px} .title{font-size:18px} }
   </style>
 </head>
@@ -80,19 +100,56 @@
     </section>
 
     <!-- Step 3 -->
-    <section class="step">
+    <section class="step" id="step-3-identification">
       <p class="title">3. Identification</p>
-      <div class="card">
-        <div class="section" style="margin-bottom:8px;font-weight:700">Nouveau sur FitMatch ?</div>
-        <div class="actions" style="margin-bottom:18px">
-          <a class="btn btn-outline" href="/signup">Créer mon compte</a>
-        </div>
-        <div class="muted small" style="text-align:center;margin:8px 0;">ou</div>
-        <div class="section" style="margin:10px 0 8px;font-weight:700">Vous avez déjà utilisé FitMatch ?</div>
-        <div class="actions">
-          <a class="btn btn-primary" href="/login">Se connecter</a>
+
+      <!-- Bloc identité (apparait après inscription/connexion) -->
+      <div id="id-summary" class="hidden card">
+        <div class="id-row">
+          <div>
+            <div class="id-label">Identifié</div>
+            <div class="id-name" id="idFullName">—</div>
+            <div class="id-email" id="idEmail">—</div>
+          </div>
+          <div class="id-actions">
+            <button type="button" class="btn-link" id="btnEdit">Modifier</button>
+            <span class="sep">•</span>
+            <button type="button" class="btn-link danger" id="btnLogout">Se déconnecter</button>
+          </div>
         </div>
       </div>
+
+      <!-- Formulaire (visible si pas encore identifié) -->
+      <form id="signupForm" class="id-form card">
+        <div class="grid">
+          <div class="field">
+            <label for="fullName">Nom complet *</label>
+            <input id="fullName" name="fullName" type="text" required placeholder="Votre nom et prénom" autocomplete="name">
+          </div>
+
+          <div class="field">
+            <label for="email">Email *</label>
+            <input id="email" name="email" type="email" required placeholder="vous@email.com" autocomplete="email">
+          </div>
+
+          <div class="field">
+            <label for="password">Mot de passe *</label>
+            <input id="password" name="password" type="password" required placeholder="Au moins 8 caractères" minlength="8" autocomplete="new-password">
+          </div>
+        </div>
+
+        <label class="cgu">
+          <input type="checkbox" id="acceptCgu" required>
+          J'accepte les <a href="#" target="_blank" rel="noopener">CGU</a> de FitMatch.
+        </label>
+
+        <button type="submit" class="btn-create" id="btnCreate">Créer mon compte</button>
+
+        <p class="small-note">
+          Vos informations sont traitées par FitMatch. Voir notre
+          <a href="#" target="_blank" rel="noopener">politique de confidentialité</a>.
+        </p>
+      </form>
     </section>
   </div>
 
