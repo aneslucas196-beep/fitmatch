@@ -244,20 +244,26 @@ async function renderWeek(){
 $("#prevWeek").addEventListener("click", ()=>{ weekOffset--; renderWeek(); });
 $("#nextWeek").addEventListener("click", ()=>{ weekOffset++; renderWeek(); });
 
-$("#confirmBtn").addEventListener("click", async ()=>{
+$("#confirmBtn").addEventListener("click", ()=>{
   if(!selection) return;
-  const payload = {
-    coach_id: COACH_ID,
-    starts_at: toISO(selection.start),
-    ends_at: toISO(selection.end)
-  };
-  const res = await createBooking(payload);
-  if(res?.ok){
-    showToast("Réservation confirmée ✅");
-    renderWeek();
-  }else{
-    showToast("Erreur de réservation ❌");
-  }
+  
+  // Construire l'URL de réservation avec les paramètres
+  const startDate = selection.start;
+  const dateStr = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
+  const timeStr = `${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`; // HH:mm
+  
+  const params = new URLSearchParams({
+    coach: COACH_NAME,
+    service: "Séance de coaching",
+    duration: "60",
+    price: "40",
+    gym: "Salle de sport",
+    date: dateStr,
+    time: timeStr
+  });
+  
+  // Rediriger vers la page de confirmation
+  window.location.href = `/reservation?${params.toString()}`;
 });
 
 function showToast(msg){
