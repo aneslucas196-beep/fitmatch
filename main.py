@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Request, Form, HTTPException, Depends, File, UploadFile, Cookie, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from typing import Optional, List, Dict
+from pydantic import BaseModel
 import uvicorn
 import jwt
 import os
@@ -16,6 +17,8 @@ from PIL import Image
 import io
 from pathlib import Path
 from typing import Tuple
+import resend
+import random
 
 from utils import (
     geocode_city, 
@@ -3019,6 +3022,131 @@ async def serve_image(image_path: str):
     # Cette route peut être utilisée pour servir des images locales
     # En production, préférer utiliser directement Supabase Storage
     pass
+
+# ===== API ENDPOINTS POUR VÉRIFICATION EMAIL =====
+
+class SendOTPRequest(BaseModel):
+    email: str
+
+class VerifyOTPRequest(BaseModel):
+    email: str
+    code: str
+
+# Stockage temporaire des codes OTP (en production, utiliser Redis ou DB)
+otp_storage = {}
+
+@app.post("/api/send-otp-email")
+async def send_otp_email(request: SendOTPRequest):
+    """Envoie un code OTP à 6 chiffres par email via Resend."""
+    try:
+        # Générer un code à 6 chiffres
+        code = str(random.randint(100000, 999999))
+        
+        # Configurer Resend
+        resend.api_key = os.getenv("RESEND_API_KEY")
+        sender_email = os.getenv("SENDER_EMAIL", "onboarding@resend.dev")
+        
+        # Créer l'email HTML
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 0; background-color: #f9fafb; }}
+                .container {{ max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; }}
+                .header h1 {{ color: white; margin: 0; font-size: 28px; font-weight: 700; }}
+                .content {{ padding: 40px 30px; }}
+                .code-box {{ background: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0; }}
+                .code {{ font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #111; font-family: 'Courier New', monospace; }}
+                .message {{ color: #374151; line-height: 1.6; margin: 20px 0; }}
+                .footer {{ background: #f9fafb; padding: 20px; text-align: center; color: #6b7280; font-size: 14px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🏋️ FitMatch</h1>
+                </div>
+                <div class="content">
+                    <h2 style="color: #111; margin-top: 0;">Confirmation de votre adresse e-mail</h2>
+                    <p class="message">Merci de vous être inscrit sur FitMatch ! Voici votre code de vérification :</p>
+                    <div class="code-box">
+                        <div class="code">{code}</div>
+                    </div>
+                    <p class="message">Entrez ce code sur la page de confirmation pour activer votre compte.</p>
+                    <p class="message" style="color: #6b7280; font-size: 14px;">Ce code expire dans 5 minutes.</p>
+                </div>
+                <div class="footer">
+                    <p>Si vous n'avez pas demandé ce code, ignorez cet e-mail.</p>
+                    <p>© 2025 FitMatch - Votre coach fitness à portée de main</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Envoyer l'email via Resend
+        params = {
+            "from": f"FitMatch <{sender_email}>",
+            "to": [request.email],
+            "subject": "Votre code de vérification FitMatch",
+            "html": html_content
+        }
+        
+        response = resend.Emails.send(params)
+        
+        # Stocker le code avec expiration (5 minutes)
+        otp_storage[request.email] = {
+            "code": code,
+            "expires_at": datetime.now() + timedelta(minutes=5)
+        }
+        
+        print(f"✅ Email envoyé à {request.email} avec le code {code}")
+        
+        return JSONResponse({
+            "success": True,
+            "message": f"Code envoyé à {request.email}",
+            "email_id": response.get("id")
+        })
+        
+    except Exception as e:
+        print(f"❌ Erreur envoi email: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'envoi de l'email: {str(e)}")
+
+@app.post("/api/verify-otp")
+async def verify_otp(request: VerifyOTPRequest):
+    """Vérifie le code OTP saisi par l'utilisateur."""
+    try:
+        # Vérifier si le code existe
+        if request.email not in otp_storage:
+            raise HTTPException(status_code=400, detail="Aucun code actif pour cet e-mail")
+        
+        stored_data = otp_storage[request.email]
+        
+        # Vérifier l'expiration
+        if datetime.now() > stored_data["expires_at"]:
+            del otp_storage[request.email]
+            raise HTTPException(status_code=400, detail="Le code a expiré. Renvoyez-le.")
+        
+        # Vérifier le code
+        if stored_data["code"] != request.code:
+            raise HTTPException(status_code=400, detail="Code incorrect")
+        
+        # Code valide - supprimer de la mémoire
+        del otp_storage[request.email]
+        
+        return JSONResponse({
+            "success": True,
+            "message": "Email vérifié avec succès"
+        })
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Erreur vérification OTP: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la vérification: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)

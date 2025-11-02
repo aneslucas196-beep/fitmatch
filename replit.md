@@ -91,6 +91,7 @@ Preferred communication style: Simple, everyday language.
 - **Google Places API**: For worldwide gym search, autocomplete, and coach onboarding.
 - **Geopy**: Geographic location services using Nominatim geocoder.
 - **Supabase**: Planned integration for user authentication and data storage.
+- **Resend**: Transactional email service for sending OTP verification codes (configured with API key, replaces demo mode)
 
 ### Frontend Libraries
 - **Tailwind CSS**: Delivered via CDN for UI development.

@@ -187,17 +187,45 @@ function getOtp(){ try{ return JSON.parse(localStorage.getItem(LS_OTP_KEY)||'nul
 function clearOtp(){ localStorage.removeItem(LS_OTP_KEY); }
 
 async function sendOtpEmail(email){
-  const code = generateCode();
-  saveOtp(email, code);
-  console.log('%c[DEV] Code OTP envoyé à ' + email + ' : ' + code, 'color: #16a34a; font-weight:700;');
-  toast('Code envoyé à ' + email + ' (vérifie ta boîte mail).');
+  try {
+    const res = await fetch('/api/send-otp-email', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email })
+    });
+    if(!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Envoi OTP impossible');
+    }
+    toast('Code envoyé à ' + email + ' ! Vérifie ta boîte Gmail 📧');
+  } catch(err) {
+    console.error('Erreur envoi OTP:', err);
+    // Fallback local si l'API échoue
+    const code = generateCode();
+    saveOtp(email, code);
+    console.log('%c[DEV] Mode fallback - Code: ' + code, 'color: #f59e0b; font-weight:700;');
+    toast('Mode démo: vérifie la console pour le code');
+  }
 }
 
 async function verifyOtpEmail(email, code){
-  const otp = getOtp();
-  if(!otp || otp.email !== email) throw new Error("Aucun code actif pour cet e-mail.");
-  if(Date.now() > otp.expiresAt) throw new Error("Le code a expiré. Renvoyez-le.");
-  if(otp.code !== code) throw new Error("Code incorrect.");
+  try {
+    const res = await fetch('/api/verify-otp', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, code })
+    });
+    if(!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Code invalide');
+    }
+  } catch(err) {
+    // Si l'API échoue, essayer le fallback local
+    const otp = getOtp();
+    if(!otp || otp.email !== email) throw new Error("Aucun code actif pour cet e-mail.");
+    if(Date.now() > otp.expiresAt) throw new Error("Le code a expiré. Renvoyez-le.");
+    if(otp.code !== code) throw new Error("Code incorrect.");
+  }
 }
 
 function openEmailVerification(){
