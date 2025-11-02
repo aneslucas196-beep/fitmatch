@@ -160,5 +160,14 @@
     "password": "Anasking1234!",
     "coach_gender_preference": "aucune",
     "selected_gyms": []
+  },
+  "lkolnik176@gmail.com": {
+    "full_name": "braw",
+    "gender": "femme",
+    "role": "client",
+    "country_code": "AT",
+    "password": "Anasking1234!",
+    "coach_gender_preference": "aucune",
+    "selected_gyms": []
   }
 }
