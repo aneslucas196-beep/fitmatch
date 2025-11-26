@@ -92,15 +92,18 @@ const btnConfirmBooking = $('#btnConfirmBooking');
 // Rendu selon l'état (connecté ou pas)
 function renderIdentification(){
   const uRaw = localStorage.getItem(LS_USER_KEY);
+  const confirmBtn = document.getElementById('confirm-section');
+  
   if(!uRaw){
     // Pas identifié → montrer boutons guest
     summary.classList.add('hidden');
     form.classList.add('hidden');
     guestCard.classList.remove('hidden');
-    confirmSection.classList.add('hidden');
+    if(confirmBtn) confirmBtn.classList.add('hidden');
     return;
   }
   const user = JSON.parse(uRaw);
+  console.log('👤 Utilisateur:', user);
   fullNameOut.textContent = user.fullName || '—';
   emailOut.textContent = user.email || '—';
   // Identifié → cacher tout sauf résumé
@@ -109,10 +112,15 @@ function renderIdentification(){
   summary.classList.remove('hidden');
   
   // Si vérifié → montrer bouton confirmer
-  if(user.verified){
-    confirmSection.classList.remove('hidden');
+  if(user.verified === true){
+    console.log('✅ Utilisateur vérifié, affichage bouton confirmer');
+    if(confirmBtn) {
+      confirmBtn.classList.remove('hidden');
+      confirmBtn.style.display = 'block';
+    }
   } else {
-    confirmSection.classList.add('hidden');
+    console.log('⚠️ Utilisateur non vérifié');
+    if(confirmBtn) confirmBtn.classList.add('hidden');
   }
 }
 
