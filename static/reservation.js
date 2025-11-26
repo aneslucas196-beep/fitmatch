@@ -260,15 +260,22 @@ evLogout2.addEventListener('click', ()=>{
 });
 
 evSubmit.addEventListener('click', async ()=>{
+  console.log('🔐 Début vérification OTP');
   const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
-  if(!u) return;
+  if(!u) { console.log('❌ Pas d\'utilisateur'); return; }
   const code = evCode.value.trim();
   if(code.length !== 6){ toast('Entre le code à 6 chiffres.'); return; }
 
   evSubmit.disabled = true; evSubmit.textContent = 'Vérification…';
+  
   try{
+    console.log('📧 Vérification du code pour:', u.email);
     await verifyOtpEmail(u.email, code);
-    localStorage.setItem(LS_USER_KEY, JSON.stringify({ ...u, verified:true }));
+    console.log('✅ Code vérifié avec succès');
+    
+    // Mettre à jour l'utilisateur
+    const verifiedUser = { ...u, verified: true };
+    localStorage.setItem(LS_USER_KEY, JSON.stringify(verifiedUser));
     clearOtp();
     
     // Sauvegarder la réservation
@@ -282,22 +289,27 @@ evSubmit.addEventListener('click', async ()=>{
       time: selTime,
       createdAt: new Date().toISOString()
     };
+    console.log('📅 Réservation:', booking);
     
     // Récupérer les données existantes ou créer un objet vide
     const fmData = JSON.parse(localStorage.getItem('fitmatch') || '{}');
-    fmData.user = { ...u, verified: true };
+    fmData.user = verifiedUser;
     fmData.bookings = fmData.bookings || [];
     fmData.bookings.push(booking);
     localStorage.setItem('fitmatch', JSON.stringify(fmData));
+    console.log('💾 Données sauvegardées:', fmData);
     
     toast('Réservation confirmée ! Redirection...');
     
     // Rediriger vers la page Mon compte
+    console.log('🚀 Redirection vers /account dans 1.5s');
     setTimeout(() => {
+      console.log('➡️ Redirection maintenant');
       window.location.href = '/account';
     }, 1500);
     
   }catch(e){
+    console.error('❌ Erreur vérification:', e);
     toast(e.message || 'Code invalide.');
     evSubmit.disabled = false; evSubmit.textContent = 'Enregistrer';
   }
