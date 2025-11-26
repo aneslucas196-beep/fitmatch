@@ -171,26 +171,12 @@
     "selected_gyms": []
   },
   "dressbynk@gmail.com": {
-    "id": "dressbynk@gmail.com",
-    "email": "dressbynk@gmail.com",
-    "role": "coach",
-    "profile_completed": true,
-    "full_name": "efzef",
-    "bio": "hthe y",
-    "city": "elancourt ",
-    "instagram_url": "",
-    "price_from": 30,
-    "radius_km": 5,
-    "specialties": [
-      "musculation"
-    ],
-    "selected_gym_ids": "google_worldwide_ChIJO_inH1_LRIYRo3m33nO32FM",
-    "selected_gyms_data": "[{\"id\":\"google_worldwide_ChIJO_inH1_LRIYRo3m33nO32FM\",\"name\":\"Los Campeones Gym Austin North\",\"address\":\"6406 N Interstate 35 Frontage Rd Suite 2450, Austin, TX 78752, USA\",\"city\":\"\",\"lat\":30.3256621,\"lng\":-97.70778250000001,\"chain\":\"Google Places (Mondial)\",\"source\":\"Google Places Worldwide\",\"display_name\":\"Los Campeones Gym Austin North - 6406 N Interstate 35 Frontage Rd Suite 2450, Austin, TX 78752, USA\"}]",
-    "profile_photo_url": null,
-    "password": "gfrg5SQAsd",
+    "full_name": "zazakj",
     "gender": "homme",
-    "country_code": "AZ",
-    "coach_gender_preference": null,
-    "selected_gyms": null
+    "role": "client",
+    "country_code": "AU",
+    "password": "ANSHGVVHDG286",
+    "coach_gender_preference": "homme",
+    "selected_gyms": []
   }
 }

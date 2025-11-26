@@ -3037,74 +3037,16 @@ otp_storage = {}
 
 @app.post("/api/send-otp-email")
 async def send_otp_email(request: SendOTPRequest):
-    """Envoie un code OTP à 6 chiffres par email via Resend."""
+    """Envoie un code OTP à 6 chiffres par email via Resend (utilise le même service que /signup)."""
     try:
         # Générer un code à 6 chiffres
         code = str(random.randint(100000, 999999))
         
-        # Configurer Resend
-        resend.api_key = os.getenv("RESEND_API_KEY")
-        sender_email_raw = os.getenv("SENDER_EMAIL", "")
+        # Utiliser le même service que /signup (resend_service.py)
+        email_result = send_otp_email_resend(request.email, code, None)
         
-        # Valider le format de l'email expéditeur
-        # Resend nécessite soit un domaine vérifié, soit onboarding@resend.dev
-        if sender_email_raw and "@" in sender_email_raw and "." in sender_email_raw.split("@")[-1]:
-            sender_email = sender_email_raw
-        else:
-            # Fallback vers l'adresse de test Resend
-            sender_email = "onboarding@resend.dev"
-            print(f"⚠️ SENDER_EMAIL invalide ou absent, utilisation de {sender_email}")
-        
-        # Créer l'email HTML
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 0; background-color: #f9fafb; }}
-                .container {{ max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; }}
-                .header h1 {{ color: white; margin: 0; font-size: 28px; font-weight: 700; }}
-                .content {{ padding: 40px 30px; }}
-                .code-box {{ background: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0; }}
-                .code {{ font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #111; font-family: 'Courier New', monospace; }}
-                .message {{ color: #374151; line-height: 1.6; margin: 20px 0; }}
-                .footer {{ background: #f9fafb; padding: 20px; text-align: center; color: #6b7280; font-size: 14px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>🏋️ FitMatch</h1>
-                </div>
-                <div class="content">
-                    <h2 style="color: #111; margin-top: 0;">Confirmation de votre adresse e-mail</h2>
-                    <p class="message">Merci de vous être inscrit sur FitMatch ! Voici votre code de vérification :</p>
-                    <div class="code-box">
-                        <div class="code">{code}</div>
-                    </div>
-                    <p class="message">Entrez ce code sur la page de confirmation pour activer votre compte.</p>
-                    <p class="message" style="color: #6b7280; font-size: 14px;">Ce code expire dans 5 minutes.</p>
-                </div>
-                <div class="footer">
-                    <p>Si vous n'avez pas demandé ce code, ignorez cet e-mail.</p>
-                    <p>© 2025 FitMatch - Votre coach fitness à portée de main</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-        # Envoyer l'email via Resend
-        params = {
-            "from": f"FitMatch <{sender_email}>",
-            "to": [request.email],
-            "subject": "Votre code de vérification FitMatch",
-            "html": html_content
-        }
-        
-        response = resend.Emails.send(params)
+        if not email_result.get("success"):
+            raise Exception(email_result.get("error", "Erreur envoi email"))
         
         # Stocker le code avec expiration (5 minutes)
         otp_storage[request.email] = {
@@ -3112,12 +3054,12 @@ async def send_otp_email(request: SendOTPRequest):
             "expires_at": datetime.now() + timedelta(minutes=5)
         }
         
-        print(f"✅ Email envoyé à {request.email} avec le code {code}")
+        print(f"✅ Email OTP envoyé à {request.email} avec le code {code}")
         
         return JSONResponse({
             "success": True,
             "message": f"Code envoyé à {request.email}",
-            "email_id": response.get("id")
+            "mode": email_result.get("mode", "resend")
         })
         
     except Exception as e:
