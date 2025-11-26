@@ -3044,7 +3044,16 @@ async def send_otp_email(request: SendOTPRequest):
         
         # Configurer Resend
         resend.api_key = os.getenv("RESEND_API_KEY")
-        sender_email = os.getenv("SENDER_EMAIL", "onboarding@resend.dev")
+        sender_email_raw = os.getenv("SENDER_EMAIL", "")
+        
+        # Valider le format de l'email expéditeur
+        # Resend nécessite soit un domaine vérifié, soit onboarding@resend.dev
+        if sender_email_raw and "@" in sender_email_raw and "." in sender_email_raw.split("@")[-1]:
+            sender_email = sender_email_raw
+        else:
+            # Fallback vers l'adresse de test Resend
+            sender_email = "onboarding@resend.dev"
+            print(f"⚠️ SENDER_EMAIL invalide ou absent, utilisation de {sender_email}")
         
         # Créer l'email HTML
         html_content = f"""
