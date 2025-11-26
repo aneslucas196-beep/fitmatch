@@ -270,12 +270,35 @@ evSubmit.addEventListener('click', async ()=>{
     await verifyOtpEmail(u.email, code);
     localStorage.setItem(LS_USER_KEY, JSON.stringify({ ...u, verified:true }));
     clearOtp();
-    hideOverlay();
-    renderIdentification();
-    toast('Adresse e-mail vérifiée ✅');
+    
+    // Sauvegarder la réservation
+    const booking = {
+      coach,
+      service,
+      duration,
+      price,
+      gym,
+      date: selDate.toISOString().split('T')[0],
+      time: selTime,
+      createdAt: new Date().toISOString()
+    };
+    
+    // Récupérer les données existantes ou créer un objet vide
+    const fmData = JSON.parse(localStorage.getItem('fitmatch') || '{}');
+    fmData.user = { ...u, verified: true };
+    fmData.bookings = fmData.bookings || [];
+    fmData.bookings.push(booking);
+    localStorage.setItem('fitmatch', JSON.stringify(fmData));
+    
+    toast('Réservation confirmée ! Redirection...');
+    
+    // Rediriger vers la page Mon compte
+    setTimeout(() => {
+      window.location.href = '/account';
+    }, 1500);
+    
   }catch(e){
     toast(e.message || 'Code invalide.');
-  }finally{
     evSubmit.disabled = false; evSubmit.textContent = 'Enregistrer';
   }
 });

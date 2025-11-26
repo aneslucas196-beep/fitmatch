@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon compte - FitMatch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; }
+        
+        .fm-account {
+            max-width: 1100px;
+            margin: 40px auto;
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 32px;
+            color: #111827;
+            padding: 0 20px;
+        }
+        
+        .fm-account-sidebar {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px 20px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+            height: fit-content;
+        }
+        .fm-account-sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .fm-account-sidebar nav {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .fm-account-sidebar a {
+            font-size: 15px;
+            text-decoration: none;
+            color: #6b7280;
+            padding: 8px 0;
+            transition: color 0.2s;
+        }
+        .fm-account-sidebar a:hover {
+            color: #111827;
+        }
+        .fm-account-sidebar a.active {
+            color: #111827;
+            font-weight: 600;
+        }
+        .fm-link-danger {
+            border: none;
+            background: transparent;
+            color: #ef4444;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0;
+        }
+        .fm-link-danger:hover {
+            text-decoration: underline;
+        }
+        
+        .fm-account-main {
+            background: #f9fafb;
+            border-radius: 16px;
+            padding: 24px 24px 32px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+        }
+        .fm-page-title {
+            font-size: 22px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .fm-account-main section + section {
+            margin-top: 32px;
+        }
+        
+        .fm-current-booking h2,
+        .fm-upcoming h2 {
+            font-size: 18px;
+            margin-bottom: 14px;
+            font-weight: 600;
+        }
+        
+        .fm-booking-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 18px 20px 20px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+            border: 1px solid #e5e7eb;
+        }
+        .fm-booking-card--current {
+            border-color: #22c55e;
+        }
+        
+        .fm-booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .fm-booking-date {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        .fm-booking-coach,
+        .fm-booking-gym {
+            font-size: 14px;
+            color: #4b5563;
+        }
+        .fm-booking-gym {
+            margin-top: 2px;
+        }
+        
+        .fm-booking-body {
+            margin-top: 8px;
+        }
+        .fm-booking-service {
+            font-size: 14px;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+        
+        .fm-booking-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .fm-btn-outline {
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            background: #ffffff;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .fm-btn-outline:hover {
+            background: #f3f4f6;
+        }
+        .fm-btn-danger {
+            border-color: #fecaca;
+            color: #b91c1c;
+        }
+        .fm-btn-danger:hover {
+            background: #fef2f2;
+        }
+        .fm-booking-notify {
+            border-top: 1px dashed #e5e7eb;
+            padding-top: 8px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .fm-booking-notify label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .fm-booking-notify input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #22c55e;
+        }
+        
+        .fm-booking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .fm-empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6b7280;
+        }
+        .fm-empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 900px) {
+            .fm-account {
+                grid-template-columns: 1fr;
+            }
+            .fm-account-sidebar {
+                order: 2;
+            }
+            .fm-account-main {
+                order: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="fm-account">
+        <aside class="fm-account-sidebar">
+            <h2>Mon compte</h2>
+            <nav>
+                <a href="/account" class="active">Mes séances</a>
+                <a href="/account/info">Mes informations</a>
+                <a href="/account/payments">Mes paiements</a>
+            </nav>
+            <button class="fm-link-danger" onclick="logout()">Se déconnecter</button>
+        </aside>
+
+        <main class="fm-account-main">
+            <h1 class="fm-page-title">Mes séances</h1>
+
+            <section class="fm-current-booking" id="current-booking-section" style="display: none;">
+                <h2>Votre séance est confirmée</h2>
+                <article class="fm-booking-card fm-booking-card--current">
+                    <header class="fm-booking-header">
+                        <div>
+                            <p class="fm-booking-date" id="current-date"></p>
+                            <p class="fm-booking-coach">Avec <strong id="current-coach"></strong></p>
+                            <p class="fm-booking-gym" id="current-gym"></p>
+                        </div>
+                    </header>
+                    <div class="fm-booking-body">
+                        <p class="fm-booking-service" id="current-service"></p>
+                        <div class="fm-booking-actions">
+                            <button class="fm-btn-outline" onclick="addToCalendar()">
+                                <span>📅</span> Ajouter à mon agenda
+                            </button>
+                            <button class="fm-btn-outline" onclick="reschedule()">
+                                <span>🔄</span> Déplacer la séance
+                            </button>
+                            <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking()">
+                                <span>❌</span> Annuler la séance
+                            </button>
+                        </div>
+                        <div class="fm-booking-notify">
+                            <label>
+                                <input type="checkbox" id="notify-earlier" />
+                                Me prévenir si un créneau se libère avant
+                            </label>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="fm-upcoming">
+                <h2>Mes séances à venir</h2>
+                <div class="fm-booking-list" id="upcoming-list">
+                    <div class="fm-empty-state" id="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p>Aucune séance à venir</p>
+                        <a href="/" class="text-blue-600 hover:underline mt-2 inline-block">Réserver une séance</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'fitmatch';
+        
+        function getStoredData() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            } catch {
+                return {};
+            }
+        }
+        
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const options = { weekday: 'long', day: 'numeric', month: 'short' };
+            return date.toLocaleDateString('fr-FR', options);
+        }
+        
+        function loadBookings() {
+            const data = getStoredData();
+            const user = data.user;
+            const bookings = data.bookings || [];
+            
+            if (!user || !user.verified) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            const currentSection = document.getElementById('current-booking-section');
+            const upcomingList = document.getElementById('upcoming-list');
+            const emptyState = document.getElementById('empty-state');
+            
+            if (bookings.length === 0) {
+                currentSection.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            const sortedBookings = bookings.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const [current, ...upcoming] = sortedBookings;
+            
+            if (current) {
+                currentSection.style.display = 'block';
+                document.getElementById('current-date').textContent = `${formatDate(current.date)} ${current.time}`;
+                document.getElementById('current-coach').textContent = current.coach || 'Coach';
+                document.getElementById('current-gym').textContent = current.gym || 'Salle de sport';
+                document.getElementById('current-service').textContent = `${current.service || 'Séance de coaching'} – ${current.duration || 60} min • ${current.price || 40} €`;
+            }
+            
+            if (upcoming.length > 0) {
+                emptyState.style.display = 'none';
+                upcoming.forEach(booking => {
+                    const card = createBookingCard(booking);
+                    upcomingList.appendChild(card);
+                });
+            }
+        }
+        
+        function createBookingCard(booking) {
+            const article = document.createElement('article');
+            article.className = 'fm-booking-card';
+            article.innerHTML = `
+                <header class="fm-booking-header">
+                    <div>
+                        <p class="fm-booking-date">${formatDate(booking.date)} ${booking.time}</p>
+                        <p class="fm-booking-coach">Avec <strong>${booking.coach || 'Coach'}</strong></p>
+                        <p class="fm-booking-gym">${booking.gym || 'Salle de sport'}</p>
+                    </div>
+                </header>
+                <div class="fm-booking-body">
+                    <p class="fm-booking-service">${booking.service || 'Séance de coaching'} – ${booking.duration || 60} min • ${booking.price || 40} €</p>
+                    <div class="fm-booking-actions">
+                        <button class="fm-btn-outline" onclick="addToCalendar()">📅 Ajouter à mon agenda</button>
+                        <button class="fm-btn-outline" onclick="reschedule()">🔄 Déplacer</button>
+                        <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking()">❌ Annuler</button>
+                    </div>
+                </div>
+            `;
+            return article;
+        }
+        
+        function addToCalendar() {
+            alert('Fonctionnalité à venir : Ajouter au calendrier');
+        }
+        
+        function reschedule() {
+            alert('Fonctionnalité à venir : Déplacer la séance');
+        }
+        
+        function cancelBooking() {
+            if (confirm('Êtes-vous sûr de vouloir annuler cette séance ?')) {
+                alert('Séance annulée');
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem(STORAGE_KEY);
+            window.location.href = '/';
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadBookings);
+    </script>
+</body>
+</html>
