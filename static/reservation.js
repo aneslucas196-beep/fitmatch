@@ -270,67 +270,71 @@ evLogout2.addEventListener('click', ()=>{
 });
 
 evSubmit.addEventListener('click', async ()=>{
-  console.log('🔐 Début vérification OTP');
   const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
-  if(!u) { console.log('❌ Pas d\'utilisateur'); return; }
+  if(!u) return;
   const code = evCode.value.trim();
   if(code.length !== 6){ toast('Entre le code à 6 chiffres.'); return; }
 
   evSubmit.disabled = true; evSubmit.textContent = 'Vérification…';
   
   try{
-    console.log('📧 Vérification du code pour:', u.email);
     await verifyOtpEmail(u.email, code);
-    console.log('✅ Code vérifié avec succès');
     
     // Mettre à jour l'utilisateur comme vérifié
     const verifiedUser = { ...u, verified: true };
     localStorage.setItem(LS_USER_KEY, JSON.stringify(verifiedUser));
     clearOtp();
     
-    // Fermer l'overlay et afficher le bouton confirmer
+    // Sauvegarder la réservation immédiatement
+    const booking = {
+      coach,
+      service,
+      duration,
+      price,
+      gym,
+      date: selDate.toISOString().split('T')[0],
+      time: selTime,
+      createdAt: new Date().toISOString()
+    };
+    
+    const fmData = JSON.parse(localStorage.getItem('fitmatch') || '{}');
+    fmData.user = verifiedUser;
+    fmData.bookings = fmData.bookings || [];
+    fmData.bookings.push(booking);
+    localStorage.setItem('fitmatch', JSON.stringify(fmData));
+    
+    // Fermer overlay et montrer le bouton
     hideOverlay();
-    renderIdentification();
+    
+    // Afficher le résumé et le bouton confirmer
+    summary.classList.remove('hidden');
+    guestCard.classList.add('hidden');
+    form.classList.add('hidden');
+    fullNameOut.textContent = verifiedUser.fullName || '—';
+    emailOut.textContent = verifiedUser.email || '—';
+    
+    // Montrer le bouton vert
+    document.getElementById('confirm-section').classList.remove('hidden');
+    
     toast('Email vérifié ✅ Cliquez sur "Confirmer la séance"');
     
   }catch(e){
-    console.error('❌ Erreur vérification:', e);
     toast(e.message || 'Code invalide.');
     evSubmit.disabled = false; evSubmit.textContent = 'Enregistrer';
   }
 });
 
 // Bouton Confirmer la séance
-btnConfirmBooking.addEventListener('click', ()=>{
+document.getElementById('btnConfirmBooking').addEventListener('click', ()=>{
   const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
   if(!u || !u.verified) {
     toast('Veuillez d\'abord vérifier votre email.');
     return;
   }
   
-  btnConfirmBooking.disabled = true;
-  btnConfirmBooking.textContent = 'Confirmation en cours...';
-  
-  // Sauvegarder la réservation
-  const booking = {
-    coach,
-    service,
-    duration,
-    price,
-    gym,
-    date: selDate.toISOString().split('T')[0],
-    time: selTime,
-    createdAt: new Date().toISOString()
-  };
-  console.log('📅 Réservation:', booking);
-  
-  // Sauvegarder dans localStorage
-  const fmData = JSON.parse(localStorage.getItem('fitmatch') || '{}');
-  fmData.user = u;
-  fmData.bookings = fmData.bookings || [];
-  fmData.bookings.push(booking);
-  localStorage.setItem('fitmatch', JSON.stringify(fmData));
-  console.log('💾 Données sauvegardées:', fmData);
+  const btn = document.getElementById('btnConfirmBooking');
+  btn.disabled = true;
+  btn.textContent = 'Confirmation en cours...';
   
   // Rediriger vers la page Mon compte
   window.location.href = '/account';
