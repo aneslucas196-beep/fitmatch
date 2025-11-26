@@ -293,7 +293,7 @@ evSubmit.addEventListener('click', async ()=>{
     localStorage.setItem(LS_USER_KEY, JSON.stringify(verifiedUser));
     clearOtp();
     
-    // Sauvegarder la réservation immédiatement
+    // Sauvegarder la réservation
     const booking = {
       coach,
       service,
@@ -311,20 +311,8 @@ evSubmit.addEventListener('click', async ()=>{
     fmData.bookings.push(booking);
     localStorage.setItem('fitmatch', JSON.stringify(fmData));
     
-    // Fermer overlay et montrer le bouton
-    hideOverlay();
-    
-    // Afficher le résumé et le bouton confirmer
-    summary.classList.remove('hidden');
-    guestCard.classList.add('hidden');
-    form.classList.add('hidden');
-    fullNameOut.textContent = verifiedUser.fullName || '—';
-    emailOut.textContent = verifiedUser.email || '—';
-    
-    // Montrer le bouton vert
-    document.getElementById('confirm-section').classList.remove('hidden');
-    
-    toast('Email vérifié ✅ Cliquez sur "Confirmer la séance"');
+    // Rediriger directement vers la page Mon compte
+    window.location.href = '/account';
     
   }catch(e){
     toast(e.message || 'Code invalide.');

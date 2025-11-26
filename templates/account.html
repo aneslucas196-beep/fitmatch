@@ -268,10 +268,19 @@
 
     <script>
         const STORAGE_KEY = 'fitmatch';
+        const USER_KEY = 'fitmatch.user';
         
         function getStoredData() {
             try {
-                return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+                const mainData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+                const userData = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+                
+                // Si l'utilisateur est dans fitmatch.user mais pas dans fitmatch, le synchroniser
+                if (userData && !mainData.user) {
+                    mainData.user = userData;
+                }
+                
+                return mainData;
             } catch {
                 return {};
             }
@@ -285,10 +294,21 @@
         
         function loadBookings() {
             const data = getStoredData();
-            const user = data.user;
+            let user = data.user;
+            
+            // Fallback: vérifier aussi fitmatch.user directement
+            if (!user) {
+                try {
+                    user = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+                } catch {}
+            }
+            
             const bookings = data.bookings || [];
             
+            console.log('📊 Données chargées:', { user, bookings });
+            
             if (!user || !user.verified) {
+                console.log('❌ Utilisateur non vérifié, redirection vers /login');
                 window.location.href = '/login';
                 return;
             }
