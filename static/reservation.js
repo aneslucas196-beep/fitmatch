@@ -346,7 +346,7 @@ evSubmit.addEventListener('click', async ()=>{
 });
 
 // Bouton Confirmer la séance
-document.getElementById('btnConfirmBooking').addEventListener('click', ()=>{
+document.getElementById('btnConfirmBooking').addEventListener('click', async ()=>{
   const u = JSON.parse(localStorage.getItem(LS_USER_KEY) || 'null');
   if(!u || !u.verified) {
     toast('Veuillez d\'abord vérifier votre email.');
@@ -356,6 +356,49 @@ document.getElementById('btnConfirmBooking').addEventListener('click', ()=>{
   const btn = document.getElementById('btnConfirmBooking');
   btn.disabled = true;
   btn.textContent = 'Confirmation en cours...';
+  
+  // Sauvegarder la réservation
+  const booking = {
+    coach,
+    service,
+    duration,
+    price,
+    gym,
+    date: selDate.toISOString().split('T')[0],
+    time: selTime,
+    createdAt: new Date().toISOString()
+  };
+  
+  const fmData = JSON.parse(localStorage.getItem('fitmatch') || '{}');
+  fmData.user = u;
+  fmData.bookings = fmData.bookings || [];
+  fmData.bookings.push(booking);
+  localStorage.setItem('fitmatch', JSON.stringify(fmData));
+  
+  // Envoyer l'email de confirmation via l'API
+  btn.textContent = 'Envoi de la confirmation…';
+  try {
+    const confirmRes = await fetch('/api/confirm-booking', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        client_name: u.fullName,
+        client_email: u.email,
+        coach_name: coach,
+        gym_name: gym,
+        gym_address: p.get('gym_address') || 'Adresse non renseignée',
+        date: booking.date,
+        time: booking.time,
+        service: service,
+        duration: duration,
+        price: price
+      })
+    });
+    const confirmData = await confirmRes.json();
+    console.log('📧 Email confirmation:', confirmData);
+  } catch(emailErr) {
+    console.log('⚠️ Email confirmation non envoyé:', emailErr);
+  }
   
   // Rediriger vers la page Mon compte
   window.location.href = '/account';
