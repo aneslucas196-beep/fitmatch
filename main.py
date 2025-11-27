@@ -3106,5 +3106,91 @@ async def verify_otp(request: VerifyOTPRequest):
         print(f"❌ Erreur vérification OTP: {e}")
         raise HTTPException(status_code=500, detail=f"Erreur lors de la vérification: {str(e)}")
 
+
+# ===== CONFIRMATION DE RÉSERVATION AVEC EMAIL =====
+class ConfirmBookingRequest(BaseModel):
+    client_name: str
+    client_email: str
+    coach_name: str
+    gym_name: str
+    gym_address: Optional[str] = "Adresse non renseignée"
+    date: str  # format: "2025-11-28"
+    time: str  # format: "14:00"
+    service: str
+    duration: str
+    price: str
+    coach_photo: Optional[str] = None
+
+@app.post("/api/confirm-booking")
+async def confirm_booking(request: ConfirmBookingRequest):
+    """Confirme une réservation et envoie l'email de confirmation au client."""
+    try:
+        from resend_service import send_booking_confirmation_email
+        
+        # Formater la date en français
+        from datetime import datetime as dt
+        try:
+            date_obj = dt.strptime(request.date, "%Y-%m-%d")
+            date_fr = date_obj.strftime("%A %d %B %Y").capitalize()
+            # Traduire en français
+            jours = {"Monday": "Lundi", "Tuesday": "Mardi", "Wednesday": "Mercredi", 
+                     "Thursday": "Jeudi", "Friday": "Vendredi", "Saturday": "Samedi", "Sunday": "Dimanche"}
+            mois = {"January": "janvier", "February": "février", "March": "mars", "April": "avril",
+                    "May": "mai", "June": "juin", "July": "juillet", "August": "août",
+                    "September": "septembre", "October": "octobre", "November": "novembre", "December": "décembre"}
+            for en, fr in jours.items():
+                date_fr = date_fr.replace(en, fr)
+            for en, fr in mois.items():
+                date_fr = date_fr.replace(en, fr)
+        except:
+            date_fr = request.date
+        
+        print(f"📧 Confirmation réservation pour {request.client_name} ({request.client_email})")
+        print(f"   Coach: {request.coach_name}, Salle: {request.gym_name}")
+        print(f"   Date: {date_fr} à {request.time}")
+        
+        # Envoyer l'email de confirmation
+        result = send_booking_confirmation_email(
+            to_email=request.client_email,
+            client_name=request.client_name,
+            coach_name=request.coach_name,
+            gym_name=request.gym_name,
+            gym_address=request.gym_address or "Adresse non renseignée",
+            date_str=date_fr,
+            time_str=request.time,
+            service_name=request.service,
+            duration=f"{request.duration} min",
+            price=f"{request.price}€",
+            coach_photo=request.coach_photo
+        )
+        
+        if result.get("success"):
+            return JSONResponse({
+                "success": True,
+                "message": "Réservation confirmée, email envoyé",
+                "email_sent": True,
+                "email_id": result.get("email_id")
+            })
+        else:
+            # L'email n'a pas pu être envoyé mais on confirme quand même la réservation
+            print(f"⚠️ Email non envoyé mais réservation confirmée: {result.get('error')}")
+            return JSONResponse({
+                "success": True,
+                "message": "Réservation confirmée (email non envoyé)",
+                "email_sent": False,
+                "error": result.get("error")
+            })
+            
+    except Exception as e:
+        print(f"❌ Erreur confirmation réservation: {e}")
+        # On retourne quand même un succès car la réservation est faite côté client
+        return JSONResponse({
+            "success": True,
+            "message": "Réservation confirmée (erreur email)",
+            "email_sent": False,
+            "error": str(e)
+        })
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)

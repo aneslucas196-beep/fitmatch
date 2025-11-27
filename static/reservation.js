@@ -311,6 +311,31 @@ evSubmit.addEventListener('click', async ()=>{
     fmData.bookings.push(booking);
     localStorage.setItem('fitmatch', JSON.stringify(fmData));
     
+    // Envoyer l'email de confirmation via l'API
+    evSubmit.textContent = 'Envoi de la confirmation…';
+    try {
+      const confirmRes = await fetch('/api/confirm-booking', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          client_name: verifiedUser.fullName,
+          client_email: verifiedUser.email,
+          coach_name: coach,
+          gym_name: gym,
+          gym_address: p.get('gym_address') || 'Adresse non renseignée',
+          date: booking.date,
+          time: booking.time,
+          service: service,
+          duration: duration,
+          price: price
+        })
+      });
+      const confirmData = await confirmRes.json();
+      console.log('📧 Email confirmation:', confirmData);
+    } catch(emailErr) {
+      console.log('⚠️ Email confirmation non envoyé:', emailErr);
+    }
+    
     // Rediriger directement vers la page Mon compte
     window.location.href = '/account';
     

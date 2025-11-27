@@ -1,0 +1,92 @@
+“Je veux que lorsque l’utilisateur confirme une réservation sur FitMatch, votre backend envoie automatiquement un email de confirmation reprenant le design de Planity.
+L’email doit contenir :
+– Réservation confirmée ✔
+– Un bouton “Voir réservation”
+– Une image de couverture (photo du coach ou de la salle)
+– Le nom du coach
+– Le nom de la salle
+– L’adresse complète
+– La date et l’heure du RDV
+– La prestation choisie + durée + prix
+– Boutons "Appel", "Calendrier", "Annuler"
+Ensuite, cet email doit être envoyé via Supabase Auth (SMTP) au mail du client.”
+
+✅ 2. CODE BACKEND (Python – FastAPI)
+
+📌 Ce code envoie un email HTML identique au mail Planity.
+
+👉 À coller dans ton fichier send_email.py ou directement dans ton endpoint réservation.
+
+from fastapi import APIRouter
+from supabase import create_client
+import os
+
+router = APIRouter()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+@router.post("/send-booking-email")
+def send_booking_email(email: str, coach_name: str, salle_name: str, address: str,
+                       prestation: str, price: str, duration: str,
+                       date_str: str, hour_str: str, cover_image: str, reservation_url: str):
+
+    html_email = f"""
+    <div style="font-family: Arial; color:#111;">
+        <h2 style="text-align:center; margin-top:20px;">✔️ Réservation confirmée</h2>
+        <div style="text-align:center; margin:20px 0;">
+            <a href="{reservation_url}" 
+               style="background:#111; color:white; padding:12px 24px; text-decoration:none; border-radius:8px;">
+               Voir réservation
+            </a>
+        </div>
+
+        <img src="{cover_image}" style="width:100%; border-radius:12px; margin:20px 0;"/>
+
+        <h3 style="font-size:20px;">{salle_name}</h3>
+        <p style="font-size:16px;">
+            <b>{date_str} à {hour_str}</b><br>
+            Avec <b>{coach_name}</b>
+        </p>
+
+        <h3>📌 Adresse</h3>
+        <p>{address}</p>
+
+        <h3>💼 Prestation choisie</h3>
+        <p>{prestation} — {duration} • {price}</p>
+
+        <div style="margin-top:25px; display:flex; gap:10px;">
+            <a href="tel:+33000000000" 
+               style="flex:1; background:#eee; padding:12px; text-align:center; border-radius:8px; text-decoration:none;">📞 Appel</a>
+
+            <a href="#" 
+               style="flex:1; background:#eee; padding:12px; text-align:center; border-radius:8px; text-decoration:none;">📅 Calendrier</a>
+
+            <a href="{reservation_url}/cancel"
+               style="flex:1; background:#eee; padding:12px; text-align:center; border-radius:8px; text-decoration:none;">❌ Annuler</a>
+        </div>
+    </div>
+    """
+
+    # ENVOI EMAIL via Supabase
+    response = supabase.auth.api.send_magic_link_email(email, html_email)
+    return {"status": "email_sent", "email": email}
+
+✅ 3. COMMENT L’UTILISER ?
+
+Quand la réservation est confirmée dans ton backend, tu appelles :
+
+requests.post("https://ton-backend/send-booking-email", json={
+    "email": "client@gmail.com",
+    "coach_name": "Anas Coach",
+    "salle_name": "BasicFit ÉlanCourt",
+    "address": "12 Avenue du Stade, 78990 Élancourt",
+    "prestation": "Séance Musculation",
+    "price": "30€",
+    "duration": "1h",
+    "date_str": "Mercredi 12 novembre 2025",
+    "hour_str": "15:00",
+    "cover_image": "https://lien-de-la-photo.jpg",
+    "reservation_url": "https://fitmatch.com/reservation/12345"
+})
