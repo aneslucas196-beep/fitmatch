@@ -172,8 +172,17 @@ def send_booking_confirmation_email(
         print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi d'email")
         return {"success": True, "mode": "demo", "message": "Email confirmation simulé"}
     
-    # Image de couverture par défaut (photo coach ou gym)
-    cover_image = coach_photo if coach_photo else "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&h=300&fit=crop"
+    # Image de couverture - convertir le chemin relatif en URL complète
+    default_image = "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&h=300&fit=crop"
+    if coach_photo and coach_photo.startswith('/'):
+        # C'est un chemin relatif, le convertir en URL complète
+        cover_image = f"{site_url}{coach_photo}"
+    elif coach_photo and coach_photo.startswith('http'):
+        cover_image = coach_photo
+    else:
+        cover_image = default_image
+    
+    print(f"  - Photo coach: {cover_image}")
     
     # Prénom du client
     first_name = client_name.split()[0] if client_name else "Client"

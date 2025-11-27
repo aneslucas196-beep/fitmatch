@@ -2023,6 +2023,16 @@ async def booking_page(request: Request, coach_id: str):
     if not coach.get("photo"):
         coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
     
+    # Parser les données des salles si c'est une string JSON
+    if coach.get("selected_gyms_data") and isinstance(coach["selected_gyms_data"], str):
+        try:
+            import json
+            coach["gyms"] = json.loads(coach["selected_gyms_data"])
+        except:
+            coach["gyms"] = []
+    elif not coach.get("gyms"):
+        coach["gyms"] = []
+    
     return templates.TemplateResponse("booking.html", {
         "request": request,
         "coach": coach
