@@ -11,6 +11,8 @@ const service = p.get('service') || 'Séance musculation';
 const duration= p.get('duration')|| '60';
 const price   = p.get('price')   || '40';
 const gym     = p.get('gym')     || 'BasicFit Élancourt';
+const gymAddress = p.get('gym_address') || '';
+const coachPhoto = p.get('coach_photo') || '';
 
 const today = new Date();
 const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate()+1);
@@ -322,12 +324,13 @@ evSubmit.addEventListener('click', async ()=>{
           client_email: verifiedUser.email,
           coach_name: coach,
           gym_name: gym,
-          gym_address: p.get('gym_address') || 'Adresse non renseignée',
+          gym_address: gymAddress || 'Adresse non renseignée',
           date: booking.date,
           time: booking.time,
           service: service,
           duration: duration,
-          price: price
+          price: price,
+          coach_photo: coachPhoto || null
         })
       });
       const confirmData = await confirmRes.json();
@@ -386,12 +389,13 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
         client_email: u.email,
         coach_name: coach,
         gym_name: gym,
-        gym_address: p.get('gym_address') || 'Adresse non renseignée',
+        gym_address: gymAddress || 'Adresse non renseignée',
         date: booking.date,
         time: booking.time,
         service: service,
         duration: duration,
-        price: price
+        price: price,
+        coach_photo: coachPhoto || null
       })
     });
     const confirmData = await confirmRes.json();
