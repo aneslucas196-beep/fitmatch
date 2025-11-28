@@ -113,7 +113,7 @@
 /* === CONFIG === */
 const COACH_ID = "{{ coach.id }}";
 const COACH_NAME = "{{ coach.full_name }}";
-const COACH_PHOTO = "{{ coach.profile_photo or coach.photo or '' }}";
+const COACH_PHOTO = "{{ coach.profile_photo_url or coach.profile_photo or coach.photo or '' }}";
 const GYM_NAME = "{{ coach.gyms[0].name if coach.gyms else 'Salle de sport' }}";
 const GYM_ADDRESS = "{{ coach.gyms[0].address if coach.gyms else '' }}";
 const SLOT_MINUTES = 30;

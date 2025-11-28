@@ -295,13 +295,15 @@ evSubmit.addEventListener('click', async ()=>{
     localStorage.setItem(LS_USER_KEY, JSON.stringify(verifiedUser));
     clearOtp();
     
-    // Sauvegarder la réservation
+    // Sauvegarder la réservation avec toutes les données
     const booking = {
       coach,
       service,
       duration,
       price,
       gym,
+      gym_address: gymAddress || '',
+      coach_photo: coachPhoto || '',
       date: selDate.toISOString().split('T')[0],
       time: selTime,
       createdAt: new Date().toISOString()
@@ -360,13 +362,15 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
   btn.disabled = true;
   btn.textContent = 'Confirmation en cours...';
   
-  // Sauvegarder la réservation
+  // Sauvegarder la réservation avec toutes les données
   const booking = {
     coach,
     service,
     duration,
     price,
     gym,
+    gym_address: gymAddress || '',
+    coach_photo: coachPhoto || '',
     date: selDate.toISOString().split('T')[0],
     time: selTime,
     createdAt: new Date().toISOString()
