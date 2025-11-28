@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Annulation de RDV</title>
+<style>
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+        background: #f7f7f7;
+        margin: 0;
+        padding: 20px;
+    }
+
+    .container {
+        max-width: 600px;
+        margin: auto;
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+    p {
+        color: #444;
+        line-height: 22px;
+    }
+
+    .card {
+        background: #fafafa;
+        border: 1px solid #e4e4e4;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 20px 0;
+    }
+
+    .details {
+        font-size: 15px;
+        color: #333;
+    }
+
+    .duration-price {
+        margin-top: 10px;
+        font-size: 14px;
+        color: #777;
+    }
+
+    .btns {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 12px;
+        border-radius: 10px;
+        font-size: 16px;
+        text-align: center;
+        cursor: pointer;
+        border: 2px solid black;
+        transition: 0.2s;
+    }
+
+    .cancel {
+        background: white;
+    }
+
+    .confirm {
+        background: #ff4d4d;
+        border-color: #ff4d4d;
+        color: white;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Suppression de RDV</h1>
+
+    <p>
+        Souhaitez-vous annuler votre rendez-vous du 
+        <strong id="date"></strong> à <strong id="hour"></strong>  
+        chez <strong id="salle"></strong> ?
+    </p>
+
+    <div class="card">
+        <div class="details" id="prestation"></div>
+        <div class="duration-price">
+            ⏱ <span id="duration"></span> &nbsp; • &nbsp; 💶 <span id="price"></span>
+        </div>
+    </div>
+
+    <div class="btns">
+        <div class="btn cancel" onclick="window.history.back()">Ne pas annuler</div>
+        <div class="btn confirm" onclick="confirmCancellation()">Confirmer l'annulation</div>
+    </div>
+
+</div>
+
+<script>
+    // Ces données seront remplies par ton backend
+    const rdvData = {
+        date: "mercredi 3 décembre 2025",
+        hour: "09:30",
+        salle: "Saint Lou - Élancourt",
+        prestation: "Shampooing Coiffure - Cheveux Mi-Longs",
+        duration: "30min",
+        price: "29€",
+        reservation_id: 12345
+    };
+
+    document.getElementById("date").textContent = rdvData.date;
+    document.getElementById("hour").textContent = rdvData.hour;
+    document.getElementById("salle").textContent = rdvData.salle;
+    document.getElementById("prestation").textContent = rdvData.prestation;
+    document.getElementById("duration").textContent = rdvData.duration;
+    document.getElementById("price").textContent = rdvData.price;
+
+    function confirmCancellation() {
+        fetch(`/cancel-reservation/${rdvData.reservation_id}`, {
+            method: "POST"
+        })
+        .then(() => {
+            window.location.href = "/reservation-cancelled";
+        });
+    }
+</script>
+
+</body>
+</html>

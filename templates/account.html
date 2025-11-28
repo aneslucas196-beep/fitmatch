@@ -237,7 +237,7 @@
                             <button class="fm-btn-outline" onclick="reschedule()">
                                 <span>🔄</span> Déplacer la séance
                             </button>
-                            <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking()">
+                            <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking(0)">
                                 <span>❌</span> Annuler la séance
                             </button>
                         </div>
@@ -265,6 +265,61 @@
             </section>
         </main>
     </div>
+
+    <!-- Modal d'annulation de RDV -->
+    <dialog id="cancel-modal" style="
+        border: none;
+        border-radius: 12px;
+        padding: 0;
+        max-width: 600px;
+        width: 90%;
+        background: white;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    ">
+        <div style="padding: 25px;">
+            <h1 style="font-size: 24px; margin: 0 0 10px 0; font-weight: 600;">Suppression de RDV</h1>
+            <p style="color: #444; line-height: 22px; margin: 0;">
+                Souhaitez-vous annuler votre rendez-vous du 
+                <strong id="cancel-date"></strong> à <strong id="cancel-hour"></strong>  
+                chez <strong id="cancel-salle"></strong> ?
+            </p>
+
+            <div style="background: #fafafa; border: 1px solid #e4e4e4; padding: 15px; border-radius: 10px; margin: 20px 0;">
+                <div id="cancel-prestation" style="font-size: 15px; color: #333;"></div>
+                <div style="margin-top: 10px; font-size: 14px; color: #777;">
+                    ⏱ <span id="cancel-duration"></span> &nbsp; • &nbsp; 💶 <span id="cancel-price"></span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closeCancelModal()" style="
+                    flex: 1;
+                    padding: 12px;
+                    border-radius: 10px;
+                    font-size: 16px;
+                    text-align: center;
+                    cursor: pointer;
+                    border: 2px solid black;
+                    background: white;
+                    font-weight: 500;
+                    transition: 0.2s;
+                ">Ne pas annuler</button>
+                <button onclick="confirmCancellation()" style="
+                    flex: 1;
+                    padding: 12px;
+                    border-radius: 10px;
+                    font-size: 16px;
+                    text-align: center;
+                    cursor: pointer;
+                    border: 2px solid #ff4d4d;
+                    background: #ff4d4d;
+                    color: white;
+                    font-weight: 500;
+                    transition: 0.2s;
+                ">Confirmer l'annulation</button>
+            </div>
+        </div>
+    </dialog>
 
     <script>
         const STORAGE_KEY = 'fitmatch';
@@ -336,14 +391,14 @@
             
             if (upcoming.length > 0) {
                 emptyState.style.display = 'none';
-                upcoming.forEach(booking => {
-                    const card = createBookingCard(booking);
+                upcoming.forEach((booking, idx) => {
+                    const card = createBookingCard(booking, idx + 1);
                     upcomingList.appendChild(card);
                 });
             }
         }
         
-        function createBookingCard(booking) {
+        function createBookingCard(booking, index) {
             const article = document.createElement('article');
             article.className = 'fm-booking-card';
             article.innerHTML = `
@@ -359,12 +414,14 @@
                     <div class="fm-booking-actions">
                         <button class="fm-btn-outline" onclick="addToCalendar()">📅 Ajouter à mon agenda</button>
                         <button class="fm-btn-outline" onclick="reschedule()">🔄 Déplacer</button>
-                        <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking()">❌ Annuler</button>
+                        <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking(${index})">❌ Annuler</button>
                     </div>
                 </div>
             `;
             return article;
         }
+        
+        let currentCancelIndex = null;
         
         function addToCalendar() {
             alert('Fonctionnalité à venir : Ajouter au calendrier');
@@ -374,10 +431,63 @@
             alert('Fonctionnalité à venir : Déplacer la séance');
         }
         
-        function cancelBooking() {
-            if (confirm('Êtes-vous sûr de vouloir annuler cette séance ?')) {
-                alert('Séance annulée');
+        function cancelBooking(index = 0) {
+            const data = getStoredData();
+            const bookings = data.bookings || [];
+            const sortedBookings = bookings.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const booking = sortedBookings[index];
+            
+            if (!booking) return;
+            
+            currentCancelIndex = index;
+            
+            // Formater la date en français
+            const dateObj = new Date(booking.date);
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            const formattedDate = dateObj.toLocaleDateString('fr-FR', options);
+            
+            // Remplir les infos de la modal
+            document.getElementById('cancel-date').textContent = formattedDate;
+            document.getElementById('cancel-hour').textContent = booking.time || '10:00';
+            document.getElementById('cancel-salle').textContent = booking.gym || 'Salle de sport';
+            document.getElementById('cancel-prestation').textContent = booking.service || 'Séance de coaching personnalisé';
+            document.getElementById('cancel-duration').textContent = (booking.duration || 60) + 'min';
+            document.getElementById('cancel-price').textContent = (booking.price || 40) + '€';
+            
+            // Afficher la modal
+            document.getElementById('cancel-modal').showModal();
+        }
+        
+        function closeCancelModal() {
+            document.getElementById('cancel-modal').close();
+            currentCancelIndex = null;
+        }
+        
+        function confirmCancellation() {
+            if (currentCancelIndex === null) return;
+            
+            const data = getStoredData();
+            const bookings = data.bookings || [];
+            const sortedBookings = bookings.sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // Trouver l'index original dans le tableau non trié
+            const bookingToCancel = sortedBookings[currentCancelIndex];
+            const originalIndex = bookings.findIndex(b => 
+                b.date === bookingToCancel.date && 
+                b.time === bookingToCancel.time && 
+                b.coach === bookingToCancel.coach
+            );
+            
+            if (originalIndex !== -1) {
+                bookings.splice(originalIndex, 1);
+                data.bookings = bookings;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             }
+            
+            closeCancelModal();
+            
+            // Recharger la page pour afficher les changements
+            window.location.reload();
         }
         
         function logout() {
