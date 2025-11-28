@@ -363,3 +363,196 @@ def send_booking_confirmation_email(
             "mode": "error",
             "error": error_msg
         }
+
+
+def send_cancellation_email(
+    to_email: str,
+    client_name: str,
+    coach_name: str,
+    gym_name: str,
+    gym_address: str,
+    date_str: str,
+    time_str: str,
+    service_name: str,
+    duration: str,
+    price: str,
+    coach_photo: Optional[str] = None,
+    booking_url: Optional[str] = None
+) -> dict:
+    """
+    Envoie un email d'annulation de réservation style Planity via Resend API
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    site_url = os.environ.get('REPLIT_DEV_DOMAIN', os.environ.get('SITE_URL', 'http://localhost:5000'))
+    
+    if site_url and not site_url.startswith('http'):
+        site_url = f"https://{site_url}"
+    
+    if not booking_url:
+        booking_url = f"{site_url}/"
+    
+    print(f"📧 Préparation email annulation:")
+    print(f"  - Client: {client_name} ({to_email})")
+    print(f"  - Coach: {coach_name}")
+    print(f"  - Salle: {gym_name}")
+    print(f"  - Date: {date_str} à {time_str}")
+    
+    if not resend_key:
+        print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi d'email")
+        return {"success": True, "mode": "demo", "message": "Email annulation simulé"}
+    
+    # Image de couverture
+    default_image = "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&h=300&fit=crop"
+    if coach_photo and coach_photo.startswith('/'):
+        cover_image = f"{site_url}{coach_photo}"
+    elif coach_photo and coach_photo.startswith('http'):
+        cover_image = coach_photo
+    else:
+        cover_image = default_image
+    
+    first_name = client_name.split()[0] if client_name else "Client"
+    
+    # Lien Google Maps
+    maps_url = f"https://www.google.com/maps/search/?api=1&query={gym_address.replace(' ', '+')}" if gym_address else "#"
+    
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; font-family: 'Inter', Arial, sans-serif; background-color:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:white;">
+                
+                <!-- Header annulation -->
+                <div style="background:#111; padding:30px; text-align:center;">
+                    <div style="display:inline-block; background:#ef4444; color:white; padding:8px 20px; border-radius:50px; font-size:14px; font-weight:600;">
+                        ✕ Rendez-vous annulé
+                    </div>
+                </div>
+                
+                <!-- Message principal -->
+                <div style="padding:25px; text-align:center; background:#fef2f2; border-bottom:1px solid #fecaca;">
+                    <p style="margin:0; color:#991b1b; font-size:15px;">
+                        Votre rendez-vous a été annulé avec succès.
+                    </p>
+                </div>
+                
+                <!-- Image de couverture -->
+                <div style="padding:0;">
+                    <img src="{cover_image}" alt="Photo" style="width:100%; height:200px; object-fit:cover; display:block;"/>
+                </div>
+                
+                <!-- Infos du RDV annulé -->
+                <div style="padding:25px;">
+                    <h2 style="margin:0 0 8px 0; font-size:20px; color:#111;">{gym_name}</h2>
+                    <p style="margin:0; color:#666; font-size:14px;">{gym_address}</p>
+                    
+                    <div style="margin:20px 0; padding:15px; background:#fafafa; border-radius:8px; border:1px solid #e5e5e5;">
+                        <p style="margin:0 0 8px 0; font-size:15px; color:#111;">
+                            <strong style="color:#ef4444; text-decoration:line-through;">{date_str} à {time_str}</strong>
+                        </p>
+                        <p style="margin:0; color:#666; font-size:14px;">
+                            Coach: {coach_name}
+                        </p>
+                    </div>
+                    
+                    <div style="padding:15px 0; border-top:1px solid #eee;">
+                        <p style="margin:0 0 5px 0; font-size:14px; color:#111; font-weight:500;">Prestation annulée</p>
+                        <p style="margin:0; color:#666; font-size:14px;">{service_name} · {duration} · {price}</p>
+                    </div>
+                </div>
+                
+                <!-- CTA Reprendre RDV -->
+                <div style="padding:0 25px 25px;">
+                    <a href="{booking_url}" 
+                       style="display:block; background:#111; color:white; padding:14px 40px; text-decoration:none; border-radius:8px; font-weight:600; font-size:15px; text-align:center;">
+                        Reprendre rendez-vous
+                    </a>
+                </div>
+                
+                <!-- Adresse avec lien Maps -->
+                <div style="padding:20px 25px; background:#fafafa; border-top:1px solid #eee;">
+                    <p style="margin:0 0 5px 0; font-size:12px; color:#999; text-transform:uppercase;">Adresse</p>
+                    <a href="{maps_url}" style="color:#3b82f6; text-decoration:none; font-size:14px;">
+                        📍 {gym_address}
+                    </a>
+                </div>
+                
+                <!-- Footer -->
+                <div style="padding:20px 25px; text-align:center; border-top:1px solid #eee;">
+                    <p style="margin:0; color:#999; font-size:12px;">
+                        Fitmatch - Votre plateforme fitness
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+Rendez-vous annulé
+
+Votre rendez-vous a été annulé avec succès.
+
+{gym_name}
+{gym_address}
+
+Date: {date_str} à {time_str}
+Coach: {coach_name}
+
+Prestation: {service_name} · {duration} · {price}
+
+Pour reprendre rendez-vous: {booking_url}
+
+---
+Fitmatch - Votre plateforme fitness
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {resend_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": f"✕ Rendez-vous annulé - {gym_name}",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        print(f"📤 Envoi email annulation via Resend...")
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            email_id = response_data.get('id', 'N/A')
+            print(f"✅ Email annulation envoyé à {to_email} (ID: {email_id})")
+            return {
+                "success": True,
+                "mode": "resend",
+                "email_id": email_id,
+                "message": "Email d'annulation envoyé"
+            }
+        else:
+            error_msg = f"Erreur Resend (Status {response.status_code}): {response.text}"
+            print(f"❌ {error_msg}")
+            return {
+                "success": False,
+                "mode": "resend",
+                "error": error_msg
+            }
+            
+    except Exception as e:
+        error_msg = f"Erreur envoi email annulation: {e}"
+        print(f"❌ {error_msg}")
+        return {
+            "success": False,
+            "mode": "error",
+            "error": error_msg
+        }

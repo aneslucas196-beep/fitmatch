@@ -3131,6 +3131,22 @@ class ConfirmBookingRequest(BaseModel):
     price: str
     coach_photo: Optional[str] = None
 
+
+class CancelBookingRequest(BaseModel):
+    client_name: str
+    client_email: str
+    coach_name: str
+    gym_name: str
+    gym_address: Optional[str] = "Adresse non renseignée"
+    date: str  # format en français: "vendredi 28 novembre 2025"
+    time: str  # format: "14:00"
+    service: str
+    duration: str
+    price: str
+    coach_photo: Optional[str] = None
+    booking_url: Optional[str] = None
+
+
 @app.post("/api/confirm-booking")
 async def confirm_booking(request: ConfirmBookingRequest):
     """Confirme une réservation et envoie l'email de confirmation au client."""
@@ -3200,6 +3216,64 @@ async def confirm_booking(request: ConfirmBookingRequest):
             "email_sent": False,
             "error": str(e)
         })
+
+
+@app.post("/api/cancel-booking")
+async def cancel_booking(request: CancelBookingRequest):
+    """Annule une réservation et envoie l'email d'annulation au client."""
+    try:
+        from resend_service import send_cancellation_email
+        
+        print(f"📧 Annulation réservation pour {request.client_name} ({request.client_email})")
+        print(f"   Coach: {request.coach_name}, Salle: {request.gym_name}")
+        print(f"   Date: {request.date} à {request.time}")
+        
+        # Envoyer l'email d'annulation
+        result = send_cancellation_email(
+            to_email=request.client_email,
+            client_name=request.client_name,
+            coach_name=request.coach_name,
+            gym_name=request.gym_name,
+            gym_address=request.gym_address or "Adresse non renseignée",
+            date_str=request.date,
+            time_str=request.time,
+            service_name=request.service,
+            duration=request.duration,
+            price=request.price,
+            coach_photo=request.coach_photo,
+            booking_url=request.booking_url
+        )
+        
+        if result.get("success"):
+            return JSONResponse({
+                "success": True,
+                "message": "Réservation annulée, email envoyé",
+                "email_sent": True,
+                "email_id": result.get("email_id")
+            })
+        else:
+            print(f"⚠️ Email non envoyé mais réservation annulée: {result.get('error')}")
+            return JSONResponse({
+                "success": True,
+                "message": "Réservation annulée (email non envoyé)",
+                "email_sent": False,
+                "error": result.get("error")
+            })
+            
+    except Exception as e:
+        print(f"❌ Erreur annulation réservation: {e}")
+        return JSONResponse({
+            "success": True,
+            "message": "Réservation annulée (erreur email)",
+            "email_sent": False,
+            "error": str(e)
+        })
+
+
+@app.get("/reservation-cancelled", response_class=HTMLResponse)
+async def reservation_cancelled(request: Request):
+    """Page de confirmation d'annulation de réservation."""
+    return templates.TemplateResponse("reservation_cancelled.html", {"request": request})
 
 
 if __name__ == "__main__":

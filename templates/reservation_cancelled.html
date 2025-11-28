@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rendez-vous annulé - FitMatch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+        <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </div>
+        
+        <h1 class="text-2xl font-semibold text-gray-900 mb-3">Rendez-vous annulé</h1>
+        
+        <p class="text-gray-600 mb-6">
+            Votre rendez-vous a été annulé avec succès.<br>
+            Un email de confirmation vous a été envoyé.
+        </p>
+        
+        <div class="bg-gray-50 rounded-xl p-4 mb-6">
+            <p class="text-sm text-gray-500">
+                Vous pouvez reprendre rendez-vous à tout moment avec un coach de votre choix.
+            </p>
+        </div>
+        
+        <div class="space-y-3">
+            <a href="/" class="block w-full bg-black text-white py-3 px-6 rounded-xl font-medium hover:bg-gray-800 transition-colors">
+                Reprendre rendez-vous
+            </a>
+            <a href="/account" class="block w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-medium hover:bg-gray-200 transition-colors">
+                Retour à mes séances
+            </a>
+        </div>
+    </div>
+</body>
+</html>

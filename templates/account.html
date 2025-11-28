@@ -463,15 +463,47 @@
             currentCancelIndex = null;
         }
         
-        function confirmCancellation() {
+        async function confirmCancellation() {
             if (currentCancelIndex === null) return;
             
             const data = getStoredData();
+            const user = data.user || {};
             const bookings = data.bookings || [];
-            const sortedBookings = bookings.sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            // Trouver l'index original dans le tableau non trié
+            const sortedBookings = [...bookings].sort((a, b) => new Date(a.date) - new Date(b.date));
             const bookingToCancel = sortedBookings[currentCancelIndex];
+            
+            if (!bookingToCancel) return;
+            
+            // Formater la date en français pour l'email
+            const dateObj = new Date(bookingToCancel.date);
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            const formattedDate = dateObj.toLocaleDateString('fr-FR', options);
+            
+            // Envoyer l'email d'annulation via l'API
+            try {
+                await fetch('/api/cancel-booking', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        client_name: user.fullName || 'Client',
+                        client_email: user.email || '',
+                        coach_name: bookingToCancel.coach || 'Coach',
+                        gym_name: bookingToCancel.gym || 'Salle de sport',
+                        gym_address: bookingToCancel.gym_address || '',
+                        date: formattedDate,
+                        time: bookingToCancel.time || '10:00',
+                        service: bookingToCancel.service || 'Séance de coaching',
+                        duration: (bookingToCancel.duration || 60) + 'min',
+                        price: (bookingToCancel.price || 40) + '€',
+                        coach_photo: bookingToCancel.coach_photo || null,
+                        booking_url: window.location.origin + '/'
+                    })
+                });
+            } catch (e) {
+                console.error('Erreur envoi email annulation:', e);
+            }
+            
+            // Supprimer la réservation du localStorage
             const originalIndex = bookings.findIndex(b => 
                 b.date === bookingToCancel.date && 
                 b.time === bookingToCancel.time && 
@@ -486,8 +518,8 @@
             
             closeCancelModal();
             
-            // Recharger la page pour afficher les changements
-            window.location.reload();
+            // Rediriger vers la page de confirmation d'annulation
+            window.location.href = '/reservation-cancelled';
         }
         
         function logout() {

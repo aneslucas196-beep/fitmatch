@@ -1,0 +1,123 @@
+. BACKEND — Code Python (FastAPI / Flask)
+
+👉 Ce code envoie l’email au client.
+
+import requests
+from flask import Flask, request, jsonify
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+
+app = Flask(__name__)
+
+@app.route("/send-cancel-email", methods=["POST"])
+def send_cancel_email():
+    data = request.json
+
+    email = data["email"]
+    coach = data["coach"]
+    salle = data["salle"]
+    date = data["date"]
+    hour = data["hour"]
+    prestation = data["prestation"]
+    duration = data["duration"]
+    price = data["price"]
+    address = data["address"]
+    image_url = data["image_url"]
+    booking_url = data["booking_url"]
+
+    html_content = f"""
+    <div style="font-family:Arial;padding:20px;">
+        <h2 style="color:#d33;text-align:center;">Votre rendez-vous est annulé</h2>
+        
+        <div style="text-align:center;">
+            <img src="{image_url}" style="width:100%;border-radius:12px;margin:20px 0;">
+        </div>
+
+        <h3>{salle}</h3>
+        <p><strong>{date} à {hour}</strong><br>{coach}</p>
+
+        <h4>Prestation choisie</h4>
+        <p>{prestation} · {duration} · {price}</p>
+
+        <div style="text-align:center;margin:30px 0;">
+            <a href="{booking_url}" 
+               style="background:black;color:white;padding:12px 20px;border-radius:8px;text-decoration:none;">
+               Reprendre RDV
+            </a>
+        </div>
+
+        <h4>Adresse</h4>
+        <p>
+            <a href="https://www.google.com/maps/search/?api=1&query={address}" 
+               style="color:#007bff;text-decoration:none;">
+               {address}
+            </a>
+        </p>
+    </div>
+    """
+
+    message = Mail(
+        from_email="no-reply@fitmatch.com",
+        to_emails=email,
+        subject="Votre rendez-vous est annulé",
+        html_content=html_content
+    )
+
+    try:
+        sg = SendGridAPIClient("TA_CLE_API_SENDGRID")
+        sg.send(message)
+        return jsonify({"status":"email sent"})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+if __name__ == "__main__":
+    app.run()
+
+✅ 2. Quand le client clique sur “Confirmer l’annulation”
+
+Dans ton fichier cancel.html, remplace la fonction :
+
+function confirmCancellation() {
+    fetch("/cancel-reservation/" + rdvData.reservation_id, { method: "POST" })
+    .then(() => {
+        fetch("/send-cancel-email", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                email: rdvData.email,
+                coach: rdvData.coach,
+                salle: rdvData.salle,
+                date: rdvData.date,
+                hour: rdvData.hour,
+                prestation: rdvData.prestation,
+                duration: rdvData.duration,
+                price: rdvData.price,
+                image_url: rdvData.image,
+                address: rdvData.address,
+                booking_url: "https://fitmatch.com/reserver/" + rdvData.salle_id
+            })
+        });
+
+        window.location.href = "/reservation-cancelled";
+    });
+}
+
+
+✔️ Ça annule le RDV
+✔️ Ça envoie l’email
+✔️ Ça redirige vers “RDV annulé”
+
+🔥 3. Exemple de données envoyées (à mettre dans ton JS)
+const rdvData = {
+    email: "client@gmail.com",
+    coach: "Anes Ben",
+    salle: "HK Coiffure",
+    date: "Vendredi 28 novembre 2025",
+    hour: "17:20",
+    prestation: "Contour de barbe",
+    duration: "10min",
+    price: "5€",
+    address: "15 Rue d'Athènes, 78990 Élancourt",
+    image: "https://ton-site.com/photos/hk.jpg",
+    salle_id: 55
+};
