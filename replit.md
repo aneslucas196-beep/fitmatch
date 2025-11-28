@@ -55,8 +55,20 @@ Preferred communication style: Simple, everyday language.
             - Identity summary shows "Identifié: [Name] / [Email]" with "Modifier" and "Se déconnecter" buttons
             - Clean white Planity-style design with responsive grid (2 cols desktop, 1 col mobile)
             - OTP stored in localStorage.fitmatch.otp with 5-minute expiration
-    - **URL Parameters**: Dynamic data passed via query strings (coach, service, duration, price, gym, date, time) with intelligent fallback to default values
-    - **Persistence**: Bookings stored in demo_users.json with conflict detection
+    - **URL Parameters**: Dynamic data passed via query strings (coach, coach_email, service, duration, price, gym, date, time) with intelligent fallback to default values
+    - **Persistence**: Bookings stored in demo_users.json under each coach's pending_bookings array with conflict detection
+    - **Coach Notification System**: When a client books a session:
+        - Booking is saved to coach's pending_bookings in demo_users.json
+        - Coach receives email notification via Resend with booking details
+        - Coach can view pending bookings in their dashboard (/coach-portal)
+        - Coach can confirm or reject bookings via dashboard buttons
+    - **Coach Lookup**: 3-level robust coach identification:
+        1. Direct email match (coach_email parameter)
+        2. Slug decoding (email_with_underscores → real@email.com)
+        3. Normalized name matching (strip + lower)
+    - **API Endpoints**:
+        - GET /api/coach/bookings?coach_email=... - List coach's pending/confirmed bookings
+        - POST /api/coach/bookings/respond - Coach confirms/rejects a booking
     - **Mobile-First**: Responsive design with native HTML5 elements for optimal mobile UX
 - **Client Dashboard**: Redesigned home page with fitness-inspired gradient background, dynamic motivational quotes, visual progress bar, upcoming workout sessions, and badge system.
 - **FAQ Section**: Homepage includes a Planity-style FAQ section using native HTML5 `<details>` for accordion functionality.

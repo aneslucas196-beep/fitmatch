@@ -349,73 +349,76 @@
 // Variables globales
 let currentWeekStart = new Date();
 let isWeekView = true;
+const COACH_EMAIL = "{{ coach.email or coach.id or '' }}";
 
-// Données mock pour le développement
-const mockBookings = [
-    {
-        id: 1,
-        client_name: "Marie Dupont",
-        date: "2025-09-28",
-        start_time: "10:00",
-        end_time: "11:00",
-        status: "confirmed",
-        session_type: "musculation",
-        payment_status: "paid",
-        gym_location: "Fitness Park Maurepas",
-        price: 65
-    },
-    {
-        id: 2,
-        client_name: "Pierre Martin",
-        date: "2025-09-29",
-        start_time: "14:00",
-        end_time: "15:00",
-        status: "pending",
-        session_type: "cardio",
-        payment_status: "pending",
-        gym_location: "Basic-Fit Paris 15",
-        price: 60
-    },
-    {
-        id: 3,
-        client_name: "Sophie Leroy",
-        date: "2025-10-01",
-        start_time: "16:00",
-        end_time: "17:00",
-        status: "confirmed",
-        session_type: "yoga",
-        payment_status: "paid",
-        gym_location: "Studio Zen Versailles",
-        price: 55
-    }
-];
+// Données réelles chargées depuis l'API
+let realBookings = {
+    pending: [],
+    confirmed: [],
+    rejected: []
+};
 
-const mockNotifications = [
-    {
-        id: 1,
-        type: "booking",
-        message: "Nouvelle réservation de Marie Dupont",
-        time: "Il y a 2h",
-        urgent: false
-    },
-    {
-        id: 2,
-        type: "payment",
-        message: "Paiement en attente - Pierre Martin",
-        time: "Il y a 4h",
-        urgent: true
-    },
-    {
-        id: 3,
-        type: "reminder",
-        message: "Séance dans 1h avec Sophie",
-        time: "Il y a 30min",
-        urgent: false
+// Charger les réservations depuis l'API
+async function loadBookingsFromAPI() {
+    if (!COACH_EMAIL) {
+        console.log("⚠️ Email coach non disponible");
+        return;
     }
-];
+    
+    try {
+        const response = await fetch(`/api/coach/bookings?coach_email=${encodeURIComponent(COACH_EMAIL)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            realBookings = {
+                pending: data.pending || [],
+                confirmed: data.confirmed || [],
+                rejected: data.rejected || []
+            };
+            console.log("📊 Réservations chargées:", realBookings);
+            
+            // Mettre à jour les compteurs
+            document.getElementById('notifications-count').textContent = realBookings.pending.length;
+            document.getElementById('weekly-bookings').textContent = realBookings.pending.length + realBookings.confirmed.length;
+        }
+    } catch (error) {
+        console.error("❌ Erreur chargement réservations:", error);
+    }
+}
+
+// Confirmer ou refuser une réservation
+async function respondToBooking(bookingId, action) {
+    try {
+        const response = await fetch('/api/coach/bookings/respond', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                coach_email: COACH_EMAIL,
+                booking_id: bookingId,
+                action: action
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            // Recharger les données
+            await loadBookingsFromAPI();
+            loadUpcomingBookings();
+            loadNotifications();
+        } else {
+            alert("Erreur: " + data.error);
+        }
+    } catch (error) {
+        console.error("❌ Erreur réponse réservation:", error);
+        alert("Une erreur est survenue");
+    }
+}
 
 // Initialisation
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadBookingsFromAPI();
     initializeCalendar();
     loadUpcomingBookings();
     loadNotifications();
@@ -540,17 +543,18 @@ function generateWeekCalendar() {
             date.setDate(currentWeekStart.getDate() + day);
             const dateStr = date.toISOString().split('T')[0];
             
-            // Check for bookings at this time
-            const booking = mockBookings.find(b => 
-                b.date === dateStr && b.start_time === hour
+            // Check for bookings at this time (utiliser les vraies données)
+            const allBookings = [...realBookings.pending, ...realBookings.confirmed];
+            const booking = allBookings.find(b => 
+                b.date === dateStr && b.time === hour
             );
             
             if (booking) {
                 const statusColor = booking.status === 'confirmed' ? 'bg-green-100 border-green-500' : 'bg-orange-100 border-orange-500';
                 html += `<div class="p-1 border ${statusColor} rounded cursor-pointer hover:opacity-80" 
-                    title="${booking.client_name} - ${booking.session_type}">
+                    title="${booking.client_name} - ${booking.service}">
                     <div class="text-xs font-medium truncate">${booking.client_name}</div>
-                    <div class="text-xs text-gray-600 truncate">${booking.session_type}</div>
+                    <div class="text-xs text-gray-600 truncate">${booking.time}</div>
                 </div>`;
             } else {
                 html += '<div class="p-1 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer" title="Disponible"></div>';
@@ -592,8 +596,9 @@ function generateMonthCalendar() {
             const isToday = date.toDateString() === new Date().toDateString();
             const dateStr = date.toISOString().split('T')[0];
             
-            // Check for bookings on this date
-            const dayBookings = mockBookings.filter(b => b.date === dateStr);
+            // Check for bookings on this date (utiliser les vraies données)
+            const allBookingsMonth = [...realBookings.pending, ...realBookings.confirmed];
+            const dayBookings = allBookingsMonth.filter(b => b.date === dateStr);
             
             let cellClass = 'p-2 min-h-[80px] border border-gray-200 hover:bg-gray-50 cursor-pointer';
             if (!isCurrentMonth) {
@@ -610,8 +615,8 @@ function generateMonthCalendar() {
             dayBookings.forEach(booking => {
                 const statusColor = booking.status === 'confirmed' ? 'bg-green-200 text-green-800' : 'bg-orange-200 text-orange-800';
                 html += `<div class="text-xs p-1 mb-1 rounded ${statusColor} truncate" 
-                    title="${booking.client_name} - ${booking.start_time}">
-                    ${booking.start_time} ${booking.client_name}
+                    title="${booking.client_name} - ${booking.time}">
+                    ${booking.time} ${booking.client_name}
                 </div>`;
             });
             
@@ -626,35 +631,65 @@ function generateMonthCalendar() {
 function loadUpcomingBookings() {
     const container = document.getElementById('upcoming-bookings');
     
-    // Sort by date and take next 3
-    const upcoming = mockBookings
-        .sort((a, b) => new Date(a.date + ' ' + a.start_time) - new Date(b.date + ' ' + b.start_time))
-        .slice(0, 3);
+    // Combiner pending et confirmed, trier par date
+    const allBookings = [...realBookings.pending, ...realBookings.confirmed];
+    
+    if (allBookings.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-gray-500 py-6">
+                <p>Aucune réservation pour le moment</p>
+                <p class="text-sm mt-2">Partagez votre lien de réservation !</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Trier par date et prendre les 5 prochaines
+    const upcoming = allBookings
+        .sort((a, b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time))
+        .slice(0, 5);
     
     container.innerHTML = upcoming.map(booking => {
-        const statusIcon = booking.payment_status === 'paid' ? '✅' : '⏳';
-        const statusText = booking.payment_status === 'paid' ? 'Payé' : 'En attente';
-        const statusColor = booking.payment_status === 'paid' ? 'text-green-600' : 'text-orange-600';
+        const isPending = booking.status === 'pending';
+        const statusIcon = isPending ? '⏳' : '✅';
+        const statusText = isPending ? 'En attente' : 'Confirmée';
+        const statusColor = isPending ? 'text-orange-600' : 'text-green-600';
+        const bgColor = isPending ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-200';
+        
+        // Formater la date
+        const dateObj = new Date(booking.date);
+        const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
         
         return `
-            <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition">
+            <div class="border ${bgColor} rounded-lg p-4 hover:shadow-md transition">
                 <div class="flex justify-between items-start mb-2">
                     <h4 class="font-semibold text-gray-900">${booking.client_name}</h4>
-                    <span class="${statusColor} text-xs">${statusIcon} ${statusText}</span>
+                    <span class="${statusColor} text-xs font-medium">${statusIcon} ${statusText}</span>
                 </div>
-                <div class="text-sm text-gray-600">
-                    <p>📅 ${new Date(booking.date).toLocaleDateString('fr-FR')}</p>
-                    <p>⏰ ${booking.start_time} - ${booking.end_time}</p>
-                    <p>🏋️ ${booking.session_type}</p>
-                    <p>📍 ${booking.gym_location}</p>
+                <div class="text-sm text-gray-600 space-y-1">
+                    <p>📅 ${dateStr}</p>
+                    <p>⏰ ${booking.time}</p>
+                    <p>📍 ${booking.gym_name}</p>
+                    <p>💰 ${booking.price}€</p>
                 </div>
-                <div class="mt-2 flex justify-between items-center">
-                    <span class="font-semibold text-green-600">€${booking.price}</span>
-                    ${booking.status === 'confirmed' ? 
-                        '<button class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">Marquer terminée</button>' :
-                        '<button class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">Confirmer</button>'
-                    }
-                </div>
+                ${isPending ? `
+                    <div class="mt-3 flex gap-2">
+                        <button onclick="respondToBooking('${booking.id}', 'confirm')" 
+                                class="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition">
+                            ✓ Confirmer
+                        </button>
+                        <button onclick="respondToBooking('${booking.id}', 'reject')" 
+                                class="flex-1 bg-red-100 text-red-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-200 transition">
+                            ✕ Refuser
+                        </button>
+                    </div>
+                ` : `
+                    <div class="mt-3">
+                        <span class="inline-block bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                            Séance confirmée
+                        </span>
+                    </div>
+                `}
             </div>
         `;
     }).join('');
@@ -663,16 +698,40 @@ function loadUpcomingBookings() {
 function loadNotifications() {
     const container = document.getElementById('notifications-list');
     
-    container.innerHTML = mockNotifications.map(notification => {
-        const urgentClass = notification.urgent ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50';
+    // Utiliser les réservations pending comme notifications
+    const pendingBookings = realBookings.pending || [];
+    
+    if (pendingBookings.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-gray-500 py-4">
+                <p class="text-sm">Aucune notification</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = pendingBookings.map(booking => {
+        const dateObj = new Date(booking.date);
+        const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
         
         return `
-            <div class="border ${urgentClass} rounded-lg p-3">
+            <div class="border border-orange-200 bg-orange-50 rounded-lg p-3">
                 <div class="flex justify-between items-start">
-                    <p class="text-sm text-gray-900">${notification.message}</p>
-                    ${notification.urgent ? '<span class="text-red-500 text-xs">🔴</span>' : ''}
+                    <p class="text-sm text-gray-900 font-medium">🔔 ${booking.client_name}</p>
+                    <span class="text-orange-500 text-xs">En attente</span>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">${notification.time}</p>
+                <p class="text-xs text-gray-600 mt-1">${dateStr} à ${booking.time}</p>
+                <p class="text-xs text-gray-500 mt-1">📍 ${booking.gym_name}</p>
+                <div class="mt-2 flex gap-2">
+                    <button onclick="respondToBooking('${booking.id}', 'confirm')" 
+                            class="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">
+                        Confirmer
+                    </button>
+                    <button onclick="respondToBooking('${booking.id}', 'reject')" 
+                            class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300">
+                        Refuser
+                    </button>
+                </div>
             </div>
         `;
     }).join('');

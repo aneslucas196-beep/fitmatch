@@ -7,6 +7,7 @@ const fmtDateLong = (d) => {
 // Lire paramètres URL ou mettre des valeurs par défaut
 const p = new URLSearchParams(location.search);
 const coach   = p.get('coach')   || 'Coach Anas';
+const coachEmail = p.get('coach_email') || '';  // Email du coach pour identification fiable
 const service = p.get('service') || 'Séance musculation';
 const duration= p.get('duration')|| '60';
 const price   = p.get('price')   || '40';
@@ -325,6 +326,7 @@ evSubmit.addEventListener('click', async ()=>{
           client_name: verifiedUser.fullName,
           client_email: verifiedUser.email,
           coach_name: coach,
+          coach_email: coachEmail || null,
           gym_name: gym,
           gym_address: gymAddress || 'Adresse non renseignée',
           date: booking.date,
@@ -392,6 +394,7 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
         client_name: u.fullName,
         client_email: u.email,
         coach_name: coach,
+        coach_email: coachEmail || null,
         gym_name: gym,
         gym_address: gymAddress || 'Adresse non renseignée',
         date: booking.date,

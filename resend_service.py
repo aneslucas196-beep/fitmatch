@@ -556,3 +556,203 @@ Fitmatch - Votre plateforme fitness
             "mode": "error",
             "error": error_msg
         }
+
+
+def send_coach_notification_email(
+    to_email: str,
+    coach_name: str,
+    client_name: str,
+    client_email: str,
+    gym_name: str,
+    gym_address: str,
+    date_str: str,
+    time_str: str,
+    service_name: str = "Séance de coaching",
+    duration: str = "60 min",
+    price: str = "40€",
+    booking_id: str = "",
+    dashboard_url: Optional[str] = None
+) -> dict:
+    """
+    Envoie une notification email au coach quand un client fait une réservation.
+    Le coach peut confirmer ou refuser la séance depuis son dashboard.
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    
+    # URL du dashboard coach
+    if not dashboard_url:
+        site_url = os.environ.get('REPLIT_DEV_DOMAIN', 'localhost:5000')
+        if not site_url.startswith('http'):
+            site_url = f"https://{site_url}"
+        dashboard_url = f"{site_url}/coach/portal"
+    
+    print(f"📧 Notification nouvelle réservation pour coach {coach_name} ({to_email})")
+    print(f"   Client: {client_name}, Date: {date_str} à {time_str}")
+    
+    if not resend_key:
+        print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi d'email")
+        return {"success": True, "mode": "demo", "message": "Email simulé"}
+    
+    try:
+        first_name = coach_name.split()[0] if coach_name else "Coach"
+        
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: white; }}
+        .header {{ background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; }}
+        .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+        .badge {{ display: inline-block; background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 20px; margin-top: 10px; font-size: 14px; }}
+        .content {{ padding: 30px; }}
+        .alert-box {{ background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 0 8px 8px 0; margin-bottom: 25px; }}
+        .alert-box p {{ margin: 0; color: #92400e; font-size: 14px; }}
+        .booking-card {{ background: #f9fafb; border-radius: 12px; padding: 20px; margin: 20px 0; }}
+        .booking-card h3 {{ margin: 0 0 15px 0; color: #111; font-size: 18px; }}
+        .info-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }}
+        .info-row:last-child {{ border-bottom: none; }}
+        .info-label {{ color: #6b7280; font-size: 14px; }}
+        .info-value {{ color: #111; font-size: 14px; font-weight: 500; }}
+        .client-box {{ background: #eff6ff; border-radius: 8px; padding: 15px; margin-top: 15px; }}
+        .client-box p {{ margin: 5px 0; color: #1e40af; font-size: 14px; }}
+        .btn {{ display: inline-block; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; text-align: center; }}
+        .btn-primary {{ background: #10b981; color: white; }}
+        .btn-container {{ text-align: center; margin: 25px 0; }}
+        .footer {{ background: #f9fafb; padding: 20px; text-align: center; }}
+        .footer p {{ color: #6b7280; font-size: 12px; margin: 5px 0; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 Nouvelle demande de réservation</h1>
+            <div class="badge">Action requise</div>
+        </div>
+        
+        <div class="content">
+            <p style="font-size: 16px; color: #374151;">Bonjour {first_name},</p>
+            
+            <div class="alert-box">
+                <p><strong>Un client souhaite réserver une séance avec vous !</strong><br>
+                Connectez-vous à votre dashboard pour confirmer ou refuser cette demande.</p>
+            </div>
+            
+            <div class="booking-card">
+                <h3>📅 Détails de la réservation</h3>
+                <div class="info-row">
+                    <span class="info-label">Date</span>
+                    <span class="info-value">{date_str}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Heure</span>
+                    <span class="info-value">{time_str}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Salle</span>
+                    <span class="info-value">{gym_name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Prestation</span>
+                    <span class="info-value">{service_name} · {duration}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Tarif</span>
+                    <span class="info-value">{price}</span>
+                </div>
+                
+                <div class="client-box">
+                    <p><strong>👤 Client :</strong> {client_name}</p>
+                    <p><strong>📧 Email :</strong> {client_email}</p>
+                </div>
+            </div>
+            
+            <div class="btn-container">
+                <a href="{dashboard_url}" class="btn btn-primary">Voir mon dashboard</a>
+            </div>
+            
+            <p style="font-size: 13px; color: #6b7280; text-align: center;">
+                Vous pouvez confirmer ou refuser cette demande depuis votre espace coach.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Fitmatch - Votre plateforme fitness</p>
+            <p>Cet email a été envoyé suite à une demande de réservation.</p>
+        </div>
+    </div>
+</body>
+</html>
+        """
+        
+        text_content = f"""
+🔔 Nouvelle demande de réservation
+
+Bonjour {first_name},
+
+Un client souhaite réserver une séance avec vous !
+
+📅 Détails de la réservation:
+- Date: {date_str}
+- Heure: {time_str}
+- Salle: {gym_name}
+- Prestation: {service_name} · {duration}
+- Tarif: {price}
+
+👤 Client: {client_name}
+📧 Email: {client_email}
+
+Connectez-vous à votre dashboard pour confirmer ou refuser:
+{dashboard_url}
+
+---
+Fitmatch - Votre plateforme fitness
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {resend_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": f"🔔 Nouvelle réservation - {client_name} · {date_str}",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        print(f"📤 Envoi notification coach via Resend...")
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            email_id = response_data.get('id', 'N/A')
+            print(f"✅ Notification envoyée au coach {to_email} (ID: {email_id})")
+            return {
+                "success": True,
+                "mode": "resend",
+                "email_id": email_id,
+                "message": "Notification coach envoyée"
+            }
+        else:
+            error_msg = f"Erreur Resend (Status {response.status_code}): {response.text}"
+            print(f"❌ {error_msg}")
+            return {
+                "success": False,
+                "mode": "resend",
+                "error": error_msg
+            }
+            
+    except Exception as e:
+        error_msg = f"Erreur envoi notification coach: {e}"
+        print(f"❌ {error_msg}")
+        return {
+            "success": False,
+            "mode": "error",
+            "error": error_msg
+        }

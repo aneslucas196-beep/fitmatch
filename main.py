@@ -189,6 +189,7 @@ def get_coaches_by_gym_id(gym_id: str) -> List[Dict]:
                 # Construire un objet coach pour l'affichage
                 coach_obj = {
                     "id": email.replace("@", "_").replace(".", "_"),  # ID unique basé sur email
+                    "email": email,  # Email réel pour les réservations
                     "full_name": user_data.get("full_name", "Coach"),
                     "photo": user_data.get("profile_photo_url", user_data.get("photo", "/static/default-avatar.jpg")),
                     "verified": user_data.get("verified", False),
@@ -2014,7 +2015,8 @@ async def booking_page(request: Request, coach_id: str):
             for email, user_data in demo_users.items():
                 encoded_email = email.replace("@", "_").replace(".", "_")
                 if user_data.get("role") == "coach" and (str(user_data.get("id")) == coach_id or user_data.get("email") == coach_id or encoded_email == coach_id):
-                    coach = user_data
+                    coach = user_data.copy()
+                    coach["email"] = email
                     break
     
     if not coach:
@@ -3122,6 +3124,7 @@ class ConfirmBookingRequest(BaseModel):
     client_name: str
     client_email: str
     coach_name: str
+    coach_email: Optional[str] = None  # Email du coach pour identification fiable
     gym_name: str
     gym_address: Optional[str] = "Adresse non renseignée"
     date: str  # format: "2025-11-28"
@@ -3147,11 +3150,18 @@ class CancelBookingRequest(BaseModel):
     booking_url: Optional[str] = None
 
 
+class CoachBookingRequest(BaseModel):
+    coach_email: str
+    booking_id: str
+    action: str  # "confirm" ou "reject"
+
+
 @app.post("/api/confirm-booking")
 async def confirm_booking(request: ConfirmBookingRequest):
-    """Confirme une réservation et envoie l'email de confirmation au client."""
+    """Confirme une réservation et envoie l'email de confirmation au client + notification au coach."""
     try:
-        from resend_service import send_booking_confirmation_email
+        from resend_service import send_booking_confirmation_email, send_coach_notification_email
+        import uuid
         
         # Formater la date en français
         from datetime import datetime as dt
@@ -3174,6 +3184,95 @@ async def confirm_booking(request: ConfirmBookingRequest):
         print(f"📧 Confirmation réservation pour {request.client_name} ({request.client_email})")
         print(f"   Coach: {request.coach_name}, Salle: {request.gym_name}")
         print(f"   Date: {date_fr} à {request.time}")
+        
+        # Générer un ID unique pour la réservation
+        booking_id = str(uuid.uuid4())[:8]
+        
+        # Sauvegarder la réservation dans demo_users.json (sous le coach correspondant)
+        try:
+            demo_users = load_demo_users()
+            
+            # Trouver le coach - priorité à l'email si fourni
+            coach_email = None
+            print(f"🔍 Recherche coach - email reçu: '{request.coach_email}', nom: '{request.coach_name}'")
+            
+            # 1. Match direct par email
+            if request.coach_email and request.coach_email in demo_users:
+                coach_email = request.coach_email
+                print(f"✅ Coach trouvé par email direct: {coach_email}")
+            
+            # 2. Fallback: décoder le slug (email_avec_underscore → email@réel)
+            if not coach_email and request.coach_email:
+                # Essayer de décoder le slug en email
+                for email in demo_users.keys():
+                    encoded_email = email.replace("@", "_").replace(".", "_")
+                    if encoded_email == request.coach_email:
+                        if demo_users[email].get("role") == "coach":
+                            coach_email = email
+                            print(f"✅ Coach trouvé par slug décodé: {coach_email}")
+                            break
+            
+            # 3. Fallback: recherche par nom normalisé (strip + lower)
+            if not coach_email:
+                normalized_coach_name = request.coach_name.strip().lower()
+                for email, user_data in demo_users.items():
+                    if user_data.get("role") == "coach":
+                        stored_name = user_data.get("full_name", "").strip().lower()
+                        if stored_name == normalized_coach_name:
+                            coach_email = email
+                            print(f"✅ Coach trouvé par nom normalisé: {coach_email}")
+                            break
+            
+            if not coach_email:
+                print(f"⚠️ Coach non trouvé - email: {request.coach_email}, nom: {request.coach_name}")
+            
+            if coach_email:
+                if "pending_bookings" not in demo_users[coach_email]:
+                    demo_users[coach_email]["pending_bookings"] = []
+                
+                # Ajouter la réservation en attente
+                new_booking = {
+                    "id": booking_id,
+                    "client_name": request.client_name,
+                    "client_email": request.client_email,
+                    "gym_name": request.gym_name,
+                    "gym_address": request.gym_address or "",
+                    "date": request.date,
+                    "time": request.time,
+                    "service": request.service,
+                    "duration": request.duration,
+                    "price": request.price,
+                    "status": "pending",
+                    "created_at": datetime.now().isoformat()
+                }
+                demo_users[coach_email]["pending_bookings"].append(new_booking)
+                
+                # Sauvegarder
+                with open("demo_users.json", "w", encoding="utf-8") as f:
+                    import json
+                    json.dump(demo_users, f, ensure_ascii=False, indent=2)
+                
+                print(f"✅ Réservation {booking_id} sauvegardée pour coach {coach_email}")
+                
+                # Envoyer notification au coach
+                coach_data = demo_users[coach_email]
+                coach_notification = send_coach_notification_email(
+                    to_email=coach_email,
+                    coach_name=coach_data.get("full_name", "Coach"),
+                    client_name=request.client_name,
+                    client_email=request.client_email,
+                    gym_name=request.gym_name,
+                    gym_address=request.gym_address or "",
+                    date_str=date_fr,
+                    time_str=request.time,
+                    service_name=request.service,
+                    duration=f"{request.duration} min",
+                    price=f"{request.price}€",
+                    booking_id=booking_id
+                )
+                print(f"📧 Notification coach: {coach_notification}")
+        except Exception as save_error:
+            print(f"⚠️ Erreur sauvegarde réservation: {save_error}")
         
         # Envoyer l'email de confirmation
         result = send_booking_confirmation_email(
@@ -3274,6 +3373,103 @@ async def cancel_booking(request: CancelBookingRequest):
 async def reservation_cancelled(request: Request):
     """Page de confirmation d'annulation de réservation."""
     return templates.TemplateResponse("reservation_cancelled.html", {"request": request})
+
+
+# ===== API COACH - GESTION DES RÉSERVATIONS =====
+
+@app.get("/api/coach/bookings")
+async def get_coach_bookings(coach_email: str):
+    """Récupère les réservations en attente et confirmées d'un coach."""
+    try:
+        demo_users = load_demo_users()
+        
+        if coach_email not in demo_users:
+            return JSONResponse({"success": False, "error": "Coach non trouvé"}, status_code=404)
+        
+        coach_data = demo_users[coach_email]
+        
+        pending_bookings = coach_data.get("pending_bookings", [])
+        confirmed_bookings = coach_data.get("confirmed_bookings", [])
+        rejected_bookings = coach_data.get("rejected_bookings", [])
+        
+        return JSONResponse({
+            "success": True,
+            "pending": pending_bookings,
+            "confirmed": confirmed_bookings,
+            "rejected": rejected_bookings
+        })
+        
+    except Exception as e:
+        print(f"❌ Erreur récupération réservations coach: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/api/coach/bookings/respond")
+async def respond_to_booking(request: CoachBookingRequest):
+    """Le coach confirme ou refuse une réservation."""
+    try:
+        import json
+        demo_users = load_demo_users()
+        
+        if request.coach_email not in demo_users:
+            return JSONResponse({"success": False, "error": "Coach non trouvé"}, status_code=404)
+        
+        coach_data = demo_users[request.coach_email]
+        pending_bookings = coach_data.get("pending_bookings", [])
+        
+        # Trouver la réservation
+        booking_to_update = None
+        booking_index = -1
+        for i, booking in enumerate(pending_bookings):
+            if booking.get("id") == request.booking_id:
+                booking_to_update = booking
+                booking_index = i
+                break
+        
+        if not booking_to_update:
+            return JSONResponse({"success": False, "error": "Réservation non trouvée"}, status_code=404)
+        
+        # Retirer de pending
+        pending_bookings.pop(booking_index)
+        
+        # Ajouter à la bonne liste selon l'action
+        if request.action == "confirm":
+            booking_to_update["status"] = "confirmed"
+            booking_to_update["confirmed_at"] = datetime.now().isoformat()
+            if "confirmed_bookings" not in coach_data:
+                coach_data["confirmed_bookings"] = []
+            coach_data["confirmed_bookings"].append(booking_to_update)
+            action_label = "confirmée"
+        elif request.action == "reject":
+            booking_to_update["status"] = "rejected"
+            booking_to_update["rejected_at"] = datetime.now().isoformat()
+            if "rejected_bookings" not in coach_data:
+                coach_data["rejected_bookings"] = []
+            coach_data["rejected_bookings"].append(booking_to_update)
+            action_label = "refusée"
+        else:
+            return JSONResponse({"success": False, "error": "Action invalide"}, status_code=400)
+        
+        # Mettre à jour pending_bookings
+        coach_data["pending_bookings"] = pending_bookings
+        
+        # Sauvegarder
+        with open("demo_users.json", "w", encoding="utf-8") as f:
+            json.dump(demo_users, f, ensure_ascii=False, indent=2)
+        
+        print(f"✅ Réservation {request.booking_id} {action_label} par {request.coach_email}")
+        
+        # TODO: Envoyer email au client pour l'informer
+        
+        return JSONResponse({
+            "success": True,
+            "message": f"Réservation {action_label}",
+            "booking": booking_to_update
+        })
+        
+    except Exception as e:
+        print(f"❌ Erreur réponse réservation: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 if __name__ == "__main__":

@@ -113,6 +113,7 @@
 /* === CONFIG === */
 const COACH_ID = "{{ coach.id }}";
 const COACH_NAME = "{{ coach.full_name }}";
+const COACH_EMAIL = "{{ coach.email or '' }}";
 const COACH_PHOTO = "{{ coach.profile_photo_url or coach.profile_photo or coach.photo or '' }}";
 const GYM_NAME = "{{ coach.gyms[0].name if coach.gyms else 'Salle de sport' }}";
 const GYM_ADDRESS = "{{ coach.gyms[0].address if coach.gyms else '' }}";
@@ -257,6 +258,7 @@ $("#confirmBtn").addEventListener("click", ()=>{
   
   const params = new URLSearchParams({
     coach: COACH_NAME,
+    coach_email: COACH_EMAIL,  // Email réel du coach pour identification fiable
     service: "Séance de coaching",
     duration: "60",
     price: "40",
