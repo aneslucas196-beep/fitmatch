@@ -23,18 +23,32 @@
     "selected_gyms": null,
     "pending_bookings": [
       {
-        "id": "dcc91ad9",
-        "client_name": "anas",
-        "client_email": "mejedjaoued@gmail.com",
+        "id": "8a84fe96",
+        "client_name": "Mejed",
+        "client_email": "Mejedjaoued@gmail.com",
         "gym_name": "Basic-Fit",
         "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
-        "date": "2025-12-03",
-        "time": "11:00",
+        "date": "2025-11-29",
+        "time": "18:00",
         "service": "Séance de coaching",
         "duration": "60",
         "price": "40",
         "status": "pending",
-        "created_at": "2025-11-29T09:06:43.754822"
+        "created_at": "2025-11-29T10:02:58.588199"
+      },
+      {
+        "id": "bfe8cc89",
+        "client_name": "huaydaTK58",
+        "client_email": "mejedjaoued@gmail.com",
+        "gym_name": "Basic-Fit",
+        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
+        "date": "2025-12-03",
+        "time": "11:30",
+        "service": "Séance de coaching",
+        "duration": "60",
+        "price": "40",
+        "status": "pending",
+        "created_at": "2025-11-29T10:03:57.291702"
       }
     ],
     "confirmed_bookings": [
@@ -82,6 +96,21 @@
         "status": "confirmed",
         "created_at": "2025-11-29T08:58:15.145601",
         "confirmed_at": "2025-11-29T08:59:34.291290"
+      },
+      {
+        "id": "4cde2a5f",
+        "client_name": "huaydaTK58",
+        "client_email": "mejedjaoued@gmail.com",
+        "gym_name": "Basic-Fit",
+        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
+        "date": "2025-12-03",
+        "time": "19:30",
+        "service": "Séance de coaching",
+        "duration": "60",
+        "price": "40",
+        "status": "confirmed",
+        "created_at": "2025-11-29T09:11:13.837593",
+        "confirmed_at": "2025-11-29T10:05:20.997574"
       }
     ],
     "rejected_bookings": [
@@ -114,6 +143,21 @@
         "status": "rejected",
         "created_at": "2025-11-29T08:32:47.383857",
         "rejected_at": "2025-11-29T08:36:14.440610"
+      },
+      {
+        "id": "dcc91ad9",
+        "client_name": "anas",
+        "client_email": "mejedjaoued@gmail.com",
+        "gym_name": "Basic-Fit",
+        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
+        "date": "2025-12-03",
+        "time": "11:00",
+        "service": "Séance de coaching",
+        "duration": "60",
+        "price": "40",
+        "status": "rejected",
+        "created_at": "2025-11-29T09:06:43.754822",
+        "rejected_at": "2025-11-29T09:10:02.029706"
       }
     ]
   },

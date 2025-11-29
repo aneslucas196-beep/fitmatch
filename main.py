@@ -3512,5 +3512,144 @@ async def respond_to_booking(request: CoachBookingRequest):
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
+# ============================================
+# MESSAGERIE CLIENT-COACH
+# ============================================
+
+MESSAGES_FILE = "messages.json"
+
+def load_messages():
+    """Charge les messages depuis le fichier JSON."""
+    if os.path.exists(MESSAGES_FILE):
+        with open(MESSAGES_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def save_messages(messages):
+    """Sauvegarde les messages dans le fichier JSON."""
+    with open(MESSAGES_FILE, "w", encoding="utf-8") as f:
+        json.dump(messages, f, ensure_ascii=False, indent=2)
+
+def get_conversation_id(client_email: str, coach_email: str, booking_id: str) -> str:
+    """Génère un ID unique pour une conversation."""
+    return f"{client_email}_{coach_email}_{booking_id}"
+
+class SendMessageRequest(BaseModel):
+    booking_id: str
+    client_email: str
+    coach_email: str
+    sender_role: str  # "client" ou "coach"
+    sender_name: str
+    message: str
+
+@app.post("/api/messages/send")
+async def send_message(request: SendMessageRequest):
+    """Envoie un message dans une conversation."""
+    try:
+        messages = load_messages()
+        conv_id = get_conversation_id(request.client_email, request.coach_email, request.booking_id)
+        
+        if conv_id not in messages:
+            messages[conv_id] = {
+                "booking_id": request.booking_id,
+                "client_email": request.client_email,
+                "coach_email": request.coach_email,
+                "messages": []
+            }
+        
+        new_message = {
+            "id": str(uuid.uuid4())[:8],
+            "sender_role": request.sender_role,
+            "sender_name": request.sender_name,
+            "message": request.message,
+            "timestamp": datetime.now().isoformat(),
+            "read": False
+        }
+        
+        messages[conv_id]["messages"].append(new_message)
+        save_messages(messages)
+        
+        return JSONResponse({
+            "success": True,
+            "message": new_message
+        })
+    except Exception as e:
+        print(f"❌ Erreur envoi message: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/messages/{booking_id}")
+async def get_messages(booking_id: str, client_email: str = None, coach_email: str = None):
+    """Récupère les messages d'une conversation."""
+    try:
+        messages = load_messages()
+        
+        # Chercher la conversation
+        for conv_id, conv in messages.items():
+            if conv.get("booking_id") == booking_id:
+                if client_email and conv.get("client_email") != client_email:
+                    continue
+                if coach_email and conv.get("coach_email") != coach_email:
+                    continue
+                return JSONResponse({
+                    "success": True,
+                    "conversation": conv
+                })
+        
+        return JSONResponse({
+            "success": True,
+            "conversation": {"messages": []}
+        })
+    except Exception as e:
+        print(f"❌ Erreur récupération messages: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/conversations")
+async def get_conversations(email: str, role: str):
+    """Récupère toutes les conversations d'un utilisateur."""
+    try:
+        messages = load_messages()
+        user_conversations = []
+        
+        for conv_id, conv in messages.items():
+            if role == "client" and conv.get("client_email") == email:
+                user_conversations.append(conv)
+            elif role == "coach" and conv.get("coach_email") == email:
+                user_conversations.append(conv)
+        
+        return JSONResponse({
+            "success": True,
+            "conversations": user_conversations
+        })
+    except Exception as e:
+        print(f"❌ Erreur récupération conversations: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/messages/mark-read")
+async def mark_messages_read(booking_id: str, reader_role: str):
+    """Marque les messages d'une conversation comme lus."""
+    try:
+        messages = load_messages()
+        
+        for conv_id, conv in messages.items():
+            if conv.get("booking_id") == booking_id:
+                for msg in conv.get("messages", []):
+                    if msg.get("sender_role") != reader_role:
+                        msg["read"] = True
+                save_messages(messages)
+                break
+        
+        return JSONResponse({"success": True})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+@app.get("/conversation/{booking_id}", response_class=HTMLResponse)
+async def conversation_page(request: Request, booking_id: str):
+    """Page de conversation pour client ou coach."""
+    return templates.TemplateResponse("conversation.html", {
+        "request": request,
+        "booking_id": booking_id
+    })
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)

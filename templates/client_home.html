@@ -245,7 +245,10 @@ function loadBookings() {
                 </div>
                 <div class="text-right flex-shrink-0 ml-4">
                     <div class="${colors.text} font-bold text-lg">${relativeDay}</div>
-                    <button onclick="openCancelModal(${idx})" class="text-sm text-red-500 hover:text-red-700 mt-1">Annuler</button>
+                    <div class="flex gap-2 mt-1">
+                        ${booking.status === 'confirmed' ? `<a href="/conversation/${booking.id || booking.booking_id}" class="text-sm text-blue-500 hover:text-blue-700">Messagerie</a>` : ''}
+                        <button onclick="openCancelModal(${idx})" class="text-sm text-red-500 hover:text-red-700">Annuler</button>
+                    </div>
                 </div>
             </div>
         `;
