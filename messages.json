@@ -105,6 +105,22 @@
         "message": "coach spaw",
         "timestamp": "2025-11-29T17:52:25.569210",
         "read": false
+      },
+      {
+        "id": "3186ac91",
+        "sender_role": "client",
+        "sender_name": "anas",
+        "message": "sa dit quoi la bete chuis le client bien?",
+        "timestamp": "2025-11-29T17:59:35.941825",
+        "read": false
+      },
+      {
+        "id": "e53acfe3",
+        "sender_role": "coach",
+        "sender_name": "Ns",
+        "message": "chuis ton coach aujourd hui mon petit",
+        "timestamp": "2025-11-29T18:13:53.166363",
+        "read": false
       }
     ]
   }

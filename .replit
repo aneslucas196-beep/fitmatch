@@ -13,7 +13,7 @@ requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
 run = ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
-deploymentTarget = "autoscale"
+deploymentTarget = "gce"
 
 [agent]
 expertMode = true
