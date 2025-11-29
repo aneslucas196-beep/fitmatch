@@ -284,41 +284,52 @@
                 return;
             }
             
-            // D'abord vérifier si c'est un coach via l'API
+            // Récupérer les infos complètes du booking via l'API
             try {
-                const res = await fetch(`/api/coach/bookings?coach_email=${encodeURIComponent(currentUser.email)}`);
-                const coachData = await res.json();
-                console.log('🔍 Données coach API:', coachData);
+                const bookingRes = await fetch(`/api/booking/${BOOKING_ID}`);
+                const bookingResult = await bookingRes.json();
+                console.log('🔍 Booking API result:', bookingResult);
                 
-                if (coachData.success) {
-                    const allCoachBookings = [...(coachData.pending || []), ...(coachData.confirmed || [])];
-                    const coachBooking = allCoachBookings.find(b => b.id === BOOKING_ID);
+                if (bookingResult.success && bookingResult.booking) {
+                    const serverBooking = bookingResult.booking;
+                    bookingData = serverBooking;
                     
-                    if (coachBooking) {
-                        console.log('✅ Réservation trouvée comme COACH:', coachBooking);
+                    // Déterminer le rôle: si l'email du client match l'utilisateur actuel
+                    if (serverBooking.client_email && serverBooking.client_email.toLowerCase() === currentUser.email.toLowerCase()) {
+                        console.log('✅ Identifié comme CLIENT');
+                        currentRole = 'client';
+                        otherPartyName = serverBooking.coach_name || 'Coach';
+                        otherPartyEmail = serverBooking.coach_email || '';
+                    } else if (serverBooking.coach_email && serverBooking.coach_email.toLowerCase() === currentUser.email.toLowerCase()) {
+                        console.log('✅ Identifié comme COACH');
                         currentRole = 'coach';
-                        bookingData = coachBooking;
-                        otherPartyName = coachBooking.client_name || 'Client';
-                        otherPartyEmail = coachBooking.client_email || '';
+                        otherPartyName = serverBooking.client_name || 'Client';
+                        otherPartyEmail = serverBooking.client_email || '';
+                    } else {
+                        // Vérification secondaire via l'API coach
+                        const coachRes = await fetch(`/api/coach/bookings?coach_email=${encodeURIComponent(currentUser.email)}`);
+                        const coachData = await coachRes.json();
+                        if (coachData.success) {
+                            const allCoachBookings = [...(coachData.pending || []), ...(coachData.confirmed || [])];
+                            if (allCoachBookings.some(b => b.id === BOOKING_ID)) {
+                                console.log('✅ Identifié comme COACH (via API coach)');
+                                currentRole = 'coach';
+                                otherPartyName = serverBooking.client_name || 'Client';
+                                otherPartyEmail = serverBooking.client_email || '';
+                            }
+                        }
+                    }
+                    
+                    // Si toujours pas de rôle, assumer client
+                    if (!currentRole) {
+                        console.log('⚠️ Rôle non déterminé, assumé CLIENT');
+                        currentRole = 'client';
+                        otherPartyName = serverBooking.coach_name || 'Coach';
+                        otherPartyEmail = serverBooking.coach_email || '';
                     }
                 }
             } catch (e) {
-                console.error('Erreur récupération booking coach:', e);
-            }
-            
-            // Si pas coach, vérifier en tant que client (localStorage)
-            if (!bookingData) {
-                const bookings = data.bookings || [];
-                console.log('🔍 Bookings client localStorage:', bookings);
-                const clientBooking = bookings.find(b => b.id === BOOKING_ID || b.booking_id === BOOKING_ID);
-                
-                if (clientBooking) {
-                    console.log('✅ Réservation trouvée comme CLIENT:', clientBooking);
-                    currentRole = 'client';
-                    bookingData = clientBooking;
-                    otherPartyName = clientBooking.coach || 'Coach';
-                    otherPartyEmail = clientBooking.coach_email || '';
-                }
+                console.error('❌ Erreur récupération booking:', e);
             }
             
             if (!bookingData) {

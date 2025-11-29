@@ -1,0 +1,122 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "ABCDiatype",
+      "role": "body"
+    },
+    {
+      "family": "Helvetica Neue LT Std",
+      "role": "body"
+    },
+    {
+      "family": "Helvetica Neue",
+      "role": "body"
+    },
+    {
+      "family": "Helvetica",
+      "role": "body"
+    },
+    {
+      "family": "BlinkMacSystemFont",
+      "role": "body"
+    }
+  ],
+  "colors": {
+    "primary": "#1B252B",
+    "accent": "#EC4E02",
+    "background": "#0B1419",
+    "textPrimary": "#AEBEC7",
+    "link": "#AEBEC7"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "ABCDiatype",
+      "heading": "ABCDiatype"
+    },
+    "fontStacks": {
+      "heading": [
+        "ABCDiatype",
+        "sans-serif"
+      ],
+      "body": [
+        "ABCDiatype",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "ABCDiatype",
+        "Helvetica Neue LT Std",
+        "-apple-system",
+        "BlinkMacSystemFont",
+        "Helvetica Neue",
+        "Helvetica",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "42px",
+      "h2": "64px",
+      "body": "20.08px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 8,
+    "borderRadius": "0px"
+  },
+  "components": {
+    "input": {
+      "borderColor": "#CCCCCC",
+      "borderRadius": "0px"
+    },
+    "buttonPrimary": {
+      "background": "#EC4E02",
+      "textColor": "#FFFFFF",
+      "borderRadius": "4px",
+      "shadow": "none"
+    },
+    "buttonSecondary": {
+      "background": "#FFFFFF",
+      "textColor": "#000000",
+      "borderRadius": "9999px",
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": "File saved at: attached_assets/logo.svg",
+    "favicon": "File saved at: attached_assets/favicon.png",
+    "ogImage": "File saved at: attached_assets/ogImage.png"
+  },
+  "__framework_hints": [],
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Logo #0 is an SVG in the header that visually represents the brand name 'Replit' and links to the homepage, making it the main brand logo.",
+    "confidence": 0.95
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": 0,
+      "text": "Get started free",
+      "reasoning": "Button #0 has a vibrant orange background (#EC4E02) and action-oriented text 'Get started free', making it the primary call-to-action."
+    },
+    "secondary": {
+      "index": 2,
+      "text": "Start building with AI",
+      "reasoning": "Button #2 has a white background (#FFFFFF) and is less prominent compared to the primary button, making it a suitable secondary option."
+    },
+    "confidence": 0.95
+  },
+  "personality": {
+    "tone": "modern",
+    "energy": "high",
+    "targetAudience": "developers and tech enthusiasts"
+  },
+  "designSystem": {
+    "framework": "tailwind",
+    "componentLibrary": null
+  },
+  "confidence": {
+    "buttons": 0.95,
+    "colors": 0.9,
+    "overall": 0.925
+  }
+}
