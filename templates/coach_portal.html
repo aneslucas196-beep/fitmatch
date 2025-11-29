@@ -502,8 +502,7 @@ function initProfileLink() {
     const fullName = '{{ coach.full_name | default("Coach", true) }}';
     const firstName = fullName.split(' ')[0];
     const slug = generateSlug(firstName);
-    const baseUrl = window.location.origin;
-    const profileLink = `${baseUrl}/reserver/${slug}`;
+    const profileLink = `https://fitmatch.fr/reserver/${slug}`;
     document.getElementById('profile-link').value = profileLink;
 }
 
