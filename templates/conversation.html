@@ -250,7 +250,7 @@
         
         function goBack() {
             if (currentRole === 'coach') {
-                window.location.href = '/coach-portal';
+                window.location.href = '/coach/portal';
             } else {
                 window.location.href = '/client/home';
             }
@@ -276,37 +276,48 @@
             const data = getStoredData();
             currentUser = data.user;
             
+            console.log('🔍 Init messagerie - User:', currentUser);
+            console.log('🔍 Booking ID recherché:', BOOKING_ID);
+            
             if (!currentUser) {
                 window.location.href = '/login';
                 return;
             }
             
-            // Déterminer le rôle
-            const bookings = data.bookings || [];
-            const clientBooking = bookings.find(b => b.id === BOOKING_ID || b.booking_id === BOOKING_ID);
-            
-            if (clientBooking) {
-                currentRole = 'client';
-                bookingData = clientBooking;
-                otherPartyName = clientBooking.coach || 'Coach';
-                otherPartyEmail = clientBooking.coach_email || '';
-            } else {
-                // Vérifier si c'est un coach via l'API
-                try {
-                    const res = await fetch(`/api/coach/bookings?coach_email=${encodeURIComponent(currentUser.email)}`);
-                    const coachData = await res.json();
-                    
-                    const allBookings = [...(coachData.pending || []), ...(coachData.confirmed || [])];
-                    const coachBooking = allBookings.find(b => b.id === BOOKING_ID);
+            // D'abord vérifier si c'est un coach via l'API
+            try {
+                const res = await fetch(`/api/coach/bookings?coach_email=${encodeURIComponent(currentUser.email)}`);
+                const coachData = await res.json();
+                console.log('🔍 Données coach API:', coachData);
+                
+                if (coachData.success) {
+                    const allCoachBookings = [...(coachData.pending || []), ...(coachData.confirmed || [])];
+                    const coachBooking = allCoachBookings.find(b => b.id === BOOKING_ID);
                     
                     if (coachBooking) {
+                        console.log('✅ Réservation trouvée comme COACH:', coachBooking);
                         currentRole = 'coach';
                         bookingData = coachBooking;
                         otherPartyName = coachBooking.client_name || 'Client';
                         otherPartyEmail = coachBooking.client_email || '';
                     }
-                } catch (e) {
-                    console.error('Erreur récupération booking coach:', e);
+                }
+            } catch (e) {
+                console.error('Erreur récupération booking coach:', e);
+            }
+            
+            // Si pas coach, vérifier en tant que client (localStorage)
+            if (!bookingData) {
+                const bookings = data.bookings || [];
+                console.log('🔍 Bookings client localStorage:', bookings);
+                const clientBooking = bookings.find(b => b.id === BOOKING_ID || b.booking_id === BOOKING_ID);
+                
+                if (clientBooking) {
+                    console.log('✅ Réservation trouvée comme CLIENT:', clientBooking);
+                    currentRole = 'client';
+                    bookingData = clientBooking;
+                    otherPartyName = clientBooking.coach || 'Coach';
+                    otherPartyEmail = clientBooking.coach_email || '';
                 }
             }
             
@@ -418,6 +429,14 @@
                 const clientEmail = currentRole === 'client' ? currentUser.email : otherPartyEmail;
                 const coachEmail = currentRole === 'coach' ? currentUser.email : otherPartyEmail;
                 
+                console.log('📤 Envoi message:', {
+                    booking_id: BOOKING_ID,
+                    client_email: clientEmail,
+                    coach_email: coachEmail,
+                    sender_role: currentRole,
+                    message: message
+                });
+                
                 const res = await fetch('/api/messages/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -432,13 +451,17 @@
                 });
                 
                 const data = await res.json();
+                console.log('📥 Réponse API:', data);
                 
                 if (data.success) {
                     input.value = '';
                     await loadMessages();
+                } else {
+                    console.error('❌ Erreur API:', data.error);
+                    alert('Erreur: ' + (data.error || 'Erreur inconnue'));
                 }
             } catch (e) {
-                console.error('Erreur envoi message:', e);
+                console.error('❌ Erreur envoi message:', e);
                 alert('Erreur lors de l\'envoi du message');
             } finally {
                 sendBtn.disabled = false;
