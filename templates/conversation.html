@@ -392,13 +392,17 @@
         
         async function loadMessages() {
             try {
-                const clientEmail = currentRole === 'client' ? currentUser.email : otherPartyEmail;
-                const coachEmail = currentRole === 'coach' ? currentUser.email : otherPartyEmail;
+                // TOUJOURS utiliser les emails du booking (pas du localStorage)
+                const clientEmail = bookingData.client_email;
+                const coachEmail = bookingData.coach_email;
+                
+                console.log('📨 Chargement messages - Client:', clientEmail, 'Coach:', coachEmail);
                 
                 const res = await fetch(`/api/messages/${BOOKING_ID}?client_email=${encodeURIComponent(clientEmail)}&coach_email=${encodeURIComponent(coachEmail)}`);
                 const data = await res.json();
                 
                 if (data.success) {
+                    console.log('📨 Messages reçus:', data.conversation.messages?.length || 0);
                     renderMessages(data.conversation.messages || []);
                 }
             } catch (e) {
@@ -465,14 +469,21 @@
             sendBtn.disabled = true;
             
             try {
-                const clientEmail = currentRole === 'client' ? currentUser.email : otherPartyEmail;
-                const coachEmail = currentRole === 'coach' ? currentUser.email : otherPartyEmail;
+                // TOUJOURS utiliser les emails du booking (pas du localStorage)
+                const clientEmail = bookingData.client_email;
+                const coachEmail = bookingData.coach_email;
+                
+                // Déterminer le nom de l'expéditeur
+                const senderName = currentRole === 'coach' 
+                    ? (bookingData.coach_name || currentUser.fullName || 'Coach')
+                    : (bookingData.client_name || currentUser.fullName || 'Client');
                 
                 console.log('📤 Envoi message:', {
                     booking_id: BOOKING_ID,
                     client_email: clientEmail,
                     coach_email: coachEmail,
                     sender_role: currentRole,
+                    sender_name: senderName,
                     message: message
                 });
                 
@@ -484,7 +495,7 @@
                         client_email: clientEmail,
                         coach_email: coachEmail,
                         sender_role: currentRole,
-                        sender_name: currentUser.fullName || currentUser.full_name || 'Utilisateur',
+                        sender_name: senderName,
                         message: message
                     })
                 });
