@@ -316,8 +316,8 @@ evSubmit.addEventListener('click', async ()=>{
     fmData.bookings.push(booking);
     localStorage.setItem('fitmatch', JSON.stringify(fmData));
     
-    // Envoyer l'email de confirmation via l'API
-    evSubmit.textContent = 'Envoi de la confirmation…';
+    // Envoyer la demande de réservation au coach
+    evSubmit.textContent = 'Envoi de la demande…';
     try {
       const confirmRes = await fetch('/api/confirm-booking', {
         method: 'POST',
@@ -338,9 +338,9 @@ evSubmit.addEventListener('click', async ()=>{
         })
       });
       const confirmData = await confirmRes.json();
-      console.log('📧 Email confirmation:', confirmData);
+      console.log('📋 Demande envoyée au coach:', confirmData);
     } catch(emailErr) {
-      console.log('⚠️ Email confirmation non envoyé:', emailErr);
+      console.log('⚠️ Demande non envoyée:', emailErr);
     }
     
     // Rediriger directement vers la page Mon compte
@@ -384,8 +384,8 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
   fmData.bookings.push(booking);
   localStorage.setItem('fitmatch', JSON.stringify(fmData));
   
-  // Envoyer l'email de confirmation via l'API
-  btn.textContent = 'Envoi de la confirmation…';
+  // Envoyer la demande de réservation au coach
+  btn.textContent = 'Envoi de la demande…';
   try {
     const confirmRes = await fetch('/api/confirm-booking', {
       method: 'POST',
@@ -406,9 +406,9 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
       })
     });
     const confirmData = await confirmRes.json();
-    console.log('📧 Email confirmation:', confirmData);
+    console.log('📋 Demande envoyée au coach:', confirmData);
   } catch(emailErr) {
-    console.log('⚠️ Email confirmation non envoyé:', emailErr);
+    console.log('⚠️ Demande non envoyée:', emailErr);
   }
   
   // Rediriger vers la page Mon compte

@@ -3158,9 +3158,9 @@ class CoachBookingRequest(BaseModel):
 
 @app.post("/api/confirm-booking")
 async def confirm_booking(request: ConfirmBookingRequest):
-    """Confirme une réservation et envoie l'email de confirmation au client + notification au coach."""
+    """Enregistre une demande de réservation et notifie le coach. L'email de confirmation sera envoyé au client quand le coach acceptera."""
     try:
-        from resend_service import send_booking_confirmation_email, send_coach_notification_email
+        from resend_service import send_coach_notification_email
         import uuid
         
         # Formater la date en français
@@ -3274,37 +3274,17 @@ async def confirm_booking(request: ConfirmBookingRequest):
         except Exception as save_error:
             print(f"⚠️ Erreur sauvegarde réservation: {save_error}")
         
-        # Envoyer l'email de confirmation
-        result = send_booking_confirmation_email(
-            to_email=request.client_email,
-            client_name=request.client_name,
-            coach_name=request.coach_name,
-            gym_name=request.gym_name,
-            gym_address=request.gym_address or "Adresse non renseignée",
-            date_str=date_fr,
-            time_str=request.time,
-            service_name=request.service,
-            duration=f"{request.duration} min",
-            price=f"{request.price}€",
-            coach_photo=request.coach_photo
-        )
+        # La réservation est en attente de confirmation du coach
+        # L'email de confirmation sera envoyé au client quand le coach acceptera
+        print(f"📋 Réservation en attente de confirmation du coach")
         
-        if result.get("success"):
-            return JSONResponse({
-                "success": True,
-                "message": "Réservation confirmée, email envoyé",
-                "email_sent": True,
-                "email_id": result.get("email_id")
-            })
-        else:
-            # L'email n'a pas pu être envoyé mais on confirme quand même la réservation
-            print(f"⚠️ Email non envoyé mais réservation confirmée: {result.get('error')}")
-            return JSONResponse({
-                "success": True,
-                "message": "Réservation confirmée (email non envoyé)",
-                "email_sent": False,
-                "error": result.get("error")
-            })
+        return JSONResponse({
+            "success": True,
+            "message": "Demande de réservation envoyée au coach",
+            "coach_notified": True,  # Notification envoyée au coach
+            "client_email_sent": False,  # L'email au client sera envoyé après confirmation du coach
+            "status": "pending"
+        })
             
     except Exception as e:
         print(f"❌ Erreur confirmation réservation: {e}")
@@ -3459,13 +3439,73 @@ async def respond_to_booking(request: CoachBookingRequest):
         
         print(f"✅ Réservation {request.booking_id} {action_label} par {request.coach_email}")
         
-        # TODO: Envoyer email au client pour l'informer
+        # Envoyer email au client pour l'informer
+        email_sent = False
+        email_error_msg = None
         
-        return JSONResponse({
+        if request.action == "confirm":
+            # Vérifier que les données client sont présentes
+            client_email = booking_to_update.get("client_email")
+            client_name = booking_to_update.get("client_name", "Client")
+            
+            if not client_email:
+                print(f"⚠️ Email client manquant pour la réservation {request.booking_id}")
+                email_error_msg = "Email client non disponible"
+            else:
+                try:
+                    from resend_service import send_booking_confirmation_email
+                    
+                    # Formater la date en français
+                    from datetime import datetime as dt
+                    try:
+                        date_obj = dt.strptime(booking_to_update.get("date", ""), "%Y-%m-%d")
+                        date_fr = date_obj.strftime("%A %d %B %Y").capitalize()
+                        jours = {"Monday": "Lundi", "Tuesday": "Mardi", "Wednesday": "Mercredi", 
+                                 "Thursday": "Jeudi", "Friday": "Vendredi", "Saturday": "Samedi", "Sunday": "Dimanche"}
+                        mois = {"January": "janvier", "February": "février", "March": "mars", "April": "avril",
+                                "May": "mai", "June": "juin", "July": "juillet", "August": "août",
+                                "September": "septembre", "October": "octobre", "November": "novembre", "December": "décembre"}
+                        for en, fr in jours.items():
+                            date_fr = date_fr.replace(en, fr)
+                        for en, fr in mois.items():
+                            date_fr = date_fr.replace(en, fr)
+                    except:
+                        date_fr = booking_to_update.get("date", "Date non spécifiée")
+                    
+                    # Envoyer l'email de confirmation au client
+                    coach_name = coach_data.get("full_name", "Coach")
+                    email_result = send_booking_confirmation_email(
+                        to_email=client_email,
+                        client_name=client_name,
+                        coach_name=coach_name,
+                        gym_name=booking_to_update.get("gym_name", "Salle de sport"),
+                        gym_address=booking_to_update.get("gym_address", ""),
+                        date_str=date_fr,
+                        time_str=booking_to_update.get("time", ""),
+                        service_name=booking_to_update.get("service", "Séance de coaching"),
+                        duration=f"{booking_to_update.get('duration', '60')} min",
+                        price=f"{booking_to_update.get('price', '40')}€",
+                        coach_photo=coach_data.get("profile_photo_url"),
+                        reservation_id=request.booking_id
+                    )
+                    email_sent = email_result.get("success", False)
+                    if not email_sent:
+                        email_error_msg = email_result.get("error", "Erreur inconnue")
+                    print(f"📧 Email confirmation client: {email_result}")
+                except Exception as email_error:
+                    email_error_msg = str(email_error)
+                    print(f"⚠️ Erreur envoi email confirmation: {email_error}")
+        
+        response_data = {
             "success": True,
             "message": f"Réservation {action_label}",
-            "booking": booking_to_update
-        })
+            "booking": booking_to_update,
+            "email_sent": email_sent
+        }
+        if email_error_msg:
+            response_data["email_error"] = email_error_msg
+        
+        return JSONResponse(response_data)
         
     except Exception as e:
         print(f"❌ Erreur réponse réservation: {e}")

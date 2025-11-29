@@ -57,11 +57,15 @@ Preferred communication style: Simple, everyday language.
             - OTP stored in localStorage.fitmatch.otp with 5-minute expiration
     - **URL Parameters**: Dynamic data passed via query strings (coach, coach_email, service, duration, price, gym, date, time) with intelligent fallback to default values
     - **Persistence**: Bookings stored in demo_users.json under each coach's pending_bookings array with conflict detection
-    - **Coach Notification System**: When a client books a session:
-        - Booking is saved to coach's pending_bookings in demo_users.json
-        - Coach receives email notification via Resend with booking details
-        - Coach can view pending bookings in their dashboard (/coach-portal)
-        - Coach can confirm or reject bookings via dashboard buttons
+    - **Booking Notification Flow**: Complete email notification system:
+        1. **Client books session** → Booking saved as "pending" in coach's pending_bookings
+        2. **Coach receives notification email** via Resend with booking details and dashboard link
+        3. **Coach views dashboard** (/coach-portal) with pending bookings list
+        4. **Coach confirms booking** → Client receives confirmation email via Resend
+        5. **Coach rejects booking** → Booking moved to rejected list (future: rejection email)
+    - **Email Types**:
+        - Coach notification: Sent when client makes a booking request
+        - Client confirmation: Sent ONLY when coach accepts the booking
     - **Coach Lookup**: 3-level robust coach identification:
         1. Direct email match (coach_email parameter)
         2. Slug decoding (email_with_underscores → real@email.com)
