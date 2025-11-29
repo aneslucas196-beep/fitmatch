@@ -1913,6 +1913,107 @@ async def coach_transformations_add(
     return RedirectResponse(url="/coach/portal", status_code=303)
 
 # ======================================
+# UTILITAIRE - GÉNÉRATION DE SLUG
+# ======================================
+
+def generate_slug(name: str) -> str:
+    """Génère un slug URL-friendly à partir d'un nom."""
+    import unicodedata
+    import re
+    # Supprimer les accents
+    slug = unicodedata.normalize('NFKD', name).encode('ASCII', 'ignore').decode('ASCII')
+    # Convertir en minuscules et supprimer les espaces
+    slug = slug.lower().strip()
+    # Remplacer les espaces par des tirets
+    slug = re.sub(r'\s+', '-', slug)
+    # Supprimer les caractères non-alphanumériques
+    slug = re.sub(r'[^a-z0-9-]', '', slug)
+    return slug
+
+def find_coach_by_slug(slug: str):
+    """Trouve un coach par son slug (prénom)."""
+    from utils import load_demo_users
+    demo_users = load_demo_users()
+    
+    # Chercher dans demo_users
+    for email, user_data in demo_users.items():
+        if user_data.get("role") == "coach":
+            full_name = user_data.get("full_name", "")
+            # Extraire le prénom (premier mot du nom complet)
+            first_name = full_name.split()[0] if full_name.strip() else ""
+            coach_slug = generate_slug(first_name)
+            
+            # Vérifier si le slug correspond
+            if coach_slug == slug.lower():
+                coach_data = user_data.copy()
+                coach_data["email"] = email
+                return coach_data
+    
+    return None
+
+# ======================================
+# ROUTE PUBLIQUE - RÉSERVATION AVEC SLUG
+# ======================================
+
+@app.get("/reserver/{slug}", response_class=HTMLResponse)
+async def reserver_by_slug(request: Request, slug: str):
+    """Page de profil coach avec URL propre (prénom)."""
+    
+    coach = find_coach_by_slug(slug)
+    
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trouvé")
+    
+    # Assurer qu'il y a une photo
+    if not coach.get("photo"):
+        coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
+    
+    # Récupérer les salles associées au coach
+    gyms = []
+    if coach.get("selected_gyms_data"):
+        try:
+            import json
+            gyms = json.loads(coach.get("selected_gyms_data"))
+        except:
+            pass
+    
+    return templates.TemplateResponse("coach_profile.html", {
+        "request": request,
+        "coach": coach,
+        "gyms": gyms,
+        "slug": slug
+    })
+
+@app.get("/reserver/{slug}/book", response_class=HTMLResponse)
+async def booking_by_slug(request: Request, slug: str):
+    """Page de réservation avec URL propre (prénom)."""
+    
+    coach = find_coach_by_slug(slug)
+    
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trouvé")
+    
+    # Assurer qu'il y a une photo
+    if not coach.get("photo"):
+        coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
+    
+    # Récupérer les salles associées
+    gyms = []
+    if coach.get("selected_gyms_data"):
+        try:
+            import json
+            gyms = json.loads(coach.get("selected_gyms_data"))
+        except:
+            pass
+    
+    return templates.TemplateResponse("booking.html", {
+        "request": request,
+        "coach": coach,
+        "gyms": gyms,
+        "slug": slug
+    })
+
+# ======================================
 # ROUTE PUBLIQUE - PROFIL DU COACH
 # ======================================
 
