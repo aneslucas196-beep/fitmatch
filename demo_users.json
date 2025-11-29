@@ -37,6 +37,21 @@
         "status": "confirmed",
         "created_at": "2025-11-28T20:51:22.296271",
         "confirmed_at": "2025-11-28T20:53:39.982395"
+      },
+      {
+        "id": "7773d168",
+        "client_name": "Mejed",
+        "client_email": "Mejedjaoued@gmail.com",
+        "gym_name": "Basic-Fit",
+        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
+        "date": "2025-11-29",
+        "time": "16:30",
+        "service": "Séance de coaching",
+        "duration": "60",
+        "price": "40",
+        "status": "confirmed",
+        "created_at": "2025-11-29T08:15:51.451655",
+        "confirmed_at": "2025-11-29T08:17:43.045821"
       }
     ],
     "rejected_bookings": [
@@ -54,6 +69,21 @@
         "status": "rejected",
         "created_at": "2025-11-28T21:33:25.072311",
         "rejected_at": "2025-11-28T21:34:52.881088"
+      },
+      {
+        "id": "bc3c899f",
+        "client_name": "anas",
+        "client_email": "mejedjaoued@gmail.com",
+        "gym_name": "Basic-Fit",
+        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
+        "date": "2025-12-02",
+        "time": "11:00",
+        "service": "Séance de coaching",
+        "duration": "60",
+        "price": "40",
+        "status": "rejected",
+        "created_at": "2025-11-29T08:32:47.383857",
+        "rejected_at": "2025-11-29T08:36:14.440610"
       }
     ]
   },
@@ -157,26 +187,13 @@
     "selected_gyms": null
   },
   "mejedjaoued@gmail.com": {
-    "id": "mejedjaoued@gmail.com",
-    "email": "mejedjaoued@gmail.com",
-    "role": "coach",
-    "profile_completed": true,
-    "full_name": "ANAS",
-    "bio": "dzgzefze",
-    "city": "qnaq",
-    "instagram_url": "",
-    "price_from": 40,
-    "radius_km": 10,
-    "specialties": [
-      "musculation"
-    ],
-    "selected_gym_ids": "google_worldwide_ChIJQ72x1zaD5kcRQlqvEwUXty0",
-    "selected_gyms_data": "[{\"id\":\"google_worldwide_ChIJQ72x1zaD5kcRQlqvEwUXty0\",\"name\":\"Fitness Park Maurepas\",\"address\":\"Centre Commercial Pariwest, Rdpt Laurent Schwartz, 78310 Maurepas, France\",\"city\":\"\",\"lat\":48.7593384,\"lng\":1.9204497999999999,\"chain\":\"Google Places (Mondial)\",\"source\":\"Google Places Worldwide\",\"display_name\":\"Fitness Park Maurepas - Centre Commercial Pariwest, Rdpt Laurent Schwartz, 78310 Maurepas, France\"}]",
-    "password": "Anasking12345!",
+    "full_name": "braw",
     "gender": "homme",
-    "country_code": "AU",
-    "coach_gender_preference": null,
-    "selected_gyms": null
+    "role": "client",
+    "country_code": "AT",
+    "password": "Anasking1234",
+    "coach_gender_preference": "homme",
+    "selected_gyms": []
   },
   "brawstar79@gmail.com": {
     "full_name": "anaslima",

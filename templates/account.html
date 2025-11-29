@@ -95,8 +95,11 @@
             box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
             border: 1px solid #e5e7eb;
         }
-        .fm-booking-card--current {
+        .fm-booking-card--confirmed {
             border-color: #22c55e;
+        }
+        .fm-booking-card--pending {
+            border-color: #f59e0b;
         }
         
         .fm-booking-header {
@@ -117,6 +120,24 @@
         }
         .fm-booking-gym {
             margin-top: 2px;
+        }
+        
+        .fm-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .fm-status-badge--confirmed {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .fm-status-badge--pending {
+            background: #fef3c7;
+            color: #92400e;
         }
         
         .fm-booking-body {
@@ -190,6 +211,23 @@
             opacity: 0.5;
         }
         
+        .fm-user-welcome {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        .fm-user-welcome h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .fm-user-welcome p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
         @media (max-width: 900px) {
             .fm-account {
                 grid-template-columns: 1fr;
@@ -216,44 +254,15 @@
         </aside>
 
         <main class="fm-account-main">
+            <div class="fm-user-welcome" id="user-welcome" style="display: none;">
+                <h3 id="welcome-name">Bonjour !</h3>
+                <p id="welcome-email"></p>
+            </div>
+            
             <h1 class="fm-page-title">Mes séances</h1>
 
-            <section class="fm-current-booking" id="current-booking-section" style="display: none;">
-                <h2>Votre séance est confirmée</h2>
-                <article class="fm-booking-card fm-booking-card--current">
-                    <header class="fm-booking-header">
-                        <div>
-                            <p class="fm-booking-date" id="current-date"></p>
-                            <p class="fm-booking-coach">Avec <strong id="current-coach"></strong></p>
-                            <p class="fm-booking-gym" id="current-gym"></p>
-                        </div>
-                    </header>
-                    <div class="fm-booking-body">
-                        <p class="fm-booking-service" id="current-service"></p>
-                        <div class="fm-booking-actions">
-                            <button class="fm-btn-outline" onclick="addToCalendar()">
-                                <span>📅</span> Ajouter à mon agenda
-                            </button>
-                            <button class="fm-btn-outline" onclick="reschedule()">
-                                <span>🔄</span> Déplacer la séance
-                            </button>
-                            <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking(0)">
-                                <span>❌</span> Annuler la séance
-                            </button>
-                        </div>
-                        <div class="fm-booking-notify">
-                            <label>
-                                <input type="checkbox" id="notify-earlier" />
-                                Me prévenir si un créneau se libère avant
-                            </label>
-                        </div>
-                    </div>
-                </article>
-            </section>
-
             <section class="fm-upcoming">
-                <h2>Mes séances à venir</h2>
-                <div class="fm-booking-list" id="upcoming-list">
+                <div class="fm-booking-list" id="bookings-list">
                     <div class="fm-empty-state" id="empty-state">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -266,7 +275,6 @@
         </main>
     </div>
 
-    <!-- Modal d'annulation de RDV -->
     <dialog id="cancel-modal" style="
         border: none;
         border-radius: 12px;
@@ -277,9 +285,9 @@
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     ">
         <div style="padding: 25px;">
-            <h1 style="font-size: 24px; margin: 0 0 10px 0; font-weight: 600;">Suppression de RDV</h1>
+            <h1 style="font-size: 24px; margin: 0 0 10px 0; font-weight: 600;">Annulation de séance</h1>
             <p style="color: #444; line-height: 22px; margin: 0;">
-                Souhaitez-vous annuler votre rendez-vous du 
+                Souhaitez-vous annuler votre séance du 
                 <strong id="cancel-date"></strong> à <strong id="cancel-hour"></strong>  
                 chez <strong id="cancel-salle"></strong> ?
             </p>
@@ -287,7 +295,7 @@
             <div style="background: #fafafa; border: 1px solid #e4e4e4; padding: 15px; border-radius: 10px; margin: 20px 0;">
                 <div id="cancel-prestation" style="font-size: 15px; color: #333;"></div>
                 <div style="margin-top: 10px; font-size: 14px; color: #777;">
-                    ⏱ <span id="cancel-duration"></span> &nbsp; • &nbsp; 💶 <span id="cancel-price"></span>
+                    <span id="cancel-duration"></span> &nbsp; • &nbsp; <span id="cancel-price"></span>
                 </div>
             </div>
 
@@ -330,7 +338,6 @@
                 const mainData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
                 const userData = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
                 
-                // Si l'utilisateur est dans fitmatch.user mais pas dans fitmatch, le synchroniser
                 if (userData && !mainData.user) {
                     mainData.user = userData;
                 }
@@ -343,78 +350,102 @@
         
         function formatDate(dateStr) {
             const date = new Date(dateStr);
-            const options = { weekday: 'long', day: 'numeric', month: 'short' };
+            const options = { weekday: 'long', day: 'numeric', month: 'long' };
             return date.toLocaleDateString('fr-FR', options);
+        }
+        
+        function formatShortDate(dateStr) {
+            const date = new Date(dateStr);
+            const options = { weekday: 'short', day: 'numeric', month: 'short' };
+            return date.toLocaleDateString('fr-FR', options);
+        }
+        
+        function isUpcoming(dateStr, time) {
+            const [hours, minutes] = (time || '10:00').split(':').map(Number);
+            const bookingDate = new Date(dateStr);
+            bookingDate.setHours(hours, minutes, 0, 0);
+            return bookingDate > new Date();
         }
         
         function loadBookings() {
             const data = getStoredData();
             let user = data.user;
             
-            // Fallback: vérifier aussi fitmatch.user directement
             if (!user) {
                 try {
                     user = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
                 } catch {}
             }
             
-            const bookings = data.bookings || [];
+            const allBookings = data.bookings || [];
             
-            console.log('📊 Données chargées:', { user, bookings });
+            console.log('📊 Données chargées:', { user, bookings: allBookings });
             
             if (!user || !user.verified) {
-                console.log('❌ Utilisateur non vérifié, redirection vers /login');
+                console.log('Utilisateur non vérifié, redirection vers /login');
                 window.location.href = '/login';
                 return;
             }
             
-            const currentSection = document.getElementById('current-booking-section');
-            const upcomingList = document.getElementById('upcoming-list');
+            const welcomeSection = document.getElementById('user-welcome');
+            const welcomeName = document.getElementById('welcome-name');
+            const welcomeEmail = document.getElementById('welcome-email');
+            
+            if (user.fullName) {
+                welcomeSection.style.display = 'block';
+                welcomeName.textContent = `Bonjour ${user.fullName.split(' ')[0]} !`;
+                welcomeEmail.textContent = user.email || '';
+            }
+            
+            const bookingsList = document.getElementById('bookings-list');
             const emptyState = document.getElementById('empty-state');
             
-            if (bookings.length === 0) {
-                currentSection.style.display = 'none';
+            const upcomingBookings = allBookings.filter(b => isUpcoming(b.date, b.time));
+            
+            if (upcomingBookings.length === 0) {
                 emptyState.style.display = 'block';
                 return;
             }
             
-            const sortedBookings = bookings.sort((a, b) => new Date(a.date) - new Date(b.date));
-            const [current, ...upcoming] = sortedBookings;
+            emptyState.style.display = 'none';
             
-            if (current) {
-                currentSection.style.display = 'block';
-                document.getElementById('current-date').textContent = `${formatDate(current.date)} ${current.time}`;
-                document.getElementById('current-coach').textContent = current.coach || 'Coach';
-                document.getElementById('current-gym').textContent = current.gym || 'Salle de sport';
-                document.getElementById('current-service').textContent = `${current.service || 'Séance de coaching'} – ${current.duration || 60} min • ${current.price || 40} €`;
-            }
+            const sortedBookings = upcomingBookings.sort((a, b) => {
+                const dateA = new Date(a.date + 'T' + (a.time || '10:00'));
+                const dateB = new Date(b.date + 'T' + (b.time || '10:00'));
+                return dateA - dateB;
+            });
             
-            if (upcoming.length > 0) {
-                emptyState.style.display = 'none';
-                upcoming.forEach((booking, idx) => {
-                    const card = createBookingCard(booking, idx + 1);
-                    upcomingList.appendChild(card);
-                });
-            }
+            sortedBookings.forEach((booking, idx) => {
+                const card = createBookingCard(booking, idx);
+                bookingsList.appendChild(card);
+            });
         }
         
         function createBookingCard(booking, index) {
             const article = document.createElement('article');
-            article.className = 'fm-booking-card';
+            const isConfirmed = booking.status === 'confirmed';
+            const statusClass = isConfirmed ? 'fm-booking-card--confirmed' : 'fm-booking-card--pending';
+            const statusBadgeClass = isConfirmed ? 'fm-status-badge--confirmed' : 'fm-status-badge--pending';
+            const statusText = isConfirmed ? 'Confirmée' : 'En attente';
+            const statusIcon = isConfirmed ? '✓' : '⏳';
+            
+            article.className = `fm-booking-card ${statusClass}`;
             article.innerHTML = `
                 <header class="fm-booking-header">
                     <div>
-                        <p class="fm-booking-date">${formatDate(booking.date)} ${booking.time}</p>
+                        <p class="fm-booking-date">${formatDate(booking.date)} à ${booking.time || '10:00'}</p>
                         <p class="fm-booking-coach">Avec <strong>${booking.coach || 'Coach'}</strong></p>
                         <p class="fm-booking-gym">${booking.gym || 'Salle de sport'}</p>
                     </div>
+                    <span class="fm-status-badge ${statusBadgeClass}">
+                        ${statusIcon} ${statusText}
+                    </span>
                 </header>
                 <div class="fm-booking-body">
-                    <p class="fm-booking-service">${booking.service || 'Séance de coaching'} – ${booking.duration || 60} min • ${booking.price || 40} €</p>
+                    <p class="fm-booking-service">${booking.service || 'Séance de coaching'} – ${booking.duration || 60} min • ${booking.price || 40}€</p>
                     <div class="fm-booking-actions">
-                        <button class="fm-btn-outline" onclick="addToCalendar()">📅 Ajouter à mon agenda</button>
-                        <button class="fm-btn-outline" onclick="reschedule()">🔄 Déplacer</button>
-                        <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking(${index})">❌ Annuler</button>
+                        <button class="fm-btn-outline" onclick="addToCalendar(${index})">📅 Ajouter à l'agenda</button>
+                        <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking(${index})">Annuler</button>
                     </div>
                 </div>
             `;
@@ -423,17 +454,27 @@
         
         let currentCancelIndex = null;
         
-        function addToCalendar() {
-            alert('Fonctionnalité à venir : Ajouter au calendrier');
-        }
-        
-        function reschedule() {
-            alert('Fonctionnalité à venir : Déplacer la séance');
-        }
-        
-        function cancelBooking(index = 0) {
+        function addToCalendar(index) {
             const data = getStoredData();
-            const bookings = data.bookings || [];
+            const bookings = (data.bookings || []).filter(b => isUpcoming(b.date, b.time));
+            const sortedBookings = bookings.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const booking = sortedBookings[index];
+            
+            if (!booking) return;
+            
+            const startDate = new Date(booking.date + 'T' + (booking.time || '10:00'));
+            const endDate = new Date(startDate.getTime() + (booking.duration || 60) * 60000);
+            
+            const formatGoogleDate = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+            
+            const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Séance avec ' + (booking.coach || 'Coach'))}&dates=${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}&details=${encodeURIComponent(booking.service || 'Séance de coaching')}&location=${encodeURIComponent(booking.gym || '')}`;
+            
+            window.open(googleUrl, '_blank');
+        }
+        
+        function cancelBooking(index) {
+            const data = getStoredData();
+            const bookings = (data.bookings || []).filter(b => isUpcoming(b.date, b.time));
             const sortedBookings = bookings.sort((a, b) => new Date(a.date) - new Date(b.date));
             const booking = sortedBookings[index];
             
@@ -441,20 +482,15 @@
             
             currentCancelIndex = index;
             
-            // Formater la date en français
-            const dateObj = new Date(booking.date);
-            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            const formattedDate = dateObj.toLocaleDateString('fr-FR', options);
+            const formattedDate = formatDate(booking.date);
             
-            // Remplir les infos de la modal
             document.getElementById('cancel-date').textContent = formattedDate;
             document.getElementById('cancel-hour').textContent = booking.time || '10:00';
             document.getElementById('cancel-salle').textContent = booking.gym || 'Salle de sport';
-            document.getElementById('cancel-prestation').textContent = booking.service || 'Séance de coaching personnalisé';
-            document.getElementById('cancel-duration').textContent = (booking.duration || 60) + 'min';
+            document.getElementById('cancel-prestation').textContent = `Séance avec ${booking.coach || 'Coach'}`;
+            document.getElementById('cancel-duration').textContent = (booking.duration || 60) + ' min';
             document.getElementById('cancel-price').textContent = (booking.price || 40) + '€';
             
-            // Afficher la modal
             document.getElementById('cancel-modal').showModal();
         }
         
@@ -468,18 +504,16 @@
             
             const data = getStoredData();
             const user = data.user || {};
-            const bookings = data.bookings || [];
-            const sortedBookings = [...bookings].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const allBookings = data.bookings || [];
+            
+            const upcomingBookings = allBookings.filter(b => isUpcoming(b.date, b.time));
+            const sortedBookings = [...upcomingBookings].sort((a, b) => new Date(a.date) - new Date(b.date));
             const bookingToCancel = sortedBookings[currentCancelIndex];
             
             if (!bookingToCancel) return;
             
-            // Formater la date en français pour l'email
-            const dateObj = new Date(bookingToCancel.date);
-            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            const formattedDate = dateObj.toLocaleDateString('fr-FR', options);
+            const formattedDate = formatDate(bookingToCancel.date);
             
-            // Envoyer l'email d'annulation via l'API
             try {
                 await fetch('/api/cancel-booking', {
                     method: 'POST',
@@ -488,12 +522,13 @@
                         client_name: user.fullName || 'Client',
                         client_email: user.email || '',
                         coach_name: bookingToCancel.coach || 'Coach',
+                        coach_email: bookingToCancel.coach_email || '',
                         gym_name: bookingToCancel.gym || 'Salle de sport',
                         gym_address: bookingToCancel.gym_address || '',
                         date: formattedDate,
                         time: bookingToCancel.time || '10:00',
                         service: bookingToCancel.service || 'Séance de coaching',
-                        duration: (bookingToCancel.duration || 60) + 'min',
+                        duration: (bookingToCancel.duration || 60) + ' min',
                         price: (bookingToCancel.price || 40) + '€',
                         coach_photo: bookingToCancel.coach_photo || null,
                         booking_url: window.location.origin + '/'
@@ -503,27 +538,25 @@
                 console.error('Erreur envoi email annulation:', e);
             }
             
-            // Supprimer la réservation du localStorage
-            const originalIndex = bookings.findIndex(b => 
+            const originalIndex = allBookings.findIndex(b => 
                 b.date === bookingToCancel.date && 
                 b.time === bookingToCancel.time && 
                 b.coach === bookingToCancel.coach
             );
             
             if (originalIndex !== -1) {
-                bookings.splice(originalIndex, 1);
-                data.bookings = bookings;
+                allBookings.splice(originalIndex, 1);
+                data.bookings = allBookings;
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             }
             
             closeCancelModal();
-            
-            // Rediriger vers la page de confirmation d'annulation
-            window.location.href = '/reservation-cancelled';
+            window.location.reload();
         }
         
         function logout() {
             localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(USER_KEY);
             window.location.href = '/';
         }
         
