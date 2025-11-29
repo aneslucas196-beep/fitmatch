@@ -339,6 +339,20 @@ evSubmit.addEventListener('click', async ()=>{
       });
       const confirmData = await confirmRes.json();
       console.log('📋 Demande envoyée au coach:', confirmData);
+      
+      // Mettre à jour le booking avec l'ID du serveur et l'email du coach
+      if (confirmData.booking_id) {
+        const fmDataUpdated = JSON.parse(localStorage.getItem('fitmatch') || '{}');
+        const lastBookingIndex = (fmDataUpdated.bookings || []).length - 1;
+        if (lastBookingIndex >= 0) {
+          fmDataUpdated.bookings[lastBookingIndex].id = confirmData.booking_id;
+          fmDataUpdated.bookings[lastBookingIndex].booking_id = confirmData.booking_id;
+          fmDataUpdated.bookings[lastBookingIndex].coach_email = coachEmail || '';
+          fmDataUpdated.bookings[lastBookingIndex].status = 'pending';
+          localStorage.setItem('fitmatch', JSON.stringify(fmDataUpdated));
+          console.log('✅ Booking mis à jour avec ID:', confirmData.booking_id);
+        }
+      }
     } catch(emailErr) {
       console.log('⚠️ Demande non envoyée:', emailErr);
     }
@@ -407,6 +421,20 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
     });
     const confirmData = await confirmRes.json();
     console.log('📋 Demande envoyée au coach:', confirmData);
+    
+    // Mettre à jour le booking avec l'ID du serveur et l'email du coach
+    if (confirmData.booking_id) {
+      const fmDataUpdated = JSON.parse(localStorage.getItem('fitmatch') || '{}');
+      const lastBookingIndex = (fmDataUpdated.bookings || []).length - 1;
+      if (lastBookingIndex >= 0) {
+        fmDataUpdated.bookings[lastBookingIndex].id = confirmData.booking_id;
+        fmDataUpdated.bookings[lastBookingIndex].booking_id = confirmData.booking_id;
+        fmDataUpdated.bookings[lastBookingIndex].coach_email = coachEmail || '';
+        fmDataUpdated.bookings[lastBookingIndex].status = 'pending';
+        localStorage.setItem('fitmatch', JSON.stringify(fmDataUpdated));
+        console.log('✅ Booking mis à jour avec ID:', confirmData.booking_id);
+      }
+    }
   } catch(emailErr) {
     console.log('⚠️ Demande non envoyée:', emailErr);
   }

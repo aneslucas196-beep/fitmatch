@@ -3281,6 +3281,7 @@ async def confirm_booking(request: ConfirmBookingRequest):
         return JSONResponse({
             "success": True,
             "message": "Demande de réservation envoyée au coach",
+            "booking_id": booking_id,
             "coach_notified": True,  # Notification envoyée au coach
             "client_email_sent": False,  # L'email au client sera envoyé après confirmation du coach
             "status": "pending"

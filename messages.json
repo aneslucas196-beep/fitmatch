@@ -1,1 +1,17 @@
-{}
+{
+  "mejedjaoued@gmail.com_anaslimeme830@gmail.com_d4a878a3": {
+    "booking_id": "d4a878a3",
+    "client_email": "mejedjaoued@gmail.com",
+    "coach_email": "anaslimeme830@gmail.com",
+    "messages": [
+      {
+        "id": "b82fbf25",
+        "sender_role": "client",
+        "sender_name": "anas",
+        "message": "ikhy",
+        "timestamp": "2025-11-29T14:03:03.795479",
+        "read": false
+      }
+    ]
+  }
+}

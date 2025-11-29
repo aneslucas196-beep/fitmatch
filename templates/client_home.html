@@ -184,15 +184,59 @@ function getStatusColor(status) {
     return { bg: 'from-orange-50 to-amber-50', border: 'border-orange-400', text: 'text-orange-600', badge: 'bg-orange-100 text-orange-700' };
 }
 
-function loadBookings() {
+async function syncBookingStatuses() {
+    const data = getStoredData();
+    const bookings = data.bookings || [];
+    let hasChanges = false;
+    
+    for (let i = 0; i < bookings.length; i++) {
+        const booking = bookings[i];
+        const bookingId = booking.id || booking.booking_id;
+        
+        if (bookingId) {
+            try {
+                const res = await fetch(`/api/booking/${bookingId}`);
+                const result = await res.json();
+                
+                if (result.success && result.booking) {
+                    if (booking.status !== result.booking.status) {
+                        bookings[i].status = result.booking.status;
+                        hasChanges = true;
+                    }
+                    if (!booking.coach_email && result.booking.coach_email) {
+                        bookings[i].coach_email = result.booking.coach_email;
+                        hasChanges = true;
+                    }
+                }
+            } catch (e) {
+                console.log('Sync booking error:', e);
+            }
+        }
+    }
+    
+    if (hasChanges) {
+        data.bookings = bookings;
+        localStorage.setItem('fitmatch', JSON.stringify(data));
+    }
+    
+    return bookings;
+}
+
+async function loadBookings() {
     const data = getStoredData();
     const user = data.user;
-    const allBookings = data.bookings || [];
     
     if (user && user.fullName) {
         const firstName = user.fullName.split(' ')[0];
         document.getElementById('welcome-title').textContent = `Bienvenue ${firstName} !`;
     }
+    
+    // Synchroniser les statuts depuis le serveur
+    await syncBookingStatuses();
+    
+    // Recharger les données après synchro
+    const freshData = getStoredData();
+    const allBookings = freshData.bookings || [];
     
     const upcomingBookings = allBookings.filter(b => isUpcoming(b.date, b.time));
     const bookingsList = document.getElementById('bookings-list');
