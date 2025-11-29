@@ -291,19 +291,17 @@
             const data = getStoredData();
             currentUser = data.user;
             
-            // Vérifier aussi le rôle stocké dans localStorage
-            const storedRole = data.role || currentUser?.role;
+            // PRIORITÉ 1: Vérifier le paramètre "from" dans l'URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const fromParam = urlParams.get('from');
             
-            console.log('🔍 Init messagerie - User:', currentUser);
+            console.log('🔍 Init messagerie - Paramètre from:', fromParam);
             console.log('🔍 Booking ID recherché:', BOOKING_ID);
-            console.log('🔍 Rôle stocké:', storedRole);
             
             if (!currentUser) {
                 window.location.href = '/login';
                 return;
             }
-            
-            const userEmail = currentUser.email?.toLowerCase() || '';
             
             // Récupérer les infos complètes du booking via l'API
             try {
@@ -315,53 +313,42 @@
                     const serverBooking = bookingResult.booking;
                     bookingData = serverBooking;
                     
-                    const clientEmail = (serverBooking.client_email || '').toLowerCase();
-                    const coachEmail = (serverBooking.coach_email || '').toLowerCase();
-                    
-                    console.log('🔍 Comparaison emails - User:', userEmail, 'Client:', clientEmail, 'Coach:', coachEmail);
-                    
-                    // Méthode 1: Vérifier via le rôle stocké
-                    if (storedRole === 'coach') {
-                        console.log('✅ Identifié comme COACH (via rôle stocké)');
+                    // Déterminer le rôle via le paramètre URL (méthode fiable)
+                    if (fromParam === 'coach') {
+                        console.log('✅ Identifié comme COACH (via paramètre URL)');
                         currentRole = 'coach';
                         otherPartyName = serverBooking.client_name || 'Client';
                         otherPartyEmail = serverBooking.client_email || '';
-                    }
-                    // Méthode 2: Vérifier via l'email du coach
-                    else if (coachEmail && userEmail === coachEmail) {
-                        console.log('✅ Identifié comme COACH (via email)');
-                        currentRole = 'coach';
-                        otherPartyName = serverBooking.client_name || 'Client';
-                        otherPartyEmail = serverBooking.client_email || '';
-                    }
-                    // Méthode 3: Vérifier via l'email du client
-                    else if (clientEmail && userEmail === clientEmail) {
-                        console.log('✅ Identifié comme CLIENT (via email)');
+                    } else if (fromParam === 'client') {
+                        console.log('✅ Identifié comme CLIENT (via paramètre URL)');
                         currentRole = 'client';
                         otherPartyName = serverBooking.coach_name || 'Coach';
                         otherPartyEmail = serverBooking.coach_email || '';
-                    }
-                    // Méthode 4: Vérification via l'API coach
-                    else {
-                        const coachRes = await fetch(`/api/coach/bookings?coach_email=${encodeURIComponent(userEmail)}`);
-                        const coachData = await coachRes.json();
-                        if (coachData.success) {
-                            const allCoachBookings = [...(coachData.pending || []), ...(coachData.confirmed || [])];
-                            if (allCoachBookings.some(b => b.id === BOOKING_ID)) {
-                                console.log('✅ Identifié comme COACH (via API coach)');
-                                currentRole = 'coach';
-                                otherPartyName = serverBooking.client_name || 'Client';
-                                otherPartyEmail = serverBooking.client_email || '';
-                            }
+                    } else {
+                        // Fallback: comparaison d'emails
+                        const userEmail = currentUser.email?.toLowerCase() || '';
+                        const clientEmail = (serverBooking.client_email || '').toLowerCase();
+                        const coachEmail = (serverBooking.coach_email || '').toLowerCase();
+                        
+                        console.log('🔍 Comparaison emails - User:', userEmail, 'Client:', clientEmail, 'Coach:', coachEmail);
+                        
+                        if (coachEmail && userEmail === coachEmail) {
+                            console.log('✅ Identifié comme COACH (via email)');
+                            currentRole = 'coach';
+                            otherPartyName = serverBooking.client_name || 'Client';
+                            otherPartyEmail = serverBooking.client_email || '';
+                        } else if (clientEmail && userEmail === clientEmail) {
+                            console.log('✅ Identifié comme CLIENT (via email)');
+                            currentRole = 'client';
+                            otherPartyName = serverBooking.coach_name || 'Coach';
+                            otherPartyEmail = serverBooking.coach_email || '';
+                        } else {
+                            // Par défaut, assumer client
+                            console.log('⚠️ Rôle non déterminé, assumé CLIENT');
+                            currentRole = 'client';
+                            otherPartyName = serverBooking.coach_name || 'Coach';
+                            otherPartyEmail = serverBooking.coach_email || '';
                         }
-                    }
-                    
-                    // Si toujours pas de rôle, assumer client
-                    if (!currentRole) {
-                        console.log('⚠️ Rôle non déterminé, assumé CLIENT');
-                        currentRole = 'client';
-                        otherPartyName = serverBooking.coach_name || 'Coach';
-                        otherPartyEmail = serverBooking.coach_email || '';
                     }
                     
                     console.log('✅ Rôle final:', currentRole);

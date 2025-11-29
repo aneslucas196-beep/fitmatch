@@ -73,6 +73,30 @@
         "message": "cab",
         "timestamp": "2025-11-29T17:39:51.339812",
         "read": false
+      },
+      {
+        "id": "d2261edc",
+        "sender_role": "coach",
+        "sender_name": "Ns",
+        "message": "cava ou quoi",
+        "timestamp": "2025-11-29T17:44:04.378440",
+        "read": false
+      },
+      {
+        "id": "f9d70d35",
+        "sender_role": "coach",
+        "sender_name": "Ns",
+        "message": "coach",
+        "timestamp": "2025-11-29T17:44:14.758634",
+        "read": false
+      },
+      {
+        "id": "7787c0ae",
+        "sender_role": "coach",
+        "sender_name": "Ns",
+        "message": "client bien ?",
+        "timestamp": "2025-11-29T17:44:52.368313",
+        "read": false
       }
     ]
   }
