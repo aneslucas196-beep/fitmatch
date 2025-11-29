@@ -187,30 +187,56 @@ function getStatusColor(status) {
 async function syncBookingStatuses() {
     const data = getStoredData();
     const bookings = data.bookings || [];
+    const user = data.user;
     let hasChanges = false;
     
-    for (let i = 0; i < bookings.length; i++) {
-        const booking = bookings[i];
-        const bookingId = booking.id || booking.booking_id;
-        
-        if (bookingId) {
-            try {
-                const res = await fetch(`/api/booking/${bookingId}`);
-                const result = await res.json();
-                
-                if (result.success && result.booking) {
-                    if (booking.status !== result.booking.status) {
-                        bookings[i].status = result.booking.status;
+    // Si l'utilisateur est connecté, chercher ses réservations côté serveur
+    if (user && user.email) {
+        try {
+            const res = await fetch(`/api/client/bookings?client_email=${encodeURIComponent(user.email)}`);
+            const result = await res.json();
+            
+            if (result.success && result.bookings) {
+                // Pour chaque réservation du serveur, mettre à jour ou ajouter au localStorage
+                for (const serverBooking of result.bookings) {
+                    // Chercher si on a déjà cette réservation localement
+                    let localIndex = bookings.findIndex(b => 
+                        (b.id && b.id === serverBooking.id) || 
+                        (b.booking_id && b.booking_id === serverBooking.id) ||
+                        (b.date === serverBooking.date && b.time === serverBooking.time && 
+                         (b.coach === serverBooking.coach_name || b.coach_email === serverBooking.coach_email))
+                    );
+                    
+                    if (localIndex >= 0) {
+                        // Mettre à jour le booking local
+                        bookings[localIndex].id = serverBooking.id;
+                        bookings[localIndex].booking_id = serverBooking.id;
+                        bookings[localIndex].status = serverBooking.status;
+                        bookings[localIndex].coach_email = serverBooking.coach_email;
                         hasChanges = true;
-                    }
-                    if (!booking.coach_email && result.booking.coach_email) {
-                        bookings[i].coach_email = result.booking.coach_email;
+                    } else {
+                        // Ajouter le booking du serveur
+                        bookings.push({
+                            id: serverBooking.id,
+                            booking_id: serverBooking.id,
+                            coach: serverBooking.coach_name,
+                            coach_email: serverBooking.coach_email,
+                            service: serverBooking.service || 'Séance de coaching',
+                            duration: serverBooking.duration,
+                            price: serverBooking.price,
+                            gym: serverBooking.gym_name,
+                            gym_address: serverBooking.gym_address,
+                            date: serverBooking.date,
+                            time: serverBooking.time,
+                            status: serverBooking.status,
+                            createdAt: serverBooking.created_at
+                        });
                         hasChanges = true;
                     }
                 }
-            } catch (e) {
-                console.log('Sync booking error:', e);
             }
+        } catch (e) {
+            console.log('Sync from server error:', e);
         }
     }
     
@@ -289,9 +315,17 @@ async function loadBookings() {
                 </div>
                 <div class="text-right flex-shrink-0 ml-4">
                     <div class="${colors.text} font-bold text-lg">${relativeDay}</div>
-                    <div class="flex gap-2 mt-1">
-                        ${booking.status === 'confirmed' ? `<a href="/conversation/${booking.id || booking.booking_id}" class="text-sm text-blue-500 hover:text-blue-700">Messagerie</a>` : ''}
-                        <button onclick="openCancelModal(${idx})" class="text-sm text-red-500 hover:text-red-700">Annuler</button>
+                    <div class="flex gap-2 mt-2">
+                        ${booking.status === 'confirmed' && (booking.id || booking.booking_id) ? `
+                            <a href="/conversation/${booking.id || booking.booking_id}" 
+                               class="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium rounded-full hover:from-blue-600 hover:to-indigo-700 transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                                Message
+                            </a>
+                        ` : ''}
+                        <button onclick="openCancelModal(${idx})" class="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-full transition-colors">Annuler</button>
                     </div>
                 </div>
             </div>

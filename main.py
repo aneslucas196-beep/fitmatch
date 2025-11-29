@@ -3420,6 +3420,40 @@ async def get_booking_by_id(booking_id: str):
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
+@app.get("/api/client/bookings")
+async def get_client_bookings(client_email: str):
+    """Récupère toutes les réservations d'un client depuis tous les coachs."""
+    try:
+        demo_users = load_demo_users()
+        client_bookings = []
+        
+        # Parcourir tous les coachs pour trouver les réservations du client
+        for coach_email, coach_data in demo_users.items():
+            if coach_data.get("role") != "coach":
+                continue
+            
+            coach_name = coach_data.get("full_name", "Coach")
+            
+            # Chercher dans pending et confirmed (pas rejected car annulées)
+            for booking_list in ["pending_bookings", "confirmed_bookings"]:
+                bookings = coach_data.get(booking_list, [])
+                for booking in bookings:
+                    if booking.get("client_email", "").lower() == client_email.lower():
+                        booking_with_coach = booking.copy()
+                        booking_with_coach["coach_email"] = coach_email
+                        booking_with_coach["coach_name"] = coach_name
+                        client_bookings.append(booking_with_coach)
+        
+        return JSONResponse({
+            "success": True,
+            "bookings": client_bookings
+        })
+        
+    except Exception as e:
+        print(f"❌ Erreur récupération bookings client: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
 @app.post("/api/coach/bookings/respond")
 async def respond_to_booking(request: CoachBookingRequest):
     """Le coach confirme ou refuse une réservation."""
