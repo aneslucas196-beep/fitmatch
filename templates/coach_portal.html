@@ -551,24 +551,37 @@ function updateCalendarDisplay() {
 function generateWeekCalendar() {
     const calendar = document.getElementById('calendar-grid');
     const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-    const hours = Array.from({length: 12}, (_, i) => `${8 + i}:00`);
     
-    let html = '<div class="grid grid-cols-8 gap-1 text-xs">';
+    // Générer les créneaux de 30 minutes de 8h à 20h
+    const timeSlots = [];
+    for (let h = 8; h <= 20; h++) {
+        timeSlots.push(`${h.toString().padStart(2, '0')}:00`);
+        if (h < 20) {
+            timeSlots.push(`${h.toString().padStart(2, '0')}:30`);
+        }
+    }
+    
+    let html = '<div class="grid grid-cols-8 gap-0 text-xs">';
     
     // Header with days
-    html += '<div class="font-semibold text-gray-600 p-2">Heures</div>';
+    html += '<div class="font-semibold text-gray-600 p-2 border-b border-r bg-gray-50">Heures</div>';
     for (let i = 0; i < 7; i++) {
         const date = new Date(currentWeekStart);
         date.setDate(currentWeekStart.getDate() + i);
-        html += `<div class="font-semibold text-gray-600 p-2 text-center">
+        const isToday = date.toDateString() === new Date().toDateString();
+        const bgClass = isToday ? 'bg-blue-50' : 'bg-gray-50';
+        html += `<div class="font-semibold text-gray-600 p-2 text-center border-b ${bgClass}">
             ${days[i]}<br>
-            <span class="text-xs text-gray-500">${date.getDate()}</span>
+            <span class="text-xs ${isToday ? 'text-blue-600 font-bold' : 'text-gray-500'}">${date.getDate()}</span>
         </div>`;
     }
     
     // Time slots
-    hours.forEach(hour => {
-        html += `<div class="font-medium text-gray-500 p-2 text-right">${hour}</div>`;
+    timeSlots.forEach((timeSlot, idx) => {
+        const isFullHour = timeSlot.endsWith(':00');
+        const hourClass = isFullHour ? 'border-t border-gray-300' : 'border-t border-gray-100';
+        
+        html += `<div class="font-medium text-gray-500 p-1 text-right border-r bg-gray-50 ${hourClass}">${isFullHour ? timeSlot : ''}</div>`;
         
         for (let day = 0; day < 7; day++) {
             const date = new Date(currentWeekStart);
@@ -577,19 +590,19 @@ function generateWeekCalendar() {
             
             // Check for bookings at this time (utiliser les vraies données)
             const allBookings = [...realBookings.pending, ...realBookings.confirmed];
-            const booking = allBookings.find(b => 
-                b.date === dateStr && b.time === hour
-            );
+            const booking = allBookings.find(b => b.date === dateStr && b.time === timeSlot);
             
             if (booking) {
-                const statusColor = booking.status === 'confirmed' ? 'bg-green-100 border-green-500' : 'bg-orange-100 border-orange-500';
-                html += `<div class="p-1 border ${statusColor} rounded cursor-pointer hover:opacity-80" 
-                    title="${booking.client_name} - ${booking.service}">
-                    <div class="text-xs font-medium truncate">${booking.client_name}</div>
-                    <div class="text-xs text-gray-600 truncate">${booking.time}</div>
+                const statusColor = booking.status === 'confirmed' 
+                    ? 'bg-green-500 text-white border-green-600' 
+                    : 'bg-orange-400 text-white border-orange-500';
+                const statusIcon = booking.status === 'confirmed' ? '✓' : '⏳';
+                html += `<div class="p-1 ${statusColor} border rounded-sm cursor-pointer hover:opacity-90 ${hourClass}" 
+                    title="${booking.client_name} - ${booking.time} - ${booking.status === 'confirmed' ? 'Confirmée' : 'En attente'}">
+                    <div class="text-xs font-bold truncate">${statusIcon} ${booking.client_name}</div>
                 </div>`;
             } else {
-                html += '<div class="p-1 border border-gray-200 rounded hover:bg-gray-50 cursor-pointer" title="Disponible"></div>';
+                html += `<div class="p-1 border-r border-gray-100 hover:bg-blue-50 cursor-pointer ${hourClass}" title="Disponible"></div>`;
             }
         }
     });
@@ -615,7 +628,7 @@ function generateMonthCalendar() {
     
     // Header with day names
     days.forEach(day => {
-        html += `<div class="font-semibold text-gray-600 p-3 text-center border-b">${day}</div>`;
+        html += `<div class="font-semibold text-gray-600 p-3 text-center border-b bg-gray-50">${day}</div>`;
     });
     
     // Generate 6 weeks to cover the entire month
@@ -632,25 +645,34 @@ function generateMonthCalendar() {
             const allBookingsMonth = [...realBookings.pending, ...realBookings.confirmed];
             const dayBookings = allBookingsMonth.filter(b => b.date === dateStr);
             
-            let cellClass = 'p-2 min-h-[80px] border border-gray-200 hover:bg-gray-50 cursor-pointer';
+            let cellClass = 'p-2 min-h-[90px] border border-gray-200 hover:bg-gray-50 cursor-pointer';
             if (!isCurrentMonth) {
-                cellClass += ' bg-gray-100 text-gray-400';
+                cellClass += ' bg-gray-50 text-gray-400';
             }
             if (isToday) {
-                cellClass += ' bg-blue-100 border-blue-500';
+                cellClass += ' bg-blue-50 border-blue-400 border-2';
             }
             
             html += `<div class="${cellClass}">
-                <div class="font-semibold ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'} mb-1">${date.getDate()}</div>`;
+                <div class="font-semibold ${isCurrentMonth ? 'text-gray-900' : 'text-gray-400'} ${isToday ? 'text-blue-600' : ''} mb-1">${date.getDate()}</div>`;
             
-            // Show bookings for this day
-            dayBookings.forEach(booking => {
-                const statusColor = booking.status === 'confirmed' ? 'bg-green-200 text-green-800' : 'bg-orange-200 text-orange-800';
-                html += `<div class="text-xs p-1 mb-1 rounded ${statusColor} truncate" 
-                    title="${booking.client_name} - ${booking.time}">
-                    ${booking.time} ${booking.client_name}
+            // Show bookings for this day (max 3 visible)
+            const visibleBookings = dayBookings.slice(0, 3);
+            visibleBookings.forEach(booking => {
+                const statusColor = booking.status === 'confirmed' 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-orange-400 text-white';
+                const statusIcon = booking.status === 'confirmed' ? '✓' : '⏳';
+                html += `<div class="text-xs p-1 mb-1 rounded ${statusColor} truncate font-medium" 
+                    title="${booking.client_name} - ${booking.time} - ${booking.status === 'confirmed' ? 'Confirmée' : 'En attente'}">
+                    ${statusIcon} ${booking.time} ${booking.client_name}
                 </div>`;
             });
+            
+            // Show "+N more" if there are more bookings
+            if (dayBookings.length > 3) {
+                html += `<div class="text-xs text-gray-500 font-medium">+${dayBookings.length - 3} autres</div>`;
+            }
             
             html += '</div>';
         }
