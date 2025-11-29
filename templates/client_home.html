@@ -153,6 +153,19 @@ function getStoredData() {
     } catch { return {}; }
 }
 
+// S'assurer que le rôle client est défini au chargement de la page
+(function updateClientRole() {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    if (data.user && data.role !== 'client') {
+        data.role = 'client';
+        if (data.user.role !== 'client') {
+            data.user.role = 'client';
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        console.log('✅ LocalStorage mis à jour pour client');
+    }
+})();
+
 function formatDate(dateStr) {
     const date = new Date(dateStr);
     const options = { weekday: 'long', day: 'numeric', month: 'long' };

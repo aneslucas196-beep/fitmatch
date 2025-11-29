@@ -52,5 +52,28 @@
         "read": false
       }
     ]
+  },
+  "mejedjaoued@gmail.com_anaslimeme830@gmail.com_7e5a70f1": {
+    "booking_id": "7e5a70f1",
+    "client_email": "mejedjaoued@gmail.com",
+    "coach_email": "anaslimeme830@gmail.com",
+    "messages": [
+      {
+        "id": "a17718a1",
+        "sender_role": "client",
+        "sender_name": "anas",
+        "message": "bonjour",
+        "timestamp": "2025-11-29T17:39:35.345737",
+        "read": false
+      },
+      {
+        "id": "a07fecd2",
+        "sender_role": "client",
+        "sender_name": "anas",
+        "message": "cab",
+        "timestamp": "2025-11-29T17:39:51.339812",
+        "read": false
+      }
+    ]
   }
 }

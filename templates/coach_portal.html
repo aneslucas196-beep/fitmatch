@@ -838,11 +838,28 @@ function formatDate(date) {
 const coachId = "{{ coach.id or coach.email|replace('@', '_')|replace('.', '_') }}";
 const shareUrl = window.location.origin + "/coach/" + coachId;
 
-// Initialiser le lien de partage
+// Initialiser le lien de partage et mettre à jour le localStorage avec les données du coach
 document.addEventListener('DOMContentLoaded', function() {
     const shareLinkInput = document.getElementById('shareLink');
     if (shareLinkInput) {
         shareLinkInput.value = shareUrl;
+    }
+    
+    // Mettre à jour le localStorage avec les données du coach
+    const coachEmail = "{{ coach.email or '' }}";
+    const coachName = "{{ coach.full_name or 'Coach' }}";
+    
+    if (coachEmail) {
+        const data = JSON.parse(localStorage.getItem('fitmatch') || '{}');
+        data.user = {
+            email: coachEmail,
+            fullName: coachName,
+            role: 'coach',
+            verified: true
+        };
+        data.role = 'coach';
+        localStorage.setItem('fitmatch', JSON.stringify(data));
+        console.log('✅ LocalStorage mis à jour pour coach:', coachEmail);
     }
 });
 
