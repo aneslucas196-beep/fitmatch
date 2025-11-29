@@ -343,8 +343,8 @@ evSubmit.addEventListener('click', async ()=>{
       console.log('⚠️ Demande non envoyée:', emailErr);
     }
     
-    // Rediriger directement vers la page Mon compte
-    window.location.href = '/account';
+    // Rediriger directement vers le dashboard client
+    window.location.href = '/client/home';
     
   }catch(e){
     toast(e.message || 'Code invalide.');
@@ -411,6 +411,6 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
     console.log('⚠️ Demande non envoyée:', emailErr);
   }
   
-  // Rediriger vers la page Mon compte
-  window.location.href = '/account';
+  // Rediriger vers le dashboard client
+  window.location.href = '/client/home';
 });
