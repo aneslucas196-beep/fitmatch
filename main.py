@@ -3512,6 +3512,61 @@ async def respond_to_booking(request: CoachBookingRequest):
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
+class DeleteBookingRequest(BaseModel):
+    coach_email: str
+    booking_id: str
+
+@app.post("/api/coach/bookings/delete")
+async def delete_booking(request: DeleteBookingRequest):
+    """Le coach supprime une réservation (pending ou confirmed)."""
+    try:
+        import json
+        demo_users = load_demo_users()
+        
+        if request.coach_email not in demo_users:
+            return JSONResponse({"success": False, "error": "Coach non trouvé"}, status_code=404)
+        
+        coach_data = demo_users[request.coach_email]
+        booking_found = False
+        
+        # Chercher dans pending_bookings
+        pending_bookings = coach_data.get("pending_bookings", [])
+        for i, booking in enumerate(pending_bookings):
+            if booking.get("id") == request.booking_id:
+                pending_bookings.pop(i)
+                coach_data["pending_bookings"] = pending_bookings
+                booking_found = True
+                break
+        
+        # Chercher dans confirmed_bookings si pas trouvé
+        if not booking_found:
+            confirmed_bookings = coach_data.get("confirmed_bookings", [])
+            for i, booking in enumerate(confirmed_bookings):
+                if booking.get("id") == request.booking_id:
+                    confirmed_bookings.pop(i)
+                    coach_data["confirmed_bookings"] = confirmed_bookings
+                    booking_found = True
+                    break
+        
+        if not booking_found:
+            return JSONResponse({"success": False, "error": "Réservation non trouvée"}, status_code=404)
+        
+        # Sauvegarder
+        with open("demo_users.json", "w", encoding="utf-8") as f:
+            json.dump(demo_users, f, ensure_ascii=False, indent=2)
+        
+        print(f"🗑️ Réservation {request.booking_id} supprimée par {request.coach_email}")
+        
+        return JSONResponse({
+            "success": True,
+            "message": "Séance supprimée"
+        })
+        
+    except Exception as e:
+        print(f"❌ Erreur suppression réservation: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
 # ============================================
 # MESSAGERIE CLIENT-COACH
 # ============================================

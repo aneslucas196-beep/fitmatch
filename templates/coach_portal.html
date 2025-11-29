@@ -416,6 +416,38 @@ async function respondToBooking(bookingId, action) {
     }
 }
 
+// Supprimer une réservation
+async function deleteBooking(bookingId) {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette séance ?")) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/coach/bookings/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                coach_email: COACH_EMAIL,
+                booking_id: bookingId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Recharger les données
+            await loadBookingsFromAPI();
+            loadUpcomingBookings();
+            loadNotifications();
+        } else {
+            alert("Erreur: " + data.error);
+        }
+    } catch (error) {
+        console.error("❌ Erreur suppression réservation:", error);
+        alert("Une erreur est survenue");
+    }
+}
+
 // Initialisation
 document.addEventListener('DOMContentLoaded', async function() {
     await loadBookingsFromAPI();
@@ -661,10 +693,19 @@ function loadUpcomingBookings() {
         const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
         
         return `
-            <div class="border ${bgColor} rounded-lg p-4 hover:shadow-md transition">
+            <div class="border ${bgColor} rounded-lg p-4 hover:shadow-md transition relative">
                 <div class="flex justify-between items-start mb-2">
                     <h4 class="font-semibold text-gray-900">${booking.client_name}</h4>
-                    <span class="${statusColor} text-xs font-medium">${statusIcon} ${statusText}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="${statusColor} text-xs font-medium">${statusIcon} ${statusText}</span>
+                        <button onclick="deleteBooking('${booking.id}')" 
+                                class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition"
+                                title="Supprimer cette séance">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="text-sm text-gray-600 space-y-1">
                     <p>📅 ${dateStr}</p>
