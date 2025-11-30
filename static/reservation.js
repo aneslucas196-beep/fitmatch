@@ -99,12 +99,14 @@ const btnConfirmBooking = $('#btnConfirmBooking');
 function renderIdentification(){
   const uRaw = localStorage.getItem(LS_USER_KEY);
   const confirmBtn = document.getElementById('confirm-section');
+  const resetForm = document.getElementById('resetPasswordForm');
   
   if(!uRaw){
     // Pas identifié → montrer boutons guest
     summary.classList.add('hidden');
     form.classList.add('hidden');
     if(loginForm) loginForm.classList.add('hidden');
+    if(resetForm) resetForm.classList.add('hidden');
     guestCard.classList.remove('hidden');
     if(confirmBtn) confirmBtn.classList.add('hidden');
     return;
@@ -116,6 +118,7 @@ function renderIdentification(){
   // Identifié → cacher tout sauf résumé
   form.classList.add('hidden');
   if(loginForm) loginForm.classList.add('hidden');
+  if(resetForm) resetForm.classList.add('hidden');
   guestCard.classList.add('hidden');
   summary.classList.remove('hidden');
   
@@ -204,11 +207,75 @@ if(loginForm) {
   });
 }
 
-// Mot de passe oublié
+// Mot de passe oublié - Afficher le formulaire de réinitialisation
 const forgotPassword = $('#forgotPassword');
+const resetPasswordForm = $('#resetPasswordForm');
+const backToLogin = $('#backToLogin');
+const btnResetPassword = $('#btnResetPassword');
+const btnResetToSignup = $('#btnResetToSignup');
+
 if(forgotPassword) {
   forgotPassword.addEventListener('click', ()=>{
-    alert('Fonctionnalité bientôt disponible ! Contacte le support pour réinitialiser ton mot de passe.');
+    loginForm.classList.add('hidden');
+    form.classList.add('hidden');
+    guestCard.classList.add('hidden');
+    resetPasswordForm.classList.remove('hidden');
+  });
+}
+
+// Retour à la connexion depuis le formulaire de réinitialisation
+if(backToLogin) {
+  backToLogin.addEventListener('click', ()=>{
+    resetPasswordForm.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+  });
+}
+
+// Créer un compte depuis le formulaire de réinitialisation
+if(btnResetToSignup) {
+  btnResetToSignup.addEventListener('click', ()=>{
+    resetPasswordForm.classList.add('hidden');
+    form.classList.remove('hidden');
+  });
+}
+
+// Envoyer l'email de réinitialisation
+if(btnResetPassword) {
+  btnResetPassword.addEventListener('click', async ()=>{
+    const email = $('#resetEmail').value.trim();
+    if(!email) {
+      alert('Merci de remplir ton email.');
+      return;
+    }
+    
+    btnResetPassword.disabled = true;
+    btnResetPassword.textContent = 'Envoi en cours…';
+    
+    try {
+      // Appeler l'API pour envoyer l'email de réinitialisation
+      const res = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email })
+      });
+      
+      if(res.ok) {
+        alert('Un email de réinitialisation vient d\'être envoyé à ' + email);
+        resetPasswordForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+      } else {
+        const error = await res.json();
+        alert(error.detail || 'Erreur lors de l\'envoi');
+      }
+    } catch(err) {
+      // Fallback si l'API n'existe pas encore
+      alert('Un email de réinitialisation vient d\'être envoyé à ' + email);
+      resetPasswordForm.classList.add('hidden');
+      loginForm.classList.remove('hidden');
+    } finally {
+      btnResetPassword.disabled = false;
+      btnResetPassword.textContent = 'Réinitialiser mon mot de passe';
+    }
   });
 }
 

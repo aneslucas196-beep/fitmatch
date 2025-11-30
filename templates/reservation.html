@@ -193,6 +193,33 @@
         </button>
       </form>
 
+      <!-- Formulaire de réinitialisation du mot de passe (caché par défaut) -->
+      <div id="resetPasswordForm" class="card hidden">
+        <h3 style="font-size:22px;font-weight:600;margin-bottom:12px;color:#111827;">Réinitialiser mon mot de passe</h3>
+        
+        <div style="margin-bottom:16px;">
+          <label style="font-size:14px;font-weight:500;display:block;margin-bottom:6px;" for="resetEmail">Email *</label>
+          <input id="resetEmail" type="email" required placeholder="Email" 
+                 style="width:100%;padding:12px;border-radius:10px;border:1px solid #d1d5db;font-size:15px;outline:none;background:#f9fafb;">
+        </div>
+
+        <button type="button" id="btnResetPassword" 
+                style="width:100%;border:none;padding:14px;border-radius:12px;background:#111827;color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:8px;">
+          Réinitialiser mon mot de passe
+        </button>
+
+        <div style="margin-top:16px;font-size:15px;text-decoration:underline;color:#111827;cursor:pointer;" id="backToLogin">
+          Retour à la connexion
+        </div>
+
+        <div style="margin:24px 0;color:#6b7280;text-align:center;font-size:14px;text-transform:uppercase;">ou</div>
+
+        <button type="button" id="btnResetToSignup" 
+                style="width:100%;border-radius:999px;border:1px solid #111;background:#fff;color:#111;padding:12px 16px;font-size:15px;font-weight:500;cursor:pointer;">
+          Créer mon compte
+        </button>
+      </div>
+
       <!-- Formulaire (caché par défaut) -->
       <form id="signupForm" class="id-form card hidden">
         <div class="grid">
@@ -266,6 +293,6 @@
     </div>
   </dialog>
 
-  <script src="/static/reservation.js?v=9"></script>
+  <script src="/static/reservation.js?v=10"></script>
 </body>
 </html>
