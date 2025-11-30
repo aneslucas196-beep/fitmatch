@@ -199,6 +199,11 @@ body {
 
 /* === Responsive Design === */
 @media (max-width: 768px) {
+  .hero {
+    background-position: top center;
+    background-size: cover;
+  }
+
   .navbar {
     padding: 15px 20px;
   }
