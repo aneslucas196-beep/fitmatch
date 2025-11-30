@@ -148,16 +148,50 @@
 
       <!-- Boutons initiaux -->
       <div class="card" id="guestCard">
-        <div class="section" style="margin-bottom:8px;font-weight:700">Nouveau sur FitMatch ?</div>
+        <div class="section" style="margin-bottom:8px;font-weight:700">Vous avez déjà un compte ?</div>
         <div class="actions" style="margin-bottom:18px">
-          <button class="btn btn-outline" id="btnShowSignup">Créer mon compte</button>
+          <button class="btn btn-primary" id="btnShowLogin">Se connecter</button>
         </div>
         <div class="muted small" style="text-align:center;margin:8px 0;">ou</div>
-        <div class="section" style="margin:10px 0 8px;font-weight:700">Vous avez déjà utilisé FitMatch ?</div>
+        <div class="section" style="margin:10px 0 8px;font-weight:700">Nouveau sur FitMatch ?</div>
         <div class="actions">
-          <a class="btn btn-primary" href="/login">Se connecter</a>
+          <button class="btn btn-outline" id="btnShowSignup">Créer mon compte</button>
         </div>
       </div>
+
+      <!-- Formulaire de connexion (caché par défaut) -->
+      <form id="loginForm" class="card hidden">
+        <div style="margin-bottom:16px;">
+          <label style="font-size:14px;font-weight:500;display:block;margin-bottom:6px;" for="loginEmail">Email *</label>
+          <input id="loginEmail" name="email" type="email" required placeholder="Email" 
+                 style="width:100%;padding:11px 12px;border-radius:10px;border:1px solid #d1d5db;font-size:15px;outline:none;background:#f9fafb;">
+        </div>
+
+        <div style="margin-bottom:6px;">
+          <label style="font-size:14px;font-weight:500;display:block;margin-bottom:6px;" for="loginPassword">Mot de passe *</label>
+          <input id="loginPassword" name="password" type="password" required placeholder="Mot de passe" 
+                 style="width:100%;padding:11px 12px;border-radius:10px;border:1px solid #d1d5db;font-size:15px;outline:none;background:#f9fafb;">
+        </div>
+
+        <div style="font-size:13px;color:#111;margin-top:6px;margin-bottom:16px;text-decoration:underline;cursor:pointer;" id="forgotPassword">
+          Mot de passe oublié ?
+        </div>
+
+        <button type="submit" style="width:100%;border:none;padding:13px 16px;border-radius:999px;background:#111;color:#fff;font-size:16px;font-weight:600;cursor:pointer;">
+          Se connecter
+        </button>
+
+        <div style="display:flex;align-items:center;margin:24px 0 16px;color:#9ca3af;font-size:13px;">
+          <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+          <div style="padding:0 10px;text-transform:uppercase;letter-spacing:0.08em;">ou</div>
+          <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+        </div>
+
+        <button type="button" id="btnSwitchToSignup" 
+                style="width:100%;border-radius:999px;border:1px solid #111;background:#fff;color:#111;padding:12px 16px;font-size:15px;font-weight:500;cursor:pointer;">
+          Créer mon compte
+        </button>
+      </form>
 
       <!-- Formulaire (caché par défaut) -->
       <form id="signupForm" class="id-form card hidden">
@@ -232,6 +266,6 @@
     </div>
   </dialog>
 
-  <script src="/static/reservation.js?v=8"></script>
+  <script src="/static/reservation.js?v=9"></script>
 </body>
 </html>

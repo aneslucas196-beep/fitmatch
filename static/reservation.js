@@ -82,10 +82,13 @@ const LS_OTP_KEY = 'fitmatch.otp';
 const idCard = $('#step-3-identification');
 const guestCard = $('#guestCard');
 const form = $('#signupForm');
+const loginForm = $('#loginForm');
 const summary = $('#id-summary');
 const fullNameOut = $('#idFullName');
 const emailOut = $('#idEmail');
 const btnShowSignup = $('#btnShowSignup');
+const btnShowLogin = $('#btnShowLogin');
+const btnSwitchToSignup = $('#btnSwitchToSignup');
 const btnEdit = $('#btnEdit');
 const btnLogout = $('#btnLogout');
 const btnCreate = $('#btnCreate');
@@ -101,6 +104,7 @@ function renderIdentification(){
     // Pas identifié → montrer boutons guest
     summary.classList.add('hidden');
     form.classList.add('hidden');
+    if(loginForm) loginForm.classList.add('hidden');
     guestCard.classList.remove('hidden');
     if(confirmBtn) confirmBtn.classList.add('hidden');
     return;
@@ -111,6 +115,7 @@ function renderIdentification(){
   emailOut.textContent = user.email || '—';
   // Identifié → cacher tout sauf résumé
   form.classList.add('hidden');
+  if(loginForm) loginForm.classList.add('hidden');
   guestCard.classList.add('hidden');
   summary.classList.remove('hidden');
   
@@ -130,8 +135,82 @@ function renderIdentification(){
 // Afficher le formulaire au clic sur "Créer mon compte"
 btnShowSignup.addEventListener('click', ()=>{
   guestCard.classList.add('hidden');
+  if(loginForm) loginForm.classList.add('hidden');
   form.classList.remove('hidden');
 });
+
+// Afficher le formulaire de connexion
+if(btnShowLogin) {
+  btnShowLogin.addEventListener('click', ()=>{
+    guestCard.classList.add('hidden');
+    form.classList.add('hidden');
+    loginForm.classList.remove('hidden');
+  });
+}
+
+// Basculer vers inscription depuis le formulaire de connexion
+if(btnSwitchToSignup) {
+  btnSwitchToSignup.addEventListener('click', ()=>{
+    loginForm.classList.add('hidden');
+    form.classList.remove('hidden');
+  });
+}
+
+// Gérer la soumission du formulaire de connexion
+if(loginForm) {
+  loginForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const email = $('#loginEmail').value.trim();
+    const password = $('#loginPassword').value;
+    
+    if(!email || !password) return;
+    
+    const btn = loginForm.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Connexion…';
+    
+    try {
+      // Appeler l'API de connexion
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email, password })
+      });
+      
+      if(!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || 'Identifiants incorrects');
+      }
+      
+      const data = await res.json();
+      
+      // Sauvegarder la session
+      const user = {
+        fullName: data.full_name || data.name || email.split('@')[0],
+        email: email,
+        verified: true // Un utilisateur connecté est considéré comme vérifié
+      };
+      localStorage.setItem(LS_USER_KEY, JSON.stringify(user));
+      
+      // Mettre à jour l'affichage
+      renderIdentification();
+      
+    } catch(err) {
+      alert(err.message || 'Erreur de connexion');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Se connecter';
+    }
+  });
+}
+
+// Mot de passe oublié
+const forgotPassword = $('#forgotPassword');
+if(forgotPassword) {
+  forgotPassword.addEventListener('click', ()=>{
+    alert('Fonctionnalité bientôt disponible ! Contacte le support pour réinitialiser ton mot de passe.');
+  });
+}
 
 // Fake call API (remplace par ton vrai POST si dispo)
 async function signupViaAPI(payload){

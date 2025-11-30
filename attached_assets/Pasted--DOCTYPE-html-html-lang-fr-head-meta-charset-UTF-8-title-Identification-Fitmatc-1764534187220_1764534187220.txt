@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Identification – Fitmatch</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+
+    body {
+      background: #f5f5f7;
+      padding: 24px;
+      color: #111827;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px 20px 32px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    .step-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #111827;
+    }
+
+    .step-sub {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 16px 18px;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 24px;
+    }
+
+    .date-line {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .time-line {
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .login-section {
+      margin-top: 8px;
+    }
+
+    label {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .input {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      background-color: #f9fafb;
+    }
+
+    .input:focus {
+      border-color: #111827;
+      box-shadow: 0 0 0 1px #11182720;
+      background-color: #ffffff;
+    }
+
+    .forgot {
+      font-size: 13px;
+      color: #111827;
+      margin-top: 6px;
+      margin-bottom: 16px;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      width: 100%;
+      border: none;
+      padding: 13px 16px;
+      border-radius: 999px;
+      background: #111827;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .btn-primary:hover {
+      background: #000000;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 24px 0 16px;
+      color: #9ca3af;
+      font-size: 13px;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    .divider-text {
+      padding: 0 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid #111827;
+      background: #ffffff;
+      color: #111827;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Étape 2 : Date et heure sélectionnées -->
+    <div style="margin-bottom: 20px;">
+      <div class="step-title">2. Date et heure sélectionnées</div>
+      <div class="card">
+        <div class="date-line">mardi 2 décembre 2025</div>
+        <div class="time-line">à 13:15</div>
+      </div>
+    </div>
+
+    <!-- Étape 3 : Identification -->
+    <div class="login-section">
+      <div class="step-title">3. Identification</div>
+
+      <form id="login-form">
+        <div style="margin-top: 14px;">
+          <label for="email">Email *</label>
+          <input id="email" type="email" class="input" placeholder="Email" required />
+        </div>
+
+        <div style="margin-top: 14px;">
+          <label for="password">Mot de passe *</label>
+          <input id="password" type="password" class="input" placeholder="Mot de passe" required />
+        </div>
+
+        <div class="forgot">Mot de passe oublié ?</div>
+
+        <button type="submit" class="btn-primary">Se connecter</button>
+
+        <div class="divider">
+          <div class="divider-line"></div>
+          <div class="divider-text">ou</div>
+          <div class="divider-line"></div>
+        </div>
+
+        <button type="button" class="btn-secondary" id="create-account-btn">
+          Créer mon compte
+        </button>
+
+        <div class="hint">
+          (À connecter à ta vraie API / base de données plus tard)
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Exemple : quand on clique sur "Se connecter", on affiche juste les infos dans la console
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+      e.preventDefault(); // empêche le rechargement de la page
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      // Ici, tu feras ton appel à ton backend (fetch/axios → /api/login)
+      console.log('Connexion avec :', email, password);
+      alert('Connexion envoyée (à connecter au backend).');
+    });
+
+    // Exemple : redirection "Créer mon compte"
+    document.getElementById('create-account-btn').addEventListener('click', function () {
+      // Mets ici l’URL de ta page d’inscription
+      window.location.href = '/inscription';
+    });
+  </script>
+</body>
+</html>
