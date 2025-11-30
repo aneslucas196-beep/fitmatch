@@ -200,8 +200,8 @@ body {
 /* === Responsive Design === */
 @media (max-width: 768px) {
   .hero {
-    background-position: top center;
-    background-size: cover;
+    background-position: center 20%;
+    background-size: 180% auto;
   }
 
   .navbar {
