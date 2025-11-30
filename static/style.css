@@ -200,13 +200,15 @@ body {
 /* === Responsive Design === */
 @media (max-width: 768px) {
   .hero {
+    background-image: url("/static/images/hero-bg-mobile.png?v=2");
     background-position: center top;
     background-size: cover;
-    min-height: 100vh;
+    height: auto;
+    min-height: 100dvh;
   }
   
   .overlay {
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(0, 0, 0, 0.2);
   }
 
   .navbar {
