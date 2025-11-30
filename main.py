@@ -2194,34 +2194,75 @@ async def get_availability(coach_id: str, from_date: str = Query(..., alias="fro
 
 @app.get("/api/bookings")
 async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
-    """Récupère les réservations existantes d'un coach."""
+    """Récupère les réservations existantes d'un coach (pending + confirmed)."""
     # Charger depuis demo_users.json
     try:
         demo_users = load_demo_users()
         
-        # Chercher le coach par ID
+        # Chercher le coach par ID ou slug
         coach_email = None
         for email, user_data in demo_users.items():
             encoded_email = email.replace("@", "_").replace(".", "_")
-            if user_data.get("role") == "coach" and (str(user_data.get("id")) == coach_id or user_data.get("email") == coach_id or encoded_email == coach_id):
+            user_slug = user_data.get("slug", "")
+            if user_data.get("role") == "coach" and (
+                str(user_data.get("id")) == coach_id or 
+                user_data.get("email") == coach_id or 
+                encoded_email == coach_id or
+                user_slug == coach_id
+            ):
                 coach_email = email
                 break
         
         if not coach_email:
             return []
         
-        # Récupérer les réservations
-        bookings = demo_users.get(coach_email, {}).get("bookings", [])
+        coach_data = demo_users.get(coach_email, {})
+        
+        # Récupérer TOUTES les réservations (pending + confirmed)
+        pending_bookings = coach_data.get("pending_bookings", [])
+        confirmed_bookings = coach_data.get("confirmed_bookings", [])
         
         # Filtrer par période
         from_dt = datetime.fromisoformat(from_date.replace('Z', '+00:00'))
         to_dt = datetime.fromisoformat(to_date.replace('Z', '+00:00'))
         
         filtered_bookings = []
-        for booking in bookings:
-            booking_start = datetime.fromisoformat(booking["start"].replace('Z', '+00:00'))
-            if from_dt <= booking_start <= to_dt:
-                filtered_bookings.append(booking)
+        
+        # Ajouter les réservations pending
+        for booking in pending_bookings:
+            booking_date = booking.get("date", "")
+            booking_time = booking.get("time", "")
+            if booking_date and booking_time:
+                try:
+                    booking_start = datetime.fromisoformat(f"{booking_date}T{booking_time}:00")
+                    booking_end = booking_start + timedelta(hours=1)
+                    if from_dt.date() <= booking_start.date() <= to_dt.date():
+                        filtered_bookings.append({
+                            "start": booking_start.isoformat(),
+                            "end": booking_end.isoformat(),
+                            "title": f"{booking.get('client_name', 'Client')} - En attente",
+                            "status": "pending"
+                        })
+                except:
+                    pass
+        
+        # Ajouter les réservations confirmées
+        for booking in confirmed_bookings:
+            booking_date = booking.get("date", "")
+            booking_time = booking.get("time", "")
+            if booking_date and booking_time:
+                try:
+                    booking_start = datetime.fromisoformat(f"{booking_date}T{booking_time}:00")
+                    booking_end = booking_start + timedelta(hours=1)
+                    if from_dt.date() <= booking_start.date() <= to_dt.date():
+                        filtered_bookings.append({
+                            "start": booking_start.isoformat(),
+                            "end": booking_end.isoformat(),
+                            "title": f"{booking.get('client_name', 'Client')} - Confirmé",
+                            "status": "confirmed"
+                        })
+                except:
+                    pass
         
         return filtered_bookings
     except Exception as e:
