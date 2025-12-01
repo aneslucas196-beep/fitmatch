@@ -118,8 +118,8 @@ const COACH_PHOTO = "{{ coach.profile_photo_url or coach.profile_photo or coach.
 const GYM_NAME = "{{ coach.gyms[0].name if coach.gyms else 'Salle de sport' }}";
 const GYM_ADDRESS = "{{ coach.gyms[0].address if coach.gyms else '' }}";
 const SLOT_MINUTES = 30;
-const DAY_START = "10:00";
-const DAY_END = "24:00";
+const DAY_START = "08:00";
+const DAY_END = "22:00";
 
 /* === HELPERS === */
 const $ = s => document.querySelector(s);
