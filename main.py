@@ -2158,12 +2158,12 @@ async def account_page(request: Request):
 
 @app.get("/api/bookings/availability")
 async def get_availability(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
-    """Récupère les disponibilités d'un coach pour une période donnée, en excluant les indisponibilités."""
+    """Récupère les disponibilités d'un coach pour une période donnée, basées sur les horaires de travail."""
     try:
         from_dt = datetime.fromisoformat(from_date.replace('Z', '+00:00'))
         to_dt = datetime.fromisoformat(to_date.replace('Z', '+00:00'))
         
-        # Charger les indisponibilités du coach
+        # Charger les données du coach
         demo_users = load_demo_users()
         coach_email = None
         coach_data = None
@@ -2181,17 +2181,24 @@ async def get_availability(coach_id: str, from_date: str = Query(..., alias="fro
                 coach_data = user_data
                 break
         
-        # Récupérer les indisponibilités (dates complètes ou créneaux spécifiques)
+        # Récupérer les indisponibilités
         unavailable_dates = set()
-        unavailable_slots = []
-        
         if coach_data:
-            # Jours complets indisponibles (format: "2025-12-05")
             for date_str in coach_data.get("unavailable_days", []):
                 unavailable_dates.add(date_str)
-            
-            # Créneaux spécifiques indisponibles (format: {"date": "2025-12-05", "time": "14:00"})
-            unavailable_slots = coach_data.get("unavailable_slots", [])
+        
+        # Récupérer les horaires de travail (8h-20h par défaut)
+        day_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        default_hours = {
+            "monday": {"enabled": True, "start": "08:00", "end": "20:00"},
+            "tuesday": {"enabled": True, "start": "08:00", "end": "20:00"},
+            "wednesday": {"enabled": True, "start": "08:00", "end": "20:00"},
+            "thursday": {"enabled": True, "start": "08:00", "end": "20:00"},
+            "friday": {"enabled": True, "start": "08:00", "end": "20:00"},
+            "saturday": {"enabled": True, "start": "08:00", "end": "20:00"},
+            "sunday": {"enabled": True, "start": "08:00", "end": "20:00"}
+        }
+        working_hours = coach_data.get("working_hours", default_hours) if coach_data else default_hours
         
         availability = []
         current = from_dt.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -2204,22 +2211,27 @@ async def get_availability(coach_id: str, from_date: str = Query(..., alias="fro
                 current += timedelta(days=1)
                 continue
             
-            # Disponibilité matin: 10h-13h
-            morning_start = current.replace(hour=10, minute=0)
-            morning_end = current.replace(hour=13, minute=0)
-            availability.append({
-                "start": morning_start.isoformat(),
-                "end": morning_end.isoformat()
-            })
+            # Récupérer le jour de la semaine (0=lundi, 6=dimanche)
+            weekday = current.weekday()
+            day_name = day_names[weekday]
             
-            # Disponibilité après-midi/soir: 14h-00h (minuit)
-            afternoon_start = current.replace(hour=14, minute=0)
-            next_day = current + timedelta(days=1)
-            midnight = next_day.replace(hour=0, minute=0)
-            availability.append({
-                "start": afternoon_start.isoformat(),
-                "end": midnight.isoformat()
-            })
+            # Récupérer les horaires pour ce jour
+            day_config = working_hours.get(day_name, default_hours[day_name])
+            
+            if day_config.get("enabled", True):
+                # Parser les horaires
+                start_time = day_config.get("start", "08:00")
+                end_time = day_config.get("end", "20:00")
+                
+                start_hour, start_min = map(int, start_time.split(":"))
+                end_hour, end_min = map(int, end_time.split(":"))
+                
+                # Créer le créneau de disponibilité (sans timezone pour éviter les décalages)
+                date_str = current.strftime("%Y-%m-%d")
+                availability.append({
+                    "start": f"{date_str}T{start_time}:00",
+                    "end": f"{date_str}T{end_time}:00"
+                })
             
             current += timedelta(days=1)
         

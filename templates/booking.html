@@ -161,25 +161,6 @@ async function createBooking(payload){
 /* === STATE === */
 let weekOffset = 0;
 let selection = null;
-let workingHours = {};
-
-/* === HELPERS FOR WORKING HOURS === */
-const dayNameMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-
-function isWithinWorkingHours(date, time, wh) {
-  if (!wh || Object.keys(wh).length === 0) return true; // Pas de restrictions
-  
-  const dayName = dayNameMap[date.getDay()];
-  const dayConfig = wh[dayName];
-  
-  if (!dayConfig || !dayConfig.enabled) return false; // Jour fermé
-  
-  const timeInt = parseInt(time.replace(':', ''));
-  const startInt = parseInt(dayConfig.start.replace(':', ''));
-  const endInt = parseInt(dayConfig.end.replace(':', ''));
-  
-  return timeInt >= startInt && timeInt < endInt;
-}
 
 /* === RENDER === */
 async function renderWeek(){
@@ -212,16 +193,13 @@ async function renderWeek(){
   const avail = await fetchAvailability(COACH_ID, start.toISOString(), end.toISOString());
   const bookingsData = await fetchBookings(COACH_ID, start.toISOString(), end.toISOString());
   const bookings = bookingsData.bookings || [];
-  workingHours = bookingsData.working_hours || {};
   const body = $("#gridBody"); body.innerHTML = "";
 
   function statusFor(dtStart, time, dayDate){
     const dtEnd = addMinutes(dtStart, SLOT_MINUTES);
     if(dtStart < new Date()) return "disabled";
     
-    // Vérifier les horaires de travail du coach
-    if(!isWithinWorkingHours(dayDate, time, workingHours)) return "disabled";
-    
+    // L'API gère déjà les horaires de travail du coach
     const inAvail = avail.some(a=>{
       const s=new Date(a.start), e=new Date(a.end);
       return between(dtStart,s,e) && dtEnd<=e;

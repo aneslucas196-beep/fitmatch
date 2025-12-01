@@ -994,22 +994,7 @@ function setupEventListeners() {
     });
     
     // Modal disponibilités
-    document.getElementById('add-availability').addEventListener('click', () => {
-        document.getElementById('availability-modal').classList.remove('hidden');
-    });
-    
-    document.getElementById('close-availability-modal').addEventListener('click', () => {
-        document.getElementById('availability-modal').classList.add('hidden');
-    });
-    
-    document.getElementById('cancel-availability').addEventListener('click', () => {
-        document.getElementById('availability-modal').classList.add('hidden');
-    });
-    
-    document.getElementById('availability-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        addAvailability();
-    });
+    document.getElementById('add-availability').addEventListener('click', openAvailabilityModal);
 }
 
 function setCalendarView(view) {
