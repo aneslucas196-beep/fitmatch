@@ -1344,6 +1344,57 @@ async def resend_otp_submit(
             "error": "Erreur lors du renvoi du code."
         }, status_code=500)
 
+# API Login pour le JavaScript (accepte JSON)
+@app.post("/api/login")
+async def api_login(request: Request):
+    """API de connexion pour JavaScript (JSON)."""
+    try:
+        data = await request.json()
+        email = data.get("email", "").lower().strip()
+        password = data.get("password", "")
+        
+        if not email or not password:
+            raise HTTPException(status_code=400, detail="Email et mot de passe requis")
+        
+        # Mode démo - vérifier identifiants
+        demo_users_hardcoded = {
+            "coach@demo.com": {"password": "demopass123", "role": "coach", "full_name": "Coach Demo"},
+            "client@demo.com": {"password": "demopass123", "role": "client", "full_name": "Client Demo"}
+        }
+        
+        user_found = None
+        
+        # Vérifier les comptes démo hardcodés
+        demo_user = demo_users_hardcoded.get(email)
+        if demo_user and demo_user["password"] == password:
+            user_found = demo_user
+            print(f"✅ API Login: compte démo hardcodé")
+        
+        # Si pas trouvé, vérifier les utilisateurs inscrits
+        if not user_found:
+            cached_user = get_demo_user(email)
+            if cached_user:
+                stored_password = cached_user.get("password", "").strip()
+                if stored_password and stored_password == password.strip():
+                    user_found = cached_user
+                    print(f"✅ API Login: compte inscrit trouvé")
+        
+        if user_found:
+            return {
+                "success": True,
+                "full_name": user_found.get("full_name", email.split("@")[0]),
+                "email": email,
+                "role": user_found.get("role", "client")
+            }
+        else:
+            raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Erreur API login: {e}")
+        raise HTTPException(status_code=500, detail="Erreur serveur")
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request, message: Optional[str] = None):
     """Formulaire de connexion."""
