@@ -1600,6 +1600,17 @@ def save_demo_user(email: str, user_data: Dict) -> bool:
         print(f"❌ Erreur lors de la sauvegarde de l'utilisateur {email}: {e}")
         return False
 
+def save_demo_users(users: Dict) -> bool:
+    """Sauvegarde tout le dictionnaire d'utilisateurs démonstration dans le fichier persistant."""
+    try:
+        with open(DEMO_USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users, f, ensure_ascii=False, indent=2)
+        print(f"✅ Tous les utilisateurs sauvegardés dans le stockage persistant")
+        return True
+    except Exception as e:
+        print(f"❌ Erreur lors de la sauvegarde des utilisateurs: {e}")
+        return False
+
 def get_demo_user(email: str) -> Optional[Dict]:
     """Récupère un utilisateur démonstration spécifique."""
     try:

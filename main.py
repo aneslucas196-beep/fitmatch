@@ -49,6 +49,7 @@ from utils import (
     # Fonctions stockage persistant
     load_demo_users,
     save_demo_user,
+    save_demo_users,
     get_demo_user,
     remove_demo_user,
     get_pending_otp_data,
@@ -2383,8 +2384,9 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
         # Ajouter les jours complets indisponibles (bloquer tous les créneaux de la journée)
         for date_str in unavailable_days:
             try:
-                day_date = datetime.fromisoformat(date_str)
-                if from_dt.date() <= day_date.date() <= to_dt.date():
+                # Parser la date (format: "2025-12-05")
+                day_date = datetime.strptime(date_str, "%Y-%m-%d")
+                if from_dt.replace(tzinfo=None).date() <= day_date.date() <= to_dt.replace(tzinfo=None).date():
                     # Bloquer toute la journée (10h-00h)
                     for hour in range(10, 24):
                         slot_start = day_date.replace(hour=hour, minute=0)
@@ -2395,7 +2397,8 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
                             "title": "Indisponible",
                             "status": "unavailable"
                         })
-            except:
+            except Exception as e:
+                print(f"Erreur parsing date indisponible {date_str}: {e}")
                 pass
         
         # Ajouter les créneaux spécifiques indisponibles

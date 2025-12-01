@@ -258,21 +258,26 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900">Mes indisponibilités</h3>
-                            <p class="text-sm text-gray-600">Bloquer des jours ou créneaux</p>
+                            <h3 class="text-lg font-bold text-gray-900">Mes disponibilités</h3>
+                            <p class="text-sm text-gray-600">Bloquer/débloquer des jours</p>
                         </div>
                     </div>
                     
+                    <!-- Prochains 7 jours avec toggles -->
+                    <div id="days-toggle-list" class="space-y-2 mb-4">
+                        <!-- Généré par JavaScript -->
+                    </div>
+                    
                     <button onclick="openUnavailabilityModal()" 
-                            class="w-full bg-red-500 text-white py-3 px-4 rounded-lg hover:bg-red-600 transition flex items-center justify-center mb-4">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition flex items-center justify-center text-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
-                        Ajouter une indisponibilité
+                        Bloquer un créneau spécifique
                     </button>
                     
-                    <div id="unavailability-list" class="space-y-2 max-h-48 overflow-y-auto">
-                        <p class="text-gray-500 text-sm text-center py-2">Aucune indisponibilité</p>
+                    <!-- Liste des créneaux spécifiques bloqués -->
+                    <div id="unavailability-list" class="space-y-2 mt-4 max-h-32 overflow-y-auto">
                     </div>
                 </div>
 
@@ -549,42 +554,56 @@ async function removeUnavailability(type, date, time = null) {
 }
 
 function renderUnavailabilityList() {
-    const container = document.getElementById('unavailability-list');
+    const daysContainer = document.getElementById('days-toggle-list');
+    const slotsContainer = document.getElementById('unavailability-list');
     const days = unavailabilityData.unavailable_days || [];
     const slots = unavailabilityData.unavailable_slots || [];
     
-    if (days.length === 0 && slots.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 text-sm text-center py-2">Aucune indisponibilité</p>';
-        return;
-    }
+    // Générer les 7 prochains jours avec toggles
+    let daysHtml = '';
+    const today = new Date();
     
-    let html = '';
-    
-    // Jours complets
-    days.forEach(date => {
-        const dateObj = new Date(date);
-        const formattedDate = dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-        html += `
-            <div class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        const isBlocked = days.includes(dateStr);
+        const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+        const dayNum = date.getDate();
+        const monthName = date.toLocaleDateString('fr-FR', { month: 'short' });
+        
+        daysHtml += `
+            <div class="flex items-center justify-between py-2 px-3 rounded-lg ${isBlocked ? 'bg-red-50' : 'bg-green-50'} transition-all">
                 <div class="flex items-center">
-                    <span class="text-red-500 mr-2">📅</span>
-                    <span class="text-sm font-medium">${formattedDate}</span>
-                    <span class="text-xs text-gray-500 ml-2">(journée)</span>
+                    <span class="w-10 h-10 flex items-center justify-center rounded-full ${isBlocked ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'} font-bold text-sm mr-3">
+                        ${dayNum}
+                    </span>
+                    <div>
+                        <span class="text-sm font-medium capitalize">${dayName}</span>
+                        <span class="text-xs text-gray-500 ml-1">${monthName}</span>
+                    </div>
                 </div>
-                <button onclick="removeUnavailability('day', '${date}')" class="text-red-500 hover:text-red-700">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
+                <button onclick="toggleDayAvailability('${dateStr}', ${isBlocked})" 
+                        class="relative w-12 h-6 rounded-full transition-colors ${isBlocked ? 'bg-red-400' : 'bg-green-400'}">
+                    <span class="absolute top-1 ${isBlocked ? 'left-1' : 'right-1'} w-4 h-4 bg-white rounded-full shadow transition-all"></span>
                 </button>
             </div>
         `;
-    });
+    }
     
-    // Créneaux spécifiques
+    daysContainer.innerHTML = daysHtml;
+    
+    // Afficher les créneaux spécifiques bloqués
+    if (slots.length === 0) {
+        slotsContainer.innerHTML = '';
+        return;
+    }
+    
+    let slotsHtml = '<p class="text-xs text-gray-500 mb-2">Créneaux bloqués :</p>';
     slots.forEach(slot => {
-        const dateObj = new Date(slot.date);
+        const dateObj = new Date(slot.date + 'T00:00:00');
         const formattedDate = dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
-        html += `
+        slotsHtml += `
             <div class="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
                 <div class="flex items-center">
                     <span class="text-orange-500 mr-2">⏰</span>
@@ -599,7 +618,36 @@ function renderUnavailabilityList() {
         `;
     });
     
-    container.innerHTML = html;
+    slotsContainer.innerHTML = slotsHtml;
+}
+
+async function toggleDayAvailability(dateStr, isCurrentlyBlocked) {
+    const action = isCurrentlyBlocked ? 'remove' : 'add';
+    
+    try {
+        const response = await fetch('/api/coach/unavailability', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                coach_email: COACH_EMAIL,
+                action: action,
+                type: 'day',
+                date: dateStr
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            unavailabilityData = data;
+            renderUnavailabilityList();
+        } else {
+            alert('Erreur: ' + (data.error || 'Une erreur est survenue'));
+        }
+    } catch (error) {
+        console.error("❌ Erreur toggle:", error);
+        alert('Une erreur est survenue');
+    }
 }
 
 // ===== FIN GESTION INDISPONIBILITÉS =====
