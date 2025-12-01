@@ -679,6 +679,14 @@ async def client_home(request: Request, user = Depends(get_current_user)):
         "user": user
     })
 
+@app.get("/mon-compte", response_class=HTMLResponse)
+async def mon_compte(request: Request):
+    """Page compte client accessible via localStorage (pas besoin de session serveur)."""
+    return templates.TemplateResponse("client_home.html", {
+        "request": request, 
+        "user": None
+    })
+
 @app.get("/gyms/search", response_class=HTMLResponse)
 async def gym_search_page(request: Request):
     """Page de recherche de salles de sport avec géolocalisation."""
