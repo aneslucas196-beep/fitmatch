@@ -585,6 +585,41 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
     console.log('⚠️ Demande non envoyée:', emailErr);
   }
   
-  // Rediriger vers le dashboard client
-  window.location.href = '/client/home';
+  // Afficher un message de succès au lieu de rediriger
+  const mainContent = document.querySelector('main') || document.body;
+  mainContent.innerHTML = `
+    <div style="max-width: 600px; margin: 40px auto; padding: 32px; text-align: center; font-family: 'Inter', sans-serif;">
+      <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center;">
+        <svg width="40" height="40" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <h1 style="font-size: 24px; font-weight: 700; color: #111; margin-bottom: 12px;">Demande envoyée !</h1>
+      <p style="color: #6b7280; margin-bottom: 24px; line-height: 1.6;">
+        Ta demande de réservation a été envoyée au coach.<br>
+        Tu recevras un email de confirmation dès qu'il l'aura acceptée.
+      </p>
+      <div style="background: #f9fafb; border-radius: 12px; padding: 20px; margin-bottom: 24px; text-align: left;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+          <span style="color: #6b7280;">Coach</span>
+          <span style="font-weight: 600; color: #111;">${coach}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+          <span style="color: #6b7280;">Date</span>
+          <span style="font-weight: 600; color: #111;">${booking.date}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+          <span style="color: #6b7280;">Heure</span>
+          <span style="font-weight: 600; color: #111;">${booking.time}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: #6b7280;">Salle</span>
+          <span style="font-weight: 600; color: #111;">${gym}</span>
+        </div>
+      </div>
+      <a href="/" style="display: inline-block; background: #2563eb; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+        Retour à l'accueil
+      </a>
+    </div>
+  `;
 });
