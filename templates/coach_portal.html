@@ -263,14 +263,14 @@
                         </div>
                     </div>
                     
-                    <!-- Prochains 14 jours avec toggles -->
-                    <div id="days-toggle-list" class="space-y-2 mb-4 max-h-64 overflow-y-auto">
+                    <!-- Prochains 7 jours avec toggles -->
+                    <div id="days-toggle-list" class="space-y-2 mb-4">
                         <!-- Généré par JavaScript -->
                     </div>
                     
-                    <!-- Autres jours bloqués (hors période affichée) -->
-                    <div id="other-blocked-days" class="mt-3">
-                        <!-- Généré par JavaScript -->
+                    <!-- Jours bloqués au-delà de cette semaine -->
+                    <div id="other-blocked-days" class="mt-2">
+                        <!-- Généré par JavaScript - affiche uniquement les jours bloqués hors des 7 prochains jours -->
                     </div>
                     
                     <button onclick="openUnavailabilityModal()" 
@@ -560,6 +560,7 @@ async function removeUnavailability(type, date, time = null) {
 
 function renderUnavailabilityList() {
     const daysContainer = document.getElementById('days-toggle-list');
+    const otherBlockedContainer = document.getElementById('other-blocked-days');
     const slotsContainer = document.getElementById('unavailability-list');
     const days = unavailabilityData.unavailable_days || [];
     const slots = unavailabilityData.unavailable_slots || [];
@@ -567,11 +568,16 @@ function renderUnavailabilityList() {
     // Générer les 7 prochains jours avec toggles
     let daysHtml = '';
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
+    // Calculer les dates des 7 prochains jours pour les exclure de "autres jours"
+    const next7Days = [];
     for (let i = 0; i < 7; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
         const dateStr = date.toISOString().split('T')[0];
+        next7Days.push(dateStr);
+        
         const isBlocked = days.includes(dateStr);
         const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
         const dayNum = date.getDate();
@@ -597,6 +603,27 @@ function renderUnavailabilityList() {
     }
     
     daysContainer.innerHTML = daysHtml;
+    
+    // Afficher les jours bloqués au-delà des 7 prochains jours
+    const otherBlockedDays = days.filter(d => !next7Days.includes(d)).sort();
+    if (otherBlockedDays.length > 0) {
+        let otherHtml = '<p class="text-xs text-gray-500 mb-2">Autres jours bloqués :</p>';
+        otherBlockedDays.forEach(dateStr => {
+            const dateObj = new Date(dateStr + 'T00:00:00');
+            const formattedDate = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+            otherHtml += `
+                <div class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-1">
+                    <span class="text-sm font-medium capitalize">${formattedDate}</span>
+                    <button onclick="toggleDayAvailability('${dateStr}', true)" class="text-red-500 hover:text-red-700 text-xs bg-white px-2 py-1 rounded border border-red-200">
+                        Débloquer
+                    </button>
+                </div>
+            `;
+        });
+        otherBlockedContainer.innerHTML = otherHtml;
+    } else {
+        otherBlockedContainer.innerHTML = '';
+    }
     
     // Afficher les créneaux spécifiques bloqués
     if (slots.length === 0) {
