@@ -2157,16 +2157,52 @@ async def account_page(request: Request):
 
 @app.get("/api/bookings/availability")
 async def get_availability(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
-    """Récupère les disponibilités d'un coach pour une période donnée."""
-    # Pour l'instant, retourner des disponibilités par défaut (10h-13h et 14h-18h tous les jours)
+    """Récupère les disponibilités d'un coach pour une période donnée, en excluant les indisponibilités."""
     try:
         from_dt = datetime.fromisoformat(from_date.replace('Z', '+00:00'))
         to_dt = datetime.fromisoformat(to_date.replace('Z', '+00:00'))
+        
+        # Charger les indisponibilités du coach
+        demo_users = load_demo_users()
+        coach_email = None
+        coach_data = None
+        
+        for email, user_data in demo_users.items():
+            encoded_email = email.replace("@", "_").replace(".", "_")
+            user_slug = user_data.get("slug", "")
+            if user_data.get("role") == "coach" and (
+                str(user_data.get("id")) == coach_id or 
+                user_data.get("email") == coach_id or 
+                encoded_email == coach_id or
+                user_slug == coach_id
+            ):
+                coach_email = email
+                coach_data = user_data
+                break
+        
+        # Récupérer les indisponibilités (dates complètes ou créneaux spécifiques)
+        unavailable_dates = set()
+        unavailable_slots = []
+        
+        if coach_data:
+            # Jours complets indisponibles (format: "2025-12-05")
+            for date_str in coach_data.get("unavailable_days", []):
+                unavailable_dates.add(date_str)
+            
+            # Créneaux spécifiques indisponibles (format: {"date": "2025-12-05", "time": "14:00"})
+            unavailable_slots = coach_data.get("unavailable_slots", [])
         
         availability = []
         current = from_dt.replace(hour=0, minute=0, second=0, microsecond=0)
         
         while current <= to_dt:
+            date_str = current.strftime("%Y-%m-%d")
+            
+            # Si le jour complet est indisponible, on passe au suivant
+            if date_str in unavailable_dates:
+                current += timedelta(days=1)
+                continue
+            
             # Disponibilité matin: 10h-13h
             morning_start = current.replace(hour=10, minute=0)
             morning_end = current.replace(hour=13, minute=0)
@@ -2177,7 +2213,6 @@ async def get_availability(coach_id: str, from_date: str = Query(..., alias="fro
             
             # Disponibilité après-midi/soir: 14h-00h (minuit)
             afternoon_start = current.replace(hour=14, minute=0)
-            # Pour minuit, on va jusqu'à la fin du jour
             next_day = current + timedelta(days=1)
             midnight = next_day.replace(hour=0, minute=0)
             availability.append({
@@ -2192,9 +2227,86 @@ async def get_availability(coach_id: str, from_date: str = Query(..., alias="fro
         print(f"Erreur lors de la récupération des disponibilités: {e}")
         return []
 
+@app.get("/api/coach/unavailability")
+async def get_coach_unavailability(coach_email: str):
+    """Récupère les indisponibilités d'un coach."""
+    try:
+        demo_users = load_demo_users()
+        coach_data = demo_users.get(coach_email, {})
+        
+        return {
+            "unavailable_days": coach_data.get("unavailable_days", []),
+            "unavailable_slots": coach_data.get("unavailable_slots", [])
+        }
+    except Exception as e:
+        print(f"Erreur: {e}")
+        return {"unavailable_days": [], "unavailable_slots": []}
+
+@app.post("/api/coach/unavailability")
+async def set_coach_unavailability(request: Request):
+    """Ajoute ou supprime des indisponibilités pour un coach."""
+    try:
+        data = await request.json()
+        coach_email = data.get("coach_email")
+        action = data.get("action")  # "add" ou "remove"
+        unavailable_type = data.get("type")  # "day" ou "slot"
+        date = data.get("date")  # Format: "2025-12-05"
+        time = data.get("time")  # Format: "14:00" (pour les créneaux)
+        
+        if not coach_email or not action or not date:
+            return JSONResponse(status_code=400, content={"error": "Paramètres manquants"})
+        
+        demo_users = load_demo_users()
+        
+        if coach_email not in demo_users:
+            return JSONResponse(status_code=404, content={"error": "Coach non trouvé"})
+        
+        coach_data = demo_users[coach_email]
+        
+        # Initialiser les listes si elles n'existent pas
+        if "unavailable_days" not in coach_data:
+            coach_data["unavailable_days"] = []
+        if "unavailable_slots" not in coach_data:
+            coach_data["unavailable_slots"] = []
+        
+        if unavailable_type == "day":
+            # Gérer les jours complets
+            if action == "add":
+                if date not in coach_data["unavailable_days"]:
+                    coach_data["unavailable_days"].append(date)
+            elif action == "remove":
+                if date in coach_data["unavailable_days"]:
+                    coach_data["unavailable_days"].remove(date)
+        
+        elif unavailable_type == "slot" and time:
+            # Gérer les créneaux spécifiques
+            slot = {"date": date, "time": time}
+            if action == "add":
+                if slot not in coach_data["unavailable_slots"]:
+                    coach_data["unavailable_slots"].append(slot)
+            elif action == "remove":
+                coach_data["unavailable_slots"] = [
+                    s for s in coach_data["unavailable_slots"] 
+                    if not (s.get("date") == date and s.get("time") == time)
+                ]
+        
+        # Sauvegarder
+        demo_users[coach_email] = coach_data
+        save_demo_users(demo_users)
+        
+        return {
+            "success": True,
+            "unavailable_days": coach_data["unavailable_days"],
+            "unavailable_slots": coach_data["unavailable_slots"]
+        }
+        
+    except Exception as e:
+        print(f"Erreur: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 @app.get("/api/bookings")
 async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
-    """Récupère les réservations existantes d'un coach (pending + confirmed)."""
+    """Récupère les réservations existantes d'un coach (pending + confirmed + indisponibilités)."""
     # Charger depuis demo_users.json
     try:
         demo_users = load_demo_users()
@@ -2221,6 +2333,10 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
         # Récupérer TOUTES les réservations (pending + confirmed)
         pending_bookings = coach_data.get("pending_bookings", [])
         confirmed_bookings = coach_data.get("confirmed_bookings", [])
+        
+        # Récupérer les indisponibilités
+        unavailable_days = coach_data.get("unavailable_days", [])
+        unavailable_slots = coach_data.get("unavailable_slots", [])
         
         # Filtrer par période
         from_dt = datetime.fromisoformat(from_date.replace('Z', '+00:00'))
@@ -2260,6 +2376,42 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
                             "end": booking_end.isoformat(),
                             "title": f"{booking.get('client_name', 'Client')} - Confirmé",
                             "status": "confirmed"
+                        })
+                except:
+                    pass
+        
+        # Ajouter les jours complets indisponibles (bloquer tous les créneaux de la journée)
+        for date_str in unavailable_days:
+            try:
+                day_date = datetime.fromisoformat(date_str)
+                if from_dt.date() <= day_date.date() <= to_dt.date():
+                    # Bloquer toute la journée (10h-00h)
+                    for hour in range(10, 24):
+                        slot_start = day_date.replace(hour=hour, minute=0)
+                        slot_end = slot_start + timedelta(hours=1)
+                        filtered_bookings.append({
+                            "start": slot_start.isoformat(),
+                            "end": slot_end.isoformat(),
+                            "title": "Indisponible",
+                            "status": "unavailable"
+                        })
+            except:
+                pass
+        
+        # Ajouter les créneaux spécifiques indisponibles
+        for slot in unavailable_slots:
+            slot_date = slot.get("date", "")
+            slot_time = slot.get("time", "")
+            if slot_date and slot_time:
+                try:
+                    slot_start = datetime.fromisoformat(f"{slot_date}T{slot_time}:00")
+                    slot_end = slot_start + timedelta(hours=1)
+                    if from_dt.date() <= slot_start.date() <= to_dt.date():
+                        filtered_bookings.append({
+                            "start": slot_start.isoformat(),
+                            "end": slot_end.isoformat(),
+                            "title": "Indisponible",
+                            "status": "unavailable"
                         })
                 except:
                     pass
