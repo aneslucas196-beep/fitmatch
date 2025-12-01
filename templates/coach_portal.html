@@ -249,6 +249,33 @@
                     </a>
                 </div>
 
+                <!-- Horaires de travail -->
+                <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="bg-gradient-to-r from-blue-500 to-indigo-500 p-3 rounded-full mr-4">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">Mes horaires</h3>
+                            <p class="text-sm text-gray-600">Heures de travail par jour</p>
+                        </div>
+                    </div>
+                    
+                    <div id="weekly-hours-list" class="space-y-2">
+                        <!-- Généré par JavaScript -->
+                    </div>
+                    
+                    <button onclick="openWorkingHoursModal()" 
+                            class="w-full mt-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-2 px-4 rounded-lg hover:from-blue-600 hover:to-indigo-600 transition flex items-center justify-center text-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        Modifier mes horaires
+                    </button>
+                </div>
+
                 <!-- Gérer mes indisponibilités -->
                 <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6">
                     <div class="flex items-center mb-4">
@@ -258,7 +285,7 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900">Mes disponibilités</h3>
+                            <h3 class="text-lg font-bold text-gray-900">Jours bloqués</h3>
                             <p class="text-sm text-gray-600">Bloquer/débloquer des jours</p>
                         </div>
                     </div>
@@ -438,11 +465,160 @@
     </div>
 </div>
 
+<!-- Modale pour les horaires de travail -->
+<div id="working-hours-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+            <div class="p-6 border-b bg-gradient-to-r from-blue-500 to-indigo-500">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xl font-semibold text-white">Mes horaires de travail</h3>
+                    <button onclick="closeWorkingHoursModal()" class="text-white hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-6 max-h-[60vh] overflow-y-auto">
+                <p class="text-sm text-gray-600 mb-4">Définissez vos heures de disponibilité pour chaque jour. Les clients ne pourront réserver que pendant ces horaires.</p>
+                
+                <div id="working-hours-form" class="space-y-3">
+                    <!-- Lundi -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="wh-monday-enabled" class="mr-3 w-5 h-5 text-blue-600 rounded" checked>
+                            <span class="font-medium w-20">Lundi</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <select id="wh-monday-start" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                            <span class="text-gray-500">à</span>
+                            <select id="wh-monday-end" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Mardi -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="wh-tuesday-enabled" class="mr-3 w-5 h-5 text-blue-600 rounded" checked>
+                            <span class="font-medium w-20">Mardi</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <select id="wh-tuesday-start" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                            <span class="text-gray-500">à</span>
+                            <select id="wh-tuesday-end" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Mercredi -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="wh-wednesday-enabled" class="mr-3 w-5 h-5 text-blue-600 rounded" checked>
+                            <span class="font-medium w-20">Mercredi</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <select id="wh-wednesday-start" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                            <span class="text-gray-500">à</span>
+                            <select id="wh-wednesday-end" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Jeudi -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="wh-thursday-enabled" class="mr-3 w-5 h-5 text-blue-600 rounded" checked>
+                            <span class="font-medium w-20">Jeudi</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <select id="wh-thursday-start" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                            <span class="text-gray-500">à</span>
+                            <select id="wh-thursday-end" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Vendredi -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="wh-friday-enabled" class="mr-3 w-5 h-5 text-blue-600 rounded" checked>
+                            <span class="font-medium w-20">Vendredi</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <select id="wh-friday-start" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                            <span class="text-gray-500">à</span>
+                            <select id="wh-friday-end" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Samedi -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="wh-saturday-enabled" class="mr-3 w-5 h-5 text-blue-600 rounded">
+                            <span class="font-medium w-20">Samedi</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <select id="wh-saturday-start" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                            <span class="text-gray-500">à</span>
+                            <select id="wh-saturday-end" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Dimanche -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="wh-sunday-enabled" class="mr-3 w-5 h-5 text-blue-600 rounded">
+                            <span class="font-medium w-20">Dimanche</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <select id="wh-sunday-start" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                            <span class="text-gray-500">à</span>
+                            <select id="wh-sunday-end" class="border rounded px-2 py-1 text-sm">
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6 border-t flex space-x-3">
+                <button type="button" onclick="closeWorkingHoursModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">
+                    Annuler
+                </button>
+                <button type="button" onclick="saveWorkingHours()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                    Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Variables globales
 let currentWeekStart = new Date();
 let isWeekView = true;
 const COACH_EMAIL = "{{ coach.email or coach.id or '' }}";
+
+// Horaires de travail par défaut
+let workingHoursData = {
+    monday: { enabled: true, start: "09:00", end: "19:00" },
+    tuesday: { enabled: true, start: "09:00", end: "19:00" },
+    wednesday: { enabled: true, start: "09:00", end: "19:00" },
+    thursday: { enabled: true, start: "09:00", end: "19:00" },
+    friday: { enabled: true, start: "09:00", end: "19:00" },
+    saturday: { enabled: false, start: "09:00", end: "17:00" },
+    sunday: { enabled: false, start: "09:00", end: "17:00" }
+};
 
 // Données réelles chargées depuis l'API
 let realBookings = {
@@ -456,6 +632,121 @@ let unavailabilityData = {
     unavailable_days: [],
     unavailable_slots: []
 };
+
+// ===== GESTION DES HORAIRES DE TRAVAIL =====
+
+const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const dayLabels = { monday: 'Lun', tuesday: 'Mar', wednesday: 'Mer', thursday: 'Jeu', friday: 'Ven', saturday: 'Sam', sunday: 'Dim' };
+
+function generateTimeOptions() {
+    let options = '';
+    for (let h = 6; h <= 23; h++) {
+        const time = `${h.toString().padStart(2, '0')}:00`;
+        options += `<option value="${time}">${time}</option>`;
+    }
+    return options;
+}
+
+function initWorkingHoursModal() {
+    const timeOptions = generateTimeOptions();
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    days.forEach(day => {
+        document.getElementById(`wh-${day}-start`).innerHTML = timeOptions;
+        document.getElementById(`wh-${day}-end`).innerHTML = timeOptions;
+    });
+}
+
+function openWorkingHoursModal() {
+    document.getElementById('working-hours-modal').classList.remove('hidden');
+    
+    // Remplir les valeurs actuelles
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    days.forEach(day => {
+        const data = workingHoursData[day];
+        document.getElementById(`wh-${day}-enabled`).checked = data.enabled;
+        document.getElementById(`wh-${day}-start`).value = data.start;
+        document.getElementById(`wh-${day}-end`).value = data.end;
+    });
+}
+
+function closeWorkingHoursModal() {
+    document.getElementById('working-hours-modal').classList.add('hidden');
+}
+
+async function loadWorkingHours() {
+    if (!COACH_EMAIL) return;
+    
+    try {
+        const response = await fetch(`/api/coach/working-hours?coach_email=${encodeURIComponent(COACH_EMAIL)}`);
+        const data = await response.json();
+        if (data && Object.keys(data).length > 0) {
+            workingHoursData = data;
+        }
+        renderWorkingHoursList();
+    } catch (error) {
+        console.error("❌ Erreur chargement horaires:", error);
+    }
+}
+
+async function saveWorkingHours() {
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const newData = {};
+    
+    days.forEach(day => {
+        newData[day] = {
+            enabled: document.getElementById(`wh-${day}-enabled`).checked,
+            start: document.getElementById(`wh-${day}-start`).value,
+            end: document.getElementById(`wh-${day}-end`).value
+        };
+    });
+    
+    try {
+        const response = await fetch('/api/coach/working-hours', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                coach_email: COACH_EMAIL,
+                working_hours: newData
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            workingHoursData = newData;
+            renderWorkingHoursList();
+            closeWorkingHoursModal();
+        } else {
+            alert('Erreur lors de la sauvegarde');
+        }
+    } catch (error) {
+        console.error("❌ Erreur sauvegarde horaires:", error);
+        alert('Erreur de connexion');
+    }
+}
+
+function renderWorkingHoursList() {
+    const container = document.getElementById('weekly-hours-list');
+    if (!container) return;
+    
+    let html = '';
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    days.forEach(day => {
+        const data = workingHoursData[day];
+        const isEnabled = data.enabled;
+        
+        html += `
+            <div class="flex items-center justify-between py-1">
+                <span class="text-sm font-medium ${isEnabled ? 'text-gray-900' : 'text-gray-400'}">${dayLabels[day]}</span>
+                <span class="text-sm ${isEnabled ? 'text-blue-600' : 'text-gray-400'}">
+                    ${isEnabled ? `${data.start} - ${data.end}` : 'Fermé'}
+                </span>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
 
 // ===== GESTION DES INDISPONIBILITÉS =====
 
@@ -776,8 +1067,10 @@ async function deleteBooking(bookingId) {
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async function() {
+    initWorkingHoursModal();
     await loadBookingsFromAPI();
     await loadUnavailability();
+    await loadWorkingHours();
     initializeCalendar();
     loadUpcomingBookings();
     loadNotifications();

@@ -2305,6 +2305,54 @@ async def set_coach_unavailability(request: Request):
         print(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.get("/api/coach/working-hours")
+async def get_coach_working_hours(coach_email: str):
+    """Récupère les horaires de travail d'un coach."""
+    try:
+        demo_users = load_demo_users()
+        coach_data = demo_users.get(coach_email, {})
+        
+        # Horaires par défaut
+        default_hours = {
+            "monday": {"enabled": True, "start": "09:00", "end": "19:00"},
+            "tuesday": {"enabled": True, "start": "09:00", "end": "19:00"},
+            "wednesday": {"enabled": True, "start": "09:00", "end": "19:00"},
+            "thursday": {"enabled": True, "start": "09:00", "end": "19:00"},
+            "friday": {"enabled": True, "start": "09:00", "end": "19:00"},
+            "saturday": {"enabled": False, "start": "09:00", "end": "17:00"},
+            "sunday": {"enabled": False, "start": "09:00", "end": "17:00"}
+        }
+        
+        return coach_data.get("working_hours", default_hours)
+    except Exception as e:
+        print(f"Erreur: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/coach/working-hours")
+async def set_coach_working_hours(request: Request):
+    """Définit les horaires de travail d'un coach."""
+    try:
+        data = await request.json()
+        coach_email = data.get("coach_email")
+        working_hours = data.get("working_hours")
+        
+        if not coach_email or not working_hours:
+            return JSONResponse(status_code=400, content={"error": "Missing data"})
+        
+        demo_users = load_demo_users()
+        
+        if coach_email not in demo_users:
+            return JSONResponse(status_code=404, content={"error": "Coach not found"})
+        
+        demo_users[coach_email]["working_hours"] = working_hours
+        save_demo_users(demo_users)
+        
+        return {"success": True, "working_hours": working_hours}
+        
+    except Exception as e:
+        print(f"Erreur: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 @app.get("/api/bookings")
 async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
     """Récupère les réservations existantes d'un coach (pending + confirmed + indisponibilités)."""
@@ -2338,6 +2386,18 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
         # Récupérer les indisponibilités
         unavailable_days = coach_data.get("unavailable_days", [])
         unavailable_slots = coach_data.get("unavailable_slots", [])
+        
+        # Récupérer les horaires de travail
+        default_hours = {
+            "monday": {"enabled": True, "start": "09:00", "end": "19:00"},
+            "tuesday": {"enabled": True, "start": "09:00", "end": "19:00"},
+            "wednesday": {"enabled": True, "start": "09:00", "end": "19:00"},
+            "thursday": {"enabled": True, "start": "09:00", "end": "19:00"},
+            "friday": {"enabled": True, "start": "09:00", "end": "19:00"},
+            "saturday": {"enabled": False, "start": "09:00", "end": "17:00"},
+            "sunday": {"enabled": False, "start": "09:00", "end": "17:00"}
+        }
+        working_hours = coach_data.get("working_hours", default_hours)
         
         # Filtrer par période
         from_dt = datetime.fromisoformat(from_date.replace('Z', '+00:00'))
@@ -2419,10 +2479,13 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
                 except:
                     pass
         
-        return filtered_bookings
+        return {
+            "bookings": filtered_bookings,
+            "working_hours": working_hours
+        }
     except Exception as e:
         print(f"Erreur lors de la récupération des réservations: {e}")
-        return []
+        return {"bookings": [], "working_hours": {}}
 
 @app.post("/api/bookings")
 async def create_booking(request: Request):

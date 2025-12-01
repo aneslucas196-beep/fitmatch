@@ -139,8 +139,13 @@ async function fetchAvailability(coachId, fromISO, toISO){
 
 async function fetchBookings(coachId, fromISO, toISO){
   const res = await fetch(`/api/bookings?coach_id=${coachId}&from=${fromISO}&to=${toISO}`);
-  if(!res.ok) return [];
-  return await res.json();
+  if(!res.ok) return { bookings: [], working_hours: {} };
+  const data = await res.json();
+  // Gérer l'ancien format (array) et le nouveau format (object)
+  if (Array.isArray(data)) {
+    return { bookings: data, working_hours: {} };
+  }
+  return data;
 }
 
 async function createBooking(payload){
@@ -156,6 +161,25 @@ async function createBooking(payload){
 /* === STATE === */
 let weekOffset = 0;
 let selection = null;
+let workingHours = {};
+
+/* === HELPERS FOR WORKING HOURS === */
+const dayNameMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function isWithinWorkingHours(date, time, wh) {
+  if (!wh || Object.keys(wh).length === 0) return true; // Pas de restrictions
+  
+  const dayName = dayNameMap[date.getDay()];
+  const dayConfig = wh[dayName];
+  
+  if (!dayConfig || !dayConfig.enabled) return false; // Jour fermé
+  
+  const timeInt = parseInt(time.replace(':', ''));
+  const startInt = parseInt(dayConfig.start.replace(':', ''));
+  const endInt = parseInt(dayConfig.end.replace(':', ''));
+  
+  return timeInt >= startInt && timeInt < endInt;
+}
 
 /* === RENDER === */
 async function renderWeek(){
@@ -186,12 +210,18 @@ async function renderWeek(){
   }
 
   const avail = await fetchAvailability(COACH_ID, start.toISOString(), end.toISOString());
-  const bookings = await fetchBookings(COACH_ID, start.toISOString(), end.toISOString());
+  const bookingsData = await fetchBookings(COACH_ID, start.toISOString(), end.toISOString());
+  const bookings = bookingsData.bookings || [];
+  workingHours = bookingsData.working_hours || {};
   const body = $("#gridBody"); body.innerHTML = "";
 
-  function statusFor(dtStart){
+  function statusFor(dtStart, time, dayDate){
     const dtEnd = addMinutes(dtStart, SLOT_MINUTES);
     if(dtStart < new Date()) return "disabled";
+    
+    // Vérifier les horaires de travail du coach
+    if(!isWithinWorkingHours(dayDate, time, workingHours)) return "disabled";
+    
     const inAvail = avail.some(a=>{
       const s=new Date(a.start), e=new Date(a.end);
       return between(dtStart,s,e) && dtEnd<=e;
@@ -213,7 +243,7 @@ async function renderWeek(){
     days.forEach((d,dayIndex)=>{
       const td = document.createElement("td");
       const slotStart = setTime(d, time);
-      const st = statusFor(slotStart);
+      const st = statusFor(slotStart, time, d);
       const btn = document.createElement("div");
       btn.className = `slot ${st}`;
       btn.textContent = time;
