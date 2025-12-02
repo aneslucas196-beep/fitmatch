@@ -4044,37 +4044,38 @@ async def respond_to_booking(request: CoachBookingRequest):
         email_sent = False
         email_error_msg = None
         
-        if request.action == "confirm":
-            # Vérifier que les données client sont présentes
-            client_email = booking_to_update.get("client_email")
-            client_name = booking_to_update.get("client_name", "Client")
+        # Vérifier que les données client sont présentes
+        client_email = booking_to_update.get("client_email")
+        client_name = booking_to_update.get("client_name", "Client")
+        
+        if not client_email:
+            print(f"⚠️ Email client manquant pour la réservation {request.booking_id}")
+            email_error_msg = "Email client non disponible"
+        else:
+            # Formater la date en français
+            from datetime import datetime as dt
+            try:
+                date_obj = dt.strptime(booking_to_update.get("date", ""), "%Y-%m-%d")
+                date_fr = date_obj.strftime("%A %d %B %Y").capitalize()
+                jours = {"Monday": "Lundi", "Tuesday": "Mardi", "Wednesday": "Mercredi", 
+                         "Thursday": "Jeudi", "Friday": "Vendredi", "Saturday": "Samedi", "Sunday": "Dimanche"}
+                mois = {"January": "janvier", "February": "février", "March": "mars", "April": "avril",
+                        "May": "mai", "June": "juin", "July": "juillet", "August": "août",
+                        "September": "septembre", "October": "octobre", "November": "novembre", "December": "décembre"}
+                for en, fr in jours.items():
+                    date_fr = date_fr.replace(en, fr)
+                for en, fr in mois.items():
+                    date_fr = date_fr.replace(en, fr)
+            except:
+                date_fr = booking_to_update.get("date", "Date non spécifiée")
             
-            if not client_email:
-                print(f"⚠️ Email client manquant pour la réservation {request.booking_id}")
-                email_error_msg = "Email client non disponible"
-            else:
+            coach_name = coach_data.get("full_name", "Coach")
+            
+            if request.action == "confirm":
+                # Envoyer l'email de CONFIRMATION au client
                 try:
                     from resend_service import send_booking_confirmation_email
                     
-                    # Formater la date en français
-                    from datetime import datetime as dt
-                    try:
-                        date_obj = dt.strptime(booking_to_update.get("date", ""), "%Y-%m-%d")
-                        date_fr = date_obj.strftime("%A %d %B %Y").capitalize()
-                        jours = {"Monday": "Lundi", "Tuesday": "Mardi", "Wednesday": "Mercredi", 
-                                 "Thursday": "Jeudi", "Friday": "Vendredi", "Saturday": "Samedi", "Sunday": "Dimanche"}
-                        mois = {"January": "janvier", "February": "février", "March": "mars", "April": "avril",
-                                "May": "mai", "June": "juin", "July": "juillet", "August": "août",
-                                "September": "septembre", "October": "octobre", "November": "novembre", "December": "décembre"}
-                        for en, fr in jours.items():
-                            date_fr = date_fr.replace(en, fr)
-                        for en, fr in mois.items():
-                            date_fr = date_fr.replace(en, fr)
-                    except:
-                        date_fr = booking_to_update.get("date", "Date non spécifiée")
-                    
-                    # Envoyer l'email de confirmation au client
-                    coach_name = coach_data.get("full_name", "Coach")
                     email_result = send_booking_confirmation_email(
                         to_email=client_email,
                         client_name=client_name,
@@ -4096,6 +4097,31 @@ async def respond_to_booking(request: CoachBookingRequest):
                 except Exception as email_error:
                     email_error_msg = str(email_error)
                     print(f"⚠️ Erreur envoi email confirmation: {email_error}")
+            
+            elif request.action == "reject":
+                # Envoyer l'email d'ANNULATION au client
+                try:
+                    from resend_service import send_rejection_email_to_client
+                    
+                    email_result = send_rejection_email_to_client(
+                        to_email=client_email,
+                        client_name=client_name,
+                        coach_name=coach_name,
+                        gym_name=booking_to_update.get("gym_name", "Salle de sport"),
+                        gym_address=booking_to_update.get("gym_address", ""),
+                        date_str=date_fr,
+                        time_str=booking_to_update.get("time", ""),
+                        service_name=booking_to_update.get("service", "Séance de coaching"),
+                        duration=f"{booking_to_update.get('duration', '60')} min",
+                        price=f"{booking_to_update.get('price', '40')}€"
+                    )
+                    email_sent = email_result.get("success", False)
+                    if not email_sent:
+                        email_error_msg = email_result.get("error", "Erreur inconnue")
+                    print(f"📧 Email rejet client: {email_result}")
+                except Exception as email_error:
+                    email_error_msg = str(email_error)
+                    print(f"⚠️ Erreur envoi email rejet: {email_error}")
         
         response_data = {
             "success": True,

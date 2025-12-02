@@ -933,3 +933,191 @@ Fitmatch - Votre plateforme fitness
             "mode": "error",
             "error": error_msg
         }
+
+
+def send_rejection_email_to_client(
+    to_email: str,
+    client_name: str,
+    coach_name: str,
+    gym_name: str,
+    gym_address: str,
+    date_str: str,
+    time_str: str,
+    service_name: str = "Séance de coaching",
+    duration: str = "60 min",
+    price: str = "40€",
+    booking_url: Optional[str] = None
+) -> dict:
+    """
+    Envoie un email au client quand le coach annule/rejette sa réservation.
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    
+    print(f"📧 Email annulation par coach pour client {client_name} ({to_email})")
+    print(f"   Coach {coach_name} a annulé la séance du {date_str} à {time_str}")
+    
+    if not resend_key:
+        print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi d'email")
+        return {"success": True, "mode": "demo", "message": "Email simulé"}
+    
+    try:
+        first_name = client_name.split()[0] if client_name else "Client"
+        
+        # URL de réservation pour reprendre rdv
+        if not booking_url:
+            site_url = os.environ.get('REPLIT_DEV_DOMAIN', 'localhost:5000')
+            if not site_url.startswith('http'):
+                site_url = f"https://{site_url}"
+            booking_url = site_url
+        
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: white; }}
+        .header {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; }}
+        .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+        .badge {{ display: inline-block; background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 20px; margin-top: 10px; font-size: 14px; }}
+        .content {{ padding: 30px; }}
+        .alert-box {{ background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 0 8px 8px 0; margin-bottom: 25px; }}
+        .alert-box p {{ margin: 0; color: #92400e; font-size: 14px; }}
+        .booking-card {{ background: #f9fafb; border-radius: 12px; padding: 20px; margin: 20px 0; }}
+        .booking-card h3 {{ margin: 0 0 15px 0; color: #111; font-size: 18px; }}
+        .info-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }}
+        .info-row:last-child {{ border-bottom: none; }}
+        .info-label {{ color: #6b7280; font-size: 14px; }}
+        .info-value {{ color: #9ca3af; font-size: 14px; font-weight: 500; text-decoration: line-through; }}
+        .btn {{ display: inline-block; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; text-align: center; }}
+        .btn-primary {{ background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%); color: white; }}
+        .btn-container {{ text-align: center; margin: 25px 0; }}
+        .footer {{ background: #f9fafb; padding: 20px; text-align: center; }}
+        .footer p {{ color: #6b7280; font-size: 12px; margin: 5px 0; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Séance non disponible</h1>
+            <div class="badge">Information</div>
+        </div>
+        
+        <div class="content">
+            <p style="font-size: 16px; color: #374151;">Bonjour {first_name},</p>
+            
+            <div class="alert-box">
+                <p><strong>{coach_name} n'est malheureusement pas disponible</strong> pour la séance demandée.<br>
+                Nous vous invitons à choisir un autre créneau.</p>
+            </div>
+            
+            <div class="booking-card">
+                <h3>📅 Séance annulée</h3>
+                <div class="info-row">
+                    <span class="info-label">Date</span>
+                    <span class="info-value">{date_str}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Heure</span>
+                    <span class="info-value">{time_str}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Coach</span>
+                    <span class="info-value">{coach_name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Salle</span>
+                    <span class="info-value">{gym_name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Prestation</span>
+                    <span class="info-value">{service_name} · {duration}</span>
+                </div>
+            </div>
+            
+            <div class="btn-container">
+                <a href="{booking_url}" class="btn btn-primary">Réserver un autre créneau</a>
+            </div>
+            
+            <p style="font-size: 13px; color: #6b7280; text-align: center;">
+                D'autres créneaux sont disponibles. N'hésitez pas à réserver à nouveau !
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Fitmatch - Votre plateforme fitness</p>
+            <p>Cet email a été envoyé suite à l'indisponibilité de votre coach.</p>
+        </div>
+    </div>
+</body>
+</html>
+        """
+        
+        text_content = f"""
+Séance non disponible
+
+Bonjour {first_name},
+
+{coach_name} n'est malheureusement pas disponible pour la séance demandée.
+
+📅 Séance annulée:
+- Date: {date_str}
+- Heure: {time_str}
+- Coach: {coach_name}
+- Salle: {gym_name}
+- Prestation: {service_name} · {duration}
+
+Réservez un autre créneau: {booking_url}
+
+D'autres créneaux sont disponibles. N'hésitez pas à réserver à nouveau !
+
+---
+Fitmatch - Votre plateforme fitness
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {resend_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": f"Séance non disponible - {coach_name} · {date_str}",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        print(f"📤 Envoi email rejet au client via Resend...")
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            email_id = response_data.get('id', 'N/A')
+            print(f"✅ Email rejet envoyé au client {to_email} (ID: {email_id})")
+            return {
+                "success": True,
+                "mode": "resend",
+                "email_id": email_id,
+                "message": "Email rejet client envoyé"
+            }
+        else:
+            error_msg = f"Erreur Resend (Status {response.status_code}): {response.text}"
+            print(f"❌ {error_msg}")
+            return {
+                "success": False,
+                "mode": "resend",
+                "error": error_msg
+            }
+            
+    except Exception as e:
+        error_msg = f"Erreur envoi email rejet client: {e}"
+        print(f"❌ {error_msg}")
+        return {
+            "success": False,
+            "mode": "error",
+            "error": error_msg
+        }
