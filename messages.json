@@ -138,5 +138,20 @@
         "read": false
       }
     ]
+  },
+  "mejedjaoued@gmail.com_anaslimeme830@gmail.com_52b2c7dd": {
+    "booking_id": "52b2c7dd",
+    "client_email": "mejedjaoued@gmail.com",
+    "coach_email": "anaslimeme830@gmail.com",
+    "messages": [
+      {
+        "id": "26145838",
+        "sender_role": "coach",
+        "sender_name": "Ns",
+        "message": "sa dit quoi la fami",
+        "timestamp": "2025-12-02T12:58:21.867800",
+        "read": false
+      }
+    ]
   }
 }

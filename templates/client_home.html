@@ -131,6 +131,12 @@ const STORAGE_KEY = 'fitmatch';
 const USER_KEY = 'fitmatch.user';
 let currentCancelIndex = null;
 
+// Données utilisateur du serveur (source de vérité)
+const SERVER_USER = {
+    email: "{{ user.email | default('') }}",
+    fullName: "{{ user.full_name | default(user.name) | default('') }}"
+};
+
 const motivationQuotes = [
     "Votre corps peut le faire. C'est votre esprit qu'il faut convaincre !",
     "Chaque séance vous rapproche de votre objectif !",
@@ -149,8 +155,16 @@ function getStoredData() {
         const mainData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
         const userData = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
         if (userData && !mainData.user) mainData.user = userData;
+        
+        // Toujours utiliser l'email du serveur (source de vérité)
+        if (SERVER_USER.email) {
+            if (!mainData.user) mainData.user = {};
+            mainData.user.email = SERVER_USER.email;
+            mainData.user.fullName = SERVER_USER.fullName || mainData.user.fullName;
+        }
+        
         return mainData;
-    } catch { return {}; }
+    } catch { return { user: SERVER_USER }; }
 }
 
 function formatDate(dateStr) {
