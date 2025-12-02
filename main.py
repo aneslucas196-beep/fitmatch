@@ -2439,8 +2439,13 @@ async def set_coach_working_hours(request: Request):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/api/bookings")
-async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
-    """Récupère les réservations existantes d'un coach (pending + confirmed + indisponibilités)."""
+async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to"), include_pending: bool = Query(False)):
+    """Récupère les réservations existantes d'un coach.
+    
+    Args:
+        include_pending: Si True, inclut les réservations en attente (pour le calendrier du coach).
+                        Si False, n'inclut que les confirmées (pour le calendrier de réservation client).
+    """
     # Charger depuis demo_users.json
     try:
         demo_users = load_demo_users()
@@ -2464,8 +2469,8 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
         
         coach_data = demo_users.get(coach_email, {})
         
-        # Récupérer TOUTES les réservations (pending + confirmed)
-        pending_bookings = coach_data.get("pending_bookings", [])
+        # Récupérer les réservations selon le contexte
+        pending_bookings = coach_data.get("pending_bookings", []) if include_pending else []
         confirmed_bookings = coach_data.get("confirmed_bookings", [])
         
         # Récupérer les indisponibilités
