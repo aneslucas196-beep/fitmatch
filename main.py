@@ -3584,6 +3584,7 @@ class CancelBookingRequest(BaseModel):
     client_name: str
     client_email: str
     coach_name: str
+    coach_email: Optional[str] = None  # Email du coach pour identification
     gym_name: str
     gym_address: Optional[str] = "Adresse non renseignée"
     date: str  # format en français: "vendredi 28 novembre 2025"
