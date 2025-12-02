@@ -3751,9 +3751,9 @@ async def confirm_booking(request: ConfirmBookingRequest):
 
 @app.post("/api/cancel-booking")
 async def cancel_booking(request: CancelBookingRequest):
-    """Annule une réservation et envoie l'email d'annulation au client."""
+    """Annule une réservation et envoie l'email d'annulation au client ET au coach."""
     try:
-        from resend_service import send_cancellation_email
+        from resend_service import send_cancellation_email, send_cancellation_to_coach_email
         
         print(f"📧 Annulation réservation pour {request.client_name} ({request.client_email})")
         print(f"   Coach: {request.coach_name}, Salle: {request.gym_name}")
@@ -3762,6 +3762,8 @@ async def cancel_booking(request: CancelBookingRequest):
         # Supprimer la réservation du serveur (demo_users.json)
         demo_users = load_demo_users()
         booking_removed = False
+        found_coach_email = None
+        found_coach_name = None
         
         # Chercher le coach par email ou nom
         for coach_email, coach_data in demo_users.items():
@@ -3776,6 +3778,10 @@ async def cancel_booking(request: CancelBookingRequest):
                 pass  # Match par nom
             else:
                 continue
+            
+            # Sauvegarder l'email du coach pour la notification
+            found_coach_email = coach_email
+            found_coach_name = coach_data.get("full_name", request.coach_name)
             
             # Supprimer des pending_bookings
             pending = coach_data.get("pending_bookings", [])
@@ -3807,7 +3813,29 @@ async def cancel_booking(request: CancelBookingRequest):
             save_demo_users(demo_users)
             print(f"✅ Fichier demo_users.json mis à jour")
         
-        # Envoyer l'email d'annulation
+        # Envoyer l'email d'annulation AU COACH
+        coach_notified = False
+        if found_coach_email:
+            coach_result = send_cancellation_to_coach_email(
+                to_email=found_coach_email,
+                coach_name=found_coach_name or request.coach_name,
+                client_name=request.client_name,
+                client_email=request.client_email,
+                gym_name=request.gym_name,
+                gym_address=request.gym_address or "Adresse non renseignée",
+                date_str=request.date,
+                time_str=request.time,
+                service_name=request.service,
+                duration=request.duration,
+                price=request.price
+            )
+            coach_notified = coach_result.get("success", False)
+            if coach_notified:
+                print(f"✅ Email d'annulation envoyé au coach {found_coach_email}")
+            else:
+                print(f"⚠️ Erreur envoi email au coach: {coach_result.get('error')}")
+        
+        # Envoyer l'email d'annulation AU CLIENT
         result = send_cancellation_email(
             to_email=request.client_email,
             client_name=request.client_name,
@@ -3826,17 +3854,19 @@ async def cancel_booking(request: CancelBookingRequest):
         if result.get("success"):
             return JSONResponse({
                 "success": True,
-                "message": "Réservation annulée, email envoyé",
+                "message": "Réservation annulée, emails envoyés",
                 "email_sent": True,
+                "coach_notified": coach_notified,
                 "booking_removed": booking_removed,
                 "email_id": result.get("email_id")
             })
         else:
-            print(f"⚠️ Email non envoyé mais réservation annulée: {result.get('error')}")
+            print(f"⚠️ Email client non envoyé mais réservation annulée: {result.get('error')}")
             return JSONResponse({
                 "success": True,
-                "message": "Réservation annulée (email non envoyé)",
+                "message": "Réservation annulée (email client non envoyé)",
                 "email_sent": False,
+                "coach_notified": coach_notified,
                 "booking_removed": booking_removed,
                 "error": result.get("error")
             })

@@ -756,3 +756,180 @@ Fitmatch - Votre plateforme fitness
             "mode": "error",
             "error": error_msg
         }
+
+
+def send_cancellation_to_coach_email(
+    to_email: str,
+    coach_name: str,
+    client_name: str,
+    client_email: str,
+    gym_name: str,
+    gym_address: str,
+    date_str: str,
+    time_str: str,
+    service_name: str = "Séance de coaching",
+    duration: str = "60 min",
+    price: str = "40€"
+) -> dict:
+    """
+    Envoie une notification email au coach quand un client annule sa réservation.
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    
+    print(f"📧 Notification annulation pour coach {coach_name} ({to_email})")
+    print(f"   Client: {client_name} a annulé sa séance du {date_str} à {time_str}")
+    
+    if not resend_key:
+        print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi d'email")
+        return {"success": True, "mode": "demo", "message": "Email simulé"}
+    
+    try:
+        first_name = coach_name.split()[0] if coach_name else "Coach"
+        
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: white; }}
+        .header {{ background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center; }}
+        .header h1 {{ color: white; margin: 0; font-size: 24px; }}
+        .badge {{ display: inline-block; background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 20px; margin-top: 10px; font-size: 14px; }}
+        .content {{ padding: 30px; }}
+        .alert-box {{ background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px 20px; border-radius: 0 8px 8px 0; margin-bottom: 25px; }}
+        .alert-box p {{ margin: 0; color: #991b1b; font-size: 14px; }}
+        .booking-card {{ background: #f9fafb; border-radius: 12px; padding: 20px; margin: 20px 0; }}
+        .booking-card h3 {{ margin: 0 0 15px 0; color: #111; font-size: 18px; }}
+        .info-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }}
+        .info-row:last-child {{ border-bottom: none; }}
+        .info-label {{ color: #6b7280; font-size: 14px; }}
+        .info-value {{ color: #111; font-size: 14px; font-weight: 500; text-decoration: line-through; color: #9ca3af; }}
+        .client-box {{ background: #fef2f2; border-radius: 8px; padding: 15px; margin-top: 15px; }}
+        .client-box p {{ margin: 5px 0; color: #991b1b; font-size: 14px; }}
+        .footer {{ background: #f9fafb; padding: 20px; text-align: center; }}
+        .footer p {{ color: #6b7280; font-size: 12px; margin: 5px 0; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>❌ Séance annulée</h1>
+            <div class="badge">Information</div>
+        </div>
+        
+        <div class="content">
+            <p style="font-size: 16px; color: #374151;">Bonjour {first_name},</p>
+            
+            <div class="alert-box">
+                <p><strong>{client_name} a annulé sa séance avec vous.</strong><br>
+                Ce créneau est maintenant de nouveau disponible dans votre calendrier.</p>
+            </div>
+            
+            <div class="booking-card">
+                <h3>📅 Séance annulée</h3>
+                <div class="info-row">
+                    <span class="info-label">Date</span>
+                    <span class="info-value">{date_str}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Heure</span>
+                    <span class="info-value">{time_str}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Salle</span>
+                    <span class="info-value">{gym_name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Prestation</span>
+                    <span class="info-value">{service_name} · {duration}</span>
+                </div>
+                
+                <div class="client-box">
+                    <p><strong>👤 Client :</strong> {client_name}</p>
+                    <p><strong>📧 Email :</strong> {client_email}</p>
+                </div>
+            </div>
+            
+            <p style="font-size: 13px; color: #6b7280; text-align: center;">
+                Le créneau du {date_str} à {time_str} est de nouveau libre pour d'autres réservations.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Fitmatch - Votre plateforme fitness</p>
+            <p>Cet email a été envoyé suite à une annulation de réservation.</p>
+        </div>
+    </div>
+</body>
+</html>
+        """
+        
+        text_content = f"""
+❌ Séance annulée
+
+Bonjour {first_name},
+
+{client_name} a annulé sa séance avec vous.
+
+📅 Séance annulée:
+- Date: {date_str}
+- Heure: {time_str}
+- Salle: {gym_name}
+- Prestation: {service_name} · {duration}
+
+👤 Client: {client_name}
+📧 Email: {client_email}
+
+Le créneau du {date_str} à {time_str} est de nouveau libre pour d'autres réservations.
+
+---
+Fitmatch - Votre plateforme fitness
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {resend_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": f"❌ Séance annulée - {client_name} · {date_str}",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        print(f"📤 Envoi notification annulation au coach via Resend...")
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            email_id = response_data.get('id', 'N/A')
+            print(f"✅ Notification annulation envoyée au coach {to_email} (ID: {email_id})")
+            return {
+                "success": True,
+                "mode": "resend",
+                "email_id": email_id,
+                "message": "Notification annulation coach envoyée"
+            }
+        else:
+            error_msg = f"Erreur Resend (Status {response.status_code}): {response.text}"
+            print(f"❌ {error_msg}")
+            return {
+                "success": False,
+                "mode": "resend",
+                "error": error_msg
+            }
+            
+    except Exception as e:
+        error_msg = f"Erreur envoi notification annulation coach: {e}"
+        print(f"❌ {error_msg}")
+        return {
+            "success": False,
+            "mode": "error",
+            "error": error_msg
+        }
