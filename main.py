@@ -674,18 +674,28 @@ async def client_home(request: Request, user = Depends(get_current_user)):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     
-    return templates.TemplateResponse("client_home.html", {
+    response = templates.TemplateResponse("client_home.html", {
         "request": request, 
         "user": user
     })
+    # Désactiver le cache pour éviter les problèmes de session
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.get("/mon-compte", response_class=HTMLResponse)
-async def mon_compte(request: Request):
-    """Page compte client accessible via localStorage (pas besoin de session serveur)."""
-    return templates.TemplateResponse("client_home.html", {
+async def mon_compte(request: Request, user = Depends(get_current_user)):
+    """Page compte client accessible via session ou localStorage."""
+    response = templates.TemplateResponse("client_home.html", {
         "request": request, 
-        "user": None
+        "user": user  # Utiliser la session si disponible
     })
+    # Désactiver le cache pour éviter les problèmes de session
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.get("/gyms/search", response_class=HTMLResponse)
 async def gym_search_page(request: Request):
