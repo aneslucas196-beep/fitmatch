@@ -200,7 +200,7 @@ function getStatusColor(status) {
 
 async function syncBookingStatuses() {
     const data = getStoredData();
-    const bookings = data.bookings || [];
+    let bookings = data.bookings || [];
     const user = data.user;
     let hasChanges = false;
     
@@ -211,9 +211,25 @@ async function syncBookingStatuses() {
             const result = await res.json();
             
             if (result.success && result.bookings) {
-                // Pour chaque réservation du serveur, mettre à jour ou ajouter au localStorage
-                for (const serverBooking of result.bookings) {
-                    // Chercher si on a déjà cette réservation localement
+                const serverBookings = result.bookings;
+                
+                // ÉTAPE 1: Supprimer du localStorage les réservations qui n'existent plus sur le serveur
+                const serverIds = serverBookings.map(b => b.id);
+                const filteredBookings = bookings.filter(localBooking => {
+                    // Garder les réservations sans ID (anciennes) ou celles qui existent encore sur le serveur
+                    if (!localBooking.id && !localBooking.booking_id) return true;
+                    const localId = localBooking.id || localBooking.booking_id;
+                    const existsOnServer = serverIds.includes(localId);
+                    if (!existsOnServer) {
+                        console.log('🗑️ Réservation supprimée par le coach:', localId);
+                        hasChanges = true;
+                    }
+                    return existsOnServer;
+                });
+                bookings = filteredBookings;
+                
+                // ÉTAPE 2: Mettre à jour ou ajouter les réservations du serveur
+                for (const serverBooking of serverBookings) {
                     let localIndex = bookings.findIndex(b => 
                         (b.id && b.id === serverBooking.id) || 
                         (b.booking_id && b.booking_id === serverBooking.id) ||
