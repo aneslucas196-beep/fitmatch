@@ -3753,6 +3753,54 @@ async def cancel_booking(request: CancelBookingRequest):
         print(f"   Coach: {request.coach_name}, Salle: {request.gym_name}")
         print(f"   Date: {request.date} à {request.time}")
         
+        # Supprimer la réservation du serveur (demo_users.json)
+        demo_users = load_demo_users()
+        booking_removed = False
+        
+        # Chercher le coach par email ou nom
+        for coach_email, coach_data in demo_users.items():
+            if coach_data.get("role") != "coach":
+                continue
+            
+            # Vérifier si c'est le bon coach
+            coach_name = coach_data.get("full_name", "").lower().strip()
+            if request.coach_email and coach_email.lower() == request.coach_email.lower():
+                pass  # Match par email
+            elif request.coach_name and coach_name == request.coach_name.lower().strip():
+                pass  # Match par nom
+            else:
+                continue
+            
+            # Supprimer des pending_bookings
+            pending = coach_data.get("pending_bookings", [])
+            new_pending = [b for b in pending if not (
+                b.get("client_email", "").lower() == request.client_email.lower() and
+                b.get("time") == request.time
+            )]
+            if len(new_pending) < len(pending):
+                coach_data["pending_bookings"] = new_pending
+                booking_removed = True
+                print(f"✅ Réservation supprimée des pending_bookings du coach {coach_email}")
+            
+            # Supprimer des confirmed_bookings
+            confirmed = coach_data.get("confirmed_bookings", [])
+            new_confirmed = [b for b in confirmed if not (
+                b.get("client_email", "").lower() == request.client_email.lower() and
+                b.get("time") == request.time
+            )]
+            if len(new_confirmed) < len(confirmed):
+                coach_data["confirmed_bookings"] = new_confirmed
+                booking_removed = True
+                print(f"✅ Réservation supprimée des confirmed_bookings du coach {coach_email}")
+            
+            if booking_removed:
+                break
+        
+        # Sauvegarder les modifications
+        if booking_removed:
+            save_demo_users(demo_users)
+            print(f"✅ Fichier demo_users.json mis à jour")
+        
         # Envoyer l'email d'annulation
         result = send_cancellation_email(
             to_email=request.client_email,
@@ -3774,6 +3822,7 @@ async def cancel_booking(request: CancelBookingRequest):
                 "success": True,
                 "message": "Réservation annulée, email envoyé",
                 "email_sent": True,
+                "booking_removed": booking_removed,
                 "email_id": result.get("email_id")
             })
         else:
@@ -3782,6 +3831,7 @@ async def cancel_booking(request: CancelBookingRequest):
                 "success": True,
                 "message": "Réservation annulée (email non envoyé)",
                 "email_sent": False,
+                "booking_removed": booking_removed,
                 "error": result.get("error")
             })
             

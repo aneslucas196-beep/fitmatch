@@ -151,6 +151,38 @@
         "message": "sa dit quoi la fami",
         "timestamp": "2025-12-02T12:58:21.867800",
         "read": false
+      },
+      {
+        "id": "79489b01",
+        "sender_role": "client",
+        "sender_name": "braw",
+        "message": "tql et toi",
+        "timestamp": "2025-12-02T13:13:56.975018",
+        "read": false
+      },
+      {
+        "id": "bcfdc04a",
+        "sender_role": "coach",
+        "sender_name": "Ns",
+        "message": "dans le bueno hein",
+        "timestamp": "2025-12-02T13:14:38.590337",
+        "read": false
+      },
+      {
+        "id": "5fd970fd",
+        "sender_role": "coach",
+        "sender_name": "Ns",
+        "message": "demain tes pret pour la seance ?",
+        "timestamp": "2025-12-02T13:14:51.522215",
+        "read": false
+      },
+      {
+        "id": "a0e78ca0",
+        "sender_role": "client",
+        "sender_name": "braw",
+        "message": "oui",
+        "timestamp": "2025-12-02T13:15:29.295582",
+        "read": false
       }
     ]
   }
