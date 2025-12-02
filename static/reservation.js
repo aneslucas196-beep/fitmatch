@@ -173,8 +173,8 @@ if(loginForm) {
     btn.textContent = 'Connexion…';
     
     try {
-      // Appeler l'API de connexion
-      const res = await fetch('/login', {
+      // Appeler l'API de connexion (JSON)
+      const res = await fetch('/api/login', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ email, password })
