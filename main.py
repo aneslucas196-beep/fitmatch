@@ -470,11 +470,15 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
                     if fresh_user_data:
                         print(f"✅ Données fraîches récupérées: profile_completed={fresh_user_data.get('profile_completed', False)}")
                         fresh_user_data["_access_token"] = session_token
+                        # IMPORTANT: Toujours inclure l'email dans les données retournées
+                        fresh_user_data["email"] = email
+                        print(f"✅ Email ajouté aux données: {email}, full_name: {fresh_user_data.get('full_name', 'N/A')}")
                         return fresh_user_data
                     else:
                         print(f"⚠️  Pas de données persistantes pour {email}, utilisation données fichier")
                         # Fallback sur les données du fichier
                         user_data["_access_token"] = session_token
+                        user_data["email"] = email  # IMPORTANT: Inclure l'email
                         return user_data
             
             # Token démo non reconnu
