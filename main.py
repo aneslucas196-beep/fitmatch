@@ -3524,12 +3524,14 @@ class SignupReservationRequest(BaseModel):
 otp_storage = {}
 
 @app.post("/api/signup-reservation")
-async def signup_reservation(request: SignupReservationRequest, response: Response):
+async def signup_reservation(request: SignupReservationRequest):
     """Inscription rapide depuis la page de réservation avec création de session."""
     try:
         email = request.email.lower().strip()
         full_name = request.fullName.strip()
         password = request.password
+        
+        print(f"🔐 API signup-reservation appelée pour {email} ({full_name})")
         
         # Vérifier si l'utilisateur existe déjà
         demo_users = load_demo_users()
@@ -3554,12 +3556,23 @@ async def signup_reservation(request: SignupReservationRequest, response: Respon
             save_demo_users(demo_users)
             print(f"✅ Nouvel utilisateur créé: {email} ({full_name})")
         
-        # Créer un token de session pour le nouveau client
+        # Créer un token de session pour le client
         token = f"demo_{secrets.token_hex(8)}"
         demo_token_map[token] = email
         
-        # Définir le cookie de session
-        response.set_cookie(
+        print(f"🔐 Session créée pour {email} avec token {token}")
+        
+        # Créer la réponse JSON et y ajouter le cookie
+        json_response = JSONResponse({
+            "success": True,
+            "message": "Compte créé avec succès",
+            "token": token,
+            "email": email,
+            "fullName": full_name
+        })
+        
+        # Ajouter le cookie directement à la JSONResponse
+        json_response.set_cookie(
             key="fitmatch_token",
             value=token,
             httponly=True,
@@ -3567,15 +3580,9 @@ async def signup_reservation(request: SignupReservationRequest, response: Respon
             samesite="lax"
         )
         
-        print(f"🔐 Session créée pour {email} avec token {token}")
+        print(f"🍪 Cookie fitmatch_token défini avec token {token}")
         
-        return JSONResponse({
-            "success": True,
-            "message": "Compte créé avec succès",
-            "token": token,
-            "email": email,
-            "fullName": full_name
-        })
+        return json_response
         
     except Exception as e:
         print(f"❌ Erreur inscription: {e}")
