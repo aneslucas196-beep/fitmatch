@@ -4240,14 +4240,17 @@ async def delete_booking(request: DeleteBookingRequest):
         
         coach_data = demo_users[request.coach_email]
         booking_found = False
+        deleted_booking = None
+        was_confirmed = False
         
         # Chercher dans pending_bookings
         pending_bookings = coach_data.get("pending_bookings", [])
         for i, booking in enumerate(pending_bookings):
             if booking.get("id") == request.booking_id:
-                pending_bookings.pop(i)
+                deleted_booking = pending_bookings.pop(i)
                 coach_data["pending_bookings"] = pending_bookings
                 booking_found = True
+                was_confirmed = False
                 break
         
         # Chercher dans confirmed_bookings si pas trouvé
@@ -4255,9 +4258,10 @@ async def delete_booking(request: DeleteBookingRequest):
             confirmed_bookings = coach_data.get("confirmed_bookings", [])
             for i, booking in enumerate(confirmed_bookings):
                 if booking.get("id") == request.booking_id:
-                    confirmed_bookings.pop(i)
+                    deleted_booking = confirmed_bookings.pop(i)
                     coach_data["confirmed_bookings"] = confirmed_bookings
                     booking_found = True
+                    was_confirmed = True
                     break
         
         if not booking_found:
@@ -4269,9 +4273,53 @@ async def delete_booking(request: DeleteBookingRequest):
         
         print(f"🗑️ Réservation {request.booking_id} supprimée par {request.coach_email}")
         
+        # Envoyer un email au client pour l'informer de l'annulation
+        email_sent = False
+        if deleted_booking:
+            client_email = deleted_booking.get("client_email")
+            client_name = deleted_booking.get("client_name", "Client")
+            coach_name = coach_data.get("full_name", "Votre coach")
+            gym_name = deleted_booking.get("gym_name", "")
+            date_str = deleted_booking.get("date", "")
+            time_str = deleted_booking.get("time", "")
+            
+            if client_email:
+                try:
+                    from resend_service import send_rejection_email
+                    
+                    # Formater la date
+                    formatted_date = date_str
+                    if date_str:
+                        try:
+                            from datetime import datetime
+                            date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                            jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+                            mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+                            formatted_date = f"{jours[date_obj.weekday()]} {date_obj.day} {mois[date_obj.month - 1]}"
+                        except:
+                            pass
+                    
+                    print(f"📧 Envoi email annulation au client {client_name} ({client_email})")
+                    print(f"   Coach: {coach_name}, Date: {formatted_date} à {time_str}")
+                    
+                    email_result = send_rejection_email(
+                        client_email=client_email,
+                        client_name=client_name,
+                        coach_name=coach_name,
+                        gym_name=gym_name,
+                        date=f"{formatted_date} à {time_str}",
+                        duration=f"{deleted_booking.get('duration', '60')} min",
+                        price=f"{deleted_booking.get('price', '40')}€"
+                    )
+                    email_sent = email_result.get("success", False)
+                    print(f"📧 Email annulation client: {email_result}")
+                except Exception as email_error:
+                    print(f"⚠️ Erreur envoi email annulation: {email_error}")
+        
         return JSONResponse({
             "success": True,
-            "message": "Séance supprimée"
+            "message": "Séance supprimée",
+            "email_sent": email_sent
         })
         
     except Exception as e:
