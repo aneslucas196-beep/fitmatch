@@ -13,177 +13,30 @@
     "specialties": [
       "musculation"
     ],
-    "selected_gym_ids": "google_worldwide_ChIJM6QBj-uD5kcRF0Q60pmfdOk",
-    "selected_gyms_data": "[{\"id\":\"google_worldwide_ChIJM6QBj-uD5kcRF0Q60pmfdOk\",\"name\":\"Basic-Fit\",\"address\":\"18 Rue des Frères Lumière, 78310 Coignières, France\",\"city\":\"\",\"lat\":48.7569442,\"lng\":1.9338973000000002,\"chain\":\"Google Places (Mondial)\",\"source\":\"Google Places Worldwide\",\"display_name\":\"Basic-Fit - 18 Rue des Frères Lumière, 78310 Coignières, France\"}]",
+    "selected_gym_ids": "google_worldwide_ChIJM6QBj-uD5kcRF0Q60pmfdOk,google_worldwide_ChIJ58bSTkSH5kcR-lr_zynm0QA",
+    "selected_gyms_data": "[{\"id\":\"google_worldwide_ChIJM6QBj-uD5kcRF0Q60pmfdOk\",\"name\":\"Basic-Fit\",\"address\":\"18 Rue des Frères Lumière, 78310 Coignières, France\",\"city\":\"\",\"lat\":48.7569442,\"lng\":1.9338973000000002,\"chain\":\"Google Places (Mondial)\",\"source\":\"Google Places Worldwide\",\"display_name\":\"Basic-Fit - 18 Rue des Frères Lumière, 78310 Coignières, France\"},{\"id\":\"google_worldwide_ChIJ58bSTkSH5kcR-lr_zynm0QA\",\"name\":\"Salle de sport Montigny - ON AIR MONTIGNY-LE-BRETONNEUX\",\"address\":\"4 Pass. Georges Méliès, 78180 Montigny-le-Bretonneux, France\",\"city\":\"\",\"lat\":48.782594599999996,\"lng\":2.0431996999999997,\"chain\":\"Google Places (Mondial)\",\"source\":\"Google Places Worldwide\",\"display_name\":\"Salle de sport Montigny - ON AIR MONTIGNY-LE-BRETONNEUX - 4 Pass. Georges Méliès, 78180 Montigny-le-Bretonneux, France\"}]",
     "profile_photo_url": "/attached_assets/profile_photos/ed5d54c7591ecfee_19ed6b3e-0316-456a-9238-d03be93f3bf7.jpg",
     "password": "Anasking1234!",
     "gender": "homme",
     "country_code": "AZ",
     "coach_gender_preference": null,
     "selected_gyms": null,
-    "pending_bookings": [],
-    "confirmed_bookings": [],
-    "rejected_bookings": [
+    "pending_bookings": [
       {
-        "id": "c9c772d9",
-        "client_name": "Mejed",
-        "client_email": "Mejedjaoued@gmail.com",
-        "gym_name": "Basic-Fit",
-        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
-        "date": "2025-11-29",
-        "time": "18:00",
-        "service": "Séance de coaching",
-        "duration": "60",
-        "price": "40",
-        "status": "rejected",
-        "created_at": "2025-11-28T21:33:25.072311",
-        "rejected_at": "2025-11-28T21:34:52.881088"
-      },
-      {
-        "id": "bc3c899f",
-        "client_name": "anas",
-        "client_email": "mejedjaoued@gmail.com",
-        "gym_name": "Basic-Fit",
-        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
-        "date": "2025-12-02",
-        "time": "11:00",
-        "service": "Séance de coaching",
-        "duration": "60",
-        "price": "40",
-        "status": "rejected",
-        "created_at": "2025-11-29T08:32:47.383857",
-        "rejected_at": "2025-11-29T08:36:14.440610"
-      },
-      {
-        "id": "dcc91ad9",
-        "client_name": "anas",
-        "client_email": "mejedjaoued@gmail.com",
-        "gym_name": "Basic-Fit",
-        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
-        "date": "2025-12-03",
-        "time": "11:00",
-        "service": "Séance de coaching",
-        "duration": "60",
-        "price": "40",
-        "status": "rejected",
-        "created_at": "2025-11-29T09:06:43.754822",
-        "rejected_at": "2025-11-29T09:10:02.029706"
-      },
-      {
-        "id": "7128b712",
-        "client_name": "Anas",
-        "client_email": "mejedjaoued@gmail.com",
-        "gym_name": "Basic-Fit",
-        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
-        "date": "2025-12-03",
-        "time": "10:00",
-        "service": "Séance de coaching",
-        "duration": "60",
-        "price": "40",
-        "status": "rejected",
-        "created_at": "2025-12-01T21:47:33.024683",
-        "rejected_at": "2025-12-01T22:03:23.487248"
-      },
-      {
-        "id": "79870424",
-        "client_name": "Anas",
-        "client_email": "mejedjaoued@gmail.com",
-        "gym_name": "Basic-Fit",
-        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
-        "date": "2025-12-05",
-        "time": "13:00",
-        "service": "Séance de coaching",
-        "duration": "60",
-        "price": "40",
-        "status": "rejected",
-        "created_at": "2025-12-01T21:42:23.802555",
-        "rejected_at": "2025-12-01T22:03:29.314180"
-      },
-      {
-        "id": "710fd8d8",
+        "id": "4f7bc5b7",
         "client_name": "braw",
         "client_email": "mejedjaoued@gmail.com",
         "gym_name": "Basic-Fit",
         "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
-        "date": "2025-12-05",
-        "time": "13:00",
+        "date": "2025-12-06",
+        "time": "13:30",
         "service": "Séance de coaching",
         "duration": "60",
         "price": "40",
-        "status": "rejected",
-        "created_at": "2025-12-01T21:41:38.626658",
-        "rejected_at": "2025-12-01T22:03:32.881722"
-      },
-      {
-        "id": "c75b06f0",
-        "client_name": "Anas",
-        "client_email": "mejedjaoued@gmail.com",
-        "gym_name": "Basic-Fit",
-        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
-        "date": "2025-12-03",
-        "time": "11:00",
-        "service": "Séance de coaching",
-        "duration": "60",
-        "price": "40",
-        "status": "rejected",
-        "created_at": "2025-12-01T21:57:34.167670",
-        "rejected_at": "2025-12-01T22:03:37.911043"
-      },
-      {
-        "id": "ba483b7e",
-        "client_name": "braw",
-        "client_email": "mejedjaoued@gmail.com",
-        "gym_name": "Basic-Fit",
-        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
-        "date": "2025-12-03",
-        "time": "18:00",
-        "service": "Séance de coaching",
-        "duration": "60",
-        "price": "40",
-        "status": "rejected",
-        "created_at": "2025-12-01T21:39:24.538982",
-        "rejected_at": "2025-12-01T22:03:40.517183"
+        "status": "pending",
+        "created_at": "2025-12-03T16:39:13.712299"
       }
-    ],
-    "unavailable_days": [],
-    "unavailable_slots": [],
-    "working_hours": {
-      "monday": {
-        "enabled": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "tuesday": {
-        "enabled": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "wednesday": {
-        "enabled": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "thursday": {
-        "enabled": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "friday": {
-        "enabled": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "saturday": {
-        "enabled": true,
-        "start": "08:00",
-        "end": "20:00"
-      },
-      "sunday": {
-        "enabled": true,
-        "start": "08:00",
-        "end": "20:00"
-      }
-    }
+    ]
   },
   "aneslucas196@gmail.com": {
     "full_name": "Anas",

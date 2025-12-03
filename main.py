@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request, Form, HTTPException, Depends, File, UploadFile, Cookie, Query
+from fastapi import FastAPI, Request, Form, HTTPException, Depends, File, UploadFile, Cookie, Query, Response
+import secrets
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -325,6 +326,8 @@ supabase_anon = get_supabase_anon_client()
 # Cache en mémoire pour les codes OTP en mode démo (email -> code)
 demo_otp_cache = {}
 demo_user_cache = {}
+# Cache pour mapper les tokens de session aux emails (token -> email)
+demo_token_map = {}
 
 # Base de données nationale des salles de sport
 GYMS_DATABASE = [
@@ -454,6 +457,17 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
             import hashlib
             
             print(f"🔍 Mode démo - Recherche utilisateur pour token: {session_token}")
+            
+            # D'abord vérifier le cache demo_token_map (pour les tokens créés via /api/signup-reservation)
+            if session_token in demo_token_map:
+                email = demo_token_map[session_token]
+                print(f"✅ Token trouvé dans demo_token_map pour {email}")
+                fresh_user_data = get_demo_user(email)
+                if fresh_user_data:
+                    fresh_user_data["_access_token"] = session_token
+                    fresh_user_data["email"] = email
+                    print(f"✅ Données récupérées: {email}, full_name: {fresh_user_data.get('full_name', 'N/A')}")
+                    return fresh_user_data
             
             # D'abord essayer de récupérer depuis le stockage persistant
             # Charger tous les utilisateurs démo des DEUX sources (fichier + persistant)
@@ -3501,8 +3515,71 @@ class VerifyOTPRequest(BaseModel):
     email: str
     code: str
 
+class SignupReservationRequest(BaseModel):
+    fullName: str
+    email: str
+    password: str
+
 # Stockage temporaire des codes OTP (en production, utiliser Redis ou DB)
 otp_storage = {}
+
+@app.post("/api/signup-reservation")
+async def signup_reservation(request: SignupReservationRequest, response: Response):
+    """Inscription rapide depuis la page de réservation avec création de session."""
+    try:
+        email = request.email.lower().strip()
+        full_name = request.fullName.strip()
+        password = request.password
+        
+        # Vérifier si l'utilisateur existe déjà
+        demo_users = load_demo_users()
+        if email in demo_users:
+            # L'utilisateur existe déjà, on met à jour le nom si différent
+            existing_user = demo_users[email]
+            if existing_user.get("full_name") != full_name:
+                existing_user["full_name"] = full_name
+                save_demo_users(demo_users)
+                print(f"✅ Nom mis à jour pour {email}: {full_name}")
+        else:
+            # Créer un nouvel utilisateur client
+            user_data = {
+                "full_name": full_name,
+                "gender": "homme",
+                "role": "client",
+                "password": password,
+                "coach_gender_preference": "aucune",
+                "selected_gyms": []
+            }
+            demo_users[email] = user_data
+            save_demo_users(demo_users)
+            print(f"✅ Nouvel utilisateur créé: {email} ({full_name})")
+        
+        # Créer un token de session pour le nouveau client
+        token = f"demo_{secrets.token_hex(8)}"
+        demo_token_map[token] = email
+        
+        # Définir le cookie de session
+        response.set_cookie(
+            key="fitmatch_token",
+            value=token,
+            httponly=True,
+            max_age=60*60*24*30,  # 30 jours
+            samesite="lax"
+        )
+        
+        print(f"🔐 Session créée pour {email} avec token {token}")
+        
+        return JSONResponse({
+            "success": True,
+            "message": "Compte créé avec succès",
+            "token": token,
+            "email": email,
+            "fullName": full_name
+        })
+        
+    except Exception as e:
+        print(f"❌ Erreur inscription: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/send-otp-email")
 async def send_otp_email(request: SendOTPRequest):

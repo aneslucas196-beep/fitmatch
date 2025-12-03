@@ -279,14 +279,19 @@ if(btnResetPassword) {
   });
 }
 
-// Fake call API (remplace par ton vrai POST si dispo)
+// Appel API pour créer le compte et définir la session
 async function signupViaAPI(payload){
-  // Si tu as une API réelle, dé-commente et adapte :
-  // const res = await fetch('/api/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-  // if(!res.ok) throw new Error('Inscription échouée');
-  // return await res.json();
-  // Fallback local : on "crée" l'utilisateur côté navigateur
-  return new Promise((resolve)=> setTimeout(()=> resolve({ ok:true }), 300));
+  const res = await fetch('/api/signup-reservation', { 
+    method:'POST', 
+    headers:{'Content-Type':'application/json'}, 
+    body: JSON.stringify(payload),
+    credentials: 'include'
+  });
+  if(!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || 'Inscription échouée');
+  }
+  return await res.json();
 }
 
 form.addEventListener('submit', async (e)=>{
