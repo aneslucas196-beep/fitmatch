@@ -4285,7 +4285,7 @@ async def delete_booking(request: DeleteBookingRequest):
             
             if client_email:
                 try:
-                    from resend_service import send_rejection_email
+                    from resend_service import send_coach_cancelled_email
                     
                     # Formater la date
                     formatted_date = date_str
@@ -4302,14 +4302,12 @@ async def delete_booking(request: DeleteBookingRequest):
                     print(f"📧 Envoi email annulation au client {client_name} ({client_email})")
                     print(f"   Coach: {coach_name}, Date: {formatted_date} à {time_str}")
                     
-                    email_result = send_rejection_email(
+                    email_result = send_coach_cancelled_email(
                         client_email=client_email,
                         client_name=client_name,
                         coach_name=coach_name,
                         gym_name=gym_name,
-                        date=f"{formatted_date} à {time_str}",
-                        duration=f"{deleted_booking.get('duration', '60')} min",
-                        price=f"{deleted_booking.get('price', '40')}€"
+                        date=f"{formatted_date} à {time_str}"
                     )
                     email_sent = email_result.get("success", False)
                     print(f"📧 Email annulation client: {email_result}")
