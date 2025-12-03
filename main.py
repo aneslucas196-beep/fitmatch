@@ -3571,16 +3571,17 @@ async def signup_reservation(request: SignupReservationRequest):
             "fullName": full_name
         })
         
-        # Ajouter le cookie directement à la JSONResponse
+        # Ajouter le cookie directement à la JSONResponse (même nom que /login)
         json_response.set_cookie(
-            key="fitmatch_token",
+            key="session_token",
             value=token,
             httponly=True,
             max_age=60*60*24*30,  # 30 jours
-            samesite="lax"
+            samesite="lax",
+            path="/"
         )
         
-        print(f"🍪 Cookie fitmatch_token défini avec token {token}")
+        print(f"🍪 Cookie session_token défini avec token {token}")
         
         return json_response
         

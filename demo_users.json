@@ -77,6 +77,20 @@
         "price": "40",
         "status": "pending",
         "created_at": "2025-12-03T16:56:58.178411"
+      },
+      {
+        "id": "8423cbd7",
+        "client_name": "huaydaTK58",
+        "client_email": "mejedjaoued@gmail.com",
+        "gym_name": "Basic-Fit",
+        "gym_address": "18 Rue des Frères Lumière, 78310 Coignières, France",
+        "date": "2025-12-06",
+        "time": "12:30",
+        "service": "Séance de coaching",
+        "duration": "60",
+        "price": "40",
+        "status": "pending",
+        "created_at": "2025-12-03T17:01:14.524370"
       }
     ],
     "rejected_bookings": [
