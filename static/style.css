@@ -44,10 +44,15 @@ body {
 }
 
 .logo {
-  font-size: 28px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logo-img {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
 }
 
 .nav-buttons {
@@ -215,8 +220,8 @@ body {
     padding: 15px 20px;
   }
 
-  .logo {
-    font-size: 22px;
+  .logo-img {
+    height: 32px;
   }
 
   .nav-buttons {
@@ -255,8 +260,8 @@ body {
     padding: 10px 15px;
   }
 
-  .logo {
-    font-size: 20px;
+  .logo-img {
+    height: 28px;
   }
 
   .content h1 {

@@ -129,7 +129,9 @@
         "rejected_at": "2025-12-03T17:06:22.509153"
       }
     ],
-    "confirmed_bookings": []
+    "confirmed_bookings": [],
+    "unavailable_days": [],
+    "unavailable_slots": []
   },
   "aneslucas196@gmail.com": {
     "full_name": "Anas",

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Coach Fitness{% endblock %}</title>
+    <title>{% block title %}FitMatch{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS et JS pour la carte -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -12,17 +12,17 @@
     <script src="/static/search-debug.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <nav class="bg-blue-600 text-white shadow-lg">
+    <nav class="bg-white shadow-lg border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-4">
-                <div class="flex items-center">
-                    <h1 class="text-xl font-bold">Coach Fitness</h1>
-                </div>
-                <div class="flex space-x-4">
-                    <a href="/" class="hover:text-blue-200">Accueil</a>
-                    <a href="/signup" class="hover:text-blue-200">S'inscrire</a>
-                    <a href="/login" class="hover:text-blue-200">Connexion</a>
-                    <a href="/coach/portal" class="hover:text-blue-200">Espace Coach</a>
+            <div class="flex justify-between items-center py-3">
+                <a href="/" class="flex items-center">
+                    <img src="/static/logo.png" alt="FitMatch" class="h-10 w-auto">
+                </a>
+                <div class="flex items-center space-x-6">
+                    <a href="/" class="text-gray-700 hover:text-emerald-600 font-medium">Accueil</a>
+                    <a href="/signup" class="text-gray-700 hover:text-emerald-600 font-medium">S'inscrire</a>
+                    <a href="/login" class="text-gray-700 hover:text-emerald-600 font-medium">Connexion</a>
+                    <a href="/coach/portal" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 font-medium">Espace Coach</a>
                 </div>
             </div>
         </div>
@@ -35,7 +35,7 @@
     <footer class="bg-gray-800 text-white mt-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div class="text-center">
-                <p>&copy; 2024 Coach Fitness. Tous droits réservés.</p>
+                <p>&copy; 2024 FitMatch. Tous droits réservés.</p>
             </div>
         </div>
     </footer>
