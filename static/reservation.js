@@ -529,6 +529,27 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
   btn.disabled = true;
   btn.textContent = 'Confirmation en cours...';
   
+  // IMPORTANT: Créer/rafraîchir la session pour cet utilisateur
+  try {
+    console.log('🔐 Création session pour:', u.email);
+    const sessionRes = await fetch('/api/signup-reservation', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        fullName: u.fullName,
+        email: u.email,
+        password: 'session_refresh'
+      }),
+      credentials: 'include'
+    });
+    if(sessionRes.ok) {
+      const sessionData = await sessionRes.json();
+      console.log('✅ Session créée:', sessionData);
+    }
+  } catch(sessionErr) {
+    console.log('⚠️ Session non créée:', sessionErr);
+  }
+  
   // Sauvegarder la réservation avec toutes les données
   const booking = {
     coach,
