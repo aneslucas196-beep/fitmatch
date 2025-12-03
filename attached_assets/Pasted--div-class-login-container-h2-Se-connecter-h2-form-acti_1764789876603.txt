@@ -1,0 +1,138 @@
+<div class="login-container">
+    <h2>Se connecter</h2>
+
+    <form action="/login" method="POST">
+        <label>Email *</label>
+        <input type="email" name="email" placeholder="email@example.com" required>
+
+        <label>Mot de passe *</label>
+        <input type="password" name="password" placeholder="••••••••" required>
+
+        <button type="submit" class="btn-primary">Se connecter</button>
+    </form>
+
+    <a href="/forgot-password" class="forgot">Mot de passe oublié ?</a>
+
+    <div class="divider">
+        <span>ou</span>
+    </div>
+
+    <a href="/register" class="btn-secondary">Créer mon compte</a>
+</div>
+🔹 CSS (style.css)
+⚠️ Très important : colle TOUT ce code dans ton fichier CSS.
+
+css
+Copier le code
+body {
+    background: #ffffff;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.login-container {
+    width: 380px;
+    padding: 30px;
+    border: 1px solid #e6e6e6;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0px 4px 18px rgba(0,0,0,0.06);
+}
+
+.login-container h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+label {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 6px;
+    margin-bottom: 14px;
+    border-radius: 8px;
+    border: 1px solid #dcdcdc;
+    font-size: 15px;
+}
+
+input:focus {
+    border-color: black;
+    outline: none;
+}
+
+.btn-primary {
+    width: 100%;
+    background: black;
+    color: white;
+    padding: 13px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.btn-primary:hover {
+    background: #222;
+}
+
+.forgot {
+    display: block;
+    margin-top: 12px;
+    color: #000;
+    font-size: 14px;
+    text-align: center;
+}
+
+.divider {
+    text-align: center;
+    margin: 25px 0;
+    position: relative;
+}
+
+.divider::before,
+.divider::after {
+    content: "";
+    height: 1px;
+    width: 40%;
+    background: #e5e5e5;
+    position: absolute;
+    top: 50%;
+}
+
+.divider::before {
+    left: 0;
+}
+
+.divider::after {
+    right: 0;
+}
+
+.divider span {
+    color: #555;
+    font-size: 14px;
+}
+
+.btn-secondary {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    border: 1px solid black;
+    color: black;
+    background: transparent;
+    border-radius: 8px;
+    font-weight: 600;
+    text-align: center;
+}
