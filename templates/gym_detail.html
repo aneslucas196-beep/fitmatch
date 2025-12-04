@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ gym_name }} - Coaches | FitMatch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --primary: #008f57;
+      --primary-light: #00c77b;
+      --primary-dark: #006d42;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --bg: #f9fafb;
+      --card: #ffffff;
+      --border: #e5e7eb;
+    }
+    
+    body {
+      font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    a { color: inherit; text-decoration: none; }
+    
+    /* Navbar */
+    .navbar {
+      background: #fff;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .navbar-logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    
+    .navbar-back {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    
+    .navbar-back:hover {
+      color: var(--primary);
+    }
+    
+    /* Hero Section */
+    .hero {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 60px 24px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1600&q=80') center/cover;
+      opacity: 0.15;
+    }
+    
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.2);
+      padding: 8px 16px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 20px;
+      backdrop-filter: blur(4px);
+    }
+    
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 800;
+      margin-bottom: 12px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .hero-address {
+      font-size: 16px;
+      opacity: 0.95;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 32px;
+    }
+    
+    .hero-stat {
+      text-align: center;
+    }
+    
+    .hero-stat-value {
+      font-size: 28px;
+      font-weight: 700;
+    }
+    
+    .hero-stat-label {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+    
+    /* Main Content */
+    .main {
+      max-width: 1200px;
+      margin: -40px auto 60px;
+      padding: 0 24px;
+      position: relative;
+      z-index: 10;
+    }
+    
+    /* Section Title */
+    .section-header {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 24px 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    
+    .section-count {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+    
+    /* Coaches Grid */
+    .coaches-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+    }
+    
+    /* Coach Card */
+    .coach-card {
+      background: var(--card);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      transition: transform 0.3s, box-shadow 0.3s;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .coach-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 40px rgba(0,143,87,0.15);
+    }
+    
+    .coach-card-image {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+    }
+    
+    .coach-card-body {
+      padding: 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .coach-card-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    
+    .coach-card-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--primary);
+    }
+    
+    .coach-card-info h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .verified-badge {
+      background: var(--primary);
+      color: white;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    
+    .coach-card-rating {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 14px;
+      color: #f59e0b;
+    }
+    
+    .coach-card-rating span {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    
+    .coach-card-specialties {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0;
+      flex: 1;
+    }
+    
+    .specialty-tag {
+      background: linear-gradient(135deg, rgba(0,143,87,0.1), rgba(0,199,123,0.1));
+      color: var(--primary);
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    
+    .coach-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+    
+    .coach-price {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    
+    .coach-price span {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+    
+    .btn-book {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      color: white;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn-book:hover {
+      transform: scale(1.02);
+      box-shadow: 0 6px 20px rgba(0,143,87,0.3);
+    }
+    
+    /* Empty State */
+    .empty-state {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 80px 40px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    
+    .empty-state h3 {
+      font-size: 22px;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+    
+    .empty-state p {
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    
+    .btn-back-home {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary);
+      color: white;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    
+    .btn-back-home:hover {
+      background: var(--primary-dark);
+    }
+    
+    /* Loading State */
+    .loading-state {
+      text-align: center;
+      padding: 80px 40px;
+    }
+    
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .hero {
+        padding: 40px 20px 60px;
+      }
+      
+      .hero-stats {
+        gap: 20px;
+      }
+      
+      .hero-stat-value {
+        font-size: 22px;
+      }
+      
+      .section-header {
+        padding: 20px 24px;
+      }
+      
+      .coaches-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .coach-card-image {
+        height: 180px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .navbar {
+        padding: 14px 16px;
+      }
+      
+      .hero h1 {
+        font-size: 24px;
+      }
+      
+      .hero-address {
+        font-size: 14px;
+      }
+      
+      .coach-card-footer {
+        flex-direction: column;
+        gap: 12px;
+      }
+      
+      .btn-book {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/" class="navbar-back">
+      <span>←</span>
+      <span>Retour</span>
+    </a>
+    <a href="/" class="navbar-logo">FitMatch</a>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span>🏋️</span>
+        <span>Salle de sport</span>
+      </div>
+      <h1>{{ gym_name }}</h1>
+      <p class="hero-address">
+        <span>📍</span>
+        <span>{{ gym_address }}</span>
+      </p>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-value">{{ coaches|length }}</div>
+          <div class="hero-stat-label">Coach{{ 's' if coaches|length > 1 else '' }}</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">⭐ 4.8</div>
+          <div class="hero-stat-label">Note moyenne</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">24/7</div>
+          <div class="hero-stat-label">Réservation</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="main">
+    <div class="section-header">
+      <h2 class="section-title">Nos coaches</h2>
+      <p class="section-count">{{ coaches|length }} coach{{ 's' if coaches|length > 1 else '' }} disponible{{ 's' if coaches|length > 1 else '' }}</p>
+    </div>
+
+    {% if coaches and coaches|length > 0 %}
+    <div class="coaches-grid">
+      {% for coach in coaches %}
+      <a href="/coach/{{ coach.id }}" class="coach-card">
+        <img 
+          src="{{ coach.photo_url or '/static/default-coach.jpg' }}" 
+          alt="{{ coach.name }}" 
+          class="coach-card-image"
+          onerror="this.src='https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop'"
+        >
+        <div class="coach-card-body">
+          <div class="coach-card-header">
+            <img 
+              src="{{ coach.photo_url or '/static/default-avatar.jpg' }}" 
+              alt="" 
+              class="coach-card-avatar"
+              onerror="this.style.background='linear-gradient(135deg, #008f57, #00c77b)'"
+            >
+            <div class="coach-card-info">
+              <h3>
+                {{ coach.name }}
+                {% if coach.verified %}
+                <span class="verified-badge">✓ Vérifié</span>
+                {% endif %}
+              </h3>
+              <div class="coach-card-rating">
+                ⭐ {{ "%.1f"|format(coach.rating or 5.0) }}
+                <span>({{ coach.review_count or 0 }} avis)</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="coach-card-specialties">
+            {% for specialty in (coach.specialties or [])[:4] %}
+            <span class="specialty-tag">{{ specialty }}</span>
+            {% endfor %}
+          </div>
+          
+          <div class="coach-card-footer">
+            <div class="coach-price">
+              {{ coach.price or 40 }}€ <span>/ séance</span>
+            </div>
+            <span class="btn-book">Voir le profil →</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">😔</div>
+      <h3>Aucun coach dans cette salle</h3>
+      <p>Il n'y a pas encore de coach inscrit dans cette salle.<br>Revenez bientôt ou essayez une autre salle !</p>
+      <a href="/" class="btn-back-home">
+        <span>←</span>
+        <span>Chercher une autre salle</span>
+      </a>
+    </div>
+    {% endif %}
+  </main>
+
+</body>
+</html>

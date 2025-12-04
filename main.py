@@ -943,40 +943,86 @@ async def gyms_map_page(request: Request, address: str = "", radius_km: int = 25
     })
 
 @app.get("/gym/{gym_id}", response_class=HTMLResponse)
-async def gym_detail_page(request: Request, gym_id: str):
+async def gym_detail_page(request: Request, gym_id: str, name: Optional[str] = None, address: Optional[str] = None):
     """
     Page publique affichant une salle et tous ses coachs.
-    🆕 Utilisé par le flow: Client cherche par CP → voit salles → clique → voit coachs
-    ✨ Support des salles locales (JSON) ET Google Places (worldwide)
+    🆕 Supporte les salles locales (JSON), Google Places (worldwide), et recherche par nom
+    Paramètres:
+    - gym_id: ID de la salle (place_id Google ou ID local)
+    - name: Nom de la salle (optionnel, pour l'affichage)
+    - address: Adresse de la salle (optionnel, pour l'affichage)
     """
-    # Charger les infos de la salle (locale ou Google Places)
+    gym_name = name or "Salle de sport"
+    gym_address = address or ""
+    
+    # Essayer de charger les infos de la salle (locale ou Google Places)
     gym_info = get_gym_by_id(gym_id)
     
-    if not gym_info:
-        # Salle non trouvée
-        return templates.TemplateResponse("404.html", {
-            "request": request,
-            "message": "Cette salle n'existe pas."
-        }, status_code=404)
+    if gym_info:
+        gym_name = gym_info.get("name", gym_name)
+        gym_address = gym_info.get("address", gym_address)
     
-    # Charger les coachs de cette salle
-    coaches = get_coaches_by_gym_id(gym_id)
+    # Charger les coachs de cette salle (par ID ou par nom)
+    coaches_found = []
+    demo_users = load_demo_users()
+    search_name = gym_name.lower().strip() if gym_name else None
     
-    # Trier par : vérifiés → note → nb d'avis
+    for email, user_data in demo_users.items():
+        if user_data.get("role") == "coach" and user_data.get("profile_completed"):
+            selected_gyms_data = user_data.get("selected_gyms_data", "[]")
+            
+            try:
+                if isinstance(selected_gyms_data, str):
+                    selected_gyms = json.loads(selected_gyms_data)
+                else:
+                    selected_gyms = selected_gyms_data if isinstance(selected_gyms_data, list) else []
+            except:
+                selected_gyms = []
+            
+            gym_match = False
+            
+            for gym in selected_gyms:
+                if isinstance(gym, dict):
+                    # Match par place_id Google Places ou ID local
+                    if gym.get("place_id") == gym_id or gym.get("id") == gym_id:
+                        gym_match = True
+                        break
+                    
+                    # Match par nom de salle
+                    if search_name:
+                        gym_name_lower = gym.get("name", "").lower().strip()
+                        if search_name in gym_name_lower or gym_name_lower in search_name:
+                            gym_match = True
+                            break
+            
+            if gym_match:
+                coach_obj = {
+                    "id": email.replace("@", "_").replace(".", "_"),
+                    "email": email,
+                    "name": user_data.get("full_name", "Coach"),
+                    "photo_url": user_data.get("profile_photo_url", "/static/default-avatar.jpg"),
+                    "verified": user_data.get("verified", False),
+                    "rating": user_data.get("rating", 5.0),
+                    "review_count": user_data.get("reviews_count", 0),
+                    "specialties": user_data.get("specialties", []),
+                    "price": user_data.get("price_from", 40),
+                    "bio": user_data.get("bio", ""),
+                    "city": user_data.get("city", "")
+                }
+                coaches_found.append(coach_obj)
+    
+    # Trier par : vérifiés → note
     coaches_sorted = sorted(
-        coaches,
-        key=lambda c: (
-            -int(c.get("verified", False)),
-            -c.get("rating", 0),
-            -c.get("reviews_count", 0)
-        )
+        coaches_found,
+        key=lambda c: (-int(c.get("verified", False)), -c.get("rating", 0))
     )
     
-    return templates.TemplateResponse("gym_coaches.html", {
+    return templates.TemplateResponse("gym_detail.html", {
         "request": request,
-        "gym": gym_info,
-        "coaches": coaches_sorted,
-        "coach_count": len(coaches_sorted)
+        "gym_name": gym_name,
+        "gym_address": gym_address,
+        "gym_id": gym_id,
+        "coaches": coaches_sorted
     })
 
 @app.get("/test-coaches", response_class=HTMLResponse)

@@ -612,15 +612,11 @@
     }
 
     function selectGym(gym) {
-      selectedGym = gym;
-      gymInput.value = gym.name;
-      autocompleteDropdown.classList.remove('active');
-
-      selectedGymName.textContent = gym.name;
-      selectedGymAddress.textContent = gym.address || gym.formatted_address || '';
-      selectedGymBanner.style.display = 'flex';
-
-      loadCoachesForGym(gym);
+      const gymId = gym.place_id || gym.id || 'unknown';
+      const gymName = encodeURIComponent(gym.name || 'Salle');
+      const gymAddress = encodeURIComponent(gym.address || gym.formatted_address || '');
+      
+      window.location.href = `/gym/${gymId}?name=${gymName}&address=${gymAddress}`;
     }
 
     function clearSelectedGym() {
