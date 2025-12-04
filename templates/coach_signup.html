@@ -258,6 +258,30 @@
     color: #d1d1d1;
     font-size: 15px;
   }
+
+  /* CTA Planity style */
+  .cta-planity {
+    display: inline-block;
+    background-color: #ffffff;
+    color: #000000;
+    padding: 16px 24px;
+    border-radius: 12px;
+    font-size: 17px;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0px 4px 10px rgba(0,0,0,0.12);
+    transition: all 0.25s ease;
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .cta-planity:hover {
+    background-color: #f2f2f2;
+    transform: translateY(-2px);
+    box-shadow: 0px 6px 15px rgba(0,0,0,0.18);
+  }
 </style>
 </head>
 <body>
@@ -343,6 +367,12 @@
       <h3>50%</h3>
       <p>des réservations faites hors horaires d'ouverture</p>
     </div>
+  </div>
+
+  <div style="margin-top: 50px;">
+    <a href="/signup?role=coach" class="cta-planity">
+      Créer mon espace coach
+    </a>
   </div>
 </section>
 
