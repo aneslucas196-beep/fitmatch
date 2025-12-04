@@ -73,6 +73,217 @@ from utils import (
 from resend_service import send_otp_email_resend
 from supabase_auth_service import signup_with_supabase_email_confirmation, resend_email_confirmation, sign_in_with_email_password, get_user_role
 
+# ============================================
+# SYSTÈME DE RAPPELS PROGRAMMÉS
+# ============================================
+
+def load_scheduled_reminders() -> dict:
+    """Charge les rappels programmés depuis le fichier JSON."""
+    try:
+        if os.path.exists("scheduled_reminders.json"):
+            with open("scheduled_reminders.json", "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"⚠️ Erreur chargement rappels: {e}")
+    return {"reminders": []}
+
+def save_scheduled_reminders(data: dict):
+    """Sauvegarde les rappels programmés dans le fichier JSON."""
+    try:
+        with open("scheduled_reminders.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"❌ Erreur sauvegarde rappels: {e}")
+
+def schedule_booking_reminders(booking: dict, coach_name: str):
+    """
+    Programme les rappels pour une réservation confirmée.
+    Crée 2 rappels: 24h avant et 2h avant le RDV.
+    """
+    try:
+        booking_date = booking.get("date")
+        booking_time = booking.get("time")
+        
+        if not booking_date or not booking_time:
+            print(f"⚠️ Date/heure manquante pour programmer les rappels")
+            return
+        
+        # Parser la date et l'heure du RDV
+        booking_datetime = datetime.strptime(f"{booking_date} {booking_time}", "%Y-%m-%d %H:%M")
+        
+        # Calculer les heures d'envoi des rappels
+        reminder_24h = booking_datetime - timedelta(hours=24)
+        reminder_2h = booking_datetime - timedelta(hours=2)
+        
+        now = datetime.now()
+        
+        # Charger les rappels existants
+        reminders_data = load_scheduled_reminders()
+        
+        # Créer le rappel 24h (si le RDV est dans plus de 24h)
+        if reminder_24h > now:
+            reminders_data["reminders"].append({
+                "id": f"{booking.get('id')}_24h",
+                "booking_id": booking.get("id"),
+                "type": "24h",
+                "send_at": reminder_24h.isoformat(),
+                "client_email": booking.get("client_email"),
+                "client_name": booking.get("client_name"),
+                "coach_name": coach_name,
+                "gym_name": booking.get("gym_name"),
+                "gym_address": booking.get("gym_address", ""),
+                "date": booking_date,
+                "time": booking_time,
+                "service": booking.get("service", "Séance de coaching"),
+                "duration": booking.get("duration", "60"),
+                "price": booking.get("price", "40"),
+                "sent": False,
+                "created_at": now.isoformat()
+            })
+            print(f"📅 Rappel 24h programmé pour {reminder_24h.strftime('%d/%m/%Y %H:%M')}")
+        else:
+            print(f"⏭️ RDV dans moins de 24h, pas de rappel J-1")
+        
+        # Créer le rappel 2h (si le RDV est dans plus de 2h)
+        if reminder_2h > now:
+            reminders_data["reminders"].append({
+                "id": f"{booking.get('id')}_2h",
+                "booking_id": booking.get("id"),
+                "type": "2h",
+                "send_at": reminder_2h.isoformat(),
+                "client_email": booking.get("client_email"),
+                "client_name": booking.get("client_name"),
+                "coach_name": coach_name,
+                "gym_name": booking.get("gym_name"),
+                "gym_address": booking.get("gym_address", ""),
+                "date": booking_date,
+                "time": booking_time,
+                "service": booking.get("service", "Séance de coaching"),
+                "duration": booking.get("duration", "60"),
+                "price": booking.get("price", "40"),
+                "sent": False,
+                "created_at": now.isoformat()
+            })
+            print(f"⏰ Rappel 2h programmé pour {reminder_2h.strftime('%d/%m/%Y %H:%M')}")
+        else:
+            print(f"⏭️ RDV dans moins de 2h, pas de rappel 2h")
+        
+        # Sauvegarder
+        save_scheduled_reminders(reminders_data)
+        print(f"✅ Rappels programmés pour la réservation {booking.get('id')}")
+        
+    except Exception as e:
+        print(f"❌ Erreur programmation rappels: {e}")
+
+def cancel_booking_reminders(booking_id: str):
+    """Annule tous les rappels programmés pour une réservation."""
+    try:
+        reminders_data = load_scheduled_reminders()
+        original_count = len(reminders_data["reminders"])
+        
+        # Filtrer pour retirer les rappels de cette réservation
+        reminders_data["reminders"] = [
+            r for r in reminders_data["reminders"] 
+            if r.get("booking_id") != booking_id
+        ]
+        
+        removed_count = original_count - len(reminders_data["reminders"])
+        if removed_count > 0:
+            save_scheduled_reminders(reminders_data)
+            print(f"🗑️ {removed_count} rappel(s) annulé(s) pour la réservation {booking_id}")
+        
+    except Exception as e:
+        print(f"❌ Erreur annulation rappels: {e}")
+
+def process_due_reminders():
+    """
+    Vérifie et envoie les rappels dus.
+    Retourne le nombre de rappels envoyés.
+    """
+    from resend_service import send_reminder_email
+    
+    try:
+        reminders_data = load_scheduled_reminders()
+        now = datetime.now()
+        sent_count = 0
+        
+        for reminder in reminders_data["reminders"]:
+            if reminder.get("sent"):
+                continue
+            
+            send_at = datetime.fromisoformat(reminder.get("send_at"))
+            
+            if send_at <= now:
+                # C'est l'heure d'envoyer ce rappel
+                print(f"📧 Envoi du rappel {reminder.get('type')} pour {reminder.get('client_email')}")
+                
+                # Formater la date en français
+                try:
+                    date_obj = datetime.strptime(reminder.get("date"), "%Y-%m-%d")
+                    jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+                    mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+                    date_fr = f"{jours[date_obj.weekday()].capitalize()} {date_obj.day} {mois[date_obj.month - 1]} {date_obj.year}"
+                except:
+                    date_fr = reminder.get("date")
+                
+                result = send_reminder_email(
+                    to_email=reminder.get("client_email"),
+                    client_name=reminder.get("client_name"),
+                    coach_name=reminder.get("coach_name"),
+                    gym_name=reminder.get("gym_name"),
+                    gym_address=reminder.get("gym_address", ""),
+                    date_str=date_fr,
+                    time_str=reminder.get("time"),
+                    service_name=reminder.get("service", "Séance de coaching"),
+                    duration=f"{reminder.get('duration', '60')} min",
+                    price=f"{reminder.get('price', '40')}€",
+                    reminder_type=reminder.get("type"),
+                    booking_id=reminder.get("booking_id")
+                )
+                
+                if result.get("success"):
+                    reminder["sent"] = True
+                    reminder["sent_at"] = now.isoformat()
+                    sent_count += 1
+                    print(f"✅ Rappel {reminder.get('type')} envoyé à {reminder.get('client_email')}")
+                else:
+                    print(f"❌ Échec envoi rappel: {result.get('error')}")
+        
+        # Sauvegarder les mises à jour
+        save_scheduled_reminders(reminders_data)
+        
+        # Nettoyer les rappels envoyés vieux de plus de 7 jours
+        cleanup_old_reminders()
+        
+        return sent_count
+        
+    except Exception as e:
+        print(f"❌ Erreur traitement rappels: {e}")
+        return 0
+
+def cleanup_old_reminders():
+    """Supprime les rappels envoyés depuis plus de 7 jours."""
+    try:
+        reminders_data = load_scheduled_reminders()
+        now = datetime.now()
+        cutoff = now - timedelta(days=7)
+        
+        original_count = len(reminders_data["reminders"])
+        reminders_data["reminders"] = [
+            r for r in reminders_data["reminders"]
+            if not r.get("sent") or datetime.fromisoformat(r.get("sent_at", now.isoformat())) > cutoff
+        ]
+        
+        removed = original_count - len(reminders_data["reminders"])
+        if removed > 0:
+            save_scheduled_reminders(reminders_data)
+            print(f"🧹 {removed} ancien(s) rappel(s) nettoyé(s)")
+            
+    except Exception as e:
+        print(f"⚠️ Erreur nettoyage rappels: {e}")
+
+# ============================================
+
 app = FastAPI()
 
 # Helper function pour charger les coaches depuis JSON
@@ -4179,6 +4390,10 @@ async def respond_to_booking(request: CoachBookingRequest):
                     if not email_sent:
                         email_error_msg = email_result.get("error", "Erreur inconnue")
                     print(f"📧 Email confirmation client: {email_result}")
+                    
+                    # Programmer les rappels (24h avant + 2h avant)
+                    schedule_booking_reminders(booking_to_update, coach_name)
+                    
                 except Exception as email_error:
                     email_error_msg = str(email_error)
                     print(f"⚠️ Erreur envoi email confirmation: {email_error}")
@@ -4272,6 +4487,9 @@ async def delete_booking(request: DeleteBookingRequest):
             json.dump(demo_users, f, ensure_ascii=False, indent=2)
         
         print(f"🗑️ Réservation {request.booking_id} supprimée par {request.coach_email}")
+        
+        # Annuler les rappels programmés pour cette réservation
+        cancel_booking_reminders(request.booking_id)
         
         # Envoyer un email au client pour l'informer de l'annulation
         email_sent = False
@@ -4462,6 +4680,66 @@ async def conversation_page(request: Request, booking_id: str):
         "request": request,
         "booking_id": booking_id
     })
+
+
+# ============================================
+# SYSTÈME DE RAPPELS - ENDPOINTS & BACKGROUND TASK
+# ============================================
+
+@app.get("/api/reminders/process")
+async def api_process_reminders():
+    """
+    Endpoint pour déclencher manuellement le traitement des rappels.
+    Peut être appelé par un cron job externe ou manuellement.
+    """
+    try:
+        sent_count = process_due_reminders()
+        return JSONResponse({
+            "success": True,
+            "reminders_sent": sent_count,
+            "message": f"{sent_count} rappel(s) envoyé(s)"
+        })
+    except Exception as e:
+        print(f"❌ Erreur API process reminders: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/reminders/pending")
+async def api_get_pending_reminders():
+    """Récupère la liste des rappels en attente."""
+    try:
+        reminders_data = load_scheduled_reminders()
+        pending = [r for r in reminders_data.get("reminders", []) if not r.get("sent")]
+        return JSONResponse({
+            "success": True,
+            "pending_count": len(pending),
+            "reminders": pending
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+# Background task pour vérifier les rappels périodiquement
+import threading
+import time
+
+def reminder_checker_thread():
+    """Thread qui vérifie les rappels toutes les 5 minutes."""
+    print("🔔 Démarrage du thread de vérification des rappels...")
+    while True:
+        try:
+            sent = process_due_reminders()
+            if sent > 0:
+                print(f"🔔 {sent} rappel(s) envoyé(s) automatiquement")
+        except Exception as e:
+            print(f"⚠️ Erreur thread rappels: {e}")
+        
+        # Attendre 5 minutes avant la prochaine vérification
+        time.sleep(300)
+
+# Démarrer le thread de vérification au lancement de l'application
+reminder_thread = threading.Thread(target=reminder_checker_thread, daemon=True)
+reminder_thread.start()
+
+# ============================================
 
 
 if __name__ == "__main__":

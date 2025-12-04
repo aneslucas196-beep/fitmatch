@@ -1292,3 +1292,244 @@ Fitmatch - Votre plateforme fitness
             "mode": "error",
             "error": error_msg
         }
+
+
+def send_reminder_email(
+    to_email: str,
+    client_name: str,
+    coach_name: str,
+    gym_name: str,
+    gym_address: str,
+    date_str: str,
+    time_str: str,
+    service_name: str,
+    duration: str,
+    price: str,
+    reminder_type: str = "24h",
+    booking_id: Optional[str] = None
+) -> dict:
+    """
+    Envoie un email de rappel de rendez-vous au client
+    reminder_type: "24h" ou "2h" pour indiquer le type de rappel
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    site_url = os.environ.get('REPLIT_DEV_DOMAIN', os.environ.get('SITE_URL', 'http://localhost:5000'))
+    
+    if site_url and not site_url.startswith('http'):
+        site_url = f"https://{site_url}"
+    
+    account_url = f"{site_url}/account"
+    
+    print(f"📧 Préparation email rappel ({reminder_type}):")
+    print(f"  - Client: {client_name} ({to_email})")
+    print(f"  - Coach: {coach_name}")
+    print(f"  - Date: {date_str} à {time_str}")
+    
+    if not resend_key:
+        print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi d'email")
+        return {"success": True, "mode": "demo", "message": "Email rappel simulé"}
+    
+    first_name = client_name.split()[0] if client_name else "Client"
+    
+    if reminder_type == "24h":
+        reminder_text = "C'est demain !"
+        emoji = "📅"
+        subject_prefix = "Rappel J-1"
+        header_color = "#3b82f6"
+    else:
+        reminder_text = "C'est dans 2 heures !"
+        emoji = "⏰"
+        subject_prefix = "Rappel"
+        header_color = "#f59e0b"
+    
+    maps_url = f"https://www.google.com/maps/search/?api=1&query={gym_address.replace(' ', '+')}" if gym_address else "#"
+    
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; font-family: 'Inter', Arial, sans-serif; background-color:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:white;">
+                
+                <!-- Header avec rappel -->
+                <div style="background:{header_color}; padding:30px; text-align:center;">
+                    <div style="font-size:40px; margin-bottom:10px;">{emoji}</div>
+                    <h1 style="margin:0; color:white; font-size:24px; font-weight:700;">
+                        {reminder_text}
+                    </h1>
+                    <p style="margin:10px 0 0 0; color:rgba(255,255,255,0.9); font-size:15px;">
+                        N'oublie pas ta séance de coaching
+                    </p>
+                </div>
+                
+                <!-- Détails du rendez-vous -->
+                <div style="padding:30px;">
+                    
+                    <div style="background:#f8fafc; border-radius:12px; padding:25px; margin-bottom:25px;">
+                        <h2 style="margin:0 0 20px 0; font-size:20px; color:#111; text-align:center;">
+                            {gym_name}
+                        </h2>
+                        
+                        <div style="display:flex; justify-content:center; margin-bottom:15px;">
+                            <div style="background:white; border:2px solid {header_color}; border-radius:10px; padding:15px 25px; text-align:center;">
+                                <p style="margin:0 0 5px 0; font-size:13px; color:#666; text-transform:uppercase;">Date & Heure</p>
+                                <p style="margin:0; font-size:18px; font-weight:700; color:#111;">
+                                    {date_str}
+                                </p>
+                                <p style="margin:5px 0 0 0; font-size:22px; font-weight:700; color:{header_color};">
+                                    {time_str}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <p style="margin:0; text-align:center; font-size:15px; color:#666;">
+                            Avec <strong style="color:#111;">{coach_name}</strong>
+                        </p>
+                    </div>
+                    
+                    <!-- Infos prestation -->
+                    <div style="border-top:1px solid #eee; padding-top:20px; margin-bottom:20px;">
+                        <h3 style="margin:0 0 10px 0; font-size:13px; text-transform:uppercase; color:#888; letter-spacing:1px;">
+                            💪 Votre séance
+                        </h3>
+                        <p style="margin:0; font-size:15px; color:#333;">
+                            {service_name}<br>
+                            <span style="color:#666;">{duration} • {price}</span>
+                        </p>
+                    </div>
+                    
+                    <!-- Adresse avec Maps -->
+                    <div style="border-top:1px solid #eee; padding-top:20px; margin-bottom:25px;">
+                        <h3 style="margin:0 0 10px 0; font-size:13px; text-transform:uppercase; color:#888; letter-spacing:1px;">
+                            📍 Adresse
+                        </h3>
+                        <a href="{maps_url}" style="color:#3b82f6; text-decoration:none; font-size:15px;">
+                            {gym_address}
+                        </a>
+                    </div>
+                    
+                    <!-- Boutons -->
+                    <table width="100%" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td style="padding:5px;">
+                                <a href="{maps_url}" 
+                                   style="display:block; background:#111; color:white; padding:14px; text-decoration:none; border-radius:8px; font-weight:600; font-size:14px; text-align:center;">
+                                    🗺️ Voir sur Google Maps
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:5px;">
+                                <a href="{account_url}" 
+                                   style="display:block; background:#f5f5f5; color:#333; padding:14px; text-decoration:none; border-radius:8px; font-weight:500; font-size:14px; text-align:center;">
+                                    📋 Voir ma réservation
+                                </a>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- Conseils -->
+                <div style="padding:20px 30px; background:#f0fdf4; border-top:1px solid #bbf7d0;">
+                    <p style="margin:0; font-size:14px; color:#166534; line-height:1.6;">
+                        <strong>💡 Conseils :</strong><br>
+                        • Arrive 5 minutes en avance<br>
+                        • Prévois une tenue de sport confortable<br>
+                        • N'oublie pas ta bouteille d'eau !
+                    </p>
+                </div>
+                
+                <!-- Footer -->
+                <div style="padding:25px; background:#f9f9f9; border-top:1px solid #eee; text-align:center;">
+                    <p style="margin:0 0 10px 0; font-size:18px; font-weight:700; color:#111;">
+                        Fitmatch
+                    </p>
+                    <p style="margin:0; font-size:12px; color:#888;">
+                        Votre plateforme de coaching fitness<br>
+                        <a href="{site_url}" style="color:#3b82f6; text-decoration:none;">fitmatch.fr</a>
+                    </p>
+                </div>
+                
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+{emoji} {reminder_text}
+
+Bonjour {first_name} !
+
+N'oublie pas ta séance de coaching :
+
+📍 {gym_name}
+📅 {date_str} à {time_str}
+👤 Avec {coach_name}
+
+Prestation : {service_name}
+Durée : {duration}
+Prix : {price}
+
+Adresse : {gym_address}
+Google Maps : {maps_url}
+
+💡 Conseils :
+• Arrive 5 minutes en avance
+• Prévois une tenue de sport confortable
+• N'oublie pas ta bouteille d'eau !
+
+Voir ta réservation : {account_url}
+
+---
+Fitmatch - Votre plateforme fitness
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {resend_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": f"{emoji} {subject_prefix} : Ta séance avec {coach_name} - {time_str}",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        print(f"📤 Envoi email rappel ({reminder_type}) via Resend...")
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            email_id = response_data.get('id', 'N/A')
+            print(f"✅ Email rappel ({reminder_type}) envoyé à {to_email} (ID: {email_id})")
+            return {
+                "success": True,
+                "mode": "resend",
+                "email_id": email_id,
+                "message": f"Email rappel {reminder_type} envoyé"
+            }
+        else:
+            error_msg = f"Erreur Resend (Status {response.status_code}): {response.text}"
+            print(f"❌ {error_msg}")
+            return {
+                "success": False,
+                "mode": "resend",
+                "error": error_msg
+            }
+            
+    except Exception as e:
+        error_msg = f"Erreur envoi email rappel: {e}"
+        print(f"❌ {error_msg}")
+        return {
+            "success": False,
+            "mode": "error",
+            "error": error_msg
+        }

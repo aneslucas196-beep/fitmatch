@@ -66,6 +66,19 @@ Preferred communication style: Simple, everyday language.
     - **Email Types**:
         - Coach notification: Sent when client makes a booking request
         - Client confirmation: Sent ONLY when coach accepts the booking
+        - Client reminders: Automatic reminders 24h and 2h before the session
+    - **Automatic Reminder System** (NEW):
+        - When coach confirms a booking, 2 reminders are scheduled:
+            1. **24h reminder**: Sent 24 hours before the session ("C'est demain !")
+            2. **2h reminder**: Sent 2 hours before the session ("C'est dans 2 heures !")
+        - Smart scheduling: If session is in less than 24h, only 2h reminder is created
+        - Reminders include: gym name, date/time, coach name, Google Maps link, practical tips
+        - Background thread checks for due reminders every 5 minutes
+        - Reminders are cancelled when booking is deleted/cancelled
+        - Storage: scheduled_reminders.json
+        - API Endpoints:
+            - GET /api/reminders/process - Manually trigger reminder processing
+            - GET /api/reminders/pending - View pending reminders
     - **Coach Lookup**: 3-level robust coach identification:
         1. Direct email match (coach_email parameter)
         2. Slug decoding (email_with_underscores → real@email.com)
