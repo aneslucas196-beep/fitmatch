@@ -1,595 +1,528 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - FitMatch</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            min-height: 100vh;
-            background: #fff;
-        }
-        
-        .login-container {
-            display: flex;
-            min-height: 100vh;
-        }
-        
-        .login-left {
-            flex: 1;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 60px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .login-left::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
-            animation: pulse 15s ease-in-out infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.3; }
-        }
-        
-        .login-left-content {
-            position: relative;
-            z-index: 2;
-            text-align: center;
-            color: white;
-            max-width: 400px;
-        }
-        
-        .login-left h2 {
-            font-size: 42px;
-            font-weight: 800;
-            margin-bottom: 20px;
-            line-height: 1.2;
-            text-shadow: 0 2px 20px rgba(0,0,0,0.2);
-        }
-        
-        .login-left p {
-            font-size: 18px;
-            opacity: 0.9;
-            line-height: 1.6;
-            font-weight: 400;
-        }
-        
-        .feature-list {
-            margin-top: 40px;
-            text-align: left;
-        }
-        
-        .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            font-size: 16px;
-            opacity: 0.95;
-        }
-        
-        .feature-icon {
-            width: 44px;
-            height: 44px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            backdrop-filter: blur(10px);
-        }
-        
-        .login-right {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 60px;
-            background: #fff;
-        }
-        
-        .login-form-container {
-            width: 100%;
-            max-width: 420px;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 50px;
-        }
-        
-        .logo img {
-            height: 45px;
-            width: auto;
-        }
-        
-        .logo-text {
-            font-size: 28px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .login-title {
-            font-size: 32px;
-            font-weight: 700;
-            color: #1a1a2e;
-            margin-bottom: 10px;
-        }
-        
-        .login-subtitle {
-            font-size: 16px;
-            color: #6b7280;
-            margin-bottom: 40px;
-        }
-        
-        .alert {
-            padding: 16px 20px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            font-size: 14px;
-            animation: slideIn 0.3s ease;
-        }
-        
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .alert-error {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #dc2626;
-        }
-        
-        .alert-info {
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            color: #2563eb;
-        }
-        
-        .alert-success {
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            color: #16a34a;
-        }
-        
-        .alert-warning {
-            background: #fffbeb;
-            border: 1px solid #fde68a;
-            color: #d97706;
-        }
-        
-        .alert-icon {
-            font-size: 18px;
-            flex-shrink: 0;
-            margin-top: 1px;
-        }
-        
-        .alert-content {
-            flex: 1;
-        }
-        
-        .alert-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-        
-        .form-group {
-            margin-bottom: 24px;
-        }
-        
-        .form-label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-        }
-        
-        .form-input {
-            width: 100%;
-            padding: 16px 18px;
-            font-size: 16px;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            transition: all 0.2s ease;
-            background: #f9fafb;
-            font-family: inherit;
-        }
-        
-        .form-input:focus {
-            outline: none;
-            border-color: #667eea;
-            background: #fff;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-        }
-        
-        .form-input::placeholder {
-            color: #9ca3af;
-        }
-        
-        .password-container {
-            position: relative;
-        }
-        
-        .password-toggle {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #6b7280;
-            font-size: 18px;
-            padding: 4px;
-            transition: color 0.2s;
-        }
-        
-        .password-toggle:hover {
-            color: #374151;
-        }
-        
-        .forgot-password {
-            display: block;
-            text-align: right;
-            margin-top: 8px;
-            font-size: 14px;
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-        
-        .forgot-password:hover {
-            color: #764ba2;
-        }
-        
-        .btn-submit {
-            width: 100%;
-            padding: 18px;
-            font-size: 16px;
-            font-weight: 600;
-            color: white;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: inherit;
-            margin-top: 8px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn-submit::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s ease;
-        }
-        
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-submit:hover::before {
-            left: 100%;
-        }
-        
-        .btn-submit:active {
-            transform: translateY(0);
-        }
-        
-        .divider {
-            display: flex;
-            align-items: center;
-            margin: 32px 0;
-            gap: 16px;
-        }
-        
-        .divider-line {
-            flex: 1;
-            height: 1px;
-            background: #e5e7eb;
-        }
-        
-        .divider-text {
-            font-size: 13px;
-            color: #9ca3af;
-            font-weight: 500;
-        }
-        
-        .signup-link {
-            text-align: center;
-            font-size: 15px;
-            color: #6b7280;
-        }
-        
-        .signup-link a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.2s;
-        }
-        
-        .signup-link a:hover {
-            color: #764ba2;
-        }
-        
-        .back-home {
-            position: absolute;
-            top: 30px;
-            left: 30px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: rgba(255,255,255,0.9);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-            z-index: 10;
-        }
-        
-        .back-home:hover {
-            color: white;
-            transform: translateX(-3px);
-        }
-        
-        .resend-form {
-            display: inline;
-        }
-        
-        .resend-btn {
-            background: #d97706;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 8px;
-        }
-        
-        .resend-btn:hover {
-            background: #b45309;
-        }
-        
-        @media (max-width: 1024px) {
-            .login-left {
-                display: none;
-            }
-            
-            .login-right {
-                padding: 40px 24px;
-            }
-            
-            .login-form-container {
-                max-width: 100%;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .login-title {
-                font-size: 26px;
-            }
-            
-            .form-input {
-                padding: 14px 16px;
-            }
-            
-            .btn-submit {
-                padding: 16px;
-            }
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connexion – FitMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:#fafafa;
+    color:#0b0f14;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    min-height: 100vh;
+  }
+  a{color:inherit;text-decoration:none}
+  a:visited{color:inherit}
+  
+  :root{
+    --accent:#008f57;
+    --accent-light:#00C77B;
+    --accent-dark:#006d42;
+    --muted:#606971;
+    --line:#e8edf2;
+    --card:#ffffff;
+    --danger:#c40812;
+  }
+
+  /* Navbar */
+  nav {
+    background: #fff;
+    padding: 16px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--accent);
+  }
+  
+  .nav-logo img {
+    height: 36px;
+    width: auto;
+  }
+  
+  nav a {
+    font-size: 15px;
+    font-weight: 500;
+    color: #0b0f14;
+    transition: color 0.2s;
+  }
+  nav a:hover {
+    color: var(--accent);
+  }
+  
+  .nav-links {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  
+  .nav-right {
+    margin-left: auto;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  nav a.cta {
+    background: var(--danger);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  nav a.cta:hover {
+    background: #9a0610;
+    color: white;
+  }
+  
+  nav a.cta-outline {
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  nav a.cta-outline:hover {
+    background: var(--accent);
+    color: white;
+  }
+
+  /* Page login */
+  .fm-login {
+    padding: clamp(48px, 6vw, 84px) 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 70px);
+  }
+  
+  .fm-wrap {
+    max-width: 460px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .fm-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 40px;
+    border: 1px solid var(--line);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+
+  .fm-head {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  
+  .fm-head h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: #0b0f14;
+  }
+  
+  .fm-head .fm-brand {
+    color: var(--accent);
+  }
+  
+  .fm-head p {
+    color: var(--muted);
+    margin: 0;
+    font-size: 15px;
+  }
+
+  /* Alertes */
+  .fm-alert {
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+  }
+  
+  .fm-alert-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  
+  .fm-alert-content {
+    flex: 1;
+  }
+  
+  .fm-alert-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  
+  .fm-alert-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+  }
+  
+  .fm-alert-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #2563eb;
+  }
+  
+  .fm-alert-success {
+    background: rgba(0,199,123,.08);
+    border: 1px solid rgba(0,199,123,.3);
+    color: #006d42;
+  }
+  
+  .fm-alert-warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #d97706;
+  }
+
+  /* Formulaire */
+  .fm-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .fm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .fm-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+  }
+  
+  .fm-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-family: inherit;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    background: #f9fafb;
+    transition: all 0.2s ease;
+  }
+  
+  .fm-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(0,143,87,0.1);
+  }
+  
+  .fm-input::placeholder {
+    color: #9ca3af;
+  }
+  
+  .fm-password-wrap {
+    position: relative;
+  }
+  
+  .fm-password-wrap .fm-input {
+    padding-right: 48px;
+  }
+  
+  .fm-password-toggle {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+  }
+  
+  .fm-password-toggle:hover {
+    color: var(--accent);
+  }
+
+  .fm-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: inherit;
+    color: white;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+  }
+  
+  .fm-btn:hover {
+    background: var(--accent-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0,143,87,0.25);
+  }
+  
+  .fm-btn:active {
+    transform: translateY(0);
+  }
+
+  /* Divider */
+  .fm-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 28px 0;
+  }
+  
+  .fm-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  
+  .fm-divider-text {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* Lien inscription */
+  .fm-signup-link {
+    text-align: center;
+  }
+  
+  .fm-signup-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.2s;
+  }
+  
+  .fm-signup-link a:hover {
+    color: var(--accent-dark);
+    gap: 12px;
+  }
+
+  /* Bouton resend */
+  .fm-resend-btn {
+    background: #d97706;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 10px;
+  }
+  
+  .fm-resend-btn:hover {
+    background: #b45309;
+  }
+
+  /* Footer simple */
+  .fm-footer {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  @media (max-width: 640px) {
+    nav {
+      padding: 14px 16px;
+      gap: 16px;
+    }
+    
+    .nav-links {
+      display: none;
+    }
+    
+    .fm-card {
+      padding: 28px 24px;
+    }
+    
+    .fm-head h1 {
+      font-size: 24px;
+    }
+  }
+</style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-left">
-            <a href="/" class="back-home">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                </svg>
-                Retour à l'accueil
-            </a>
-            
-            <div class="login-left-content">
-                <h2>Bienvenue sur FitMatch</h2>
-                <p>La plateforme qui connecte les coachs sportifs avec leurs clients, partout en France.</p>
-                
-                <div class="feature-list">
-                    <div class="feature-item">
-                        <div class="feature-icon">📅</div>
-                        <span>Réservation en ligne 24h/24</span>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon">🏋️</div>
-                        <span>+500 coachs certifiés</span>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon">📍</div>
-                        <span>Dans toutes les salles de France</span>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon">⭐</div>
-                        <span>Avis vérifiés et transparents</span>
-                    </div>
-                </div>
-            </div>
+
+<!-- Navbar -->
+<nav>
+  <a href="/" class="nav-logo">
+    <img src="/static/logo.png" alt="FitMatch" onerror="this.style.display='none'">
+    <span>FitMatch</span>
+  </a>
+  
+  <div class="nav-links">
+    <a href="/">Accueil</a>
+    <a href="/partner">Devenir partenaire</a>
+  </div>
+  
+  <div class="nav-right">
+    <a href="/coach-portal" class="cta-outline">Espace Coach</a>
+    <a href="/signup" class="cta">S'inscrire</a>
+  </div>
+</nav>
+
+<section class="fm-login">
+  <div class="fm-wrap">
+    <div class="fm-card">
+      <header class="fm-head">
+        <h1>Connexion à <span class="fm-brand">FitMatch</span></h1>
+        <p>Entrez vos identifiants pour accéder à votre espace</p>
+      </header>
+
+      {% if error %}
+      <div class="fm-alert fm-alert-error">
+        <span class="fm-alert-icon">⚠️</span>
+        <div class="fm-alert-content">
+          <div class="fm-alert-title">Erreur de connexion</div>
+          <div>{{ error }}</div>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if message == 'confirmation_email' %}
+      <div class="fm-alert fm-alert-info">
+        <span class="fm-alert-icon">📧</span>
+        <div class="fm-alert-content">
+          <div class="fm-alert-title">Email envoyé</div>
+          <div>Un email de confirmation a été envoyé. Vérifiez votre boîte mail.</div>
+        </div>
+      </div>
+      {% elif message == 'inscription_reussie' %}
+      <div class="fm-alert fm-alert-success">
+        <span class="fm-alert-icon">✅</span>
+        <div class="fm-alert-content">
+          <div class="fm-alert-title">Inscription réussie !</div>
+          <div>Vous pouvez maintenant vous connecter.</div>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if show_resend %}
+      <div class="fm-alert fm-alert-warning">
+        <span class="fm-alert-icon">⏳</span>
+        <div class="fm-alert-content">
+          <div class="fm-alert-title">Email non confirmé</div>
+          <div>Vérifiez votre boîte mail ou renvoyez l'email de confirmation.</div>
+          <form action="/auth/resend-confirmation" method="POST" style="display:inline">
+            <input type="hidden" name="email" value="{{ email }}">
+            <button type="submit" class="fm-resend-btn">Renvoyer le mail</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      <form action="/login" method="POST" class="fm-form">
+        <div class="fm-field">
+          <label for="email" class="fm-label">Adresse email</label>
+          <input 
+            type="email" 
+            name="email" 
+            id="email" 
+            required 
+            value="{{ email or '' }}"
+            class="fm-input"
+            placeholder="vous@exemple.com"
+            autocomplete="email"
+          >
         </div>
         
-        <div class="login-right">
-            <div class="login-form-container">
-                <div class="logo">
-                    <img src="/static/logo.png" alt="FitMatch" onerror="this.style.display='none'">
-                    <span class="logo-text">FitMatch</span>
-                </div>
-                
-                <h1 class="login-title">Connexion</h1>
-                <p class="login-subtitle">Entrez vos identifiants pour accéder à votre espace</p>
-                
-                {% if error %}
-                <div class="alert alert-error">
-                    <span class="alert-icon">⚠️</span>
-                    <div class="alert-content">
-                        <div class="alert-title">Erreur de connexion</div>
-                        <div>{{ error }}</div>
-                    </div>
-                </div>
-                {% endif %}
-                
-                {% if message == 'confirmation_email' %}
-                <div class="alert alert-info">
-                    <span class="alert-icon">📧</span>
-                    <div class="alert-content">
-                        <div class="alert-title">Email envoyé</div>
-                        <div>Un email de confirmation a été envoyé. Vérifiez votre boîte mail.</div>
-                    </div>
-                </div>
-                {% elif message == 'inscription_reussie' %}
-                <div class="alert alert-success">
-                    <span class="alert-icon">✅</span>
-                    <div class="alert-content">
-                        <div class="alert-title">Inscription réussie !</div>
-                        <div>Vous pouvez maintenant vous connecter.</div>
-                    </div>
-                </div>
-                {% endif %}
-                
-                {% if show_resend %}
-                <div class="alert alert-warning">
-                    <span class="alert-icon">⏳</span>
-                    <div class="alert-content">
-                        <div class="alert-title">Email non confirmé</div>
-                        <div>Vérifiez votre boîte mail ou renvoyez l'email de confirmation.</div>
-                        <form action="/auth/resend-confirmation" method="POST" class="resend-form">
-                            <input type="hidden" name="email" value="{{ email }}">
-                            <button type="submit" class="resend-btn">Renvoyer le mail</button>
-                        </form>
-                    </div>
-                </div>
-                {% endif %}
-                
-                <form action="/login" method="POST">
-                    <div class="form-group">
-                        <label for="email" class="form-label">Adresse email</label>
-                        <input 
-                            type="email" 
-                            name="email" 
-                            id="email" 
-                            required 
-                            value="{{ email or '' }}"
-                            class="form-input"
-                            placeholder="vous@exemple.com"
-                            autocomplete="email"
-                        >
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="password" class="form-label">Mot de passe</label>
-                        <div class="password-container">
-                            <input 
-                                type="password" 
-                                name="password" 
-                                id="password" 
-                                required
-                                class="form-input"
-                                placeholder="Entrez votre mot de passe"
-                                autocomplete="current-password"
-                            >
-                            <button type="button" class="password-toggle" onclick="togglePassword()">
-                                <svg id="eye-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn-submit">
-                        Se connecter
-                    </button>
-                </form>
-                
-                <div class="divider">
-                    <div class="divider-line"></div>
-                    <span class="divider-text">Nouveau sur FitMatch ?</span>
-                    <div class="divider-line"></div>
-                </div>
-                
-                <p class="signup-link">
-                    <a href="/signup">Créer un compte gratuitement</a>
-                </p>
-            </div>
+        <div class="fm-field">
+          <label for="password" class="fm-label">Mot de passe</label>
+          <div class="fm-password-wrap">
+            <input 
+              type="password" 
+              name="password" 
+              id="password" 
+              required
+              class="fm-input"
+              placeholder="Votre mot de passe"
+              autocomplete="current-password"
+            >
+            <button type="button" class="fm-password-toggle" onclick="togglePassword()" aria-label="Afficher le mot de passe">
+              <svg id="eye-icon" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
         </div>
+        
+        <button type="submit" class="fm-btn">Se connecter</button>
+      </form>
+
+      <div class="fm-divider">
+        <div class="fm-divider-line"></div>
+        <span class="fm-divider-text">Nouveau sur FitMatch ?</span>
+        <div class="fm-divider-line"></div>
+      </div>
+
+      <div class="fm-signup-link">
+        <a href="/signup">
+          Créer un compte gratuitement
+          <span>→</span>
+        </a>
+      </div>
     </div>
     
-    <script>
-        function togglePassword() {
-            const passwordInput = document.getElementById('password');
-            const eyeIcon = document.getElementById('eye-icon');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                eyeIcon.innerHTML = `
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
-                `;
-            } else {
-                passwordInput.type = 'password';
-                eyeIcon.innerHTML = `
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                `;
-            }
-        }
-        
-        document.querySelectorAll('.form-input').forEach(input => {
-            input.addEventListener('focus', function() {
-                this.parentElement.classList.add('focused');
-            });
-            input.addEventListener('blur', function() {
-                this.parentElement.classList.remove('focused');
-            });
-        });
-    </script>
+    <div class="fm-footer">
+      © 2024 FitMatch. Tous droits réservés.
+    </div>
+  </div>
+</section>
+
+<script>
+function togglePassword() {
+  const input = document.getElementById('password');
+  const icon = document.getElementById('eye-icon');
+  
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.innerHTML = `
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+    `;
+  } else {
+    input.type = 'password';
+    icon.innerHTML = `
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+    `;
+  }
+}
+</script>
 </body>
 </html>
