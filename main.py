@@ -3497,6 +3497,95 @@ async def get_gym_coaches_by_id(gym_id: str):
             "gym_id": gym_id
         }
 
+@app.get("/api/gym/{gym_id}/coaches")  
+async def get_coaches_for_gym(gym_id: str, gym_name: Optional[str] = None):
+    """
+    🆕 Récupère tous les coaches d'une salle par ID ou par nom.
+    Supporte les place_id Google Places ET les IDs locaux.
+    Paramètres:
+    - gym_id: ID de la salle (place_id Google ou ID local)
+    - gym_name: Nom de la salle (optionnel, pour recherche par nom)
+    """
+    try:
+        print(f"🔍 Recherche coaches - gym_id: {gym_id}, gym_name: {gym_name}")
+        
+        coaches_found = []
+        demo_users = load_demo_users()
+        
+        # Normaliser le nom de salle pour comparaison
+        search_name = gym_name.lower().strip() if gym_name else None
+        
+        for email, user_data in demo_users.items():
+            if user_data.get("role") == "coach" and user_data.get("profile_completed"):
+                selected_gyms_data = user_data.get("selected_gyms_data", "[]")
+                
+                try:
+                    if isinstance(selected_gyms_data, str):
+                        selected_gyms = json.loads(selected_gyms_data)
+                    else:
+                        selected_gyms = selected_gyms_data if isinstance(selected_gyms_data, list) else []
+                except:
+                    selected_gyms = []
+                
+                gym_match = False
+                
+                for gym in selected_gyms:
+                    if isinstance(gym, dict):
+                        # Match par place_id Google Places
+                        if gym.get("place_id") == gym_id or gym.get("id") == gym_id:
+                            gym_match = True
+                            break
+                        
+                        # Match par nom de salle (insensible à la casse)
+                        if search_name:
+                            gym_name_lower = gym.get("name", "").lower().strip()
+                            if search_name in gym_name_lower or gym_name_lower in search_name:
+                                gym_match = True
+                                break
+                
+                if gym_match:
+                    coach_obj = {
+                        "id": email.replace("@", "_").replace(".", "_"),
+                        "email": email,
+                        "name": user_data.get("full_name", "Coach"),
+                        "photo_url": user_data.get("profile_photo_url", "/static/default-avatar.jpg"),
+                        "verified": user_data.get("verified", False),
+                        "rating": user_data.get("rating", 5.0),
+                        "review_count": user_data.get("reviews_count", 0),
+                        "specialties": user_data.get("specialties", []),
+                        "price": user_data.get("price_from", 40),
+                        "hourly_rate": user_data.get("price_from", 40),
+                        "bio": user_data.get("bio", ""),
+                        "city": user_data.get("city", "")
+                    }
+                    coaches_found.append(coach_obj)
+        
+        # Trier par vérifiés, puis par note
+        coaches_sorted = sorted(
+            coaches_found,
+            key=lambda c: (-int(c.get("verified", False)), -c.get("rating", 0))
+        )
+        
+        print(f"📊 Résultat: {len(coaches_sorted)} coaches trouvés pour {gym_name or gym_id}")
+        
+        return {
+            "success": True,
+            "coaches": coaches_sorted,
+            "count": len(coaches_sorted),
+            "gym_id": gym_id,
+            "gym_name": gym_name
+        }
+        
+    except Exception as e:
+        print(f"❌ Erreur récupération coaches: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "message": "Erreur lors de la récupération des coaches",
+            "coaches": []
+        }
+
 # ======================================
 # ENDPOINTS API SALLES - BASE MONDIALE 
 # ======================================
