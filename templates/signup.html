@@ -1,115 +1,497 @@
-{% extends "base.html" %}
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inscription – FitMatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:#fafafa;
+    color:#0b0f14;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    min-height: 100vh;
+  }
+  a{color:inherit;text-decoration:none}
+  a:visited{color:inherit}
+  
+  :root{
+    --accent:#008f57;
+    --accent-light:#00C77B;
+    --accent-dark:#006d42;
+    --muted:#606971;
+    --line:#e8edf2;
+    --card:#ffffff;
+    --danger:#c40812;
+  }
 
-{% block title %}Inscription - Coach Fitness{% endblock %}
+  /* Navbar */
+  nav {
+    background: #fff;
+    padding: 16px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--accent);
+  }
+  
+  .nav-logo img {
+    height: 36px;
+    width: auto;
+  }
+  
+  nav a {
+    font-size: 15px;
+    font-weight: 500;
+    color: #0b0f14;
+    transition: color 0.2s;
+  }
+  nav a:hover {
+    color: var(--accent);
+  }
+  
+  .nav-links {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  
+  .nav-right {
+    margin-left: auto;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  
+  nav a.cta {
+    background: var(--danger);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  nav a.cta:hover {
+    background: #9a0610;
+    color: white;
+  }
+  
+  nav a.cta-outline {
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  nav a.cta-outline:hover {
+    background: var(--accent);
+    color: white;
+  }
 
-{% block content %}
-<div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
-    <h1 class="text-2xl font-bold text-center mb-6">Créer un compte</h1>
+  /* Page signup */
+  .fm-signup {
+    padding: clamp(48px, 6vw, 84px) 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 70px);
+  }
+  
+  .fm-wrap {
+    max-width: 460px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .fm-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 40px;
+    border: 1px solid var(--line);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+
+  .fm-head {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  
+  .fm-head h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: #0b0f14;
+  }
+  
+  .fm-head .fm-brand {
+    color: var(--accent);
+  }
+  
+  .fm-head p {
+    color: var(--muted);
+    margin: 0;
+    font-size: 15px;
+  }
+
+  /* Alertes */
+  .fm-alert {
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 14px;
+  }
+  
+  .fm-alert-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  
+  .fm-alert-content {
+    flex: 1;
+  }
+  
+  .fm-alert-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  
+  .fm-alert-error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+  }
+  
+  .fm-alert-success {
+    background: rgba(0,199,123,.08);
+    border: 1px solid rgba(0,199,123,.3);
+    color: #006d42;
+  }
+
+  /* Formulaire */
+  .fm-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .fm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .fm-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+  }
+  
+  .fm-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-family: inherit;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    background: #f9fafb;
+    transition: all 0.2s ease;
+  }
+  
+  .fm-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(0,143,87,0.1);
+  }
+  
+  .fm-input::placeholder {
+    color: #9ca3af;
+  }
+  
+  .fm-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  
+  .fm-password-wrap {
+    position: relative;
+  }
+  
+  .fm-password-wrap .fm-input {
+    padding-right: 48px;
+  }
+  
+  .fm-password-toggle {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+  }
+  
+  .fm-password-toggle:hover {
+    color: var(--accent);
+  }
+
+  .fm-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: inherit;
+    color: white;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+  }
+  
+  .fm-btn:hover {
+    background: var(--accent-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0,143,87,0.25);
+  }
+  
+  .fm-btn:active {
+    transform: translateY(0);
+  }
+
+  /* Divider */
+  .fm-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 28px 0;
+  }
+  
+  .fm-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  
+  .fm-divider-text {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* Lien connexion */
+  .fm-login-link {
+    text-align: center;
+  }
+  
+  .fm-login-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.2s;
+  }
+  
+  .fm-login-link a:hover {
+    color: var(--accent-dark);
+    gap: 12px;
+  }
+
+  /* Footer simple */
+  .fm-footer {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  @media (max-width: 640px) {
+    nav {
+      padding: 14px 16px;
+      gap: 16px;
+    }
     
-    {% if error %}
-      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
-        <strong class="font-bold">Erreur :</strong>
-        <span class="block sm:inline">{{ error }}</span>
-      </div>
-    {% endif %}
-
-    {% if message %}
-      <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4" role="alert">
-        <span class="block sm:inline">{{ message }}</span>
-      </div>
-    {% endif %}
-
-    <form action="/signup" method="POST" class="space-y-4">
-        <div>
-            <label for="full_name" class="block text-sm font-medium text-gray-700 mb-2">Nom complet</label>
-            <input type="text" name="full_name" id="full_name" required value="{{ full_name or '' }}"
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        
-        <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input type="email" name="email" id="email" required value="{{ email or '' }}"
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        
-        <div>
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Mot de passe</label>
-            <input type="password" name="password" id="password" required
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <p class="text-xs text-gray-500 mt-1">Minimum 8 caractères, 1 lettre et 1 chiffre</p>
-        </div>
-        
-        <div>
-            <label for="gender" class="block text-sm font-medium text-gray-700 mb-2">Genre</label>
-            <select name="gender" id="gender" required
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Sélectionnez votre genre</option>
-                <option value="homme" {{ 'selected' if gender == 'homme' else '' }}>Homme</option>
-                <option value="femme" {{ 'selected' if gender == 'femme' else '' }}>Femme</option>
-            </select>
-        </div>
-        
-        <div>
-            <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Type de compte</label>
-            <select name="role" id="role" required
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    onchange="toggleCoachPreference()">
-                <option value="client" {{ 'selected' if role == 'client' else '' }}>Client</option>
-                <option value="coach" {{ 'selected' if role == 'coach' else '' }}>Coach</option>
-            </select>
-        </div>
-        
-        <div>
-            <label for="country" class="block text-sm font-medium text-gray-700 mb-2">Pays</label>
-            <select name="country" id="country" required
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Sélectionnez votre pays</option>
-                {% for country in countries %}
-                <option value="{{ country.code }}" {{ 'selected' if country_code == country.code else '' }}>
-                    {{ country.name }}
-                </option>
-                {% endfor %}
-            </select>
-        </div>
-        
-        <div id="coach-preference" class="{% if role != 'client' %}hidden{% endif %}">
-            <label for="coach_gender_preference" class="block text-sm font-medium text-gray-700 mb-2">Préférence de genre du coach</label>
-            <select name="coach_gender_preference" id="coach_gender_preference"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="aucune" {{ 'selected' if coach_gender_preference == 'aucune' else '' }}>Aucune préférence</option>
-                <option value="homme" {{ 'selected' if coach_gender_preference == 'homme' else '' }}>Coach homme</option>
-                <option value="femme" {{ 'selected' if coach_gender_preference == 'femme' else '' }}>Coach femme</option>
-            </select>
-        </div>
-        
-        
-        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition duration-200">
-            S'inscrire
-        </button>
-    </form>
+    .nav-links {
+      display: none;
+    }
     
-    <p class="text-center mt-4 text-sm text-gray-600">
-        Déjà un compte ? 
-        <a href="/login" class="text-blue-600 hover:text-blue-800">Se connecter</a>
-    </p>
-</div>
+    .fm-card {
+      padding: 28px 24px;
+    }
+    
+    .fm-head h1 {
+      font-size: 24px;
+    }
+  }
+</style>
+</head>
+<body>
 
+<!-- Navbar -->
+<nav>
+  <a href="/" class="nav-logo">
+    <img src="/static/logo.png" alt="FitMatch" onerror="this.style.display='none'">
+    <span>FitMatch</span>
+  </a>
+  
+  <div class="nav-links">
+    <a href="/">Accueil</a>
+    <a href="/partner">Devenir partenaire</a>
+  </div>
+  
+  <div class="nav-right">
+    <a href="/coach-portal" class="cta-outline">Espace Coach</a>
+    <a href="/login" class="cta">Se connecter</a>
+  </div>
+</nav>
+
+<section class="fm-signup">
+  <div class="fm-wrap">
+    <div class="fm-card">
+      <header class="fm-head">
+        <h1>Rejoindre <span class="fm-brand">FitMatch</span></h1>
+        <p>Créez votre compte coach en quelques secondes</p>
+      </header>
+
+      {% if error %}
+      <div class="fm-alert fm-alert-error">
+        <span class="fm-alert-icon">⚠️</span>
+        <div class="fm-alert-content">
+          <div class="fm-alert-title">Erreur</div>
+          <div>{{ error }}</div>
+        </div>
+      </div>
+      {% endif %}
+      
+      {% if message %}
+      <div class="fm-alert fm-alert-success">
+        <span class="fm-alert-icon">✅</span>
+        <div class="fm-alert-content">
+          <div>{{ message }}</div>
+        </div>
+      </div>
+      {% endif %}
+
+      <form action="/signup" method="POST" class="fm-form">
+        <input type="hidden" name="role" value="{{ role or 'coach' }}">
+        
+        <div class="fm-field">
+          <label for="full_name" class="fm-label">Nom complet</label>
+          <input 
+            type="text" 
+            name="full_name" 
+            id="full_name" 
+            required 
+            value="{{ full_name or '' }}"
+            class="fm-input"
+            placeholder="Votre nom et prénom"
+            autocomplete="name"
+          >
+        </div>
+        
+        <div class="fm-field">
+          <label for="email" class="fm-label">Adresse email</label>
+          <input 
+            type="email" 
+            name="email" 
+            id="email" 
+            required 
+            value="{{ email or '' }}"
+            class="fm-input"
+            placeholder="vous@exemple.com"
+            autocomplete="email"
+          >
+        </div>
+        
+        <div class="fm-field">
+          <label for="password" class="fm-label">Mot de passe</label>
+          <div class="fm-password-wrap">
+            <input 
+              type="password" 
+              name="password" 
+              id="password" 
+              required
+              class="fm-input"
+              placeholder="Créez un mot de passe"
+              autocomplete="new-password"
+            >
+            <button type="button" class="fm-password-toggle" onclick="togglePassword()" aria-label="Afficher le mot de passe">
+              <svg id="eye-icon" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+          <p class="fm-hint">Minimum 8 caractères, 1 lettre et 1 chiffre</p>
+        </div>
+        
+        <button type="submit" class="fm-btn">Créer mon compte</button>
+      </form>
+
+      <div class="fm-divider">
+        <div class="fm-divider-line"></div>
+        <span class="fm-divider-text">Déjà inscrit ?</span>
+        <div class="fm-divider-line"></div>
+      </div>
+
+      <div class="fm-login-link">
+        <a href="/login">
+          Se connecter
+          <span>→</span>
+        </a>
+      </div>
+    </div>
+    
+    <div class="fm-footer">
+      © 2024 FitMatch. Tous droits réservés.
+    </div>
+  </div>
+</section>
 
 <script>
-function toggleCoachPreference() {
-    const roleSelect = document.getElementById('role');
-    const coachPreferenceDiv = document.getElementById('coach-preference');
-    
-    if (roleSelect.value === 'client') {
-        coachPreferenceDiv.classList.remove('hidden');
-    } else {
-        coachPreferenceDiv.classList.add('hidden');
-    }
+function togglePassword() {
+  const input = document.getElementById('password');
+  const icon = document.getElementById('eye-icon');
+  
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.innerHTML = `
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+    `;
+  } else {
+    input.type = 'password';
+    icon.innerHTML = `
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+    `;
+  }
 }
-
-// Initialiser l'état au chargement de la page
-document.addEventListener('DOMContentLoaded', function() {
-    toggleCoachPreference();
-});
 </script>
-{% endblock %}
+</body>
+</html>
