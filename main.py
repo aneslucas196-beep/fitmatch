@@ -1865,6 +1865,124 @@ async def logout():
     response.delete_cookie("session_token")
     return response
 
+# Espace Coach - Page de connexion/inscription dédiée aux coaches
+@app.get("/coach-login", response_class=HTMLResponse)
+async def coach_login_page(request: Request, tab: Optional[str] = None):
+    """Page de connexion/inscription pour les coaches."""
+    return templates.TemplateResponse("coach_login.html", {
+        "request": request,
+        "tab": tab
+    })
+
+@app.post("/coach-login")
+async def coach_login_submit(
+    request: Request,
+    action: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    name: Optional[str] = Form(None)
+):
+    """Traitement de la connexion/inscription coach."""
+    email = email.lower().strip()
+    
+    if action == "signup":
+        # Inscription coach
+        if not name or len(name.strip()) < 2:
+            return templates.TemplateResponse("coach_login.html", {
+                "request": request,
+                "error": "Le nom est requis (minimum 2 caractères).",
+                "tab": "signup"
+            }, status_code=400)
+        
+        if len(password) < 8:
+            return templates.TemplateResponse("coach_login.html", {
+                "request": request,
+                "error": "Le mot de passe doit contenir au moins 8 caractères.",
+                "tab": "signup"
+            }, status_code=400)
+        
+        # Vérifier si l'email existe déjà
+        existing_user = get_demo_user(email)
+        if existing_user:
+            return templates.TemplateResponse("coach_login.html", {
+                "request": request,
+                "error": "Un compte existe déjà avec cet email.",
+                "tab": "signup"
+            }, status_code=400)
+        
+        # Créer le compte coach
+        new_coach = {
+            "email": email,
+            "password": password,
+            "full_name": name.strip(),
+            "role": "coach",
+            "verified": True,
+            "profile_completed": False
+        }
+        save_demo_user(email, new_coach)
+        print(f"✅ Nouveau coach inscrit: {email}")
+        
+        # Connexion automatique après inscription
+        import hashlib
+        unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+        response = RedirectResponse(url="/coach/profile-setup", status_code=303)
+        response.set_cookie(
+            key="session_token",
+            value=unique_token,
+            httponly=True,
+            secure=False,
+            samesite="lax"
+        )
+        return response
+    
+    else:
+        # Connexion coach
+        user_found = None
+        
+        # Vérifier les comptes demo hardcodés
+        if email == "coach@demo.com" and password == "demopass123":
+            user_found = {"email": email, "role": "coach", "full_name": "Coach Demo"}
+        
+        # Vérifier les utilisateurs inscrits
+        if not user_found:
+            cached_user = get_demo_user(email)
+            if cached_user:
+                stored_password = cached_user.get("password", "").strip()
+                if stored_password and stored_password == password.strip():
+                    # Vérifier que c'est bien un coach
+                    if cached_user.get("role") == "coach":
+                        user_found = cached_user
+                    else:
+                        return templates.TemplateResponse("coach_login.html", {
+                            "request": request,
+                            "error": "Ce compte n'est pas un compte coach. Utilisez la connexion client.",
+                            "tab": "login"
+                        }, status_code=401)
+        
+        if user_found:
+            import hashlib
+            unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+            
+            # Vérifier si le profil est complété
+            profile_completed = user_found.get("profile_completed", False)
+            redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+            
+            response = RedirectResponse(url=redirect_url, status_code=303)
+            response.set_cookie(
+                key="session_token",
+                value=unique_token,
+                httponly=True,
+                secure=False,
+                samesite="lax"
+            )
+            return response
+        else:
+            return templates.TemplateResponse("coach_login.html", {
+                "request": request,
+                "error": "Email ou mot de passe incorrect.",
+                "tab": "login"
+            }, status_code=401)
+
 # Routes protégées - Espace Coach
 @app.get("/coach/portal", response_class=HTMLResponse)
 async def coach_portal(request: Request, user = Depends(require_coach_role)):

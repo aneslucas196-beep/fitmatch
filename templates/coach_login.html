@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connexion – FitMatch</title>
+<title>Espace Coach – FitMatch</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{box-sizing:border-box}
@@ -78,26 +78,26 @@
   }
   
   nav a.cta {
-    background: var(--danger);
+    background: var(--accent);
     color: white;
     padding: 10px 20px;
     border-radius: 8px;
     font-weight: 600;
   }
   nav a.cta:hover {
-    background: #9a0610;
+    background: var(--accent-dark);
     color: white;
   }
   
   nav a.cta-outline {
-    border: 2px solid var(--accent);
-    color: var(--accent);
+    border: 2px solid #0b0f14;
+    color: #0b0f14;
     padding: 8px 18px;
     border-radius: 8px;
     font-weight: 600;
   }
   nav a.cta-outline:hover {
-    background: var(--accent);
+    background: #0b0f14;
     color: white;
   }
 
@@ -127,6 +127,18 @@
   .fm-head {
     text-align: center;
     margin-bottom: 32px;
+  }
+  
+  .fm-head .fm-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 28px;
   }
   
   .fm-head h1 {
@@ -177,22 +189,47 @@
     color: #dc2626;
   }
   
-  .fm-alert-info {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #2563eb;
-  }
-  
   .fm-alert-success {
     background: rgba(0,199,123,.08);
     border: 1px solid rgba(0,199,123,.3);
     color: #006d42;
   }
+
+  /* Tabs */
+  .fm-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 28px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid var(--line);
+  }
   
-  .fm-alert-warning {
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    color: #d97706;
+  .fm-tab {
+    flex: 1;
+    padding: 14px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    background: #f9fafb;
+    color: var(--muted);
+    border: none;
+    transition: all 0.2s;
+  }
+  
+  .fm-tab:first-child {
+    border-right: 1px solid var(--line);
+  }
+  
+  .fm-tab.active {
+    background: var(--accent);
+    color: white;
+  }
+  
+  .fm-tab:not(.active):hover {
+    background: #f0f0f0;
+    color: #0b0f14;
   }
 
   /* Formulaire */
@@ -200,6 +237,10 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+  }
+  
+  .fm-form-hidden {
+    display: none;
   }
   
   .fm-field {
@@ -289,63 +330,32 @@
     transform: translateY(0);
   }
 
-  /* Divider */
-  .fm-divider {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin: 28px 0;
-  }
-  
-  .fm-divider-line {
-    flex: 1;
-    height: 1px;
-    background: var(--line);
-  }
-  
-  .fm-divider-text {
-    font-size: 13px;
-    color: var(--muted);
-    font-weight: 500;
-  }
-
-  /* Lien inscription */
-  .fm-signup-link {
+  /* Client link */
+  .fm-client-link {
     text-align: center;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
   }
   
-  .fm-signup-link a {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--accent);
+  .fm-client-link p {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 8px;
+  }
+  
+  .fm-client-link a {
+    color: #0b0f14;
     font-weight: 600;
     font-size: 15px;
-    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: color 0.2s;
   }
   
-  .fm-signup-link a:hover {
-    color: var(--accent-dark);
-    gap: 12px;
-  }
-
-  /* Bouton resend */
-  .fm-resend-btn {
-    background: #d97706;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 0.2s;
-    margin-top: 10px;
-  }
-  
-  .fm-resend-btn:hover {
-    background: #b45309;
+  .fm-client-link a:hover {
+    color: var(--accent);
   }
 
   /* Footer simple */
@@ -373,6 +383,15 @@
     .fm-head h1 {
       font-size: 24px;
     }
+    
+    .fm-tabs {
+      flex-direction: column;
+    }
+    
+    .fm-tab:first-child {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
   }
 </style>
 </head>
@@ -387,12 +406,12 @@
   
   <div class="nav-links">
     <a href="/">Accueil</a>
-    <a href="/partner">Devenir partenaire</a>
+    <a href="/coach-signup">Devenir coach</a>
   </div>
   
   <div class="nav-right">
-    <a href="/coach-login" class="cta-outline">Espace Coach</a>
-    <a href="/signup" class="cta">S'inscrire</a>
+    <a href="/login" class="cta-outline">Je suis client</a>
+    <a href="/" class="cta">Accueil</a>
   </div>
 </nav>
 
@@ -400,81 +419,68 @@
   <div class="fm-wrap">
     <div class="fm-card">
       <header class="fm-head">
-        <h1>Connexion à <span class="fm-brand">FitMatch</span></h1>
-        <p>Entrez vos identifiants pour accéder à votre espace</p>
+        <div class="fm-icon">🏋️</div>
+        <h1>Espace <span class="fm-brand">Coach</span></h1>
+        <p>Connectez-vous ou créez votre compte coach</p>
       </header>
 
       {% if error %}
       <div class="fm-alert fm-alert-error">
         <span class="fm-alert-icon">⚠️</span>
         <div class="fm-alert-content">
-          <div class="fm-alert-title">Erreur de connexion</div>
+          <div class="fm-alert-title">Erreur</div>
           <div>{{ error }}</div>
         </div>
       </div>
       {% endif %}
       
-      {% if message == 'confirmation_email' %}
-      <div class="fm-alert fm-alert-info">
-        <span class="fm-alert-icon">📧</span>
-        <div class="fm-alert-content">
-          <div class="fm-alert-title">Email envoyé</div>
-          <div>Un email de confirmation a été envoyé. Vérifiez votre boîte mail.</div>
-        </div>
-      </div>
-      {% elif message == 'inscription_reussie' %}
+      {% if success %}
       <div class="fm-alert fm-alert-success">
         <span class="fm-alert-icon">✅</span>
         <div class="fm-alert-content">
-          <div class="fm-alert-title">Inscription réussie !</div>
-          <div>Vous pouvez maintenant vous connecter.</div>
-        </div>
-      </div>
-      {% endif %}
-      
-      {% if show_resend %}
-      <div class="fm-alert fm-alert-warning">
-        <span class="fm-alert-icon">⏳</span>
-        <div class="fm-alert-content">
-          <div class="fm-alert-title">Email non confirmé</div>
-          <div>Vérifiez votre boîte mail ou renvoyez l'email de confirmation.</div>
-          <form action="/auth/resend-confirmation" method="POST" style="display:inline">
-            <input type="hidden" name="email" value="{{ email }}">
-            <button type="submit" class="fm-resend-btn">Renvoyer le mail</button>
-          </form>
+          <div class="fm-alert-title">Succès</div>
+          <div>{{ success }}</div>
         </div>
       </div>
       {% endif %}
 
-      <form action="/login" method="POST" class="fm-form">
+      <!-- Tabs -->
+      <div class="fm-tabs">
+        <button type="button" class="fm-tab active" id="tab-login" onclick="showTab('login')">Se connecter</button>
+        <button type="button" class="fm-tab" id="tab-signup" onclick="showTab('signup')">S'inscrire</button>
+      </div>
+
+      <!-- Login Form -->
+      <form action="/coach-login" method="POST" class="fm-form" id="form-login">
+        <input type="hidden" name="action" value="login">
+        
         <div class="fm-field">
-          <label for="email" class="fm-label">Adresse email</label>
+          <label for="login-email" class="fm-label">Adresse email</label>
           <input 
             type="email" 
             name="email" 
-            id="email" 
+            id="login-email" 
             required 
-            value="{{ email or '' }}"
             class="fm-input"
-            placeholder="vous@exemple.com"
+            placeholder="coach@exemple.com"
             autocomplete="email"
           >
         </div>
         
         <div class="fm-field">
-          <label for="password" class="fm-label">Mot de passe</label>
+          <label for="login-password" class="fm-label">Mot de passe</label>
           <div class="fm-password-wrap">
             <input 
               type="password" 
               name="password" 
-              id="password" 
+              id="login-password" 
               required
               class="fm-input"
               placeholder="Votre mot de passe"
               autocomplete="current-password"
             >
-            <button type="button" class="fm-password-toggle" onclick="togglePassword()" aria-label="Afficher le mot de passe">
-              <svg id="eye-icon" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button type="button" class="fm-password-toggle" onclick="togglePassword('login-password', 'login-eye')" aria-label="Afficher le mot de passe">
+              <svg id="login-eye" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
               </svg>
@@ -485,15 +491,65 @@
         <button type="submit" class="fm-btn">Se connecter</button>
       </form>
 
-      <div class="fm-divider">
-        <div class="fm-divider-line"></div>
-        <span class="fm-divider-text">Nouveau sur FitMatch ?</span>
-        <div class="fm-divider-line"></div>
-      </div>
+      <!-- Signup Form -->
+      <form action="/coach-login" method="POST" class="fm-form fm-form-hidden" id="form-signup">
+        <input type="hidden" name="action" value="signup">
+        
+        <div class="fm-field">
+          <label for="signup-name" class="fm-label">Nom complet</label>
+          <input 
+            type="text" 
+            name="name" 
+            id="signup-name" 
+            required 
+            class="fm-input"
+            placeholder="Votre nom"
+            autocomplete="name"
+          >
+        </div>
+        
+        <div class="fm-field">
+          <label for="signup-email" class="fm-label">Adresse email</label>
+          <input 
+            type="email" 
+            name="email" 
+            id="signup-email" 
+            required 
+            class="fm-input"
+            placeholder="coach@exemple.com"
+            autocomplete="email"
+          >
+        </div>
+        
+        <div class="fm-field">
+          <label for="signup-password" class="fm-label">Mot de passe</label>
+          <div class="fm-password-wrap">
+            <input 
+              type="password" 
+              name="password" 
+              id="signup-password" 
+              required
+              minlength="8"
+              class="fm-input"
+              placeholder="Minimum 8 caractères"
+              autocomplete="new-password"
+            >
+            <button type="button" class="fm-password-toggle" onclick="togglePassword('signup-password', 'signup-eye')" aria-label="Afficher le mot de passe">
+              <svg id="signup-eye" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <button type="submit" class="fm-btn">Créer mon compte coach</button>
+      </form>
 
-      <div class="fm-signup-link">
-        <a href="/signup">
-          Créer un compte gratuitement
+      <div class="fm-client-link">
+        <p>Vous êtes un client ?</p>
+        <a href="/login">
+          Connectez-vous ici
           <span>→</span>
         </a>
       </div>
@@ -506,9 +562,28 @@
 </section>
 
 <script>
-function togglePassword() {
-  const input = document.getElementById('password');
-  const icon = document.getElementById('eye-icon');
+function showTab(tab) {
+  const tabLogin = document.getElementById('tab-login');
+  const tabSignup = document.getElementById('tab-signup');
+  const formLogin = document.getElementById('form-login');
+  const formSignup = document.getElementById('form-signup');
+  
+  if (tab === 'login') {
+    tabLogin.classList.add('active');
+    tabSignup.classList.remove('active');
+    formLogin.classList.remove('fm-form-hidden');
+    formSignup.classList.add('fm-form-hidden');
+  } else {
+    tabLogin.classList.remove('active');
+    tabSignup.classList.add('active');
+    formLogin.classList.add('fm-form-hidden');
+    formSignup.classList.remove('fm-form-hidden');
+  }
+}
+
+function togglePassword(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
   
   if (input.type === 'password') {
     input.type = 'text';
@@ -522,6 +597,12 @@ function togglePassword() {
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
     `;
   }
+}
+
+// Check URL for tab parameter
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('tab') === 'signup') {
+  showTab('signup');
 }
 </script>
 </body>
