@@ -120,7 +120,15 @@ Preferred communication style: Simple, everyday language.
 - **Google Places API**: For worldwide gym search, autocomplete, and coach onboarding.
 - **Geopy**: Geographic location services using Nominatim geocoder.
 - **Supabase**: Planned integration for user authentication and data storage.
-- **Resend**: Transactional email service for sending OTP verification codes (configured with API key, replaces demo mode)
+- **Resend**: Transactional email service for sending OTP verification codes and password reset emails (configured with API key, replaces demo mode)
+
+### Password Reset System
+- **Forgot Password Link**: Added to login page with modal popup for email input
+- **Reset Email**: FitMatch-branded email template with reset link (expires after 1 hour)
+- **Reset Password Page**: Clean interface at `/reset-password?token=...` with password field and validation
+- **Token Security**: Secure random tokens with expiration, deleted after single use
+- **Auto-Login**: After password change, user is automatically logged in with session cookie
+- **Success Notification**: 2-second toast notification appears on destination page
 
 ### Frontend Libraries
 - **Tailwind CSS**: Delivered via CDN for UI development.

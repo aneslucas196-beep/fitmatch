@@ -1997,51 +1997,62 @@ async def reset_password_page(request: Request, token: str = ""):
 @app.post("/api/reset-password")
 async def api_reset_password(request: Request):
     """Réinitialise le mot de passe et connecte automatiquement l'utilisateur."""
+    from fastapi.responses import JSONResponse
+    import hashlib
+    
     try:
         data = await request.json()
         token = data.get("token", "")
         new_password = data.get("password", "")
         
         if not token or token not in password_reset_tokens:
-            return {"success": False, "error": "Lien invalide ou expiré."}
+            return JSONResponse({"success": False, "error": "Lien invalide ou expiré."})
         
         token_data = password_reset_tokens[token]
         
         if datetime.now() > token_data["expiry"]:
             del password_reset_tokens[token]
-            return {"success": False, "error": "Ce lien a expiré."}
+            return JSONResponse({"success": False, "error": "Ce lien a expiré."})
         
         if len(new_password) < 8:
-            return {"success": False, "error": "Le mot de passe doit contenir au moins 8 caractères."}
+            return JSONResponse({"success": False, "error": "Le mot de passe doit contenir au moins 8 caractères."})
         
         email = token_data["email"]
         user = get_demo_user(email)
         
         if not user:
             del password_reset_tokens[token]
-            return {"success": False, "error": "Utilisateur non trouvé."}
+            return JSONResponse({"success": False, "error": "Utilisateur non trouvé."})
         
         user["password"] = new_password
         save_demo_user(email, user)
         
         del password_reset_tokens[token]
         
-        import hashlib
         session_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
         role = user.get("role", "client")
         
         print(f"✅ Mot de passe réinitialisé pour {email}")
         
-        return {
+        response = JSONResponse({
             "success": True, 
             "email": email,
-            "session_token": session_token,
             "role": role
-        }
+        })
+        
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=False,
+            samesite="lax"
+        )
+        
+        return response
         
     except Exception as e:
         print(f"❌ Erreur reset-password: {e}")
-        return {"success": False, "error": "Une erreur est survenue."}
+        return JSONResponse({"success": False, "error": "Une erreur est survenue."})
 
 # Espace Coach - Page de connexion/inscription dédiée aux coaches
 @app.get("/coach-login", response_class=HTMLResponse)
