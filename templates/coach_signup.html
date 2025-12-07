@@ -201,62 +201,81 @@
   .fm-step__content ul{ margin:0; padding-left:16px; color:#2a3138; }
   .fm-step__content ul li{ margin:4px 0; }
 
-  /* === Section Dark Stats === */
-  .fitmatch-dark {
-    background-color: #0d0d0d;
-    color: #ffffff;
+  /* === Section Stats Blanches === */
+  .fitmatch-stats-section {
+    background-color: #ffffff;
     text-align: center;
-    padding: 100px 20px;
+    padding: 80px 20px;
     font-family: 'Poppins', sans-serif;
   }
 
-  .fitmatch-title {
-    font-size: 32px;
+  .fitmatch-stats-title {
+    font-size: 28px;
     font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 20px;
+    color: #0b0f14;
+    margin-bottom: 12px;
   }
 
-  .fitmatch-subtitle {
-    color: #a0a0a0;
-    font-size: 17px;
-    max-width: 700px;
-    margin: 0 auto 60px;
+  .fitmatch-stats-subtitle {
+    color: #5e6670;
+    font-size: 16px;
+    max-width: 600px;
+    margin: 0 auto 50px;
     line-height: 1.6;
   }
 
-  .fitmatch-stats {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 40px;
+  .fitmatch-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    max-width: 1000px;
+    margin: 0 auto;
   }
 
-  .fitmatch-box {
-    flex: 1 1 250px;
-    background: #1a1a1a;
-    border: 1px solid #222;
-    border-radius: 10px;
-    padding: 40px 25px;
-    box-shadow: 0 0 20px rgba(0, 255, 100, 0.08);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  @media (max-width: 900px) {
+    .fitmatch-stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
-  .fitmatch-box:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0 30px rgba(0, 255, 150, 0.15);
+  @media (max-width: 500px) {
+    .fitmatch-stats-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
-  .fitmatch-box h3 {
-    color: #00ff7f;
-    font-size: 30px;
+  .fitmatch-stat-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 32px 20px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .fitmatch-stat-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .fitmatch-stat-box h3 {
+    color: #00C77B;
+    font-size: 32px;
     font-weight: 700;
-    margin-bottom: 10px;
+    margin: 0 0 8px;
   }
 
-  .fitmatch-box p {
-    color: #d1d1d1;
-    font-size: 15px;
+  .fitmatch-stat-box h4 {
+    color: #0b0f14;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+
+  .fitmatch-stat-box p {
+    color: #64748b;
+    font-size: 13px;
+    margin: 0;
+    line-height: 1.4;
   }
 
   /* CTA Planity style */
@@ -348,24 +367,32 @@
   </div>
 </section>
 
-<section class="fitmatch-dark">
-  <h2 class="fitmatch-title">La plateforme n°1 pour gérer ton activité de coaching sportif</h2>
-  <p class="fitmatch-subtitle">
-    50 000 coachs font confiance à la référence du coaching, utilisée par plus de 14 millions d'utilisateurs.
+<section class="fitmatch-stats-section">
+  <h2 class="fitmatch-stats-title">Des résultats concrets pour les coachs</h2>
+  <p class="fitmatch-stats-subtitle">
+    FitMatch transforme la façon dont les coachs gèrent leur activité au quotidien.
   </p>
 
-  <div class="fitmatch-stats">
-    <div class="fitmatch-box">
-      <h3>+14 Millions</h3>
-      <p>d'utilisateurs</p>
+  <div class="fitmatch-stats-grid">
+    <div class="fitmatch-stat-box">
+      <h3>72%</h3>
+      <h4>Taux de clients qui reviennent</h4>
+      <p>des clients réservent à nouveau avec le même coach</p>
     </div>
-    <div class="fitmatch-box">
-      <h3>+50 000</h3>
-      <p>coachs inscrits</p>
+    <div class="fitmatch-stat-box">
+      <h3>2h30</h3>
+      <h4>Temps gagné par les coachs</h4>
+      <p>de gestion économisées chaque jour grâce à FitMatch</p>
     </div>
-    <div class="fitmatch-box">
-      <h3>50%</h3>
-      <p>des réservations faites hors horaires d'ouverture</p>
+    <div class="fitmatch-stat-box">
+      <h3>+21</h3>
+      <h4>Nouveaux clients / mois</h4>
+      <p>nouveaux clients en moyenne par coach chaque mois</p>
+    </div>
+    <div class="fitmatch-stat-box">
+      <h3>35%</h3>
+      <h4>Taux d'annulation réduit</h4>
+      <p>d'annulations en moins grâce aux rappels automatiques</p>
     </div>
   </div>
 
