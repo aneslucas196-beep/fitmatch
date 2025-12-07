@@ -27,6 +27,22 @@
 <!-- Spacer pour le header fixe -->
 <div class="h-16"></div>
 
+<!-- Toast notification mot de passe modifié -->
+<div id="passwordToast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium hidden">
+    Votre mot de passe a été modifié
+</div>
+
+<script>
+if (new URLSearchParams(window.location.search).get('password_changed')) {
+    const toast = document.getElementById('passwordToast');
+    toast.classList.remove('hidden');
+    setTimeout(() => {
+        toast.classList.add('hidden');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }, 2000);
+}
+</script>
+
 <div class="min-h-screen pb-16">
     
     <!-- En-tête -->

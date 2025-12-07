@@ -348,6 +348,126 @@
     background: #b45309;
   }
 
+  .fm-forgot-link {
+    font-size: 13px;
+    color: var(--accent);
+    text-decoration: none;
+    margin-top: 4px;
+    display: inline-block;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .fm-forgot-link:hover {
+    color: var(--accent-dark);
+    text-decoration: underline;
+  }
+
+  .fm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  .fm-modal-overlay.active {
+    display: flex;
+  }
+  .fm-modal {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: modalSlideIn 0.25s ease;
+  }
+  @keyframes modalSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .fm-modal-header {
+    margin-bottom: 20px;
+  }
+  .fm-modal-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: #0b0f14;
+  }
+  .fm-modal-header p {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0;
+  }
+  .fm-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: color 0.2s;
+  }
+  .fm-modal-close:hover {
+    color: #0b0f14;
+  }
+  .fm-modal-content {
+    position: relative;
+  }
+  .fm-modal-footer {
+    margin-top: 16px;
+    text-align: center;
+  }
+  .fm-modal-footer a {
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .fm-modal-footer a:hover {
+    color: #0b0f14;
+  }
+  .fm-success-message {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .fm-success-message .fm-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+  .fm-success-message h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: var(--accent);
+  }
+  .fm-success-message p {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  .fm-toast-alert {
+    animation: fadeInOut 2.5s ease-in-out forwards;
+  }
+  
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(-10px); }
+    10% { opacity: 1; transform: translateY(0); }
+    80% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+  }
+
   /* Footer simple */
   .fm-footer {
     text-align: center;
@@ -403,6 +523,16 @@
         <h1>Connexion à <span class="fm-brand">FitMatch</span></h1>
         <p>Entrez vos identifiants pour accéder à votre espace</p>
       </header>
+
+      {% if password_changed %}
+      <div class="fm-alert fm-alert-success fm-toast-alert" id="passwordChangedToast">
+        <span class="fm-alert-icon">✅</span>
+        <div class="fm-alert-content">
+          <div class="fm-alert-title">Votre mot de passe a été modifié</div>
+          <div>Vous pouvez maintenant vous connecter.</div>
+        </div>
+      </div>
+      {% endif %}
 
       {% if error %}
       <div class="fm-alert fm-alert-error">
@@ -480,6 +610,7 @@
               </svg>
             </button>
           </div>
+          <a href="#" class="fm-forgot-link" onclick="showForgotModal(); return false;">Mot de passe oublié ?</a>
         </div>
         
         <button type="submit" class="fm-btn">Se connecter</button>
@@ -505,7 +636,101 @@
   </div>
 </section>
 
+<div class="fm-modal-overlay" id="forgotModal">
+  <div class="fm-modal">
+    <div class="fm-modal-content">
+      <button class="fm-modal-close" onclick="closeForgotModal()">&times;</button>
+      
+      <div id="forgotFormView">
+        <div class="fm-modal-header">
+          <h2>Mot de passe oublié ?</h2>
+          <p>Entrez votre adresse email pour recevoir un lien de réinitialisation.</p>
+        </div>
+        
+        <form id="forgotPasswordForm" class="fm-form">
+          <div class="fm-field">
+            <label for="forgot-email" class="fm-label">Adresse email</label>
+            <input 
+              type="email" 
+              id="forgot-email" 
+              required
+              class="fm-input"
+              placeholder="vous@exemple.com"
+            >
+          </div>
+          
+          <button type="submit" class="fm-btn" id="forgotSubmitBtn">
+            Réinitialiser mon mot de passe
+          </button>
+        </form>
+        
+        <div class="fm-modal-footer">
+          <a onclick="closeForgotModal()">Retour à la connexion</a>
+        </div>
+      </div>
+      
+      <div id="forgotSuccessView" style="display:none;">
+        <div class="fm-success-message">
+          <div class="fm-icon">📧</div>
+          <h3>Email envoyé !</h3>
+          <p>Si un compte existe avec cette adresse, vous recevrez un lien de réinitialisation.</p>
+        </div>
+        <button class="fm-btn" onclick="closeForgotModal()" style="margin-top:20px;">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+function showForgotModal() {
+  document.getElementById('forgotModal').classList.add('active');
+  document.getElementById('forgotFormView').style.display = 'block';
+  document.getElementById('forgotSuccessView').style.display = 'none';
+  document.getElementById('forgot-email').value = document.getElementById('email').value || '';
+  document.getElementById('forgot-email').focus();
+}
+
+function closeForgotModal() {
+  document.getElementById('forgotModal').classList.remove('active');
+}
+
+document.getElementById('forgotModal').addEventListener('click', function(e) {
+  if (e.target === this) closeForgotModal();
+});
+
+document.getElementById('forgotPasswordForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const email = document.getElementById('forgot-email').value;
+  const btn = document.getElementById('forgotSubmitBtn');
+  
+  btn.disabled = true;
+  btn.textContent = 'Envoi en cours...';
+  
+  try {
+    const res = await fetch('/api/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    
+    document.getElementById('forgotFormView').style.display = 'none';
+    document.getElementById('forgotSuccessView').style.display = 'block';
+  } catch(err) {
+    alert('Une erreur est survenue. Veuillez réessayer.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Réinitialiser mon mot de passe';
+  }
+});
+
+if (document.getElementById('passwordChangedToast')) {
+  setTimeout(() => {
+    const toast = document.getElementById('passwordChangedToast');
+    if (toast) toast.style.display = 'none';
+    window.history.replaceState({}, document.title, '/login');
+  }, 2500);
+}
+
 function togglePassword() {
   const input = document.getElementById('password');
   const icon = document.getElementById('eye-icon');

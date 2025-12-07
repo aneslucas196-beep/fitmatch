@@ -1689,11 +1689,12 @@ async def api_login(request: Request):
         raise HTTPException(status_code=500, detail="Erreur serveur")
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_form(request: Request, message: Optional[str] = None):
+async def login_form(request: Request, message: Optional[str] = None, password_changed: Optional[str] = None):
     """Formulaire de connexion."""
     return templates.TemplateResponse("login.html", {
         "request": request,
-        "message": message
+        "message": message,
+        "password_changed": password_changed
     })
 
 @app.post("/login")
@@ -1864,6 +1865,183 @@ async def logout():
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("session_token")
     return response
+
+# === PASSWORD RESET ===
+import secrets
+from datetime import datetime, timedelta
+
+password_reset_tokens = {}
+
+@app.post("/api/forgot-password")
+async def api_forgot_password(request: Request):
+    """Envoie un email de réinitialisation de mot de passe."""
+    try:
+        data = await request.json()
+        email = data.get("email", "").lower().strip()
+        
+        if not email:
+            return {"success": True}
+        
+        user = get_demo_user(email)
+        if not user:
+            return {"success": True}
+        
+        token = secrets.token_urlsafe(32)
+        expiry = datetime.now() + timedelta(hours=1)
+        password_reset_tokens[token] = {
+            "email": email,
+            "expiry": expiry
+        }
+        
+        host = request.headers.get("host", "localhost:5000")
+        protocol = "https" if "replit" in host else "http"
+        reset_link = f"{protocol}://{host}/reset-password?token={token}"
+        
+        sender_email = os.environ.get("SENDER_EMAIL", "noreply@fitmatch.fr")
+        resend_api_key = os.environ.get("RESEND_API_KEY")
+        
+        if resend_api_key:
+            import resend
+            resend.api_key = resend_api_key
+            
+            html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:500px;background:#ffffff;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:32px 32px 24px;text-align:center;border-bottom:1px solid #eee;">
+              <span style="font-size:28px;font-weight:700;color:#0b0f14;">Fit<span style="color:#008f57;">Match</span></span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;font-size:16px;color:#333;">Bonjour,</p>
+              <p style="margin:0 0 24px;font-size:16px;color:#333;line-height:1.5;">
+                Cliquez sur ce lien pour réinitialiser votre mot de passe FitMatch pour le compte <a href="mailto:{email}" style="color:#008f57;text-decoration:none;">{email}</a>.
+              </p>
+              <p style="margin:0 0 24px;">
+                <a href="{reset_link}" style="display:inline-block;background:#008f57;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Réinitialiser mon mot de passe</a>
+              </p>
+              <p style="margin:0 0 8px;font-size:14px;color:#666;">Ou copiez ce lien dans votre navigateur :</p>
+              <p style="margin:0 0 24px;font-size:13px;color:#008f57;word-break:break-all;">
+                <a href="{reset_link}" style="color:#008f57;">{reset_link}</a>
+              </p>
+              <p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.5;">
+                Si vous n'avez pas demandé à réinitialiser votre mot de passe, vous pouvez ignorer cet e-mail.
+              </p>
+              <p style="margin:24px 0 0;font-size:14px;color:#333;">Merci,</p>
+              <p style="margin:4px 0 0;font-size:14px;color:#333;font-weight:600;">Votre équipe FitMatch</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 32px;background:#f9f9f9;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#999;">© 2024 FitMatch. Tous droits réservés.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+            
+            try:
+                resend.Emails.send({
+                    "from": f"FitMatch <{sender_email}>",
+                    "to": [email],
+                    "subject": "Réinitialisez votre mot de passe pour FitMatch",
+                    "html": html_content
+                })
+                print(f"✅ Email de réinitialisation envoyé à {email}")
+            except Exception as e:
+                print(f"❌ Erreur envoi email: {e}")
+        else:
+            print(f"⚠️ Resend non configuré - Token: {token}")
+        
+        return {"success": True}
+        
+    except Exception as e:
+        print(f"❌ Erreur forgot-password: {e}")
+        return {"success": True}
+
+@app.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(request: Request, token: str = ""):
+    """Page de réinitialisation du mot de passe."""
+    error = None
+    
+    if not token:
+        error = "Lien invalide ou expiré."
+    elif token not in password_reset_tokens:
+        error = "Lien invalide ou expiré."
+    else:
+        token_data = password_reset_tokens[token]
+        if datetime.now() > token_data["expiry"]:
+            del password_reset_tokens[token]
+            error = "Ce lien a expiré. Veuillez demander un nouveau lien."
+    
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request,
+        "token": token,
+        "error": error
+    })
+
+@app.post("/api/reset-password")
+async def api_reset_password(request: Request):
+    """Réinitialise le mot de passe et connecte automatiquement l'utilisateur."""
+    try:
+        data = await request.json()
+        token = data.get("token", "")
+        new_password = data.get("password", "")
+        
+        if not token or token not in password_reset_tokens:
+            return {"success": False, "error": "Lien invalide ou expiré."}
+        
+        token_data = password_reset_tokens[token]
+        
+        if datetime.now() > token_data["expiry"]:
+            del password_reset_tokens[token]
+            return {"success": False, "error": "Ce lien a expiré."}
+        
+        if len(new_password) < 8:
+            return {"success": False, "error": "Le mot de passe doit contenir au moins 8 caractères."}
+        
+        email = token_data["email"]
+        user = get_demo_user(email)
+        
+        if not user:
+            del password_reset_tokens[token]
+            return {"success": False, "error": "Utilisateur non trouvé."}
+        
+        user["password"] = new_password
+        save_demo_user(email, user)
+        
+        del password_reset_tokens[token]
+        
+        import hashlib
+        session_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+        role = user.get("role", "client")
+        
+        print(f"✅ Mot de passe réinitialisé pour {email}")
+        
+        return {
+            "success": True, 
+            "email": email,
+            "session_token": session_token,
+            "role": role
+        }
+        
+    except Exception as e:
+        print(f"❌ Erreur reset-password: {e}")
+        return {"success": False, "error": "Une erreur est survenue."}
 
 # Espace Coach - Page de connexion/inscription dédiée aux coaches
 @app.get("/coach-login", response_class=HTMLResponse)
