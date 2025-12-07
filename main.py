@@ -1897,12 +1897,17 @@ async def api_forgot_password(request: Request):
         protocol = "https" if "replit" in host else "http"
         reset_link = f"{protocol}://{host}/reset-password?token={token}"
         
-        sender_email = os.environ.get("SENDER_EMAIL", "noreply@fitmatch.fr")
+        sender_email = os.environ.get("SENDER_EMAIL", "")
         resend_api_key = os.environ.get("RESEND_API_KEY")
         
-        if resend_api_key:
+        if resend_api_key and sender_email:
             import resend
             resend.api_key = resend_api_key
+            
+            if "<" in sender_email:
+                from_field = sender_email
+            else:
+                from_field = f"FitMatch <{sender_email}>"
             
             html_content = f"""
 <!DOCTYPE html>
@@ -1956,7 +1961,7 @@ async def api_forgot_password(request: Request):
             
             try:
                 resend.Emails.send({
-                    "from": f"FitMatch <{sender_email}>",
+                    "from": from_field,
                     "to": [email],
                     "subject": "Réinitialisez votre mot de passe pour FitMatch",
                     "html": html_content
@@ -1965,7 +1970,7 @@ async def api_forgot_password(request: Request):
             except Exception as e:
                 print(f"❌ Erreur envoi email: {e}")
         else:
-            print(f"⚠️ Resend non configuré - Token: {token}")
+            print(f"⚠️ Resend non configuré ou SENDER_EMAIL manquant")
         
         return {"success": True}
         
