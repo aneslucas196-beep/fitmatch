@@ -12,13 +12,13 @@
         body { margin: 0; padding: 0; }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+<body class="min-h-screen bg-slate-100">
 
-<!-- Header Premium Minimaliste -->
-<header class="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
-    <div class="max-w-7xl mx-auto px-6 py-4">
+<!-- Header Simple -->
+<header class="fixed inset-x-0 top-0 z-50 bg-white border-b border-slate-200">
+    <div class="max-w-6xl mx-auto flex items-center px-6 py-4">
         <a href="/" class="inline-flex items-center">
-            <span class="text-2xl font-bold text-white tracking-tight">Fit<span class="text-emerald-400">Match</span></span>
+            <span class="text-2xl font-semibold tracking-tight text-slate-900">Fit<span class="text-emerald-500">Match</span></span>
         </a>
     </div>
 </header>
@@ -26,29 +26,28 @@
 <!-- Spacer pour le header fixe -->
 <div class="h-16"></div>
 
-<!-- Dashboard Coach Moderne -->
-<div class="min-h-screen">
+<!-- Dashboard Coach -->
+<div class="min-h-screen pb-16">
     
-    <!-- Bannière motivante en haut -->
-    <div class="relative overflow-hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600">
-        <div class="absolute inset-0 bg-black/20"></div>
-        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.03\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
-        <div class="relative px-6 py-16 text-center text-white">
-            <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
+    <!-- Bannière motivante -->
+    <div class="relative overflow-hidden bg-white border-b border-slate-200">
+        <div class="absolute inset-0 bg-gradient-to-br from-emerald-50 via-teal-50 to-transparent opacity-60"></div>
+        <div class="relative max-w-6xl mx-auto px-6 py-14 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold mb-3 text-slate-900">
                 Prêt à coacher ? 💪
             </h1>
-            <p class="text-xl md:text-2xl font-light opacity-90 mb-8">
+            <p class="text-lg md:text-xl text-slate-600 mb-8">
                 Transformez des vies, une séance à la fois !
             </p>
-            <div class="flex justify-center items-center space-x-4 md:space-x-8 text-sm md:text-base flex-wrap gap-y-3">
-                <div class="bg-white/20 backdrop-blur-sm px-5 py-2.5 rounded-full border border-white/20">
-                    <span class="font-semibold">{{ coach.full_name or 'Coach' }}</span>
+            <div class="flex justify-center items-center space-x-4 md:space-x-6 text-sm md:text-base flex-wrap gap-y-3">
+                <div class="bg-slate-100 px-5 py-2.5 rounded-full border border-slate-200">
+                    <span class="font-medium text-slate-700">{{ coach.full_name or 'Coach' }}</span>
                 </div>
-                <div class="bg-white/20 backdrop-blur-sm px-5 py-2.5 rounded-full border border-white/20">
-                    <span>🎯 Expert Fitness</span>
+                <div class="bg-slate-100 px-5 py-2.5 rounded-full border border-slate-200">
+                    <span class="text-slate-700">🎯 Expert Fitness</span>
                 </div>
                 <a href="/coach/profile-setup" 
-                   class="inline-flex items-center bg-white text-gray-900 px-5 py-2.5 rounded-full hover:bg-gray-100 transition duration-300 font-semibold shadow-lg">
+                   class="inline-flex items-center bg-emerald-500 text-white px-5 py-2.5 rounded-full hover:bg-emerald-600 transition duration-200 font-medium">
                     ⚙️ Gérer mon profil
                 </a>
             </div>
