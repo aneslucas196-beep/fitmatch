@@ -3,88 +3,77 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Réserver une séance • FitMatch</title>
+<title>Réserver une séance - FitMatch</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#f6f7f8;--card:#ffffff;--text:#1f2937;--muted:#6b7280;
-    --brand:#10b981;--brand-weak:#e6f9f2;--border:#e5e7eb;--danger:#ef4444;
-    --radius:12px;
+  * { font-family: 'Inter', sans-serif; }
+  body { margin: 0; padding: 0; }
+  
+  .grid-scroll { overflow-x: auto; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 800px; }
+  thead th { position: sticky; top: 0; background: #fff; z-index: 2; padding: 12px 8px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: 600; font-size: 14px; color: #334155; }
+  thead small { display: block; color: #94a3b8; font-weight: 400; font-size: 12px; }
+  tbody td { padding: 4px; border-bottom: 1px solid #f1f5f9; }
+  tbody td:first-child { position: sticky; left: 0; background: #fff; z-index: 1; text-align: right; padding-right: 12px; color: #64748b; font-weight: 500; font-size: 13px; width: 70px; }
+
+  .slot {
+    display: flex; align-items: center; justify-content: center;
+    height: 38px; border-radius: 8px; border: 1px solid #e2e8f0;
+    cursor: pointer; background: #fff; transition: all 0.15s; font-size: 13px; color: #334155;
   }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;}
-  .wrap{max-width:1100px;margin:40px auto;padding:0 16px}
-  h1{font-size:28px;margin:0 0 18px;color:var(--text)}
-  .sub{color:var(--muted);margin-bottom:18px}
-  .board{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:0 4px 14px rgba(0,0,0,.04)}
-
-  .header-nav{background:#2563eb;color:#fff;padding:16px 0;margin-bottom:24px}
-  .header-nav .container{max-width:1100px;margin:0 auto;padding:0 16px;display:flex;justify-content:space-between;align-items:center}
-  .header-nav a{color:#fff;text-decoration:none;font-weight:600}
-  .header-nav a:hover{opacity:0.9}
-
-  /* header */
-  .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px}
-  .range{font-weight:600;color:var(--text)}
-  .nav{display:flex;gap:8px}
-  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;font-size:14px}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
-  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
-  .btn.ghost{background:#fff}
-  .hint{color:var(--muted);font-size:14px;margin-left:8px}
-
-  /* grid */
-  .grid{overflow:auto;border-top:1px solid var(--border)}
-  table{border-collapse:separate;border-spacing:0;width:100%;min-width:880px}
-  thead th{position:sticky;top:0;background:var(--card);z-index:2;padding:14px;border-bottom:1px solid var(--border);text-align:center}
-  thead small{display:block;color:var(--muted);font-weight:500}
-  tbody td{padding:6px;border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
-  tbody tr:last-child td{border-bottom:0}
-  tbody td:first-child{position:sticky;left:0;background:var(--card);z-index:1;border-right:1px solid var(--border);text-align:right;padding-right:10px;color:var(--muted);font-weight:600;width:80px}
-
-  .slot{display:flex;align-items:center;justify-content:center;
-        height:42px;border-radius:10px;border:1px solid var(--border);
-        cursor:pointer;background:#fff;transition:.15s;font-size:13px}
-  .slot:hover{box-shadow:0 0 0 3px var(--brand-weak)}
-  .slot.disabled{background:#f3f4f6;color:#9ca3af;border-style:dashed;cursor:not-allowed}
-  .slot.busy{background:#fff0f0;border-color:#ffd1d1;color:#b91c1c}
-  .slot.selected{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 0 0 3px var(--brand-weak)}
-
-  /* footer */
-  .footer{display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:12px;flex-wrap:wrap}
-  .pill{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);border-radius:999px;padding:8px 12px;color:var(--text);font-size:14px}
-  .pill .dot{width:10px;height:10px;border-radius:50%}
-  .dot.free{background:var(--brand)}
-  .dot.busy{background:var(--danger)}
-  .dot.off{background:#9ca3af}
-
-  .confirm{display:flex;align-items:center;gap:10px}
-  .recap{color:var(--text);font-weight:600;font-size:14px}
-  .toast{position:fixed;right:18px;bottom:18px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;opacity:0;transform:translateY(10px);transition:.2s;z-index:1000}
-  .toast.show{opacity:1;transform:translateY(0)}
+  .slot:hover { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1); }
+  .slot.disabled { background: #f8fafc; color: #cbd5e1; border-style: dashed; cursor: not-allowed; }
+  .slot.disabled:hover { border-color: #e2e8f0; box-shadow: none; }
+  .slot.busy { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+  .slot.busy:hover { border-color: #fecaca; box-shadow: none; cursor: not-allowed; }
+  .slot.selected { background: #10b981; border-color: #10b981; color: #fff; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
 </style>
 </head>
-<body>
-  <div class="header-nav">
-    <div class="container">
-      <a href="/">← Retour à l'accueil</a>
-      <a href="/coach/{{ coach.id }}">Profil du coach</a>
+<body class="min-h-screen bg-slate-100">
+
+<!-- Header Simple -->
+<header class="fixed inset-x-0 top-0 z-50 bg-white border-b border-slate-200">
+  <div class="max-w-5xl mx-auto flex items-center justify-between px-6 py-4">
+    <a href="/" class="inline-flex items-center">
+      <span class="text-2xl font-semibold tracking-tight text-slate-900">Fit<span class="text-emerald-500">Match</span></span>
+    </a>
+    <a href="javascript:history.back()" class="text-sm text-slate-600 hover:text-slate-900 transition flex items-center gap-1">
+      <span>←</span> Retour
+    </a>
+  </div>
+</header>
+
+<!-- Spacer -->
+<div class="h-16"></div>
+
+<div class="min-h-screen pb-16">
+  
+  <!-- En-tête -->
+  <div class="bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-6 py-8">
+      <h1 class="text-2xl font-bold text-slate-900 mb-2">Réserver une séance</h1>
+      <p class="text-slate-600">Choisis un créneau disponible pour <strong id="coachName" class="text-slate-900">{{ coach.full_name }}</strong></p>
     </div>
   </div>
 
-  <div class="wrap">
-    <h1>Réserver une séance</h1>
-    <div class="sub">Choisis un créneau disponible pour <strong id="coachName">{{ coach.full_name }}</strong>.</div>
-
-    <div class="board">
-      <div class="head">
-        <div class="range" id="rangeText"></div>
-        <div class="nav">
-          <button class="btn" id="prevWeek">◀ Semaine préc.</button>
-          <button class="btn" id="nextWeek">Semaine suiv. ▶</button>
+  <div class="max-w-5xl mx-auto px-6 py-6">
+    
+    <!-- Carte calendrier -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      
+      <!-- Navigation semaine -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div class="font-semibold text-slate-900" id="rangeText"></div>
+        <div class="flex gap-2">
+          <button class="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition" id="prevWeek">← Semaine préc.</button>
+          <button class="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition" id="nextWeek">Semaine suiv. →</button>
         </div>
       </div>
 
-      <div class="grid">
+      <!-- Grille horaires -->
+      <div class="grid-scroll p-4">
         <table>
           <thead>
             <tr id="daysHead"><th></th></tr>
@@ -93,24 +82,37 @@
         </table>
       </div>
 
-      <div class="footer">
-        <div class="legend">
-          <span class="pill"><span class="dot free"></span>Disponible</span>
-          <span class="pill"><span class="dot busy"></span>Occupé</span>
-          <span class="pill"><span class="dot off"></span>Indispo</span>
+      <!-- Légende + Confirmation -->
+      <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50 flex-wrap gap-4">
+        <div class="flex gap-4">
+          <span class="flex items-center gap-2 text-sm text-slate-600">
+            <span class="w-3 h-3 rounded-full bg-emerald-500"></span> Disponible
+          </span>
+          <span class="flex items-center gap-2 text-sm text-slate-600">
+            <span class="w-3 h-3 rounded-full bg-red-400"></span> Occupé
+          </span>
+          <span class="flex items-center gap-2 text-sm text-slate-600">
+            <span class="w-3 h-3 rounded-full bg-slate-300"></span> Indispo
+          </span>
         </div>
-        <div class="confirm">
-          <div class="recap" id="recap">Aucun créneau sélectionné</div>
-          <button class="btn primary" id="confirmBtn" disabled>Confirmer la séance</button>
+        <div class="flex items-center gap-4">
+          <div class="text-sm font-medium text-slate-700" id="recap">Aucun créneau sélectionné</div>
+          <button class="px-5 py-2.5 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed" id="confirmBtn" disabled>
+            Confirmer
+          </button>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="toast" id="toast">Réservation confirmée ✅</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="fixed right-4 bottom-4 bg-slate-900 text-white px-4 py-3 rounded-lg opacity-0 transform translate-y-2 transition-all" id="toast">
+  Réservation confirmée
+</div>
 
 <script>
-/* === CONFIG === */
 const COACH_ID = "{{ coach.id }}";
 const COACH_NAME = "{{ coach.full_name }}";
 const COACH_EMAIL = "{{ coach.email or '' }}";
@@ -121,16 +123,13 @@ const SLOT_MINUTES = 30;
 const DAY_START = "08:00";
 const DAY_END = "22:00";
 
-/* === HELPERS === */
 const $ = s => document.querySelector(s);
 const pad = n => String(n).padStart(2,"0");
 const fmtDate = d => `${d.toLocaleDateString('fr-FR',{weekday:'short'})} ${pad(d.getDate())} ${d.toLocaleDateString('fr-FR',{month:'short'})}`;
-const toISO = (d) => d.toISOString();
 function addMinutes(date, m){ const d=new Date(date); d.setMinutes(d.getMinutes()+m); return d; }
 function setTime(base, hhmm){const [h,m]=hhmm.split(':').map(Number);const d=new Date(base);d.setHours(h,m,0,0);return d;}
 function between(date, start, end){return date>=start && date<end;}
 
-/* === API CALLS === */
 async function fetchAvailability(coachId, fromISO, toISO){
   const res = await fetch(`/api/bookings/availability?coach_id=${coachId}&from=${fromISO}&to=${toISO}`);
   if(!res.ok) return [];
@@ -141,35 +140,21 @@ async function fetchBookings(coachId, fromISO, toISO){
   const res = await fetch(`/api/bookings?coach_id=${coachId}&from=${fromISO}&to=${toISO}`);
   if(!res.ok) return { bookings: [], working_hours: {} };
   const data = await res.json();
-  // Gérer l'ancien format (array) et le nouveau format (object)
   if (Array.isArray(data)) {
     return { bookings: data, working_hours: {} };
   }
   return data;
 }
 
-async function createBooking(payload){
-  const res = await fetch('/api/bookings', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(payload)
-  });
-  if(!res.ok) return {ok: false};
-  return await res.json();
-}
-
-/* === STATE === */
 let weekOffset = 0;
 let selection = null;
 
-/* === RENDER === */
 async function renderWeek(){
   const today = new Date(); today.setHours(0,0,0,0);
   const start = new Date(today); start.setDate(start.getDate() + (weekOffset*7));
   const end = new Date(start); end.setDate(end.getDate()+6);
 
-  $("#rangeText").textContent =
-    `${start.toLocaleDateString('fr-FR')} – ${end.toLocaleDateString('fr-FR')}`;
+  $("#rangeText").textContent = `${start.toLocaleDateString('fr-FR')} – ${end.toLocaleDateString('fr-FR')}`;
 
   const headRow = $("#daysHead");
   headRow.innerHTML = "<th></th>";
@@ -199,7 +184,6 @@ async function renderWeek(){
     const dtEnd = addMinutes(dtStart, SLOT_MINUTES);
     if(dtStart < new Date()) return "disabled";
     
-    // L'API gère déjà les horaires de travail du coach
     const inAvail = avail.some(a=>{
       const s=new Date(a.start), e=new Date(a.end);
       return between(dtStart,s,e) && dtEnd<=e;
@@ -235,8 +219,7 @@ async function renderWeek(){
             end: addMinutes(slotStart,SLOT_MINUTES),
             dayIndex
           };
-          $("#recap").textContent =
-            `Séance le ${d.toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'})} à ${time}`;
+          $("#recap").textContent = `Séance le ${d.toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'})} à ${time}`;
           $("#confirmBtn").disabled = false;
         });
       }
@@ -259,14 +242,13 @@ $("#nextWeek").addEventListener("click", ()=>{ weekOffset++; renderWeek(); });
 $("#confirmBtn").addEventListener("click", ()=>{
   if(!selection) return;
   
-  // Construire l'URL de réservation avec les paramètres
   const startDate = selection.start;
-  const dateStr = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
-  const timeStr = `${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`; // HH:mm
+  const dateStr = startDate.toISOString().split('T')[0];
+  const timeStr = `${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`;
   
   const params = new URLSearchParams({
     coach: COACH_NAME,
-    coach_email: COACH_EMAIL,  // Email réel du coach pour identification fiable
+    coach_email: COACH_EMAIL,
     service: "Séance de coaching",
     duration: "60",
     price: "40",
@@ -277,13 +259,16 @@ $("#confirmBtn").addEventListener("click", ()=>{
     time: timeStr
   });
   
-  // Rediriger vers la page de confirmation
   window.location.href = `/reservation?${params.toString()}`;
 });
 
 function showToast(msg){
-  const t=$("#toast"); t.textContent=msg; t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"), 2200);
+  const t=$("#toast"); t.textContent=msg; t.classList.add("opacity-100", "translate-y-0");
+  t.classList.remove("opacity-0", "translate-y-2");
+  setTimeout(()=>{
+    t.classList.remove("opacity-100", "translate-y-0");
+    t.classList.add("opacity-0", "translate-y-2");
+  }, 2200);
 }
 
 renderWeek();
