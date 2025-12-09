@@ -111,7 +111,7 @@
   }
   
   .fm-wrap {
-    max-width: 460px;
+    max-width: 480px;
     width: 100%;
     margin: 0 auto;
   }
@@ -196,13 +196,19 @@
     gap: 8px;
   }
   
+  .fm-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  
   .fm-label {
     font-size: 14px;
     font-weight: 600;
     color: #374151;
   }
   
-  .fm-input {
+  .fm-input, .fm-select {
     width: 100%;
     padding: 14px 16px;
     font-size: 15px;
@@ -213,7 +219,16 @@
     transition: all 0.2s ease;
   }
   
-  .fm-input:focus {
+  .fm-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23606971' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+  }
+  
+  .fm-input:focus, .fm-select:focus {
     outline: none;
     border-color: var(--accent);
     background: #fff;
@@ -283,6 +298,41 @@
     transform: translateY(0);
   }
 
+  /* Role toggle */
+  .fm-role-toggle {
+    display: flex;
+    background: #f3f4f6;
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 8px;
+  }
+  
+  .fm-role-option {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s;
+    color: var(--muted);
+  }
+  
+  .fm-role-option:hover {
+    color: #374151;
+  }
+  
+  .fm-role-option.active {
+    background: white;
+    color: var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  
+  .fm-role-option input {
+    display: none;
+  }
+
   /* Divider */
   .fm-divider {
     display: flex;
@@ -348,6 +398,11 @@
     .fm-head h1 {
       font-size: 24px;
     }
+    
+    .fm-row {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
   }
 </style>
 </head>
@@ -376,7 +431,7 @@
     <div class="fm-card">
       <header class="fm-head">
         <h1>Rejoindre <span class="fm-brand">FitMatch</span></h1>
-        <p>Créez votre compte coach en quelques secondes</p>
+        <p>Créez votre compte en quelques secondes</p>
       </header>
 
       {% if error %}
@@ -399,7 +454,18 @@
       {% endif %}
 
       <form action="/signup" method="POST" class="fm-form">
-        <input type="hidden" name="role" value="{{ role or 'coach' }}">
+        
+        <!-- Role toggle -->
+        <div class="fm-role-toggle">
+          <label class="fm-role-option {% if role != 'client' %}active{% endif %}" onclick="setRole('coach')">
+            <input type="radio" name="role" value="coach" {% if role != 'client' %}checked{% endif %}>
+            Je suis coach
+          </label>
+          <label class="fm-role-option {% if role == 'client' %}active{% endif %}" onclick="setRole('client')">
+            <input type="radio" name="role" value="client" {% if role == 'client' %}checked{% endif %}>
+            Je cherche un coach
+          </label>
+        </div>
         
         <div class="fm-field">
           <label for="full_name" class="fm-label">Nom complet</label>
@@ -427,6 +493,28 @@
             placeholder="vous@exemple.com"
             autocomplete="email"
           >
+        </div>
+        
+        <div class="fm-row">
+          <div class="fm-field">
+            <label for="gender" class="fm-label">Genre</label>
+            <select name="gender" id="gender" required class="fm-select">
+              <option value="" disabled {% if not gender %}selected{% endif %}>Sélectionner</option>
+              <option value="homme" {% if gender == 'homme' %}selected{% endif %}>Homme</option>
+              <option value="femme" {% if gender == 'femme' %}selected{% endif %}>Femme</option>
+              <option value="autre" {% if gender == 'autre' %}selected{% endif %}>Autre</option>
+            </select>
+          </div>
+          
+          <div class="fm-field">
+            <label for="country" class="fm-label">Pays</label>
+            <select name="country" id="country" required class="fm-select">
+              <option value="" disabled {% if not country_code %}selected{% endif %}>Sélectionner</option>
+              {% for c in countries %}
+              <option value="{{ c.code }}" {% if country_code == c.code %}selected{% endif %}>{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
         
         <div class="fm-field">
@@ -491,6 +579,16 @@ function togglePassword() {
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
     `;
   }
+}
+
+function setRole(role) {
+  document.querySelectorAll('.fm-role-option').forEach(opt => {
+    opt.classList.remove('active');
+    if (opt.querySelector('input').value === role) {
+      opt.classList.add('active');
+      opt.querySelector('input').checked = true;
+    }
+  });
 }
 </script>
 </body>
