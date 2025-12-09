@@ -28,37 +28,46 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
         # Prénom pour personnaliser l'email
         first_name = full_name.split()[0] if full_name else "utilisateur"
         
-        # Contenu HTML de l'email
+        # Contenu HTML de l'email - Style FitMatch
         html_content = f"""
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 40px; text-align: center;">
-                <h1 style="color: white; margin: 0; font-size: 28px;">Fitmatch</h1>
-                <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Votre plateforme fitness</p>
+        <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+            <div style="background: linear-gradient(135deg, #008f57 0%, #00b36b 100%); padding: 40px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700;">FitMatch</h1>
+                <p style="color: white; margin: 10px 0 0 0; opacity: 0.9; font-size: 14px;">Votre plateforme de coaching fitness</p>
             </div>
             
             <div style="padding: 40px; background: white;">
-                <h2 style="color: #333; margin-bottom: 20px;">Bonjour {first_name} !</h2>
+                <h2 style="color: #1e293b; margin-bottom: 20px; font-size: 22px;">Bonjour {first_name} !</h2>
                 
-                <p style="color: #666; font-size: 16px; line-height: 1.6;">
-                    Voici votre code de vérification pour finaliser votre inscription :
+                <p style="color: #64748b; font-size: 16px; line-height: 1.6;">
+                    Bienvenue sur FitMatch ! Voici votre code de vérification pour activer votre compte :
                 </p>
                 
-                <div style="background: #f8fafc; border: 2px dashed #3b82f6; border-radius: 10px; padding: 30px; text-align: center; margin: 30px 0;">
-                    <span style="font-size: 36px; font-weight: bold; color: #3b82f6; letter-spacing: 8px;">{otp_code}</span>
+                <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #008f57; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0;">
+                    <p style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Votre code</p>
+                    <span style="font-size: 42px; font-weight: 700; color: #008f57; letter-spacing: 10px;">{otp_code}</span>
                 </div>
                 
-                <p style="color: #666; font-size: 14px; line-height: 1.6;">
-                    • Ce code expire dans <strong>10 minutes</strong><br>
-                    • Saisissez-le sur la page de vérification pour activer votre compte<br>
-                    • Si vous n'avez pas demandé ce code, ignorez cet email
-                </p>
-                
-                <div style="margin-top: 40px; padding: 20px; background: #f8fafc; border-radius: 8px;">
-                    <p style="color: #666; font-size: 12px; margin: 0; text-align: center;">
-                        Cet email a été envoyé par Fitmatch.<br>
-                        Si vous avez des questions, contactez notre support.
+                <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin-bottom: 25px;">
+                    <p style="color: #92400e; font-size: 14px; margin: 0;">
+                        ⏱️ Ce code expire dans <strong>10 minutes</strong>
                     </p>
                 </div>
+                
+                <p style="color: #64748b; font-size: 14px; line-height: 1.8;">
+                    Saisissez ce code sur la page de vérification pour activer votre compte et commencer à utiliser FitMatch.
+                </p>
+                
+                <p style="color: #94a3b8; font-size: 13px; line-height: 1.6; margin-top: 30px;">
+                    Si vous n'avez pas créé de compte sur FitMatch, ignorez simplement cet email.
+                </p>
+            </div>
+            
+            <div style="padding: 25px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+                <p style="color: #008f57; font-size: 16px; font-weight: 600; margin: 0 0 5px 0;">FitMatch</p>
+                <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                    La plateforme qui connecte coachs et clients
+                </p>
             </div>
         </div>
         """
