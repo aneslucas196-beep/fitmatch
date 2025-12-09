@@ -276,5 +276,37 @@
     "password": "ANSHGVVHDG286",
     "coach_gender_preference": "homme",
     "selected_gyms": []
+  },
+  "fitmatch.fr@gmail.com": {
+    "full_name": "zazakj",
+    "gender": "homme",
+    "role": "client",
+    "country_code": "AQ",
+    "password": "Anasking1234!",
+    "coach_gender_preference": "aucune",
+    "selected_gyms": []
+  },
+  "fitmatch01@gmail.com": {
+    "id": "fitmatch01@gmail.com",
+    "email": "fitmatch01@gmail.com",
+    "role": "coach",
+    "profile_completed": true,
+    "full_name": "grah ",
+    "bio": "dfhfbe",
+    "city": "paris",
+    "instagram_url": "",
+    "price_from": 200,
+    "radius_km": 5,
+    "specialties": [
+      "musculation"
+    ],
+    "selected_gym_ids": "google_worldwide_ChIJszhm9PrGxokR1JTvgZAq-AE",
+    "selected_gyms_data": "[{\"id\":\"google_worldwide_ChIJszhm9PrGxokR1JTvgZAq-AE\",\"name\":\"Fit Gym\",\"address\":\"4419 Ludlow St, Philadelphia, PA 19104, USA\",\"city\":\"\",\"lat\":39.957444599999995,\"lng\":-75.21020469999999,\"chain\":\"Google Places (Mondial)\",\"source\":\"Google Places Worldwide\",\"display_name\":\"Fit Gym - 4419 Ludlow St, Philadelphia, PA 19104, USA\"}]",
+    "profile_photo_url": "/attached_assets/profile_photos/f1d1437e34a5c40a_053982a3-74f1-4d47-9383-a66f4f3bdefc.jpg",
+    "password": "ANAS3robimay123",
+    "gender": "homme",
+    "country_code": "AU",
+    "coach_gender_preference": null,
+    "selected_gyms": null
   }
 }

@@ -1299,8 +1299,7 @@ async def signup_submit(
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
-            "success": success_message,
-            "demo_code": otp_code  # Afficher le code en mode démo
+            "success": success_message
         })
     
     try:
@@ -1566,16 +1565,30 @@ async def resend_otp_submit(
     email = email.lower().strip()
     
     if not supabase_anon:
-        # Mode démo - générer un nouveau code et le stocker
+        # Mode sans Supabase - générer un nouveau code, le stocker et l'envoyer par email
         new_otp_code = generate_otp_code(6)
         demo_otp_cache[email] = new_otp_code
-        print(f"🔐 Mode démo - Nouveau code OTP pour {email}: {new_otp_code}")
-        return templates.TemplateResponse("verify_otp.html", {
-            "request": request,
-            "email": email,
-            "demo_code": new_otp_code,
-            "success": "Nouveau code généré en mode démo"
-        })
+        print(f"🔐 Nouveau code OTP pour {email}: {new_otp_code}")
+        
+        # Récupérer le nom de l'utilisateur si disponible
+        user_data = get_demo_user(email)
+        full_name = user_data.get("full_name") if user_data else None
+        
+        # Envoyer le code par email
+        email_result = send_otp_email_resend(email, new_otp_code, full_name)
+        
+        if email_result.get("success"):
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "success": "Nouveau code envoyé à votre adresse email"
+            })
+        else:
+            return templates.TemplateResponse("verify_otp.html", {
+                "request": request,
+                "email": email,
+                "error": "Erreur lors de l'envoi du code. Réessayez."
+            })
     
     try:
         # Récupérer les données d'inscription en attente
