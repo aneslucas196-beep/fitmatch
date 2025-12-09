@@ -3,6 +3,36 @@ import os
 import requests
 from typing import Optional
 
+# Liens réseaux sociaux FitMatch
+INSTAGRAM_URL = "https://www.instagram.com/fitmatch__?igsh=MXkwcTE5dmFhaDQ3OQ%3D%3D&utm_source=qr"
+FACEBOOK_URL = "https://www.facebook.com/share/17f5yGSk86/?mibextid=wwXIfr"
+
+# Footer social commun à tous les emails
+SOCIAL_FOOTER_HTML = f'''
+<!-- Suivez-nous -->
+<div style="padding:25px; background:#f9f9f9; border-top:1px solid #eee; text-align:center;">
+    <p style="margin:0 0 15px 0; font-size:15px; color:#374151; font-weight:500;">Suivez-nous</p>
+    <div style="display:inline-block;">
+        <a href="{FACEBOOK_URL}" style="display:inline-block; margin:0 8px; text-decoration:none;" target="_blank">
+            <div style="width:40px; height:40px; border:2px solid #374151; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#374151">
+                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                </svg>
+            </div>
+        </a>
+        <a href="{INSTAGRAM_URL}" style="display:inline-block; margin:0 8px; text-decoration:none;" target="_blank">
+            <div style="width:40px; height:40px; border:2px solid #374151; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                </svg>
+            </div>
+        </a>
+    </div>
+</div>
+'''
+
 def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str] = None) -> dict:
     """
     Envoie un code OTP par email via Resend API
@@ -63,7 +93,9 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
                 </p>
             </div>
             
-            <div style="padding: 25px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+            {SOCIAL_FOOTER_HTML}
+            
+            <div style="padding: 20px; background: #f8fafc; text-align: center;">
                 <p style="color: #008f57; font-size: 16px; font-weight: 600; margin: 0 0 5px 0;">FitMatch</p>
                 <p style="color: #94a3b8; font-size: 12px; margin: 0;">
                     La plateforme qui connecte coachs et clients
@@ -290,8 +322,10 @@ def send_booking_confirmation_email(
                     </table>
                 </div>
                 
+                {SOCIAL_FOOTER_HTML}
+                
                 <!-- Footer -->
-                <div style="padding:25px; background:#f9f9f9; border-top:1px solid #eee; text-align:center;">
+                <div style="padding:20px; background:#f9f9f9; text-align:center;">
                     <p style="margin:0 0 10px 0; font-size:18px; font-weight:700; color:#111;">
                         Fitmatch
                     </p>
@@ -491,8 +525,10 @@ def send_cancellation_email(
                     </a>
                 </div>
                 
+                {SOCIAL_FOOTER_HTML}
+                
                 <!-- Footer -->
-                <div style="padding:20px 25px; text-align:center; border-top:1px solid #eee;">
+                <div style="padding:20px 25px; text-align:center;">
                     <p style="margin:0; color:#999; font-size:12px;">
                         Fitmatch - Votre plateforme fitness
                     </p>
@@ -688,6 +724,8 @@ def send_coach_notification_email(
             </p>
         </div>
         
+        {SOCIAL_FOOTER_HTML}
+        
         <div class="footer">
             <p>Fitmatch - Votre plateforme fitness</p>
             <p>Cet email a été envoyé suite à une demande de réservation.</p>
@@ -866,6 +904,8 @@ def send_cancellation_to_coach_email(
                 Le créneau du {date_str} à {time_str} est de nouveau libre pour d'autres réservations.
             </p>
         </div>
+        
+        {SOCIAL_FOOTER_HTML}
         
         <div class="footer">
             <p>Fitmatch - Votre plateforme fitness</p>
@@ -1055,6 +1095,8 @@ def send_rejection_email_to_client(
             </p>
         </div>
         
+        {SOCIAL_FOOTER_HTML}
+        
         <div class="footer">
             <p>Fitmatch - Votre plateforme fitness</p>
             <p>Cet email a été envoyé suite à l'indisponibilité de votre coach.</p>
@@ -1223,8 +1265,10 @@ def send_coach_cancelled_email(
                     </div>
                 </div>
                 
+                {SOCIAL_FOOTER_HTML}
+                
                 <!-- Footer -->
-                <div style="padding:25px; background:#f9f9f9; border-top:1px solid #eee; text-align:center;">
+                <div style="padding:20px; background:#f9f9f9; text-align:center;">
                     <p style="margin:0 0 10px 0; font-size:18px; font-weight:700; color:#111;">
                         Fitmatch
                     </p>
@@ -1453,8 +1497,10 @@ def send_reminder_email(
                     </p>
                 </div>
                 
+                {SOCIAL_FOOTER_HTML}
+                
                 <!-- Footer -->
-                <div style="padding:25px; background:#f9f9f9; border-top:1px solid #eee; text-align:center;">
+                <div style="padding:20px; background:#f9f9f9; text-align:center;">
                     <p style="margin:0 0 10px 0; font-size:18px; font-weight:700; color:#111;">
                         Fitmatch
                     </p>

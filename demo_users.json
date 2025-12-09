@@ -308,5 +308,14 @@
     "country_code": "AU",
     "coach_gender_preference": null,
     "selected_gyms": null
+  },
+  "azerty123@gmail.com": {
+    "full_name": "dsfdfv",
+    "gender": "homme",
+    "role": "coach",
+    "country_code": "AZ",
+    "password": "Arobisajgd52",
+    "coach_gender_preference": null,
+    "selected_gyms": null
   }
 }
