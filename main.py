@@ -2702,6 +2702,63 @@ async def booking_by_slug(request: Request, slug: str):
     })
 
 # ======================================
+# ROUTE ABONNEMENT COACH (doit être AVANT /coach/{coach_id})
+# ======================================
+
+@app.get("/coach/subscription", response_class=HTMLResponse)
+async def coach_subscription_page(
+    request: Request, 
+    user = Depends(require_coach_role),
+    success: Optional[str] = None,
+    session_id: Optional[str] = None
+):
+    """Page d'abonnement pour les coachs."""
+    import stripe
+    
+    coach_email = user.get("email")
+    
+    # Si retour de Stripe avec succès, vérifier et activer l'abonnement
+    if success == "true" and session_id:
+        try:
+            init_stripe()
+            checkout_session = stripe.checkout.Session.retrieve(session_id)
+            
+            if checkout_session.payment_status == "paid":
+                subscription_id = checkout_session.subscription
+                customer_id = checkout_session.customer
+                
+                if subscription_id:
+                    subscription = stripe.Subscription.retrieve(subscription_id)
+                    period_end = datetime.fromtimestamp(subscription.current_period_end).isoformat()
+                    
+                    update_coach_subscription(
+                        coach_email=coach_email,
+                        stripe_customer_id=customer_id,
+                        stripe_subscription_id=subscription_id,
+                        subscription_status="active",
+                        current_period_end=period_end
+                    )
+                    print(f"✅ Abonnement activé via redirect pour {coach_email}")
+                else:
+                    update_coach_subscription(
+                        coach_email=coach_email,
+                        stripe_customer_id=customer_id,
+                        subscription_status="active"
+                    )
+        except Exception as e:
+            print(f"⚠️ Erreur vérification session Stripe: {e}")
+    
+    subscription_info = get_coach_subscription_info(coach_email)
+    
+    return templates.TemplateResponse("coach_subscription.html", {
+        "request": request,
+        "coach": user,
+        "subscription_info": subscription_info,
+        "monthly_price": COACH_MONTHLY_PRICE / 100,
+        "publishable_key": get_publishable_key()
+    })
+
+# ======================================
 # ROUTE PUBLIQUE - PROFIL DU COACH
 # ======================================
 
@@ -5220,61 +5277,8 @@ reminder_thread.start()
 # ============================================
 
 # ============================================
-# STRIPE - ABONNEMENTS COACHS
+# STRIPE - ABONNEMENTS COACHS (API Endpoints)
 # ============================================
-
-@app.get("/coach/subscription", response_class=HTMLResponse)
-async def coach_subscription_page(
-    request: Request, 
-    user = Depends(require_coach_role),
-    success: Optional[str] = None,
-    session_id: Optional[str] = None
-):
-    """Page d'abonnement pour les coachs."""
-    import stripe
-    
-    coach_email = user.get("email")
-    
-    # Si retour de Stripe avec succès, vérifier et activer l'abonnement
-    if success == "true" and session_id:
-        try:
-            init_stripe()
-            checkout_session = stripe.checkout.Session.retrieve(session_id)
-            
-            if checkout_session.payment_status == "paid":
-                subscription_id = checkout_session.subscription
-                customer_id = checkout_session.customer
-                
-                if subscription_id:
-                    subscription = stripe.Subscription.retrieve(subscription_id)
-                    period_end = datetime.fromtimestamp(subscription.current_period_end).isoformat()
-                    
-                    update_coach_subscription(
-                        coach_email=coach_email,
-                        stripe_customer_id=customer_id,
-                        stripe_subscription_id=subscription_id,
-                        subscription_status="active",
-                        current_period_end=period_end
-                    )
-                    print(f"✅ Abonnement activé via redirect pour {coach_email}")
-                else:
-                    update_coach_subscription(
-                        coach_email=coach_email,
-                        stripe_customer_id=customer_id,
-                        subscription_status="active"
-                    )
-        except Exception as e:
-            print(f"⚠️ Erreur vérification session Stripe: {e}")
-    
-    subscription_info = get_coach_subscription_info(coach_email)
-    
-    return templates.TemplateResponse("coach_subscription.html", {
-        "request": request,
-        "coach": user,
-        "subscription_info": subscription_info,
-        "monthly_price": COACH_MONTHLY_PRICE / 100,
-        "publishable_key": get_publishable_key()
-    })
 
 @app.post("/api/stripe/create-checkout-session")
 async def api_create_checkout_session(request: Request, user = Depends(require_coach_role)):
