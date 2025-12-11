@@ -122,18 +122,27 @@ Preferred communication style: Simple, everyday language.
 - **Supabase**: Planned integration for user authentication and data storage.
 - **Resend**: Transactional email service for sending OTP verification codes and password reset emails (configured with API key, replaces demo mode)
 
-### Stripe Subscription System (NEW)
+### Stripe Subscription System (UPDATED)
 - **Coach Monthly Subscription**: 29€/month subscription for coaches to access premium features
+- **Subscription-First Signup**: Payment required BEFORE account access
 - **Stripe Integration**: Connected via Replit secure connector for API key management
-- **Checkout Flow**: 
-    1. Coach clicks "S'abonner" on `/coach/subscription` page
-    2. Redirects to Stripe Checkout (hosted payment page)
-    3. After payment, redirects back with session_id for verification
-    4. Subscription status stored in demo_users.json
+- **Coach Signup Flow**:
+    1. Coach fills signup form on `/coach-login` (name, email, password)
+    2. Account created with `subscription_status="pending_payment"`
+    3. Automatic redirect to `/coach/subscription` page
+    4. Coach subscribes via Stripe Checkout (29€/month)
+    5. After payment, redirect to `/coach/profile-setup` to complete profile
+    6. Once profile completed, access to `/coach/portal` dashboard
+- **Access Control Middlewares**:
+    - `require_coach_or_pending`: Allows pending coaches to access subscription page
+    - `require_active_subscription`: Blocks access to portal/profile-setup without active subscription
+    - `require_coach_role`: Standard coach authentication
 - **Subscription Page** (`/coach/subscription`):
+    - Welcome message for new coaches
     - Pricing comparison: Free vs Pro plan
     - Active subscription display with renewal date
     - Link to Stripe Customer Portal for billing management
+    - Auto-redirect to profile-setup/portal when subscription is active
 - **API Endpoints**:
     - POST /api/stripe/create-checkout-session - Creates Stripe Checkout session
     - POST /api/stripe/create-portal-session - Opens Stripe billing portal

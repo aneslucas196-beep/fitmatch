@@ -843,6 +843,31 @@ def require_coach_role(user = Depends(require_auth)):
         )
     return user
 
+def require_coach_or_pending(user = Depends(require_auth)):
+    """Middleware pour /coach/subscription - accepte coaches avec ou sans abonnement."""
+    if user.get("role") != "coach":
+        raise HTTPException(
+            status_code=403, 
+            detail="Accès réservé aux coaches",
+            headers={"Location": "/coach-login"}
+        )
+    return user
+
+def require_active_subscription(user = Depends(require_coach_role)):
+    """Middleware pour routes nécessitant un abonnement actif."""
+    subscription_status = user.get("subscription_status", "")
+    
+    # Autoriser si abonnement actif
+    if subscription_status == "active":
+        return user
+    
+    # Sinon rediriger vers la page d'abonnement
+    raise HTTPException(
+        status_code=303,
+        detail="Abonnement requis",
+        headers={"Location": "/coach/subscription"}
+    )
+
 # Routes publiques
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -2135,22 +2160,23 @@ async def coach_login_submit(
                 "tab": "signup"
             }, status_code=400)
         
-        # Créer le compte coach
+        # Créer le compte coach avec statut "en attente de paiement"
         new_coach = {
             "email": email,
             "password": password,
             "full_name": name.strip(),
             "role": "coach",
             "verified": True,
-            "profile_completed": False
+            "profile_completed": False,
+            "subscription_status": "pending_payment"
         }
         save_demo_user(email, new_coach)
-        print(f"✅ Nouveau coach inscrit: {email}")
+        print(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
         
-        # Connexion automatique après inscription
+        # Connexion automatique après inscription - redirection vers page d'abonnement
         import hashlib
         unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
-        response = RedirectResponse(url="/coach/profile-setup", status_code=303)
+        response = RedirectResponse(url="/coach/subscription", status_code=303)
         response.set_cookie(
             key="session_token",
             value=unique_token,
@@ -2188,9 +2214,15 @@ async def coach_login_submit(
             import hashlib
             unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
             
-            # Vérifier si le profil est complété
-            profile_completed = user_found.get("profile_completed", False)
-            redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+            # Vérifier d'abord l'abonnement
+            subscription_status = user_found.get("subscription_status", "")
+            if subscription_status != "active":
+                # Pas d'abonnement actif → page d'abonnement
+                redirect_url = "/coach/subscription"
+            else:
+                # Abonnement actif → vérifier si le profil est complété
+                profile_completed = user_found.get("profile_completed", False)
+                redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
             
             response = RedirectResponse(url=redirect_url, status_code=303)
             response.set_cookie(
@@ -2211,7 +2243,12 @@ async def coach_login_submit(
 # Routes protégées - Espace Coach
 @app.get("/coach/portal", response_class=HTMLResponse)
 async def coach_portal(request: Request, user = Depends(require_coach_role)):
-    """Dashboard coach - avec vérification du profil complété."""
+    """Dashboard coach - avec vérification du profil complété et de l'abonnement."""
+    
+    # Vérifier si l'abonnement est actif
+    subscription_status = user.get("subscription_status", "")
+    if subscription_status != "active":
+        return RedirectResponse(url="/coach/subscription", status_code=303)
     
     # Vérifier si le profil est complété
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
@@ -2282,7 +2319,12 @@ async def coach_portal_update(
 # Route onboarding coach
 @app.get("/coach/profile-setup", response_class=HTMLResponse)
 async def coach_profile_setup_get(request: Request, user = Depends(require_coach_role)):
-    """Page d'onboarding/configuration du profil coach."""
+    """Page d'onboarding/configuration du profil coach (nécessite abonnement actif)."""
+    
+    # Vérifier si l'abonnement est actif
+    subscription_status = user.get("subscription_status", "")
+    if subscription_status != "active":
+        return RedirectResponse(url="/coach/subscription", status_code=303)
     
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
     coach_data = None
@@ -2708,11 +2750,11 @@ async def booking_by_slug(request: Request, slug: str):
 @app.get("/coach/subscription", response_class=HTMLResponse)
 async def coach_subscription_page(
     request: Request, 
-    user = Depends(require_coach_role),
+    user = Depends(require_coach_or_pending),
     success: Optional[str] = None,
     session_id: Optional[str] = None
 ):
-    """Page d'abonnement pour les coachs."""
+    """Page d'abonnement pour les coachs (accessible même sans abonnement actif)."""
     import stripe
     
     coach_email = user.get("email")
@@ -2745,10 +2787,22 @@ async def coach_subscription_page(
                         stripe_customer_id=customer_id,
                         subscription_status="active"
                     )
+                
+                # Rediriger vers la configuration du profil après paiement réussi
+                profile_completed = user.get("profile_completed", False)
+                redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+                return RedirectResponse(url=redirect_url, status_code=303)
+                
         except Exception as e:
             print(f"⚠️ Erreur vérification session Stripe: {e}")
     
     subscription_info = get_coach_subscription_info(coach_email)
+    
+    # Si abonnement déjà actif, rediriger vers la bonne destination
+    if subscription_info and subscription_info.get("subscription_status") == "active":
+        profile_completed = user.get("profile_completed", False)
+        redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+        return RedirectResponse(url=redirect_url, status_code=303)
     
     return templates.TemplateResponse("coach_subscription.html", {
         "request": request,
@@ -5281,8 +5335,8 @@ reminder_thread.start()
 # ============================================
 
 @app.post("/api/stripe/create-checkout-session")
-async def api_create_checkout_session(request: Request, user = Depends(require_coach_role)):
-    """Crée une session Checkout Stripe pour l'abonnement."""
+async def api_create_checkout_session(request: Request, user = Depends(require_coach_or_pending)):
+    """Crée une session Checkout Stripe pour l'abonnement (accessible même sans abonnement actif)."""
     try:
         coach_email = user.get("email")
         coach_name = user.get("full_name", user.get("name", "Coach"))
