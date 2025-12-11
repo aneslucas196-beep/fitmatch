@@ -39,21 +39,19 @@ const slots = $('#slots');
 
 function buildSlots(){
   slots.innerHTML = '';
-  const start = 9, end = 20; // 9h -> 20h
+  const start = 8, end = 22; // 8h -> 22h (séances de 1h)
   for(let h=start; h<=end; h++){
-    for(let m of [0,30]){
-      const t = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'slot' + (t===selTime ? ' is-selected':'');
-      btn.textContent = t;
-      btn.onclick = () => {
-        [...slots.children].forEach(c=>c.classList.remove('is-selected'));
-        btn.classList.add('is-selected');
-        selTime = t;
-      };
-      slots.appendChild(btn);
-    }
+    const t = `${String(h).padStart(2,'0')}:00`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'slot' + (t===selTime ? ' is-selected':'');
+    btn.textContent = t;
+    btn.onclick = () => {
+      [...slots.children].forEach(c=>c.classList.remove('is-selected'));
+      btn.classList.add('is-selected');
+      selTime = t;
+    };
+    slots.appendChild(btn);
   }
 }
 
