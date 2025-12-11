@@ -7,29 +7,25 @@ from typing import Optional
 INSTAGRAM_URL = "https://www.instagram.com/fitmatch__?igsh=MXkwcTE5dmFhaDQ3OQ%3D%3D&utm_source=qr"
 FACEBOOK_URL = "https://www.facebook.com/share/17f5yGSk86/?mibextid=wwXIfr"
 
-# Footer social commun à tous les emails
+# Footer social commun à tous les emails (utilise images PNG pour compatibilité Gmail)
 SOCIAL_FOOTER_HTML = f'''
 <!-- Suivez-nous -->
 <div style="padding:25px; background:#f9f9f9; border-top:1px solid #eee; text-align:center;">
     <p style="margin:0 0 15px 0; font-size:15px; color:#374151; font-weight:500;">Suivez-nous</p>
-    <div style="display:inline-block;">
-        <a href="{FACEBOOK_URL}" style="display:inline-block; margin:0 8px; text-decoration:none;" target="_blank">
-            <div style="width:40px; height:40px; border:2px solid #374151; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#374151">
-                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
-                </svg>
-            </div>
-        </a>
-        <a href="{INSTAGRAM_URL}" style="display:inline-block; margin:0 8px; text-decoration:none;" target="_blank">
-            <div style="width:40px; height:40px; border:2px solid #374151; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2">
-                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
-                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-                </svg>
-            </div>
-        </a>
-    </div>
+    <table align="center" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            <td style="padding:0 8px;">
+                <a href="{FACEBOOK_URL}" target="_blank" style="text-decoration:none;">
+                    <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="36" height="36" style="display:block; border:0;">
+                </a>
+            </td>
+            <td style="padding:0 8px;">
+                <a href="{INSTAGRAM_URL}" target="_blank" style="text-decoration:none;">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" width="36" height="36" style="display:block; border:0;">
+                </a>
+            </td>
+        </tr>
+    </table>
 </div>
 '''
 
