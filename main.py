@@ -5201,6 +5201,248 @@ reminder_thread.start()
 
 # ============================================
 
+# ============================================
+# STRIPE - ABONNEMENTS COACHS
+# ============================================
+
+from stripe_service import (
+    get_publishable_key,
+    create_or_get_customer,
+    create_checkout_session,
+    create_portal_session,
+    get_coach_subscription_info,
+    update_coach_subscription,
+    is_coach_subscribed,
+    COACH_MONTHLY_PRICE
+)
+
+@app.get("/coach/subscription", response_class=HTMLResponse)
+async def coach_subscription_page(
+    request: Request, 
+    user = Depends(require_coach_role),
+    success: Optional[str] = None,
+    session_id: Optional[str] = None
+):
+    """Page d'abonnement pour les coachs."""
+    import stripe
+    from stripe_service import init_stripe
+    
+    coach_email = user.get("email")
+    
+    # Si retour de Stripe avec succès, vérifier et activer l'abonnement
+    if success == "true" and session_id:
+        try:
+            init_stripe()
+            checkout_session = stripe.checkout.Session.retrieve(session_id)
+            
+            if checkout_session.payment_status == "paid":
+                subscription_id = checkout_session.subscription
+                customer_id = checkout_session.customer
+                
+                if subscription_id:
+                    subscription = stripe.Subscription.retrieve(subscription_id)
+                    period_end = datetime.fromtimestamp(subscription.current_period_end).isoformat()
+                    
+                    update_coach_subscription(
+                        coach_email=coach_email,
+                        stripe_customer_id=customer_id,
+                        stripe_subscription_id=subscription_id,
+                        subscription_status="active",
+                        current_period_end=period_end
+                    )
+                    print(f"✅ Abonnement activé via redirect pour {coach_email}")
+                else:
+                    update_coach_subscription(
+                        coach_email=coach_email,
+                        stripe_customer_id=customer_id,
+                        subscription_status="active"
+                    )
+        except Exception as e:
+            print(f"⚠️ Erreur vérification session Stripe: {e}")
+    
+    subscription_info = get_coach_subscription_info(coach_email)
+    
+    return templates.TemplateResponse("coach_subscription.html", {
+        "request": request,
+        "coach": user,
+        "subscription_info": subscription_info,
+        "monthly_price": COACH_MONTHLY_PRICE / 100,
+        "publishable_key": get_publishable_key()
+    })
+
+@app.post("/api/stripe/create-checkout-session")
+async def api_create_checkout_session(request: Request, user = Depends(require_coach_role)):
+    """Crée une session Checkout Stripe pour l'abonnement."""
+    try:
+        coach_email = user.get("email")
+        coach_name = user.get("full_name", user.get("name", "Coach"))
+        coach_id = user.get("id", coach_email)
+        
+        # Créer ou récupérer le customer Stripe
+        customer = create_or_get_customer(coach_email, coach_name, coach_id)
+        
+        # Sauvegarder le customer_id
+        update_coach_subscription(coach_email, stripe_customer_id=customer.id)
+        
+        # Construire les URLs de retour avec session_id pour vérification
+        base_url = str(request.base_url).rstrip("/")
+        success_url = f"{base_url}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{base_url}/coach/subscription?cancelled=true"
+        
+        # Créer la session checkout
+        session = create_checkout_session(
+            customer_id=customer.id,
+            success_url=success_url,
+            cancel_url=cancel_url,
+            coach_email=coach_email
+        )
+        
+        return JSONResponse({"url": session.url})
+    except Exception as e:
+        print(f"❌ Erreur création checkout session: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/stripe/create-portal-session")
+async def api_create_portal_session(request: Request, user = Depends(require_coach_role)):
+    """Crée une session du portail de facturation Stripe."""
+    try:
+        coach_email = user.get("email")
+        subscription_info = get_coach_subscription_info(coach_email)
+        
+        if not subscription_info or not subscription_info.get("stripe_customer_id"):
+            return JSONResponse({"error": "Aucun abonnement trouvé"}, status_code=404)
+        
+        base_url = str(request.base_url).rstrip("/")
+        return_url = f"{base_url}/coach/subscription"
+        
+        session = create_portal_session(
+            customer_id=subscription_info["stripe_customer_id"],
+            return_url=return_url
+        )
+        
+        return JSONResponse({"url": session.url})
+    except Exception as e:
+        print(f"❌ Erreur création portal session: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/stripe/webhook")
+async def stripe_webhook(request: Request):
+    """
+    Webhook Stripe pour gérer les événements d'abonnement.
+    Met à jour le statut des abonnements des coachs.
+    """
+    import stripe
+    from stripe_service import init_stripe
+    
+    init_stripe()
+    
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+    
+    try:
+        event = json.loads(payload)
+        event_type = event.get("type")
+        data = event.get("data", {}).get("object", {})
+        
+        print(f"📩 Webhook Stripe reçu: {event_type}")
+        
+        if event_type == "checkout.session.completed":
+            # Paiement réussi - activer l'abonnement
+            coach_email = data.get("metadata", {}).get("coach_email")
+            subscription_id = data.get("subscription")
+            customer_id = data.get("customer")
+            
+            print(f"📩 checkout.session.completed - coach_email: {coach_email}, subscription_id: {subscription_id}")
+            
+            if coach_email and subscription_id:
+                try:
+                    # Récupérer les infos de l'abonnement
+                    subscription = stripe.Subscription.retrieve(subscription_id)
+                    period_end = datetime.fromtimestamp(subscription.current_period_end).isoformat()
+                    
+                    update_coach_subscription(
+                        coach_email=coach_email,
+                        stripe_customer_id=customer_id,
+                        stripe_subscription_id=subscription_id,
+                        subscription_status="active",
+                        current_period_end=period_end
+                    )
+                    print(f"✅ Abonnement activé pour {coach_email}")
+                except Exception as sub_error:
+                    print(f"❌ Erreur récupération subscription: {sub_error}")
+            elif coach_email:
+                # Si pas de subscription_id mais coach_email, activer quand même
+                update_coach_subscription(
+                    coach_email=coach_email,
+                    stripe_customer_id=customer_id,
+                    subscription_status="active"
+                )
+                print(f"✅ Abonnement activé (sans sub ID) pour {coach_email}")
+        
+        elif event_type == "customer.subscription.updated":
+            # Mise à jour de l'abonnement
+            subscription_id = data.get("id")
+            status = data.get("status")
+            coach_email = data.get("metadata", {}).get("coach_email")
+            
+            if coach_email:
+                period_end = datetime.fromtimestamp(data.get("current_period_end", 0)).isoformat()
+                update_coach_subscription(
+                    coach_email=coach_email,
+                    subscription_status=status,
+                    current_period_end=period_end
+                )
+                print(f"🔄 Abonnement mis à jour pour {coach_email}: {status}")
+        
+        elif event_type == "customer.subscription.deleted":
+            # Abonnement annulé
+            coach_email = data.get("metadata", {}).get("coach_email")
+            
+            if coach_email:
+                update_coach_subscription(
+                    coach_email=coach_email,
+                    subscription_status="cancelled"
+                )
+                print(f"🚫 Abonnement annulé pour {coach_email}")
+        
+        elif event_type == "invoice.payment_failed":
+            # Paiement échoué
+            subscription_id = data.get("subscription")
+            if subscription_id:
+                subscription = stripe.Subscription.retrieve(subscription_id)
+                coach_email = subscription.metadata.get("coach_email")
+                
+                if coach_email:
+                    update_coach_subscription(
+                        coach_email=coach_email,
+                        subscription_status="past_due"
+                    )
+                    print(f"⚠️ Paiement échoué pour {coach_email}")
+        
+        return JSONResponse({"received": True})
+    
+    except Exception as e:
+        print(f"❌ Erreur webhook Stripe: {e}")
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+@app.get("/api/coach/subscription-status")
+async def api_coach_subscription_status(request: Request, user = Depends(require_coach_role)):
+    """Récupère le statut d'abonnement du coach connecté."""
+    try:
+        coach_email = user.get("email")
+        subscription_info = get_coach_subscription_info(coach_email)
+        is_subscribed = is_coach_subscribed(coach_email)
+        
+        return JSONResponse({
+            "success": True,
+            "is_subscribed": is_subscribed,
+            "subscription_info": subscription_info
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+# ============================================
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)

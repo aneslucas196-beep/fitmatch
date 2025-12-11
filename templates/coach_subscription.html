@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abonnement Coach - FitMatch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { margin: 0; padding: 0; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-100">
+
+<header class="fixed inset-x-0 top-0 z-50 bg-white border-b border-slate-200">
+    <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
+        <a href="/" class="inline-flex items-center">
+            <span class="text-2xl font-semibold tracking-tight text-slate-900">Fit<span class="text-emerald-500">Match</span></span>
+        </a>
+        <a href="/coach/portal" class="text-slate-600 hover:text-slate-900 font-medium">
+            &larr; Retour au dashboard
+        </a>
+    </div>
+</header>
+
+<div class="h-16"></div>
+
+<div id="successToast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium hidden">
+    Abonnement activé avec succès !
+</div>
+
+<div id="cancelledToast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium hidden">
+    Abonnement annulé
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('success')) {
+    document.getElementById('successToast').classList.remove('hidden');
+    setTimeout(() => {
+        document.getElementById('successToast').classList.add('hidden');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }, 3000);
+}
+if (urlParams.get('cancelled')) {
+    document.getElementById('cancelledToast').classList.remove('hidden');
+    setTimeout(() => {
+        document.getElementById('cancelledToast').classList.add('hidden');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }, 3000);
+}
+</script>
+
+<div class="min-h-screen pb-16">
+    
+    <div class="relative overflow-hidden bg-white border-b border-slate-200">
+        <div class="absolute inset-0 bg-gradient-to-br from-emerald-50 via-teal-50 to-transparent opacity-60"></div>
+        <div class="relative max-w-6xl mx-auto px-6 py-14 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold mb-3 text-slate-900">
+                Abonnement FitMatch Pro
+            </h1>
+            <p class="text-lg md:text-xl text-slate-600">
+                Tout ce dont vous avez besoin pour développer votre activité de coaching
+            </p>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-6 py-12">
+
+        {% if subscription_info and subscription_info.subscription_status == 'active' %}
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8 border-l-4 border-emerald-500">
+            <div class="flex items-center mb-6">
+                <div class="bg-emerald-100 p-3 rounded-full mr-4">
+                    <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Abonnement actif</h2>
+                    <p class="text-slate-600">Vous profitez de tous les avantages FitMatch Pro</p>
+                </div>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-slate-50 rounded-xl p-5">
+                    <p class="text-sm text-slate-500 mb-1">Statut</p>
+                    <p class="text-lg font-semibold text-emerald-600">Actif</p>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-5">
+                    <p class="text-sm text-slate-500 mb-1">Prochain renouvellement</p>
+                    <p class="text-lg font-semibold text-slate-900">
+                        {% if subscription_info.subscription_period_end %}
+                            {{ subscription_info.subscription_period_end[:10] }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <button onclick="openPortal()" 
+                    class="w-full bg-slate-900 text-white py-4 rounded-xl font-semibold hover:bg-slate-800 transition duration-200">
+                Gérer mon abonnement
+            </button>
+        </div>
+
+        {% else %}
+        <div class="grid md:grid-cols-2 gap-8">
+            
+            <div class="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
+                <div class="text-center mb-8">
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">Gratuit</h3>
+                    <div class="text-4xl font-bold text-slate-900">0€</div>
+                    <p class="text-slate-500">Pour découvrir FitMatch</p>
+                </div>
+                
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-center text-slate-600">
+                        <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Profil coach visible
+                    </li>
+                    <li class="flex items-center text-slate-600">
+                        <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        1 salle associée
+                    </li>
+                    <li class="flex items-center text-slate-400">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        <span class="line-through">Réservations en ligne</span>
+                    </li>
+                    <li class="flex items-center text-slate-400">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        <span class="line-through">Rappels automatiques</span>
+                    </li>
+                    <li class="flex items-center text-slate-400">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        <span class="line-through">Messagerie</span>
+                    </li>
+                </ul>
+                
+                <div class="bg-slate-100 text-slate-600 py-4 rounded-xl font-semibold text-center">
+                    Plan actuel
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-emerald-500 relative">
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                    Recommandé
+                </div>
+                
+                <div class="text-center mb-8">
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">FitMatch Pro</h3>
+                    <div class="text-4xl font-bold text-emerald-600">{{ monthly_price }}€<span class="text-lg text-slate-500">/mois</span></div>
+                    <p class="text-slate-500">Développez votre activité</p>
+                </div>
+                
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-center text-slate-700">
+                        <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <strong>Profil coach premium</strong>
+                    </li>
+                    <li class="flex items-center text-slate-700">
+                        <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <strong>Salles illimitées</strong>
+                    </li>
+                    <li class="flex items-center text-slate-700">
+                        <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Réservations en ligne
+                    </li>
+                    <li class="flex items-center text-slate-700">
+                        <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Rappels email automatiques
+                    </li>
+                    <li class="flex items-center text-slate-700">
+                        <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Messagerie avec clients
+                    </li>
+                    <li class="flex items-center text-slate-700">
+                        <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Statistiques détaillées
+                    </li>
+                    <li class="flex items-center text-slate-700">
+                        <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Support prioritaire
+                    </li>
+                </ul>
+                
+                <button onclick="subscribe()" id="subscribeBtn"
+                        class="w-full bg-emerald-500 text-white py-4 rounded-xl font-semibold hover:bg-emerald-600 transition duration-200 flex items-center justify-center">
+                    <span id="btnText">S'abonner maintenant</span>
+                    <svg id="btnSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+                
+                <p class="text-center text-slate-500 text-sm mt-4">
+                    Sans engagement - Annulable à tout moment
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-12 bg-white rounded-2xl shadow-lg p-8">
+            <h3 class="text-xl font-bold text-slate-900 mb-6 text-center">Questions fréquentes</h3>
+            
+            <div class="space-y-4">
+                <details class="group border border-slate-200 rounded-xl">
+                    <summary class="flex justify-between items-center cursor-pointer p-5 font-medium text-slate-900">
+                        Comment fonctionne l'abonnement ?
+                        <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 text-slate-600">
+                        L'abonnement est mensuel et se renouvelle automatiquement. Vous pouvez l'annuler à tout moment depuis votre espace de gestion.
+                    </div>
+                </details>
+                
+                <details class="group border border-slate-200 rounded-xl">
+                    <summary class="flex justify-between items-center cursor-pointer p-5 font-medium text-slate-900">
+                        Puis-je annuler à tout moment ?
+                        <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 text-slate-600">
+                        Oui, vous pouvez annuler votre abonnement à tout moment. Vous conserverez l'accès jusqu'à la fin de la période payée.
+                    </div>
+                </details>
+                
+                <details class="group border border-slate-200 rounded-xl">
+                    <summary class="flex justify-between items-center cursor-pointer p-5 font-medium text-slate-900">
+                        Quels moyens de paiement acceptez-vous ?
+                        <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 text-slate-600">
+                        Nous acceptons les cartes bancaires Visa, Mastercard et American Express. Le paiement est sécurisé par Stripe.
+                    </div>
+                </details>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+async function subscribe() {
+    const btn = document.getElementById('subscribeBtn');
+    const btnText = document.getElementById('btnText');
+    const btnSpinner = document.getElementById('btnSpinner');
+    
+    btn.disabled = true;
+    btnText.textContent = 'Redirection...';
+    btnSpinner.classList.remove('hidden');
+    
+    try {
+        const response = await fetch('/api/stripe/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.url) {
+            window.location.href = data.url;
+        } else {
+            throw new Error(data.error || 'Erreur lors de la création de la session');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue. Veuillez réessayer.');
+        btn.disabled = false;
+        btnText.textContent = "S'abonner maintenant";
+        btnSpinner.classList.add('hidden');
+    }
+}
+
+async function openPortal() {
+    try {
+        const response = await fetch('/api/stripe/create-portal-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        const data = await response.json();
+        
+        if (data.url) {
+            window.location.href = data.url;
+        } else {
+            throw new Error(data.error || 'Erreur lors de l\'ouverture du portail');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue. Veuillez réessayer.');
+    }
+}
+</script>
+
+</body>
+</html>

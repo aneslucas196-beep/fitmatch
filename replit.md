@@ -122,6 +122,30 @@ Preferred communication style: Simple, everyday language.
 - **Supabase**: Planned integration for user authentication and data storage.
 - **Resend**: Transactional email service for sending OTP verification codes and password reset emails (configured with API key, replaces demo mode)
 
+### Stripe Subscription System (NEW)
+- **Coach Monthly Subscription**: 29€/month subscription for coaches to access premium features
+- **Stripe Integration**: Connected via Replit secure connector for API key management
+- **Checkout Flow**: 
+    1. Coach clicks "S'abonner" on `/coach/subscription` page
+    2. Redirects to Stripe Checkout (hosted payment page)
+    3. After payment, redirects back with session_id for verification
+    4. Subscription status stored in demo_users.json
+- **Subscription Page** (`/coach/subscription`):
+    - Pricing comparison: Free vs Pro plan
+    - Active subscription display with renewal date
+    - Link to Stripe Customer Portal for billing management
+- **API Endpoints**:
+    - POST /api/stripe/create-checkout-session - Creates Stripe Checkout session
+    - POST /api/stripe/create-portal-session - Opens Stripe billing portal
+    - POST /api/stripe/webhook - Handles Stripe events (checkout.session.completed, subscription updates)
+    - GET /api/coach/subscription-status - Returns coach subscription status
+- **Subscription Fields** (in demo_users.json):
+    - stripe_customer_id: Stripe customer identifier
+    - stripe_subscription_id: Stripe subscription identifier
+    - subscription_status: active, cancelled, past_due, inactive
+    - subscription_period_end: End date of current billing period
+- **Service Layer**: stripe_service.py handles all Stripe API operations
+
 ### Password Reset System
 - **Forgot Password Link**: Added to login page with modal popup for email input
 - **Reset Email**: FitMatch-branded email template with reset link (expires after 1 hour)
