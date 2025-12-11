@@ -341,5 +341,23 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "zefhyuyzefuy@gmail.com": {
+    "email": "zefhyuyzefuy@gmail.com",
+    "password": "ANASkkfyuaz",
+    "full_name": "fezfezfze",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
+  },
+  "huiuohi@gmail.com": {
+    "email": "huiuohi@gmail.com",
+    "password": "ytuffuytZdg53",
+    "full_name": "iuguyi",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }
