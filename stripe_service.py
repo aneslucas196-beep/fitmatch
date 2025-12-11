@@ -31,36 +31,39 @@ async def get_stripe_credentials() -> Dict[str, str]:
     else:
         raise Exception("Pas de token Replit disponible")
     
-    # Toujours utiliser l'environnement production pour Stripe
-    target_environment = "production"
+    # Essayer d'abord production, puis development
+    for target_environment in ["production", "development"]:
+        url = f"https://{hostname}/api/v2/connection?include_secrets=true&connector_names=stripe&environment={target_environment}"
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers={
+                "Accept": "application/json",
+                "X_REPLIT_TOKEN": x_replit_token
+            }) as response:
+                data = await response.json()
+        
+        items = data.get("items", [])
+        if items:
+            connection = items[0]
+            settings = connection.get("settings", {})
+            
+            publishable_key = settings.get("publishable")
+            secret_key = settings.get("secret")
+            
+            if publishable_key and secret_key:
+                print(f"✅ Utilisation des clés Stripe {target_environment}")
+                return {
+                    "publishable_key": publishable_key,
+                    "secret_key": secret_key
+                }
     
-    url = f"https://{hostname}/api/v2/connection?include_secrets=true&connector_names=stripe&environment={target_environment}"
-    
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers={
-            "Accept": "application/json",
-            "X_REPLIT_TOKEN": x_replit_token
-        }) as response:
-            data = await response.json()
-    
-    connection = data.get("items", [{}])[0]
-    settings = connection.get("settings", {})
-    
-    publishable_key = settings.get("publishable")
-    secret_key = settings.get("secret")
-    
-    if not publishable_key or not secret_key:
-        raise Exception(f"Connexion Stripe {target_environment} non trouvée")
-    
-    return {
-        "publishable_key": publishable_key,
-        "secret_key": secret_key
-    }
+    raise Exception("Aucune connexion Stripe trouvée (ni production, ni development)")
 
 
 def get_stripe_credentials_sync() -> Dict[str, str]:
     """
     Version synchrone pour récupérer les credentials Stripe.
+    Essaie d'abord production, puis development si production n'est pas configuré.
     """
     import requests
     
@@ -76,30 +79,32 @@ def get_stripe_credentials_sync() -> Dict[str, str]:
     else:
         raise Exception("Pas de token Replit disponible")
     
-    # Toujours utiliser l'environnement production pour Stripe
-    target_environment = "production"
+    # Essayer d'abord production, puis development
+    for target_environment in ["production", "development"]:
+        url = f"https://{hostname}/api/v2/connection?include_secrets=true&connector_names=stripe&environment={target_environment}"
+        
+        response = requests.get(url, headers={
+            "Accept": "application/json",
+            "X_REPLIT_TOKEN": x_replit_token
+        })
+        data = response.json()
+        
+        items = data.get("items", [])
+        if items:
+            connection = items[0]
+            settings = connection.get("settings", {})
+            
+            publishable_key = settings.get("publishable")
+            secret_key = settings.get("secret")
+            
+            if publishable_key and secret_key:
+                print(f"✅ Utilisation des clés Stripe {target_environment}")
+                return {
+                    "publishable_key": publishable_key,
+                    "secret_key": secret_key
+                }
     
-    url = f"https://{hostname}/api/v2/connection?include_secrets=true&connector_names=stripe&environment={target_environment}"
-    
-    response = requests.get(url, headers={
-        "Accept": "application/json",
-        "X_REPLIT_TOKEN": x_replit_token
-    })
-    data = response.json()
-    
-    connection = data.get("items", [{}])[0]
-    settings = connection.get("settings", {})
-    
-    publishable_key = settings.get("publishable")
-    secret_key = settings.get("secret")
-    
-    if not publishable_key or not secret_key:
-        raise Exception(f"Connexion Stripe {target_environment} non trouvée")
-    
-    return {
-        "publishable_key": publishable_key,
-        "secret_key": secret_key
-    }
+    raise Exception("Aucune connexion Stripe trouvée (ni production, ni development)")
 
 
 def init_stripe():
