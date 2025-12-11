@@ -2856,16 +2856,16 @@ async def get_availability(coach_id: str, from_date: str = Query(..., alias="fro
             for date_str in coach_data.get("unavailable_days", []):
                 unavailable_dates.add(date_str)
         
-        # Récupérer les horaires de travail (8h-20h par défaut)
+        # Récupérer les horaires de travail (8h-23h par défaut pour permettre séances jusqu'à 22h)
         day_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
         default_hours = {
-            "monday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "tuesday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "wednesday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "thursday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "friday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "saturday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "sunday": {"enabled": True, "start": "08:00", "end": "20:00"}
+            "monday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "tuesday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "wednesday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "thursday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "friday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "saturday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "sunday": {"enabled": True, "start": "08:00", "end": "23:00"}
         }
         working_hours = coach_data.get("working_hours", default_hours) if coach_data else default_hours
         
@@ -2993,15 +2993,15 @@ async def get_coach_working_hours(coach_email: str):
         demo_users = load_demo_users()
         coach_data = demo_users.get(coach_email, {})
         
-        # Horaires par défaut (8h-20h tous les jours)
+        # Horaires par défaut (8h-23h tous les jours pour permettre séances jusqu'à 22h)
         default_hours = {
-            "monday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "tuesday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "wednesday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "thursday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "friday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "saturday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "sunday": {"enabled": True, "start": "08:00", "end": "20:00"}
+            "monday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "tuesday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "wednesday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "thursday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "friday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "saturday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "sunday": {"enabled": True, "start": "08:00", "end": "23:00"}
         }
         
         return coach_data.get("working_hours", default_hours)
@@ -3073,15 +3073,15 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
         unavailable_days = coach_data.get("unavailable_days", [])
         unavailable_slots = coach_data.get("unavailable_slots", [])
         
-        # Récupérer les horaires de travail (8h-20h par défaut tous les jours)
+        # Récupérer les horaires de travail (8h-23h par défaut tous les jours pour permettre séances jusqu'à 22h)
         default_hours = {
-            "monday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "tuesday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "wednesday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "thursday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "friday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "saturday": {"enabled": True, "start": "08:00", "end": "20:00"},
-            "sunday": {"enabled": True, "start": "08:00", "end": "20:00"}
+            "monday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "tuesday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "wednesday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "thursday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "friday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "saturday": {"enabled": True, "start": "08:00", "end": "23:00"},
+            "sunday": {"enabled": True, "start": "08:00", "end": "23:00"}
         }
         working_hours = coach_data.get("working_hours", default_hours)
         
