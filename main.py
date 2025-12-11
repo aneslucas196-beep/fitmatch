@@ -73,6 +73,24 @@ from utils import (
 from resend_service import send_otp_email_resend
 from supabase_auth_service import signup_with_supabase_email_confirmation, resend_email_confirmation, sign_in_with_email_password, get_user_role
 
+# Import Stripe service (gestion des abonnements coachs)
+try:
+    from stripe_service import (
+        get_publishable_key,
+        create_or_get_customer,
+        create_checkout_session,
+        create_portal_session,
+        get_coach_subscription_info,
+        update_coach_subscription,
+        is_coach_subscribed,
+        COACH_MONTHLY_PRICE,
+        init_stripe
+    )
+    STRIPE_AVAILABLE = True
+except Exception as stripe_import_error:
+    print(f"⚠️ Stripe non disponible: {stripe_import_error}")
+    STRIPE_AVAILABLE = False
+
 # ============================================
 # SYSTÈME DE RAPPELS PROGRAMMÉS
 # ============================================
@@ -5205,17 +5223,6 @@ reminder_thread.start()
 # STRIPE - ABONNEMENTS COACHS
 # ============================================
 
-from stripe_service import (
-    get_publishable_key,
-    create_or_get_customer,
-    create_checkout_session,
-    create_portal_session,
-    get_coach_subscription_info,
-    update_coach_subscription,
-    is_coach_subscribed,
-    COACH_MONTHLY_PRICE
-)
-
 @app.get("/coach/subscription", response_class=HTMLResponse)
 async def coach_subscription_page(
     request: Request, 
@@ -5225,7 +5232,6 @@ async def coach_subscription_page(
 ):
     """Page d'abonnement pour les coachs."""
     import stripe
-    from stripe_service import init_stripe
     
     coach_email = user.get("email")
     
