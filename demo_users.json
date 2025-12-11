@@ -395,5 +395,14 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "tbrbrtb@gmail.com": {
+    "email": "tbrbrtb@gmail.com",
+    "password": "rvreveié\"",
+    "full_name": "gfbgbg",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }
