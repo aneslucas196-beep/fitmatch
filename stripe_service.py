@@ -31,80 +31,35 @@ async def get_stripe_credentials() -> Dict[str, str]:
     else:
         raise Exception("Pas de token Replit disponible")
     
-    # Essayer d'abord production, puis development
-    for target_environment in ["production", "development"]:
-        url = f"https://{hostname}/api/v2/connection?include_secrets=true&connector_names=stripe&environment={target_environment}"
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers={
-                "Accept": "application/json",
-                "X_REPLIT_TOKEN": x_replit_token
-            }) as response:
-                data = await response.json()
-        
-        items = data.get("items", [])
-        if items:
-            connection = items[0]
-            settings = connection.get("settings", {})
-            
-            publishable_key = settings.get("publishable")
-            secret_key = settings.get("secret")
-            
-            if publishable_key and secret_key:
-                print(f"✅ Utilisation des clés Stripe {target_environment}")
-                return {
-                    "publishable_key": publishable_key,
-                    "secret_key": secret_key
-                }
+    # Utiliser les clés depuis les variables d'environnement
+    publishable_key = os.environ.get("STRIPE_PUBLIC_KEY")
+    secret_key = os.environ.get("STRIPE_SECRET_KEY")
     
-    raise Exception("Aucune connexion Stripe trouvée (ni production, ni development)")
+    if publishable_key and secret_key:
+        print(f"✅ Utilisation des clés Stripe depuis les secrets")
+        return {
+            "publishable_key": publishable_key,
+            "secret_key": secret_key
+        }
+    
+    raise Exception("Clés Stripe non configurées. Ajoutez STRIPE_PUBLIC_KEY et STRIPE_SECRET_KEY dans les secrets.")
 
 
 def get_stripe_credentials_sync() -> Dict[str, str]:
     """
-    Version synchrone pour récupérer les credentials Stripe.
-    Essaie d'abord production, puis development si production n'est pas configuré.
+    Récupère les credentials Stripe depuis les variables d'environnement.
     """
-    import requests
+    publishable_key = os.environ.get("STRIPE_PUBLIC_KEY")
+    secret_key = os.environ.get("STRIPE_SECRET_KEY")
     
-    hostname = os.environ.get("REPLIT_CONNECTORS_HOSTNAME")
+    if publishable_key and secret_key:
+        print(f"✅ Utilisation des clés Stripe depuis les secrets")
+        return {
+            "publishable_key": publishable_key,
+            "secret_key": secret_key
+        }
     
-    repl_identity = os.environ.get("REPL_IDENTITY")
-    web_repl_renewal = os.environ.get("WEB_REPL_RENEWAL")
-    
-    if repl_identity:
-        x_replit_token = f"repl {repl_identity}"
-    elif web_repl_renewal:
-        x_replit_token = f"depl {web_repl_renewal}"
-    else:
-        raise Exception("Pas de token Replit disponible")
-    
-    # Essayer d'abord production, puis development
-    for target_environment in ["production", "development"]:
-        url = f"https://{hostname}/api/v2/connection?include_secrets=true&connector_names=stripe&environment={target_environment}"
-        
-        response = requests.get(url, headers={
-            "Accept": "application/json",
-            "X_REPLIT_TOKEN": x_replit_token
-        })
-        data = response.json()
-        
-        items = data.get("items", [])
-        if items:
-            connection = items[0]
-            settings = connection.get("settings", {})
-            
-            publishable_key = settings.get("publishable")
-            secret_key = settings.get("secret")
-            
-            if publishable_key and secret_key:
-                print(f"✅ Utilisation des clés Stripe {target_environment}")
-                return {
-                    "publishable_key": publishable_key,
-                    "secret_key": secret_key
-                }
-    
-    raise Exception("Aucune connexion Stripe trouvée (ni production, ni development)")
+    raise Exception("Clés Stripe non configurées. Ajoutez STRIPE_PUBLIC_KEY et STRIPE_SECRET_KEY dans les secrets.")
 
 
 def init_stripe():
