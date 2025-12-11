@@ -359,5 +359,14 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "ergugihieur@gmail.com": {
+    "email": "ergugihieur@gmail.com",
+    "password": "ezfuefoihu587",
+    "full_name": "gerge",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }

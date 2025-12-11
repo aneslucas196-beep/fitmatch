@@ -31,9 +31,8 @@ async def get_stripe_credentials() -> Dict[str, str]:
     else:
         raise Exception("Pas de token Replit disponible")
     
-    # Déterminer l'environnement
-    is_production = os.environ.get("REPLIT_DEPLOYMENT") == "1"
-    target_environment = "production" if is_production else "development"
+    # Toujours utiliser l'environnement production pour Stripe
+    target_environment = "production"
     
     url = f"https://{hostname}/api/v2/connection?include_secrets=true&connector_names=stripe&environment={target_environment}"
     
@@ -77,8 +76,8 @@ def get_stripe_credentials_sync() -> Dict[str, str]:
     else:
         raise Exception("Pas de token Replit disponible")
     
-    is_production = os.environ.get("REPLIT_DEPLOYMENT") == "1"
-    target_environment = "production" if is_production else "development"
+    # Toujours utiliser l'environnement production pour Stripe
+    target_environment = "production"
     
     url = f"https://{hostname}/api/v2/connection?include_secrets=true&connector_names=stripe&environment={target_environment}"
     
