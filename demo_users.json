@@ -368,5 +368,14 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "revverver@gmail.com": {
+    "email": "revverver@gmail.com",
+    "password": "fzinjfkz568",
+    "full_name": "erveverv",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }
