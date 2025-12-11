@@ -404,5 +404,14 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "vbehvevuy@gmail.com": {
+    "email": "vbehvevuy@gmail.com",
+    "password": "VYFTZD5585",
+    "full_name": "iuguyi",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }
