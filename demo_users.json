@@ -332,5 +332,14 @@
     "password": "Arobisajgd52",
     "coach_gender_preference": null,
     "selected_gyms": null
+  },
+  "buissnessspaw@gmail.com": {
+    "email": "buissnessspaw@gmail.com",
+    "password": "Anasking1234!",
+    "full_name": "iuguyi",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }
