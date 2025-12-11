@@ -17,7 +17,7 @@ deploymentTarget = "gce"
 
 [agent]
 expertMode = true
-integrations = ["python_sendgrid:1.0.0", "javascript_object_storage:1.0.0"]
+integrations = ["python_sendgrid:1.0.0", "javascript_object_storage:1.0.0", "stripe:2.0.0"]
 
 [workflows]
 runButton = "Project"
