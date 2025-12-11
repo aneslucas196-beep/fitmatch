@@ -386,5 +386,14 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "rgrzergvrz@gmail.com": {
+    "email": "rgrzergvrz@gmail.com",
+    "password": "fezfzfe53",
+    "full_name": "fdbef",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }
