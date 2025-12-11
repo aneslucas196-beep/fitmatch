@@ -413,5 +413,14 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "ervrhejjhr@gmail.com": {
+    "email": "ervrhejjhr@gmail.com",
+    "password": "fzohfz585H",
+    "full_name": "vffvfe",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }
