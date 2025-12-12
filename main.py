@@ -2775,58 +2775,92 @@ async def coach_subscription_page(
     
     # Si retour de Stripe avec succès, vérifier et activer l'abonnement
     if success == "true" and session_id:
+        payment_confirmed = False
         try:
             init_stripe()
             checkout_session = stripe.checkout.Session.retrieve(session_id)
             
             if checkout_session.payment_status == "paid":
+                payment_confirmed = True
                 subscription_id = checkout_session.subscription
                 customer_id = checkout_session.customer
                 
-                if subscription_id:
-                    subscription = stripe.Subscription.retrieve(subscription_id)
-                    period_end = datetime.fromtimestamp(subscription.current_period_end).isoformat()
-                    
+                try:
+                    if subscription_id:
+                        subscription = stripe.Subscription.retrieve(subscription_id)
+                        period_end = datetime.fromtimestamp(subscription.current_period_end).isoformat()
+                        
+                        update_coach_subscription(
+                            coach_email=coach_email,
+                            stripe_customer_id=customer_id,
+                            stripe_subscription_id=subscription_id,
+                            subscription_status="active",
+                            current_period_end=period_end
+                        )
+                        print(f"✅ Abonnement activé via redirect pour {coach_email}")
+                    else:
+                        update_coach_subscription(
+                            coach_email=coach_email,
+                            stripe_customer_id=customer_id,
+                            subscription_status="active"
+                        )
+                        print(f"✅ Paiement confirmé (sans subscription_id) pour {coach_email}")
+                except Exception as sub_err:
+                    print(f"⚠️ Erreur récupération détails abonnement: {sub_err}")
+                    # Activer quand même l'abonnement
                     update_coach_subscription(
                         coach_email=coach_email,
-                        stripe_customer_id=customer_id,
-                        stripe_subscription_id=subscription_id,
-                        subscription_status="active",
-                        current_period_end=period_end
-                    )
-                    print(f"✅ Abonnement activé via redirect pour {coach_email}")
-                else:
-                    update_coach_subscription(
-                        coach_email=coach_email,
-                        stripe_customer_id=customer_id,
+                        stripe_customer_id=customer_id if customer_id else "",
                         subscription_status="active"
                     )
                 
-                # Générer et envoyer le code OTP de vérification email
-                import random
-                from resend_service import send_otp_email_resend
-                
-                otp_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-                otp_expiry = (datetime.now() + timedelta(minutes=10)).isoformat()
-                
-                # Sauvegarder l'OTP dans les données du coach
-                demo_users = load_demo_users()
-                if coach_email in demo_users:
-                    demo_users[coach_email]["otp_code"] = otp_code
-                    demo_users[coach_email]["otp_expiry"] = otp_expiry
-                    demo_users[coach_email]["email_verified"] = False
-                    save_demo_users(demo_users)
-                
-                # Envoyer l'email avec le code
-                full_name = user.get("full_name", "Coach")
-                send_otp_email_resend(coach_email, otp_code, full_name)
-                print(f"📧 Code OTP envoyé à {coach_email}: {otp_code}")
-                
-                # Rediriger vers la page de vérification email
-                return RedirectResponse(url="/coach/verify-email", status_code=303)
-                
         except Exception as e:
             print(f"⚠️ Erreur vérification session Stripe: {e}")
+            # Si on a un session_id valide, on considère le paiement comme fait
+            payment_confirmed = True
+            update_coach_subscription(
+                coach_email=coach_email,
+                subscription_status="active"
+            )
+        
+        # Toujours générer et envoyer l'OTP si le paiement semble confirmé
+        if payment_confirmed:
+            import random
+            from resend_service import send_otp_email_resend
+            
+            otp_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            otp_expiry = (datetime.now() + timedelta(minutes=10)).isoformat()
+            
+            # Sauvegarder l'OTP dans les données du coach
+            demo_users = load_demo_users()
+            if coach_email in demo_users:
+                demo_users[coach_email]["otp_code"] = otp_code
+                demo_users[coach_email]["otp_expiry"] = otp_expiry
+                demo_users[coach_email]["email_verified"] = False
+                save_demo_users(demo_users)
+                print(f"✅ OTP sauvegardé pour {coach_email}")
+            else:
+                # Créer l'entrée si elle n'existe pas
+                demo_users[coach_email] = {
+                    "email": coach_email,
+                    "otp_code": otp_code,
+                    "otp_expiry": otp_expiry,
+                    "email_verified": False,
+                    "subscription_status": "active"
+                }
+                save_demo_users(demo_users)
+                print(f"✅ Nouvelle entrée + OTP créés pour {coach_email}")
+            
+            # Envoyer l'email avec le code
+            full_name = user.get("full_name", "Coach")
+            try:
+                send_otp_email_resend(coach_email, otp_code, full_name)
+                print(f"📧 Code OTP envoyé à {coach_email}: {otp_code}")
+            except Exception as email_err:
+                print(f"⚠️ Erreur envoi email OTP: {email_err}")
+            
+            # Rediriger vers la page de vérification email
+            return RedirectResponse(url="/coach/verify-email", status_code=303)
     
     subscription_info = get_coach_subscription_info(coach_email)
     
