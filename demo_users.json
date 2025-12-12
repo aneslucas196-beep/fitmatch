@@ -440,5 +440,23 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "iuzrghkrg@gmail.com": {
+    "email": "iuzrghkrg@gmail.com",
+    "password": "EFNIFjrljng695",
+    "full_name": "iuguyi",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
+  },
+  "njrgnergoi@gmail.com": {
+    "email": "njrgnergoi@gmail.com",
+    "password": "gyzfyuGHUGJegf58",
+    "full_name": "ghbjkejkkg",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }
