@@ -479,5 +479,41 @@
     "otp_code": "115245",
     "otp_expiry": "2025-12-12T12:44:06.009092",
     "email_verified": false
+  },
+  "hkjjgioegi@gmail.com": {
+    "email": "hkjjgioegi@gmail.com",
+    "password": "gzefjgvé_è'669",
+    "full_name": "fezkjf",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "active",
+    "stripe_customer_id": "cus_Tah5AHcAUyC8E2",
+    "otp_code": "061654",
+    "otp_expiry": "2025-12-12T12:53:40.562017",
+    "email_verified": false
+  },
+  "anasking12992@gmail.com": {
+    "id": "anasking12992@gmail.com",
+    "email": "anasking12992@gmail.com",
+    "role": "coach",
+    "profile_completed": true,
+    "full_name": "ANAS",
+    "bio": "coach qui bz tout finallement ",
+    "city": "paris",
+    "instagram_url": "",
+    "price_from": 200,
+    "radius_km": 5,
+    "specialties": [
+      "musculation"
+    ],
+    "selected_gym_ids": "",
+    "selected_gyms_data": "",
+    "profile_photo_url": null,
+    "password": "Anasking1234!",
+    "gender": null,
+    "country_code": null,
+    "coach_gender_preference": null,
+    "selected_gyms": null
   }
 }

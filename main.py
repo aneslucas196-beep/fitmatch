@@ -2523,7 +2523,15 @@ async def coach_profile_setup_post(
                 "gender": existing_user.get("gender"),
                 "country_code": existing_user.get("country_code"),
                 "coach_gender_preference": existing_user.get("coach_gender_preference"),
-                "selected_gyms": existing_user.get("selected_gyms")
+                "selected_gyms": existing_user.get("selected_gyms"),
+                # ✅ PRÉSERVER les données d'abonnement et vérification
+                "subscription_status": existing_user.get("subscription_status"),
+                "email_verified": existing_user.get("email_verified"),
+                "stripe_customer_id": existing_user.get("stripe_customer_id"),
+                "stripe_subscription_id": existing_user.get("stripe_subscription_id"),
+                "subscription_period_end": existing_user.get("subscription_period_end"),
+                "otp_code": existing_user.get("otp_code"),
+                "otp_expiry": existing_user.get("otp_expiry")
             }
             
             print(f"🔒 Mot de passe préservé: {'✅' if updated_user['password'] else '❌'}")
