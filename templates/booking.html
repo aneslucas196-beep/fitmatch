@@ -316,18 +316,30 @@ function renderCalendar() {
   });
 }
 
+// Parse datetime string as local time (not UTC)
+function parseLocalDateTime(str) {
+  // Handle format "2025-12-18T08:00:00" or "2025-12-18T08:00:00Z"
+  const cleaned = str.replace('Z', '');
+  const [datePart, timePart] = cleaned.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, min, sec] = (timePart || '00:00:00').split(':').map(Number);
+  return new Date(year, month - 1, day, hour, min, sec || 0);
+}
+
 function statusFor(dtStart){
   const dtEnd = addMinutes(dtStart, SLOT_MINUTES);
   if(dtStart < new Date()) return "disabled";
   
   const inAvail = avail.some(a => {
-    const s = new Date(a.start), e = new Date(a.end);
+    const s = parseLocalDateTime(a.start);
+    const e = parseLocalDateTime(a.end);
     return between(dtStart, s, e) && dtEnd <= e;
   });
   if(!inAvail) return "disabled";
   
   const isBusy = bookings.some(b => {
-    const s = new Date(b.start), e = new Date(b.end);
+    const s = parseLocalDateTime(b.start);
+    const e = parseLocalDateTime(b.end);
     return !(dtEnd <= s || dtStart >= e);
   });
   return isBusy ? "busy" : "free";
