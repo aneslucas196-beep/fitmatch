@@ -422,5 +422,23 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "jshsh@gmail.com": {
+    "email": "jshsh@gmail.com",
+    "password": "Aunab1672",
+    "full_name": "hdhd",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
+  },
+  "heheh@gmail.com": {
+    "email": "heheh@gmail.com",
+    "password": "jesb718Jz",
+    "full_name": "hehd",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }

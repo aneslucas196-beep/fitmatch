@@ -11,17 +11,11 @@
   * { font-family: 'Inter', sans-serif; }
   body { margin: 0; padding: 0; }
   
-  .grid-scroll { overflow-x: auto; }
-  table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 800px; }
-  thead th { position: sticky; top: 0; background: #fff; z-index: 2; padding: 12px 8px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: 600; font-size: 14px; color: #334155; }
-  thead small { display: block; color: #94a3b8; font-weight: 400; font-size: 12px; }
-  tbody td { padding: 4px; border-bottom: 1px solid #f1f5f9; }
-  tbody td:first-child { position: sticky; left: 0; background: #fff; z-index: 1; text-align: right; padding-right: 12px; color: #64748b; font-weight: 500; font-size: 13px; width: 70px; }
-
   .slot {
     display: flex; align-items: center; justify-content: center;
-    height: 38px; border-radius: 8px; border: 1px solid #e2e8f0;
-    cursor: pointer; background: #fff; transition: all 0.15s; font-size: 13px; color: #334155;
+    height: 44px; border-radius: 8px; border: 1px solid #e2e8f0;
+    cursor: pointer; background: #fff; transition: all 0.15s; font-size: 14px; color: #334155;
+    font-weight: 500;
   }
   .slot:hover { border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1); }
   .slot.disabled { background: #f8fafc; color: #cbd5e1; border-style: dashed; cursor: not-allowed; }
@@ -29,15 +23,44 @@
   .slot.busy { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
   .slot.busy:hover { border-color: #fecaca; box-shadow: none; cursor: not-allowed; }
   .slot.selected { background: #10b981; border-color: #10b981; color: #fff; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+
+  .day-column { min-width: 100px; flex: 1; }
+  .day-header { 
+    text-align: center; 
+    padding: 12px 4px; 
+    font-weight: 600; 
+    font-size: 13px; 
+    color: #334155; 
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+  .day-header small { display: block; color: #94a3b8; font-weight: 400; font-size: 11px; margin-top: 2px; }
+  
+  .time-label {
+    width: 50px;
+    min-width: 50px;
+    text-align: right;
+    padding-right: 8px;
+    color: #64748b;
+    font-weight: 500;
+    font-size: 12px;
+  }
+
+  @media (max-width: 640px) {
+    .day-column { min-width: 80px; }
+    .slot { height: 40px; font-size: 13px; }
+    .day-header { font-size: 12px; padding: 10px 2px; }
+    .time-label { width: 45px; min-width: 45px; font-size: 11px; }
+  }
 </style>
 </head>
 <body class="min-h-screen bg-slate-100">
 
 <!-- Header Simple -->
 <header class="fixed inset-x-0 top-0 z-50 bg-white border-b border-slate-200">
-  <div class="max-w-5xl mx-auto flex items-center justify-between px-6 py-4">
+  <div class="max-w-5xl mx-auto flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
     <a href="/" class="inline-flex items-center">
-      <span class="text-2xl font-semibold tracking-tight text-slate-900">Fit<span class="text-emerald-500">Match</span></span>
+      <span class="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">Fit<span class="text-emerald-500">Match</span></span>
     </a>
     <a href="javascript:history.back()" class="text-sm text-slate-600 hover:text-slate-900 transition flex items-center gap-1">
       <span>←</span> Retour
@@ -46,58 +69,65 @@
 </header>
 
 <!-- Spacer -->
-<div class="h-16"></div>
+<div class="h-14 sm:h-16"></div>
 
-<div class="min-h-screen pb-16">
+<div class="min-h-screen pb-24">
   
   <!-- En-tête -->
   <div class="bg-white border-b border-slate-200">
-    <div class="max-w-5xl mx-auto px-6 py-8">
-      <h1 class="text-2xl font-bold text-slate-900 mb-2">Réserver une séance</h1>
-      <p class="text-slate-600">Choisis un créneau disponible pour <strong id="coachName" class="text-slate-900">{{ coach.full_name }}</strong></p>
+    <div class="max-w-5xl mx-auto px-4 py-6 sm:px-6 sm:py-8">
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">Réserver une séance</h1>
+      <p class="text-sm sm:text-base text-slate-600">Choisis un créneau pour <strong id="coachName" class="text-slate-900">{{ coach.full_name }}</strong></p>
     </div>
   </div>
 
-  <div class="max-w-5xl mx-auto px-6 py-6">
+  <div class="max-w-5xl mx-auto px-3 py-4 sm:px-6 sm:py-6">
     
     <!-- Carte calendrier -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       
       <!-- Navigation semaine -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-        <div class="font-semibold text-slate-900" id="rangeText"></div>
-        <div class="flex gap-2">
-          <button class="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition" id="prevWeek">← Semaine préc.</button>
-          <button class="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition" id="nextWeek">Semaine suiv. →</button>
+      <div class="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 gap-2">
+        <div class="font-semibold text-slate-900 text-sm sm:text-base" id="rangeText"></div>
+        <div class="flex gap-1 sm:gap-2">
+          <button class="px-2 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition" id="prevWeek">←</button>
+          <button class="px-2 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition" id="nextWeek">→</button>
         </div>
+      </div>
+
+      <!-- Navigation jours (mobile) -->
+      <div class="flex items-center justify-center gap-2 px-4 py-2 border-b border-slate-100 sm:hidden" id="dayNavMobile">
+        <button class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg" id="prevDays">← Préc.</button>
+        <span class="text-xs text-slate-500" id="dayRangeText">Jours 1-3</span>
+        <button class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg" id="nextDays">Suiv. →</button>
       </div>
 
       <!-- Grille horaires -->
-      <div class="grid-scroll p-4">
-        <table>
-          <thead>
-            <tr id="daysHead"><th></th></tr>
-          </thead>
-          <tbody id="gridBody"></tbody>
-        </table>
+      <div class="overflow-x-auto p-3 sm:p-4">
+        <div class="flex" id="calendarGrid">
+          <!-- Colonne heures -->
+          <div class="flex-shrink-0" id="timeColumn"></div>
+          <!-- Colonnes jours -->
+          <div class="flex flex-1" id="daysContainer"></div>
+        </div>
       </div>
 
       <!-- Légende + Confirmation -->
-      <div class="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50 flex-wrap gap-4">
-        <div class="flex gap-4">
-          <span class="flex items-center gap-2 text-sm text-slate-600">
-            <span class="w-3 h-3 rounded-full bg-emerald-500"></span> Disponible
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-t border-slate-100 bg-slate-50 gap-3 sm:gap-4">
+        <div class="flex gap-3 sm:gap-4 flex-wrap">
+          <span class="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600">
+            <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500"></span> Dispo
           </span>
-          <span class="flex items-center gap-2 text-sm text-slate-600">
-            <span class="w-3 h-3 rounded-full bg-red-400"></span> Occupé
+          <span class="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600">
+            <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-400"></span> Occupé
           </span>
-          <span class="flex items-center gap-2 text-sm text-slate-600">
-            <span class="w-3 h-3 rounded-full bg-slate-300"></span> Indispo
+          <span class="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600">
+            <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-slate-300"></span> Passé
           </span>
         </div>
-        <div class="flex items-center gap-4">
-          <div class="text-sm font-medium text-slate-700" id="recap">Aucun créneau sélectionné</div>
-          <button class="px-5 py-2.5 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed" id="confirmBtn" disabled>
+        <div class="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <div class="text-xs sm:text-sm font-medium text-slate-700 flex-1 sm:flex-none" id="recap">Aucun créneau sélectionné</div>
+          <button class="px-4 py-2 sm:px-5 sm:py-2.5 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm" id="confirmBtn" disabled>
             Confirmer
           </button>
         </div>
@@ -107,8 +137,18 @@
   </div>
 </div>
 
+<!-- Barre fixe mobile pour confirmation -->
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 sm:hidden z-40" id="mobileConfirmBar" style="display: none;">
+  <div class="flex items-center gap-3">
+    <div class="flex-1 text-sm font-medium text-slate-700" id="recapMobile"></div>
+    <button class="px-5 py-2.5 bg-emerald-500 text-white font-medium rounded-lg" id="confirmBtnMobile">
+      Confirmer
+    </button>
+  </div>
+</div>
+
 <!-- Toast -->
-<div class="fixed right-4 bottom-4 bg-slate-900 text-white px-4 py-3 rounded-lg opacity-0 transform translate-y-2 transition-all" id="toast">
+<div class="fixed right-4 bottom-4 bg-slate-900 text-white px-4 py-3 rounded-lg opacity-0 transform translate-y-2 transition-all z-50" id="toast">
   Réservation confirmée
 </div>
 
@@ -125,10 +165,12 @@ const DAY_END = "23:00";
 
 const $ = s => document.querySelector(s);
 const pad = n => String(n).padStart(2,"0");
-const fmtDate = d => `${d.toLocaleDateString('fr-FR',{weekday:'short'})} ${pad(d.getDate())} ${d.toLocaleDateString('fr-FR',{month:'short'})}`;
+const fmtDate = d => `${d.toLocaleDateString('fr-FR',{weekday:'short'})} ${pad(d.getDate())}`;
+const fmtDateShort = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}`;
 function addMinutes(date, m){ const d=new Date(date); d.setMinutes(d.getMinutes()+m); return d; }
 function setTime(base, hhmm){const [h,m]=hhmm.split(':').map(Number);const d=new Date(base);d.setHours(h,m,0,0);return d;}
 function between(date, start, end){return date>=start && date<end;}
+function isMobile() { return window.innerWidth < 640; }
 
 async function fetchAvailability(coachId, fromISO, toISO){
   const res = await fetch(`/api/bookings/availability?coach_id=${coachId}&from=${fromISO}&to=${toISO}`);
@@ -147,99 +189,177 @@ async function fetchBookings(coachId, fromISO, toISO){
 }
 
 let weekOffset = 0;
+let dayOffset = 0;
 let selection = null;
+let allDays = [];
+let avail = [];
+let bookings = [];
 
-async function renderWeek(){
+function getDaysToShow() {
+  if (isMobile()) {
+    return 3;
+  }
+  return 7;
+}
+
+async function loadWeekData() {
   const today = new Date(); today.setHours(0,0,0,0);
   const start = new Date(today); start.setDate(start.getDate() + (weekOffset*7));
   const end = new Date(start); end.setDate(end.getDate()+6);
 
-  $("#rangeText").textContent = `${start.toLocaleDateString('fr-FR')} – ${end.toLocaleDateString('fr-FR')}`;
-
-  const headRow = $("#daysHead");
-  headRow.innerHTML = "<th></th>";
-  const days = [];
+  allDays = [];
   for(let i=0;i<7;i++){
     const d = new Date(start); d.setDate(d.getDate()+i);
-    days.push(d);
-    const th = document.createElement("th");
-    th.innerHTML = `<div>${fmtDate(d)}<small>${d.getFullYear()}</small></div>`;
-    headRow.appendChild(th);
+    allDays.push(d);
   }
 
+  avail = await fetchAvailability(COACH_ID, start.toISOString(), end.toISOString());
+  const bookingsData = await fetchBookings(COACH_ID, start.toISOString(), end.toISOString());
+  bookings = bookingsData.bookings || [];
+
+  return { start, end };
+}
+
+function renderCalendar() {
+  const daysToShow = getDaysToShow();
+  const visibleDays = allDays.slice(dayOffset, dayOffset + daysToShow);
+
+  // Update range text
+  if (allDays.length > 0) {
+    $("#rangeText").textContent = `${fmtDateShort(allDays[0])} – ${fmtDateShort(allDays[6])}`;
+  }
+
+  // Update mobile day navigation
+  if (isMobile()) {
+    $("#dayNavMobile").style.display = "flex";
+    const startDay = dayOffset + 1;
+    const endDay = Math.min(dayOffset + daysToShow, 7);
+    $("#dayRangeText").textContent = `Jours ${startDay}-${endDay} / 7`;
+    $("#prevDays").disabled = dayOffset === 0;
+    $("#nextDays").disabled = dayOffset + daysToShow >= 7;
+  } else {
+    $("#dayNavMobile").style.display = "none";
+  }
+
+  // Generate times
   const times = [];
-  let cursor = setTime(start, DAY_START);
-  const dayEnd = setTime(start, DAY_END);
+  let cursor = setTime(new Date(), DAY_START);
+  const dayEnd = setTime(new Date(), DAY_END);
   while(cursor < dayEnd){
     times.push(cursor.toTimeString().slice(0,5));
     cursor = addMinutes(cursor, SLOT_MINUTES);
   }
 
-  const avail = await fetchAvailability(COACH_ID, start.toISOString(), end.toISOString());
-  const bookingsData = await fetchBookings(COACH_ID, start.toISOString(), end.toISOString());
-  const bookings = bookingsData.bookings || [];
-  const body = $("#gridBody"); body.innerHTML = "";
+  // Render time column
+  const timeCol = $("#timeColumn");
+  timeCol.innerHTML = `<div class="day-header" style="height: 52px;"></div>`;
+  times.forEach(time => {
+    const div = document.createElement("div");
+    div.className = "time-label flex items-center justify-end";
+    div.style.height = "52px";
+    div.textContent = time;
+    timeCol.appendChild(div);
+  });
 
-  function statusFor(dtStart, time, dayDate){
-    const dtEnd = addMinutes(dtStart, SLOT_MINUTES);
-    if(dtStart < new Date()) return "disabled";
-    
-    const inAvail = avail.some(a=>{
-      const s=new Date(a.start), e=new Date(a.end);
-      return between(dtStart,s,e) && dtEnd<=e;
-    });
-    if(!inAvail) return "disabled";
-    const isBusy = bookings.some(b=>{
-      const s=new Date(b.start), e=new Date(b.end);
-      return !(dtEnd<=s || dtStart>=e);
-    });
-    return isBusy ? "busy" : "free";
-  }
+  // Render day columns
+  const daysContainer = $("#daysContainer");
+  daysContainer.innerHTML = "";
 
-  times.forEach(time=>{
-    const tr = document.createElement("tr");
-    const th = document.createElement("td");
-    th.textContent = time;
-    tr.appendChild(th);
+  visibleDays.forEach((d, dayIndex) => {
+    const col = document.createElement("div");
+    col.className = "day-column";
 
-    days.forEach((d,dayIndex)=>{
-      const td = document.createElement("td");
+    // Header
+    const header = document.createElement("div");
+    header.className = "day-header";
+    header.innerHTML = `${fmtDate(d)}<small>${d.toLocaleDateString('fr-FR', {month: 'short'})}</small>`;
+    col.appendChild(header);
+
+    // Slots
+    times.forEach(time => {
+      const slotContainer = document.createElement("div");
+      slotContainer.style.padding = "4px 2px";
+      slotContainer.style.height = "52px";
+
       const slotStart = setTime(d, time);
-      const st = statusFor(slotStart, time, d);
+      const st = statusFor(slotStart);
+
       const btn = document.createElement("div");
       btn.className = `slot ${st}`;
       btn.textContent = time;
 
-      if(st==="free"){
-        btn.addEventListener("click", ()=>{
-          document.querySelectorAll(".slot.selected").forEach(el=>el.classList.remove("selected"));
+      if(st === "free"){
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".slot.selected").forEach(el => el.classList.remove("selected"));
           btn.classList.add("selected");
           selection = {
             start: slotStart,
-            end: addMinutes(slotStart,SLOT_MINUTES),
-            dayIndex
+            end: addMinutes(slotStart, SLOT_MINUTES),
+            day: d
           };
-          $("#recap").textContent = `Séance le ${d.toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'})} à ${time}`;
+          const recapText = `${d.toLocaleDateString('fr-FR',{weekday:'short', day:'2-digit', month:'short'})} à ${time}`;
+          $("#recap").textContent = recapText;
+          $("#recapMobile").textContent = recapText;
           $("#confirmBtn").disabled = false;
+          
+          if (isMobile()) {
+            $("#mobileConfirmBar").style.display = "block";
+          }
         });
       }
 
-      td.appendChild(btn);
-      tr.appendChild(td);
+      slotContainer.appendChild(btn);
+      col.appendChild(slotContainer);
     });
 
-    body.appendChild(tr);
+    daysContainer.appendChild(col);
   });
+}
 
+function statusFor(dtStart){
+  const dtEnd = addMinutes(dtStart, SLOT_MINUTES);
+  if(dtStart < new Date()) return "disabled";
+  
+  const inAvail = avail.some(a => {
+    const s = new Date(a.start), e = new Date(a.end);
+    return between(dtStart, s, e) && dtEnd <= e;
+  });
+  if(!inAvail) return "disabled";
+  
+  const isBusy = bookings.some(b => {
+    const s = new Date(b.start), e = new Date(b.end);
+    return !(dtEnd <= s || dtStart >= e);
+  });
+  return isBusy ? "busy" : "free";
+}
+
+async function renderWeek() {
+  await loadWeekData();
+  dayOffset = 0;
+  renderCalendar();
+  
   selection = null;
   $("#recap").textContent = "Aucun créneau sélectionné";
   $("#confirmBtn").disabled = true;
+  $("#mobileConfirmBar").style.display = "none";
 }
 
-$("#prevWeek").addEventListener("click", ()=>{ weekOffset--; renderWeek(); });
-$("#nextWeek").addEventListener("click", ()=>{ weekOffset++; renderWeek(); });
+// Week navigation
+$("#prevWeek").addEventListener("click", () => { weekOffset--; renderWeek(); });
+$("#nextWeek").addEventListener("click", () => { weekOffset++; renderWeek(); });
 
-$("#confirmBtn").addEventListener("click", ()=>{
+// Day navigation (mobile)
+$("#prevDays").addEventListener("click", () => {
+  dayOffset = Math.max(0, dayOffset - getDaysToShow());
+  renderCalendar();
+});
+$("#nextDays").addEventListener("click", () => {
+  dayOffset = Math.min(7 - getDaysToShow(), dayOffset + getDaysToShow());
+  renderCalendar();
+});
+
+// Confirm buttons
+function confirmBooking() {
   if(!selection) return;
   
   const startDate = selection.start;
@@ -260,6 +380,19 @@ $("#confirmBtn").addEventListener("click", ()=>{
   });
   
   window.location.href = `/reservation?${params.toString()}`;
+}
+
+$("#confirmBtn").addEventListener("click", confirmBooking);
+$("#confirmBtnMobile").addEventListener("click", confirmBooking);
+
+// Handle resize
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    dayOffset = 0;
+    renderCalendar();
+  }, 150);
 });
 
 function showToast(msg){
