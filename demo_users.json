@@ -458,5 +458,14 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "gizhjbhg@gmail.com": {
+    "email": "gizhjbhg@gmail.com",
+    "password": "bhjjgjhbvhjbzhje539",
+    "full_name": "bkbgbkzgoi",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment"
   }
 }

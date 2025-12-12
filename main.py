@@ -2250,6 +2250,13 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     if subscription_status != "active":
         return RedirectResponse(url="/coach/subscription", status_code=303)
     
+    # Vérifier si l'email est vérifié
+    coach_email = user.get("email")
+    demo_users = load_demo_users()
+    coach_data_check = demo_users.get(coach_email, {})
+    if not coach_data_check.get("email_verified", False):
+        return RedirectResponse(url="/coach/verify-email", status_code=303)
+    
     # Vérifier si le profil est complété
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
     if user_supabase:
@@ -2325,6 +2332,13 @@ async def coach_profile_setup_get(request: Request, user = Depends(require_coach
     subscription_status = user.get("subscription_status", "")
     if subscription_status != "active":
         return RedirectResponse(url="/coach/subscription", status_code=303)
+    
+    # Vérifier si l'email est vérifié
+    coach_email = user.get("email")
+    demo_users = load_demo_users()
+    coach_data_check = demo_users.get(coach_email, {})
+    if not coach_data_check.get("email_verified", False):
+        return RedirectResponse(url="/coach/verify-email", status_code=303)
     
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
     coach_data = None
@@ -2788,18 +2802,44 @@ async def coach_subscription_page(
                         subscription_status="active"
                     )
                 
-                # Rediriger vers la configuration du profil après paiement réussi
-                profile_completed = user.get("profile_completed", False)
-                redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-                return RedirectResponse(url=redirect_url, status_code=303)
+                # Générer et envoyer le code OTP de vérification email
+                import random
+                from resend_service import send_otp_email_resend
+                
+                otp_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+                otp_expiry = (datetime.now() + timedelta(minutes=10)).isoformat()
+                
+                # Sauvegarder l'OTP dans les données du coach
+                demo_users = load_demo_users()
+                if coach_email in demo_users:
+                    demo_users[coach_email]["otp_code"] = otp_code
+                    demo_users[coach_email]["otp_expiry"] = otp_expiry
+                    demo_users[coach_email]["email_verified"] = False
+                    save_demo_users(demo_users)
+                
+                # Envoyer l'email avec le code
+                full_name = user.get("full_name", "Coach")
+                send_otp_email_resend(coach_email, otp_code, full_name)
+                print(f"📧 Code OTP envoyé à {coach_email}: {otp_code}")
+                
+                # Rediriger vers la page de vérification email
+                return RedirectResponse(url="/coach/verify-email", status_code=303)
                 
         except Exception as e:
             print(f"⚠️ Erreur vérification session Stripe: {e}")
     
     subscription_info = get_coach_subscription_info(coach_email)
     
-    # Si abonnement déjà actif, rediriger vers la bonne destination
+    # Si abonnement déjà actif, vérifier si email vérifié
     if subscription_info and subscription_info.get("subscription_status") == "active":
+        # Vérifier si l'email est vérifié
+        demo_users = load_demo_users()
+        coach_data = demo_users.get(coach_email, {})
+        email_verified = coach_data.get("email_verified", False)
+        
+        if not email_verified:
+            return RedirectResponse(url="/coach/verify-email", status_code=303)
+        
         profile_completed = user.get("profile_completed", False)
         redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
         return RedirectResponse(url=redirect_url, status_code=303)
@@ -2811,6 +2851,104 @@ async def coach_subscription_page(
         "monthly_price": COACH_MONTHLY_PRICE / 100,
         "publishable_key": get_publishable_key()
     })
+
+# ======================================
+# ROUTE VERIFICATION EMAIL COACH
+# ======================================
+
+@app.get("/coach/verify-email", response_class=HTMLResponse)
+async def coach_verify_email_page(request: Request, user = Depends(require_coach_or_pending)):
+    """Page de vérification de l'email du coach après paiement."""
+    coach_email = user.get("email")
+    
+    # Vérifier si l'email est déjà vérifié
+    demo_users = load_demo_users()
+    coach_data = demo_users.get(coach_email, {})
+    
+    if coach_data.get("email_verified", False):
+        # Email déjà vérifié, rediriger vers profile-setup ou portal
+        profile_completed = user.get("profile_completed", False)
+        redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+        return RedirectResponse(url=redirect_url, status_code=303)
+    
+    return templates.TemplateResponse("coach_verify_email.html", {
+        "request": request,
+        "coach": user,
+        "email": coach_email
+    })
+
+@app.post("/api/coach/verify-email")
+async def verify_coach_email(request: Request, user = Depends(require_coach_or_pending)):
+    """Vérifie le code OTP envoyé par email."""
+    try:
+        data = await request.json()
+        otp_code = data.get("otp_code", "").strip()
+        coach_email = user.get("email")
+        
+        if not otp_code or len(otp_code) != 6:
+            return JSONResponse({"success": False, "error": "Code invalide"}, status_code=400)
+        
+        demo_users = load_demo_users()
+        coach_data = demo_users.get(coach_email, {})
+        
+        stored_otp = coach_data.get("otp_code")
+        otp_expiry = coach_data.get("otp_expiry")
+        
+        if not stored_otp:
+            return JSONResponse({"success": False, "error": "Aucun code en attente"}, status_code=400)
+        
+        # Vérifier l'expiration
+        if otp_expiry:
+            expiry_dt = datetime.fromisoformat(otp_expiry)
+            if datetime.now() > expiry_dt:
+                return JSONResponse({"success": False, "error": "Code expiré. Demandez un nouveau code."}, status_code=400)
+        
+        # Vérifier le code
+        if otp_code != stored_otp:
+            return JSONResponse({"success": False, "error": "Code incorrect"}, status_code=400)
+        
+        # Marquer l'email comme vérifié
+        demo_users[coach_email]["email_verified"] = True
+        demo_users[coach_email]["otp_code"] = None
+        demo_users[coach_email]["otp_expiry"] = None
+        save_demo_users(demo_users)
+        
+        print(f"✅ Email vérifié pour {coach_email}")
+        
+        return JSONResponse({"success": True, "redirect": "/coach/profile-setup"})
+    except Exception as e:
+        print(f"❌ Erreur vérification OTP: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/coach/resend-otp")
+async def resend_coach_otp(request: Request, user = Depends(require_coach_or_pending)):
+    """Renvoie un nouveau code OTP par email."""
+    try:
+        import random
+        from resend_service import send_otp_email_resend
+        
+        coach_email = user.get("email")
+        full_name = user.get("full_name", "Coach")
+        
+        # Générer un nouveau code
+        otp_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        otp_expiry = (datetime.now() + timedelta(minutes=10)).isoformat()
+        
+        # Sauvegarder
+        demo_users = load_demo_users()
+        if coach_email in demo_users:
+            demo_users[coach_email]["otp_code"] = otp_code
+            demo_users[coach_email]["otp_expiry"] = otp_expiry
+            save_demo_users(demo_users)
+        
+        # Envoyer l'email
+        result = send_otp_email_resend(coach_email, otp_code, full_name)
+        print(f"📧 Nouveau code OTP envoyé à {coach_email}: {otp_code}")
+        
+        return JSONResponse({"success": True, "message": "Code envoyé"})
+    except Exception as e:
+        print(f"❌ Erreur renvoi OTP: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 # ======================================
 # ROUTE PUBLIQUE - PROFIL DU COACH
