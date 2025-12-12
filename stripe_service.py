@@ -242,20 +242,23 @@ def update_coach_subscription(
     """
     data = load_demo_users()
     
-    for user in data.get("users", []):
-        if user.get("email") == coach_email and user.get("role") == "coach":
-            if stripe_customer_id:
-                user["stripe_customer_id"] = stripe_customer_id
-            if stripe_subscription_id:
-                user["stripe_subscription_id"] = stripe_subscription_id
-            if subscription_status:
-                user["subscription_status"] = subscription_status
-            if current_period_end:
-                user["subscription_period_end"] = current_period_end
-            
-            save_demo_users(data)
-            return True
+    # Structure: {"email": {user_data}, ...} pas {"users": [...]}
+    if coach_email in data:
+        user = data[coach_email]
+        if stripe_customer_id:
+            user["stripe_customer_id"] = stripe_customer_id
+        if stripe_subscription_id:
+            user["stripe_subscription_id"] = stripe_subscription_id
+        if subscription_status:
+            user["subscription_status"] = subscription_status
+        if current_period_end:
+            user["subscription_period_end"] = current_period_end
+        
+        save_demo_users(data)
+        print(f"✅ Abonnement mis à jour pour {coach_email}: status={subscription_status}")
+        return True
     
+    print(f"⚠️ Coach {coach_email} non trouvé dans demo_users")
     return False
 
 
@@ -265,14 +268,15 @@ def get_coach_subscription_info(coach_email: str) -> Optional[Dict[str, Any]]:
     """
     data = load_demo_users()
     
-    for user in data.get("users", []):
-        if user.get("email") == coach_email and user.get("role") == "coach":
-            return {
-                "stripe_customer_id": user.get("stripe_customer_id"),
-                "stripe_subscription_id": user.get("stripe_subscription_id"),
-                "subscription_status": user.get("subscription_status", "inactive"),
-                "subscription_period_end": user.get("subscription_period_end")
-            }
+    # Structure: {"email": {user_data}, ...}
+    if coach_email in data:
+        user = data[coach_email]
+        return {
+            "stripe_customer_id": user.get("stripe_customer_id"),
+            "stripe_subscription_id": user.get("stripe_subscription_id"),
+            "subscription_status": user.get("subscription_status", "inactive"),
+            "subscription_period_end": user.get("subscription_period_end")
+        }
     
     return None
 

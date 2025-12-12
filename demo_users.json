@@ -467,5 +467,17 @@
     "verified": true,
     "profile_completed": false,
     "subscription_status": "pending_payment"
+  },
+  "anassriram217@gmail.com": {
+    "email": "anassriram217@gmail.com",
+    "password": "Anasking1234!",
+    "full_name": "gzzg",
+    "role": "coach",
+    "verified": true,
+    "profile_completed": false,
+    "subscription_status": "pending_payment",
+    "otp_code": "115245",
+    "otp_expiry": "2025-12-12T12:44:06.009092",
+    "email_verified": false
   }
 }
