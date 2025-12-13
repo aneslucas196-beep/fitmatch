@@ -2526,11 +2526,20 @@ async def coach_profile_setup_post(
             # CORRECTION : Récupérer les données existantes pour préserver le mot de passe
             existing_user = get_demo_user(user_email) or {}
             
+            # Générer un slug unique pour ce coach (ou garder l'existant)
+            existing_slug = existing_user.get("profile_slug")
+            if existing_slug:
+                profile_slug = existing_slug
+            else:
+                profile_slug = generate_unique_slug_for_coach(user_email, full_name)
+            print(f"🔗 Slug du profil: {profile_slug}")
+            
             updated_user = {
                 "id": user.get("id", user_email),  # Utiliser email comme ID si pas d'ID
                 "email": user_email,
                 "role": user.get("role", "coach"),
                 "profile_completed": True,
+                "profile_slug": profile_slug,  # ✅ Slug unique pour l'URL
                 "full_name": full_name,
                 "bio": bio,
                 "city": city,
