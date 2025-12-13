@@ -515,5 +515,35 @@
     "country_code": null,
     "coach_gender_preference": null,
     "selected_gyms": null
+  },
+  "anasyanis456@gmail.com": {
+    "id": "anasyanis456@gmail.com",
+    "email": "anasyanis456@gmail.com",
+    "role": "coach",
+    "profile_completed": true,
+    "full_name": "anas",
+    "bio": "fezkjefnze",
+    "city": "paris ",
+    "instagram_url": "https://www.instagram.com/maria_zaddam/",
+    "price_from": 30,
+    "radius_km": 5,
+    "specialties": [
+      "musculation"
+    ],
+    "selected_gym_ids": "google_worldwide_ChIJM6QBj-uD5kcRF0Q60pmfdOk",
+    "selected_gyms_data": "[{\"id\":\"google_worldwide_ChIJM6QBj-uD5kcRF0Q60pmfdOk\",\"name\":\"Basic-Fit\",\"address\":\"18 Rue des Frères Lumière, 78310 Coignières, France\",\"city\":\"\",\"lat\":48.7569442,\"lng\":1.9338973000000002,\"chain\":\"Google Places (Mondial)\",\"source\":\"Google Places Worldwide\",\"display_name\":\"Basic-Fit - 18 Rue des Frères Lumière, 78310 Coignières, France\"}]",
+    "profile_photo_url": "/attached_assets/profile_photos/bcdc1d8f71089a0e_ee0fcd84-58da-4103-a338-85f20cb38ead.jpg",
+    "password": "Anasking12345!",
+    "gender": null,
+    "country_code": null,
+    "coach_gender_preference": null,
+    "selected_gyms": null,
+    "subscription_status": "active",
+    "email_verified": true,
+    "stripe_customer_id": "cus_Tb07kDFQFQEsEK",
+    "stripe_subscription_id": null,
+    "subscription_period_end": null,
+    "otp_code": null,
+    "otp_expiry": null
   }
 }

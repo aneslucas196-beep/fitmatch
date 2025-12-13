@@ -2720,14 +2720,29 @@ async def reserver_by_slug(request: Request, slug: str):
     if not coach.get("photo"):
         coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
     
+    # S'assurer que les spécialités sont une liste
+    specialties = coach.get("specialties", [])
+    if isinstance(specialties, str):
+        try:
+            import json
+            coach["specialties"] = json.loads(specialties)
+        except:
+            coach["specialties"] = [s.strip() for s in specialties.split(",") if s.strip()]
+    
     # Récupérer les salles associées au coach
     gyms = []
     if coach.get("selected_gyms_data"):
         try:
             import json
-            gyms = json.loads(coach.get("selected_gyms_data"))
+            gyms_data = coach.get("selected_gyms_data")
+            if isinstance(gyms_data, str) and gyms_data.strip():
+                gyms = json.loads(gyms_data)
+            elif isinstance(gyms_data, list):
+                gyms = gyms_data
         except:
             pass
+    
+    print(f"📋 Profil coach {slug}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
     
     return templates.TemplateResponse("coach_profile.html", {
         "request": request,
@@ -3041,6 +3056,15 @@ async def view_coach_profile(request: Request, coach_id: str):
     if not coach.get("photo"):
         coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
     
+    # S'assurer que les spécialités sont une liste
+    specialties = coach.get("specialties", [])
+    if isinstance(specialties, str):
+        try:
+            import json
+            coach["specialties"] = json.loads(specialties)
+        except:
+            coach["specialties"] = [s.strip() for s in specialties.split(",") if s.strip()]
+    
     # Récupérer les salles associées au coach
     gyms = []
     if coach.get("gyms"):
@@ -3053,9 +3077,15 @@ async def view_coach_profile(request: Request, coach_id: str):
         # Pour les coaches avec selected_gyms_data (format JSON string)
         try:
             import json
-            gyms = json.loads(coach.get("selected_gyms_data"))
+            gyms_data = coach.get("selected_gyms_data")
+            if isinstance(gyms_data, str) and gyms_data.strip():
+                gyms = json.loads(gyms_data)
+            elif isinstance(gyms_data, list):
+                gyms = gyms_data
         except:
             pass
+    
+    print(f"📋 Profil coach {coach_id}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
     
     return templates.TemplateResponse("coach_profile.html", {
         "request": request,
