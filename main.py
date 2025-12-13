@@ -2705,45 +2705,64 @@ def generate_slug(name: str) -> str:
     slug = re.sub(r'[^a-z0-9-]', '', slug)
     return slug
 
-def find_coach_by_slug(slug: str):
-    """Trouve un coach par son slug (prénom). Priorité aux profils complets."""
+def generate_unique_slug_for_coach(email: str, full_name: str) -> str:
+    """Génère un slug unique pour un coach. Ajoute -2, -3, etc. si nécessaire."""
     from utils import load_demo_users
     demo_users = load_demo_users()
     
-    matching_coaches = []
+    # Extraire le prénom
+    first_name = full_name.split()[0] if full_name.strip() else "coach"
+    base_slug = generate_slug(first_name)
     
-    # Chercher tous les coachs correspondant au slug
+    if not base_slug:
+        base_slug = "coach"
+    
+    # Vérifier si ce slug est déjà pris par un AUTRE coach
+    existing_slugs = set()
+    for other_email, user_data in demo_users.items():
+        if user_data.get("role") == "coach" and other_email != email:
+            if user_data.get("profile_slug"):
+                existing_slugs.add(user_data.get("profile_slug"))
+    
+    # Si le slug de base est libre, l'utiliser
+    if base_slug not in existing_slugs:
+        return base_slug
+    
+    # Sinon, ajouter un suffixe numérique
+    counter = 2
+    while f"{base_slug}-{counter}" in existing_slugs:
+        counter += 1
+    
+    return f"{base_slug}-{counter}"
+
+
+def find_coach_by_slug(slug: str):
+    """Trouve un coach par son slug unique stocké."""
+    from utils import load_demo_users
+    demo_users = load_demo_users()
+    
+    slug_lower = slug.lower()
+    
+    # 1. Chercher par slug stocké (priorité)
     for email, user_data in demo_users.items():
         if user_data.get("role") == "coach":
+            stored_slug = user_data.get("profile_slug", "")
+            if stored_slug and stored_slug.lower() == slug_lower:
+                coach_data = user_data.copy()
+                coach_data["email"] = email
+                return coach_data
+    
+    # 2. Fallback: chercher par prénom (pour anciens comptes sans slug)
+    for email, user_data in demo_users.items():
+        if user_data.get("role") == "coach" and user_data.get("profile_completed"):
             full_name = user_data.get("full_name", "")
-            # Extraire le prénom (premier mot du nom complet)
             first_name = full_name.split()[0] if full_name.strip() else ""
             coach_slug = generate_slug(first_name)
             
-            # Vérifier si le slug correspond
-            if coach_slug == slug.lower():
+            if coach_slug == slug_lower:
                 coach_data = user_data.copy()
                 coach_data["email"] = email
-                
-                # Calculer un score de complétude du profil
-                score = 0
-                if coach_data.get("profile_completed"):
-                    score += 100
-                if coach_data.get("profile_photo_url"):
-                    score += 50
-                if coach_data.get("specialties"):
-                    score += 25
-                if coach_data.get("selected_gyms_data"):
-                    score += 25
-                if coach_data.get("bio"):
-                    score += 10
-                
-                matching_coaches.append((score, coach_data))
-    
-    # Retourner le coach avec le meilleur score de complétude
-    if matching_coaches:
-        matching_coaches.sort(key=lambda x: x[0], reverse=True)
-        return matching_coaches[0][1]
+                return coach_data
     
     return None
 
