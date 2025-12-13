@@ -2706,11 +2706,13 @@ def generate_slug(name: str) -> str:
     return slug
 
 def find_coach_by_slug(slug: str):
-    """Trouve un coach par son slug (prénom)."""
+    """Trouve un coach par son slug (prénom). Priorité aux profils complets."""
     from utils import load_demo_users
     demo_users = load_demo_users()
     
-    # Chercher dans demo_users
+    matching_coaches = []
+    
+    # Chercher tous les coachs correspondant au slug
     for email, user_data in demo_users.items():
         if user_data.get("role") == "coach":
             full_name = user_data.get("full_name", "")
@@ -2722,7 +2724,26 @@ def find_coach_by_slug(slug: str):
             if coach_slug == slug.lower():
                 coach_data = user_data.copy()
                 coach_data["email"] = email
-                return coach_data
+                
+                # Calculer un score de complétude du profil
+                score = 0
+                if coach_data.get("profile_completed"):
+                    score += 100
+                if coach_data.get("profile_photo_url"):
+                    score += 50
+                if coach_data.get("specialties"):
+                    score += 25
+                if coach_data.get("selected_gyms_data"):
+                    score += 25
+                if coach_data.get("bio"):
+                    score += 10
+                
+                matching_coaches.append((score, coach_data))
+    
+    # Retourner le coach avec le meilleur score de complétude
+    if matching_coaches:
+        matching_coaches.sort(key=lambda x: x[0], reverse=True)
+        return matching_coaches[0][1]
     
     return None
 
