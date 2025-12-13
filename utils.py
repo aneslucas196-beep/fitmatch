@@ -1564,81 +1564,110 @@ def get_coaches_by_gym(gym_id: str) -> List[Dict]:
 
 
 # ================================
-# STOCKAGE PERSISTANT UTILISATEURS DÉMONSTRATION
+# STOCKAGE PERSISTANT UTILISATEURS - MODE POSTGRESQL
 # ================================
 
-DEMO_USERS_FILE = "demo_users.json"
+def use_database() -> bool:
+    """Vérifie dynamiquement si PostgreSQL est disponible."""
+    return os.environ.get("DATABASE_URL") is not None
 
 def load_demo_users() -> Dict:
-    """Charge les utilisateurs démonstration depuis le fichier JSON."""
+    """Charge les utilisateurs depuis PostgreSQL (ou JSON en fallback)."""
+    if use_database():
+        try:
+            from db_service import load_users_from_db
+            users = load_users_from_db()
+            if users:
+                return users
+        except Exception as e:
+            print(f"⚠️ Erreur DB, fallback JSON: {e}")
+    
     try:
-        if Path(DEMO_USERS_FILE).exists():
-            with open(DEMO_USERS_FILE, 'r', encoding='utf-8') as f:
+        demo_file = "demo_users.json"
+        if Path(demo_file).exists():
+            with open(demo_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {}
     except Exception as e:
-        print(f"⚠️ Erreur lors du chargement des utilisateurs démo: {e}")
+        print(f"⚠️ Erreur chargement utilisateurs: {e}")
         return {}
 
 def save_demo_user(email: str, user_data: Dict) -> bool:
-    """Sauvegarde un utilisateur démonstration dans le fichier persistant."""
+    """Sauvegarde un utilisateur dans PostgreSQL (ou JSON en fallback)."""
+    if use_database():
+        try:
+            from db_service import save_user_to_db
+            return save_user_to_db(email, user_data)
+        except Exception as e:
+            print(f"⚠️ Erreur DB, fallback JSON: {e}")
+    
     try:
-        # Charger les utilisateurs existants
         users = load_demo_users()
-        
-        # Ajouter/mettre à jour l'utilisateur
         users[email] = user_data
-        
-        # Sauvegarder dans le fichier
-        with open(DEMO_USERS_FILE, 'w', encoding='utf-8') as f:
+        with open("demo_users.json", 'w', encoding='utf-8') as f:
             json.dump(users, f, ensure_ascii=False, indent=2)
-            
-        print(f"✅ Utilisateur {email} sauvegardé dans le stockage persistant")
+        print(f"✅ Utilisateur {email} sauvegardé")
         return True
-        
     except Exception as e:
-        print(f"❌ Erreur lors de la sauvegarde de l'utilisateur {email}: {e}")
+        print(f"❌ Erreur sauvegarde {email}: {e}")
         return False
 
 def save_demo_users(users: Dict) -> bool:
-    """Sauvegarde tout le dictionnaire d'utilisateurs démonstration dans le fichier persistant."""
+    """Sauvegarde tous les utilisateurs."""
+    if use_database():
+        try:
+            from db_service import save_user_to_db
+            for email, user_data in users.items():
+                save_user_to_db(email, user_data)
+            return True
+        except Exception as e:
+            print(f"⚠️ Erreur DB: {e}")
+    
     try:
-        with open(DEMO_USERS_FILE, 'w', encoding='utf-8') as f:
+        with open("demo_users.json", 'w', encoding='utf-8') as f:
             json.dump(users, f, ensure_ascii=False, indent=2)
-        print(f"✅ Tous les utilisateurs sauvegardés dans le stockage persistant")
         return True
     except Exception as e:
-        print(f"❌ Erreur lors de la sauvegarde des utilisateurs: {e}")
+        print(f"❌ Erreur sauvegarde: {e}")
         return False
 
 def get_demo_user(email: str) -> Optional[Dict]:
-    """Récupère un utilisateur démonstration spécifique."""
+    """Récupère un utilisateur par email."""
+    if use_database():
+        try:
+            from db_service import get_user_from_db
+            user = get_user_from_db(email)
+            if user:
+                return user
+        except Exception as e:
+            print(f"⚠️ Erreur DB, fallback JSON: {e}")
+    
     try:
         users = load_demo_users()
         return users.get(email)
     except Exception as e:
-        print(f"⚠️ Erreur lors de la récupération de l'utilisateur {email}: {e}")
+        print(f"⚠️ Erreur récupération {email}: {e}")
         return None
 
 def remove_demo_user(email: str) -> bool:
-    """Supprime un utilisateur démonstration du stockage persistant."""
+    """Supprime un utilisateur."""
+    if use_database():
+        try:
+            from db_service import remove_user_from_db
+            return remove_user_from_db(email)
+        except Exception as e:
+            print(f"⚠️ Erreur DB: {e}")
+    
     try:
         users = load_demo_users()
         if email in users:
             del users[email]
-            
-            # Sauvegarder les modifications
-            with open(DEMO_USERS_FILE, 'w', encoding='utf-8') as f:
+            with open("demo_users.json", 'w', encoding='utf-8') as f:
                 json.dump(users, f, ensure_ascii=False, indent=2)
-                
-            print(f"✅ Utilisateur {email} supprimé du stockage persistant")
             return True
-        else:
-            print(f"⚠️ Utilisateur {email} non trouvé dans le stockage persistant")
-            return False
-            
+        return False
     except Exception as e:
-        print(f"❌ Erreur lors de la suppression de l'utilisateur {email}: {e}")
+        print(f"❌ Erreur suppression {email}: {e}")
         return False
 
 
