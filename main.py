@@ -2214,14 +2214,37 @@ async def coach_login_submit(
             import hashlib
             unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
             
-            # Vérifier d'abord l'abonnement
-            subscription_status = user_found.get("subscription_status", "")
-            if subscription_status != "active":
+            # Auto-upgrade grandfathered accounts (created before OTP/subscription system)
+            # Only target truly legacy records: profile_completed=true AND subscription_status is null/None/empty
+            profile_completed = user_found.get("profile_completed", False)
+            subscription_status = user_found.get("subscription_status")
+            email_verified = user_found.get("email_verified")
+            
+            # Only upgrade if subscription_status is explicitly null/None/empty (not other valid states like "trialing")
+            is_legacy_account = profile_completed and (subscription_status is None or subscription_status == "")
+            
+            if is_legacy_account:
+                print(f"🔄 Auto-upgrading grandfathered coach account: {email}")
+                # Update only the specific user, not the entire file
+                updated_user = get_demo_user(email)
+                if updated_user:
+                    updated_user["subscription_status"] = "active"
+                    # Only set email_verified if it's missing/null (not already set)
+                    if email_verified is None or email_verified == "":
+                        updated_user["email_verified"] = True
+                    save_demo_user(email, updated_user)
+                    user_found["subscription_status"] = "active"
+                    if email_verified is None or email_verified == "":
+                        user_found["email_verified"] = True
+                    subscription_status = "active"
+                    print(f"✅ Grandfathered coach upgraded: {email}")
+            
+            # Vérifier d'abord l'abonnement (active or trialing = OK)
+            if subscription_status not in ["active", "trialing"]:
                 # Pas d'abonnement actif → page d'abonnement
                 redirect_url = "/coach/subscription"
             else:
                 # Abonnement actif → vérifier si le profil est complété
-                profile_completed = user_found.get("profile_completed", False)
                 redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
             
             response = RedirectResponse(url=redirect_url, status_code=303)
