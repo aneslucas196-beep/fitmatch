@@ -3451,6 +3451,33 @@ async def set_coach_working_hours(request: Request):
         print(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.post("/api/coach/payment-mode")
+async def set_coach_payment_mode(request: Request, user = Depends(require_coach_role)):
+    """Definit le mode de paiement d'un coach (disabled ou required)."""
+    try:
+        data = await request.json()
+        payment_mode = data.get("payment_mode")
+        
+        if payment_mode not in ["disabled", "required"]:
+            return JSONResponse(status_code=400, content={"success": False, "error": "Mode invalide"})
+        
+        coach_email = user.get("email")
+        demo_users = load_demo_users()
+        
+        if coach_email not in demo_users:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Coach non trouve"})
+        
+        demo_users[coach_email]["payment_mode"] = payment_mode
+        save_demo_user(coach_email, demo_users[coach_email])
+        
+        print(f"Mode de paiement mis a jour pour {coach_email}: {payment_mode}")
+        
+        return {"success": True, "payment_mode": payment_mode}
+        
+    except Exception as e:
+        print(f"Erreur mise a jour mode paiement: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
 @app.get("/api/bookings")
 async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to"), include_pending: bool = Query(False)):
     """Récupère les réservations existantes d'un coach.

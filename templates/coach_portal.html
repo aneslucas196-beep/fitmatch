@@ -140,6 +140,108 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
             </div>
         </div>
 
+        <!-- Section Mode de Paiement -->
+        <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+            <div class="flex items-center mb-6">
+                <div class="bg-gradient-to-r from-emerald-500 to-teal-600 p-3 rounded-full mr-4">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Mode de Paiement</h2>
+                    <p class="text-gray-600">Choisissez comment vos clients vous paient</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Option 1: Paiement Desactive -->
+                <div id="payment-mode-disabled" 
+                     onclick="selectPaymentMode('disabled')"
+                     class="payment-mode-card cursor-pointer border-2 rounded-2xl p-6 transition-all duration-300 {{ 'border-emerald-500 bg-emerald-50' if coach.payment_mode == 'disabled' or not coach.payment_mode else 'border-gray-200 hover:border-gray-300' }}">
+                    <div class="flex items-start mb-4">
+                        <div class="text-3xl mr-3">&#10060;</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">Paiement desactive</h3>
+                            <p class="text-sm text-gray-500 mt-1">Reservation simple sur FitMatch</p>
+                        </div>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-700 mb-4">
+                        <li class="flex items-start">
+                            <span class="text-emerald-500 mr-2">&#10003;</span>
+                            Le client choisit un creneau et reserve
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-emerald-500 mr-2">&#10003;</span>
+                            Vous recevez une notification pour accepter ou refuser
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-emerald-500 mr-2">&#10003;</span>
+                            Si accepte: creneau bloque + email de confirmation
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-emerald-500 mr-2">&#10003;</span>
+                            Le paiement se fait directement avec vous le jour de la seance
+                        </li>
+                    </ul>
+                    <div class="bg-gray-100 rounded-lg p-3 text-xs text-gray-600">
+                        <span class="font-medium">Ideal pour:</span> coachs debutants, seances d'essai, paiement en presentiel
+                    </div>
+                </div>
+                
+                <!-- Option 2: Paiement Obligatoire -->
+                <div id="payment-mode-required" 
+                     onclick="selectPaymentMode('required')"
+                     class="payment-mode-card cursor-pointer border-2 rounded-2xl p-6 transition-all duration-300 {{ 'border-emerald-500 bg-emerald-50' if coach.payment_mode == 'required' else 'border-gray-200 hover:border-gray-300' }}">
+                    <div class="flex items-start mb-4">
+                        <div class="text-3xl mr-3">&#128176;</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">Paiement obligatoire</h3>
+                            <p class="text-sm text-gray-500 mt-1">100% en ligne via FitMatch</p>
+                        </div>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-700 mb-4">
+                        <li class="flex items-start">
+                            <span class="text-emerald-500 mr-2">&#10003;</span>
+                            Le client choisit la seance et paie en ligne
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-emerald-500 mr-2">&#10003;</span>
+                            Reservation automatiquement validee
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-emerald-500 mr-2">&#10003;</span>
+                            Creneau bloque + messagerie ouverte
+                        </li>
+                        <li class="flex items-start">
+                            <span class="text-emerald-500 mr-2">&#10003;</span>
+                            Vous recevez l'argent directement sur votre compte
+                        </li>
+                    </ul>
+                    <div class="bg-gray-100 rounded-lg p-3 text-xs text-gray-600">
+                        <span class="font-medium">Ideal pour:</span> coachs tres demandes, seances premium, eviter les annulations
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statut actuel -->
+            <div id="payment-mode-status" class="mt-6 p-4 rounded-lg bg-gray-50 border border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="font-medium text-gray-700">Mode actuel: </span>
+                        <span id="current-payment-mode" class="font-bold {{ 'text-gray-600' if coach.payment_mode == 'disabled' or not coach.payment_mode else 'text-emerald-600' }}">
+                            {{ 'Paiement desactive' if coach.payment_mode == 'disabled' or not coach.payment_mode else 'Paiement obligatoire' }}
+                        </span>
+                    </div>
+                    <button id="save-payment-mode" 
+                            onclick="savePaymentMode()"
+                            class="hidden bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition font-medium">
+                        Enregistrer
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Section principale avec calendrier et réservations -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
@@ -1428,6 +1530,74 @@ function shareOnFacebook() {
 function shareOnTwitter() {
     const text = "Réserve ta séance de coaching avec moi ! 💪";
     window.open("https://twitter.com/intent/tweet?text=" + encodeURIComponent(text) + "&url=" + encodeURIComponent(shareUrl), "_blank");
+}
+
+let selectedPaymentMode = '{{ coach.payment_mode or "disabled" }}';
+let originalPaymentMode = selectedPaymentMode;
+
+function selectPaymentMode(mode) {
+    selectedPaymentMode = mode;
+    
+    const disabledCard = document.getElementById('payment-mode-disabled');
+    const requiredCard = document.getElementById('payment-mode-required');
+    const saveBtn = document.getElementById('save-payment-mode');
+    
+    disabledCard.classList.remove('border-emerald-500', 'bg-emerald-50');
+    requiredCard.classList.remove('border-emerald-500', 'bg-emerald-50');
+    disabledCard.classList.add('border-gray-200');
+    requiredCard.classList.add('border-gray-200');
+    
+    if (mode === 'disabled') {
+        disabledCard.classList.remove('border-gray-200');
+        disabledCard.classList.add('border-emerald-500', 'bg-emerald-50');
+    } else {
+        requiredCard.classList.remove('border-gray-200');
+        requiredCard.classList.add('border-emerald-500', 'bg-emerald-50');
+    }
+    
+    if (selectedPaymentMode !== originalPaymentMode) {
+        saveBtn.classList.remove('hidden');
+    } else {
+        saveBtn.classList.add('hidden');
+    }
+}
+
+async function savePaymentMode() {
+    const saveBtn = document.getElementById('save-payment-mode');
+    saveBtn.textContent = 'Enregistrement...';
+    saveBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/coach/payment-mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payment_mode: selectedPaymentMode })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            originalPaymentMode = selectedPaymentMode;
+            saveBtn.classList.add('hidden');
+            
+            const statusText = document.getElementById('current-payment-mode');
+            statusText.textContent = selectedPaymentMode === 'disabled' ? 'Paiement desactive' : 'Paiement obligatoire';
+            statusText.className = selectedPaymentMode === 'disabled' ? 'font-bold text-gray-600' : 'font-bold text-emerald-600';
+            
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium';
+            toast.textContent = 'Mode de paiement mis a jour';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        } else {
+            alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+        }
+    } catch (error) {
+        alert('Erreur de connexion');
+    }
+    
+    saveBtn.textContent = 'Enregistrer';
+    saveBtn.disabled = false;
 }
 </script>
 
