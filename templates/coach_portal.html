@@ -162,14 +162,14 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                     <div class="flex items-start mb-4">
                         <div class="text-3xl mr-3">&#10060;</div>
                         <div>
-                            <h3 class="text-xl font-bold text-gray-900">Paiement desactive</h3>
-                            <p class="text-sm text-gray-500 mt-1">Reservation simple sur FitMatch</p>
+                            <h3 class="text-xl font-bold text-gray-900">Paiement désactivé</h3>
+                            <p class="text-sm text-gray-500 mt-1">Réservation simple sur FitMatch</p>
                         </div>
                     </div>
                     <ul class="space-y-2 text-sm text-gray-700 mb-4">
                         <li class="flex items-start">
                             <span class="text-emerald-500 mr-2">&#10003;</span>
-                            Le client choisit un creneau et reserve
+                            Le client choisit un créneau et réserve
                         </li>
                         <li class="flex items-start">
                             <span class="text-emerald-500 mr-2">&#10003;</span>
@@ -177,15 +177,15 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                         </li>
                         <li class="flex items-start">
                             <span class="text-emerald-500 mr-2">&#10003;</span>
-                            Si accepte: creneau bloque + email de confirmation
+                            Si accepté : créneau bloqué + email de confirmation
                         </li>
                         <li class="flex items-start">
                             <span class="text-emerald-500 mr-2">&#10003;</span>
-                            Le paiement se fait directement avec vous le jour de la seance
+                            Le paiement se fait directement avec vous le jour de la séance
                         </li>
                     </ul>
                     <div class="bg-gray-100 rounded-lg p-3 text-xs text-gray-600">
-                        <span class="font-medium">Ideal pour:</span> coachs debutants, seances d'essai, paiement en presentiel
+                        <span class="font-medium">Idéal pour :</span> coachs débutants, séances d'essai, paiement en présentiel
                     </div>
                 </div>
                 
@@ -203,15 +203,15 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                     <ul class="space-y-2 text-sm text-gray-700 mb-4">
                         <li class="flex items-start">
                             <span class="text-emerald-500 mr-2">&#10003;</span>
-                            Le client choisit la seance et paie en ligne
+                            Le client choisit la séance et paie en ligne
                         </li>
                         <li class="flex items-start">
                             <span class="text-emerald-500 mr-2">&#10003;</span>
-                            Reservation automatiquement validee
+                            Réservation automatiquement validée
                         </li>
                         <li class="flex items-start">
                             <span class="text-emerald-500 mr-2">&#10003;</span>
-                            Creneau bloque + messagerie ouverte
+                            Créneau bloqué + messagerie ouverte
                         </li>
                         <li class="flex items-start">
                             <span class="text-emerald-500 mr-2">&#10003;</span>
@@ -219,7 +219,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                         </li>
                     </ul>
                     <div class="bg-gray-100 rounded-lg p-3 text-xs text-gray-600">
-                        <span class="font-medium">Ideal pour:</span> coachs tres demandes, seances premium, eviter les annulations
+                        <span class="font-medium">Idéal pour :</span> coachs très demandés, séances premium, éviter les annulations
                     </div>
                 </div>
             </div>
@@ -230,7 +230,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                     <div>
                         <span class="font-medium text-gray-700">Mode actuel: </span>
                         <span id="current-payment-mode" class="font-bold {{ 'text-gray-600' if coach.payment_mode == 'disabled' or not coach.payment_mode else 'text-emerald-600' }}">
-                            {{ 'Paiement desactive' if coach.payment_mode == 'disabled' or not coach.payment_mode else 'Paiement obligatoire' }}
+                            {{ 'Paiement désactivé' if coach.payment_mode == 'disabled' or not coach.payment_mode else 'Paiement obligatoire' }}
                         </span>
                     </div>
                     <button id="save-payment-mode" 
@@ -1581,12 +1581,12 @@ async function savePaymentMode() {
             saveBtn.classList.add('hidden');
             
             const statusText = document.getElementById('current-payment-mode');
-            statusText.textContent = selectedPaymentMode === 'disabled' ? 'Paiement desactive' : 'Paiement obligatoire';
+            statusText.textContent = selectedPaymentMode === 'disabled' ? 'Paiement désactivé' : 'Paiement obligatoire';
             statusText.className = selectedPaymentMode === 'disabled' ? 'font-bold text-gray-600' : 'font-bold text-emerald-600';
             
             const toast = document.createElement('div');
             toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium';
-            toast.textContent = 'Mode de paiement mis a jour';
+            toast.textContent = 'Mode de paiement mis à jour';
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 2000);
         } else {
