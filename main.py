@@ -5552,9 +5552,14 @@ async def respond_to_booking(request: CoachBookingRequest):
         # Mettre à jour pending_bookings
         coach_data["pending_bookings"] = pending_bookings
         
-        # Sauvegarder
+        # Sauvegarder avec conversion datetime -> string
+        def json_serial(obj):
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            raise TypeError(f"Type {type(obj)} not serializable")
+        
         with open("demo_users.json", "w", encoding="utf-8") as f:
-            json.dump(demo_users, f, ensure_ascii=False, indent=2)
+            json.dump(demo_users, f, ensure_ascii=False, indent=2, default=json_serial)
         
         print(f"✅ Réservation {request.booking_id} {action_label} par {request.coach_email}")
         
@@ -5645,10 +5650,18 @@ async def respond_to_booking(request: CoachBookingRequest):
                     email_error_msg = str(email_error)
                     print(f"⚠️ Erreur envoi email rejet: {email_error}")
         
+        # Convertir les datetime dans booking_to_update pour la réponse JSON
+        booking_response = {}
+        for key, value in booking_to_update.items():
+            if isinstance(value, datetime):
+                booking_response[key] = value.isoformat()
+            else:
+                booking_response[key] = value
+        
         response_data = {
             "success": True,
             "message": f"Réservation {action_label}",
-            "booking": booking_to_update,
+            "booking": booking_response,
             "email_sent": email_sent
         }
         if email_error_msg:
