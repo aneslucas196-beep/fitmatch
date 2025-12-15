@@ -274,7 +274,9 @@
     "country_code": "AQ",
     "password": "Anasking1234!",
     "coach_gender_preference": "aucune",
-    "selected_gyms": []
+    "selected_gyms": [],
+    "stripe_customer_id": "cus_TbqcjMH2weDN7I",
+    "subscription_status": "active"
   },
   "lkolnik176@gmail.com": {
     "full_name": "braw",

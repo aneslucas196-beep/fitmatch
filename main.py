@@ -2246,13 +2246,9 @@ async def coach_login_submit(
                     subscription_status = "active"
                     print(f"✅ Grandfathered coach upgraded: {email}")
             
-            # Vérifier d'abord l'abonnement (active or trialing = OK)
-            if subscription_status not in ["active", "trialing"]:
-                # Pas d'abonnement actif → page d'abonnement
-                redirect_url = "/coach/subscription"
-            else:
-                # Abonnement actif → vérifier si le profil est complété
-                redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+            # Rediriger vers le portail ou la création de profil
+            # L'abonnement n'est plus bloquant à la connexion
+            redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
             
             response = RedirectResponse(url=redirect_url, status_code=303)
             response.set_cookie(
@@ -2280,18 +2276,10 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     demo_users = load_demo_users()
     coach_data_fresh = demo_users.get(coach_email, {})
     
-    # Vérifier si l'abonnement est actif (données fraîches du fichier)
+    # Récupérer les infos pour affichage (plus de blocage sur l'abonnement)
     subscription_status = coach_data_fresh.get("subscription_status", "")
     email_verified = coach_data_fresh.get("email_verified", False)
     print(f"🔍 Portal check: email={coach_email}, subscription_status='{subscription_status}', email_verified={email_verified}")
-    
-    if subscription_status not in ["active", "trialing"]:
-        print(f"⚠️ Redirection vers subscription car status='{subscription_status}'")
-        return RedirectResponse(url="/coach/subscription", status_code=303)
-    
-    # Vérifier si l'email est vérifié (données fraîches du fichier)
-    if not coach_data_fresh.get("email_verified", False):
-        return RedirectResponse(url="/coach/verify-email", status_code=303)
     
     # Vérifier si le profil est complété
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
