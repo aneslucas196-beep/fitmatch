@@ -268,3 +268,84 @@ def user_exists_in_db(email: str) -> bool:
     except Exception as e:
         print(f"❌ Erreur vérification existence {email}: {e}")
         return False
+
+
+def update_stripe_connect_status(
+    email: str,
+    account_id: str = None,
+    status: str = None,
+    charges_enabled: bool = None,
+    payouts_enabled: bool = None,
+    details_submitted: bool = None
+) -> bool:
+    """Met à jour les informations Stripe Connect d'un coach."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        updates = []
+        values = []
+        
+        if account_id is not None:
+            updates.append("stripe_connect_account_id = %s")
+            values.append(account_id)
+        if status is not None:
+            updates.append("stripe_connect_status = %s")
+            values.append(status)
+        if charges_enabled is not None:
+            updates.append("stripe_connect_charges_enabled = %s")
+            values.append(charges_enabled)
+        if payouts_enabled is not None:
+            updates.append("stripe_connect_payouts_enabled = %s")
+            values.append(payouts_enabled)
+        if details_submitted is not None:
+            updates.append("stripe_connect_details_submitted = %s")
+            values.append(details_submitted)
+        
+        if not updates:
+            return False
+        
+        updates.append("updated_at = CURRENT_TIMESTAMP")
+        values.append(email)
+        
+        query = f"UPDATE users SET {', '.join(updates)} WHERE email = %s"
+        cur.execute(query, values)
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        print(f"✅ Stripe Connect mis à jour pour {email}: status={status}")
+        return True
+    except Exception as e:
+        print(f"❌ Erreur mise à jour Stripe Connect {email}: {e}")
+        return False
+
+
+def get_stripe_connect_info(email: str) -> Optional[Dict]:
+    """Récupère les informations Stripe Connect d'un coach."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT stripe_connect_account_id, stripe_connect_status, 
+                   stripe_connect_charges_enabled, stripe_connect_payouts_enabled,
+                   stripe_connect_details_submitted
+            FROM users WHERE email = %s
+        """, (email,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if row:
+            return {
+                "account_id": row.get('stripe_connect_account_id'),
+                "status": row.get('stripe_connect_status', 'not_connected'),
+                "charges_enabled": row.get('stripe_connect_charges_enabled', False),
+                "payouts_enabled": row.get('stripe_connect_payouts_enabled', False),
+                "details_submitted": row.get('stripe_connect_details_submitted', False)
+            }
+        return None
+    except Exception as e:
+        print(f"❌ Erreur récupération Stripe Connect {email}: {e}")
+        return None
