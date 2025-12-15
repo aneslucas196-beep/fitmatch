@@ -3455,6 +3455,8 @@ async def set_coach_working_hours(request: Request):
 async def set_coach_payment_mode(request: Request, user = Depends(require_coach_role)):
     """Definit le mode de paiement d'un coach (disabled ou required)."""
     try:
+        from db_service import get_stripe_connect_info
+        
         data = await request.json()
         payment_mode = data.get("payment_mode")
         
@@ -3466,6 +3468,15 @@ async def set_coach_payment_mode(request: Request, user = Depends(require_coach_
         
         if coach_email not in demo_users:
             return JSONResponse(status_code=404, content={"success": False, "error": "Coach non trouve"})
+        
+        if payment_mode == "required":
+            connect_info = get_stripe_connect_info(coach_email)
+            if not connect_info or not connect_info.get("charges_enabled"):
+                return JSONResponse(status_code=400, content={
+                    "success": False, 
+                    "error": "Vous devez d'abord connecter votre compte Stripe pour activer le paiement en ligne.",
+                    "need_stripe_connect": True
+                })
         
         demo_users[coach_email]["payment_mode"] = payment_mode
         save_demo_user(coach_email, demo_users[coach_email])
@@ -3513,6 +3524,172 @@ async def get_coach_payment_mode(coach_id: str):
     except Exception as e:
         print(f"Erreur récupération mode paiement: {e}")
         return {"payment_mode": "disabled"}
+
+
+@app.get("/api/coach/stripe-connect/status")
+async def get_stripe_connect_status(user = Depends(require_coach_role)):
+    """Récupère le statut Stripe Connect d'un coach."""
+    try:
+        from db_service import get_stripe_connect_info
+        from stripe_connect_service import get_account_status
+        
+        coach_email = user.get("email")
+        connect_info = get_stripe_connect_info(coach_email)
+        
+        if not connect_info or not connect_info.get("account_id"):
+            return {
+                "connected": False,
+                "status": "not_connected",
+                "message": "Compte Stripe non connecté"
+            }
+        
+        account_status = get_account_status(connect_info["account_id"])
+        
+        if not account_status.get("success"):
+            return {
+                "connected": False,
+                "status": "error",
+                "message": "Erreur de connexion avec Stripe"
+            }
+        
+        return {
+            "connected": True,
+            "status": account_status.get("status"),
+            "charges_enabled": account_status.get("charges_enabled"),
+            "payouts_enabled": account_status.get("payouts_enabled"),
+            "details_submitted": account_status.get("details_submitted"),
+            "currently_due": account_status.get("currently_due", []),
+            "message": "Compte Stripe actif" if account_status.get("charges_enabled") else "Configuration en cours"
+        }
+        
+    except Exception as e:
+        print(f"Erreur statut Stripe Connect: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/api/coach/stripe-connect/onboard")
+async def start_stripe_connect_onboarding(request: Request, user = Depends(require_coach_role)):
+    """Démarre l'onboarding Stripe Connect pour un coach."""
+    try:
+        from db_service import get_stripe_connect_info, update_stripe_connect_status
+        from stripe_connect_service import create_connect_account, create_account_link
+        
+        coach_email = user.get("email")
+        coach_name = user.get("full_name", "Coach")
+        
+        host = request.headers.get("host", "localhost:5000")
+        protocol = "https" if "replit" in host else "http"
+        base_url = f"{protocol}://{host}"
+        
+        connect_info = get_stripe_connect_info(coach_email)
+        account_id = connect_info.get("account_id") if connect_info else None
+        
+        if not account_id:
+            result = create_connect_account(coach_email, coach_name)
+            if not result.get("success"):
+                return JSONResponse(status_code=500, content={
+                    "success": False,
+                    "error": result.get("error", "Erreur création compte Stripe")
+                })
+            account_id = result["account_id"]
+            update_stripe_connect_status(
+                email=coach_email,
+                account_id=account_id,
+                status="pending"
+            )
+        
+        link_result = create_account_link(
+            account_id=account_id,
+            return_url=f"{base_url}/coach/portal?stripe_connected=1",
+            refresh_url=f"{base_url}/api/coach/stripe-connect/refresh"
+        )
+        
+        if not link_result.get("success"):
+            return JSONResponse(status_code=500, content={
+                "success": False,
+                "error": link_result.get("error", "Erreur création lien Stripe")
+            })
+        
+        return {
+            "success": True,
+            "onboarding_url": link_result["url"]
+        }
+        
+    except Exception as e:
+        print(f"Erreur onboarding Stripe Connect: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
+
+@app.get("/api/coach/stripe-connect/refresh")
+async def refresh_stripe_connect_onboarding(request: Request, user = Depends(require_coach_role)):
+    """Génère un nouveau lien d'onboarding si l'ancien a expiré."""
+    try:
+        from db_service import get_stripe_connect_info
+        from stripe_connect_service import create_account_link
+        
+        coach_email = user.get("email")
+        connect_info = get_stripe_connect_info(coach_email)
+        
+        if not connect_info or not connect_info.get("account_id"):
+            return RedirectResponse(url="/coach/portal?error=no_account")
+        
+        host = request.headers.get("host", "localhost:5000")
+        protocol = "https" if "replit" in host else "http"
+        base_url = f"{protocol}://{host}"
+        
+        link_result = create_account_link(
+            account_id=connect_info["account_id"],
+            return_url=f"{base_url}/coach/portal?stripe_connected=1",
+            refresh_url=f"{base_url}/api/coach/stripe-connect/refresh"
+        )
+        
+        if link_result.get("success"):
+            return RedirectResponse(url=link_result["url"])
+        
+        return RedirectResponse(url="/coach/portal?error=stripe_link")
+        
+    except Exception as e:
+        print(f"Erreur refresh Stripe Connect: {e}")
+        return RedirectResponse(url="/coach/portal?error=stripe_error")
+
+
+@app.post("/api/coach/stripe-connect/sync")
+async def sync_stripe_connect_status(user = Depends(require_coach_role)):
+    """Synchronise le statut Stripe Connect après le retour de l'onboarding."""
+    try:
+        from db_service import get_stripe_connect_info, update_stripe_connect_status
+        from stripe_connect_service import get_account_status
+        
+        coach_email = user.get("email")
+        connect_info = get_stripe_connect_info(coach_email)
+        
+        if not connect_info or not connect_info.get("account_id"):
+            return {"success": False, "error": "Aucun compte Stripe Connect"}
+        
+        status_result = get_account_status(connect_info["account_id"])
+        
+        if not status_result.get("success"):
+            return {"success": False, "error": "Impossible de récupérer le statut"}
+        
+        update_stripe_connect_status(
+            email=coach_email,
+            status=status_result.get("status"),
+            charges_enabled=status_result.get("charges_enabled"),
+            payouts_enabled=status_result.get("payouts_enabled"),
+            details_submitted=status_result.get("details_submitted")
+        )
+        
+        return {
+            "success": True,
+            "status": status_result.get("status"),
+            "charges_enabled": status_result.get("charges_enabled"),
+            "payouts_enabled": status_result.get("payouts_enabled")
+        }
+        
+    except Exception as e:
+        print(f"Erreur sync Stripe Connect: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
 
 @app.get("/api/bookings")
 async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to"), include_pending: bool = Query(False)):
