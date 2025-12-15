@@ -62,6 +62,21 @@ Preferred communication style: Simple, everyday language.
 - **API Endpoints**: For creating checkout sessions, customer portal sessions, handling webhooks, and retrieving subscription status.
 - **Grandfathered Accounts**: Legacy coach accounts are automatically upgraded to "active" subscription status upon login.
 
+### Stripe Connect (Session Payments to Coaches)
+- **Business Model**: FitMatch receives 29€/month from coaches. Clients pay sessions directly to coaches' bank accounts.
+- **Coach Onboarding**: Coaches connect their bank account via Stripe Connect Standard accounts.
+- **Transfer System**: Session payments use `transfer_data` to send funds directly to coach's connected account.
+- **Status Tracking**: Database tracks `stripe_connect_account_id`, `charges_enabled`, `payouts_enabled`, `details_submitted`.
+- **Payment Mode**: Coaches can enable "required" payment mode only after Connect account is verified.
+- **Webhooks**: `account.updated` event syncs Connect status automatically when Stripe validates coach accounts.
+- **API Endpoints**:
+    - `GET /api/coach/stripe-connect/status` - Get Connect account status
+    - `POST /api/coach/stripe-connect/onboard` - Start Stripe Connect onboarding
+    - `GET /api/coach/stripe-connect/refresh` - Regenerate expired onboarding link
+    - `POST /api/coach/stripe-connect/sync` - Manual sync after returning from Stripe
+- **DB Functions**: `update_stripe_connect_status()`, `get_stripe_connect_info()`, `find_coach_by_stripe_connect_account()`
+- **Service File**: `stripe_connect_service.py` with `create_connect_account()`, `create_account_link()`, `get_account_status()`, `create_session_payment_checkout()`
+
 ### Password Reset System
 - **Forgot Password**: Link on login page with modal for email input.
 - **Reset Email**: FitMatch-branded email with a secure, expiring reset link.
