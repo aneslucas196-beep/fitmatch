@@ -349,3 +349,24 @@ def get_stripe_connect_info(email: str) -> Optional[Dict]:
     except Exception as e:
         print(f"❌ Erreur récupération Stripe Connect {email}: {e}")
         return None
+
+
+def find_coach_by_stripe_connect_account(account_id: str) -> Optional[str]:
+    """Trouve l'email d'un coach par son stripe_connect_account_id."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT email FROM users 
+            WHERE stripe_connect_account_id = %s
+        """, (account_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if row:
+            return row.get('email')
+        return None
+    except Exception as e:
+        print(f"❌ Erreur recherche coach par Connect account {account_id}: {e}")
+        return None

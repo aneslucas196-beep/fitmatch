@@ -5135,38 +5135,53 @@ async def confirm_booking(request: ConfirmBookingRequest):
                 # Créer une session Stripe Checkout pour le paiement de la séance
                 if STRIPE_AVAILABLE:
                     try:
-                        import stripe
-                        from stripe_service import init_stripe
-                        init_stripe()
+                        from db_service import get_stripe_connect_info
+                        from stripe_connect_service import create_session_payment_checkout
+                        
+                        # Vérifier que le coach a un compte Stripe Connect actif
+                        connect_info = get_stripe_connect_info(coach_email)
+                        
+                        if not connect_info or not connect_info.get("charges_enabled"):
+                            print(f"❌ Coach {coach_email} n'a pas de compte Stripe Connect actif")
+                            return JSONResponse({
+                                "success": False,
+                                "message": "Le coach n'a pas configuré son compte bancaire pour recevoir les paiements",
+                                "error": "connect_not_configured"
+                            }, status_code=400)
+                        
+                        coach_connect_account_id = connect_info.get("account_id")
                         
                         # Prix en centimes
                         price_cents = int(float(request.price)) * 100
                         
-                        checkout_session = stripe.checkout.Session.create(
-                            payment_method_types=['card'],
-                            line_items=[{
-                                'price_data': {
-                                    'currency': 'eur',
-                                    'product_data': {
-                                        'name': f"Séance avec {request.coach_name}",
-                                        'description': f"{request.service} - {request.duration} min @ {request.gym_name}"
-                                    },
-                                    'unit_amount': price_cents,
-                                },
-                                'quantity': 1,
-                            }],
-                            mode='payment',
-                            success_url=f"{os.environ.get('REPLIT_DEV_DOMAIN', 'https://fitmatch.replit.app')}/booking-success?booking_id={booking_id}&session_id={{CHECKOUT_SESSION_ID}}",
-                            cancel_url=f"{os.environ.get('REPLIT_DEV_DOMAIN', 'https://fitmatch.replit.app')}/booking-cancelled?booking_id={booking_id}",
-                            metadata={
-                                'booking_id': booking_id,
-                                'coach_email': coach_email,
-                                'client_email': request.client_email,
-                                'booking_type': 'session_payment'
-                            }
+                        # Construire les URLs de retour
+                        base_url = os.environ.get('REPLIT_DEV_DOMAIN', 'https://fitmatch.replit.app')
+                        if not base_url.startswith('http'):
+                            base_url = f"https://{base_url}"
+                        
+                        # Créer le checkout avec transfer_data vers le coach
+                        checkout_result = create_session_payment_checkout(
+                            coach_account_id=coach_connect_account_id,
+                            coach_email=coach_email,
+                            client_email=request.client_email,
+                            client_name=request.client_name,
+                            amount_cents=price_cents,
+                            service_name=f"Séance avec {request.coach_name} - {request.service} - {request.duration} min @ {request.gym_name}",
+                            booking_id=booking_id,
+                            success_url=f"{base_url}/booking-success?booking_id={booking_id}&session_id={{CHECKOUT_SESSION_ID}}",
+                            cancel_url=f"{base_url}/booking-cancelled?booking_id={booking_id}"
                         )
                         
-                        print(f"✅ Session Stripe créée: {checkout_session.id}")
+                        if not checkout_result.get("success"):
+                            print(f"❌ Erreur création checkout: {checkout_result.get('error')}")
+                            return JSONResponse({
+                                "success": False,
+                                "message": "Erreur lors de la création du paiement",
+                                "error": checkout_result.get("error")
+                            }, status_code=500)
+                        
+                        print(f"✅ Session Stripe Connect créée: {checkout_result.get('session_id')}")
+                        print(f"   💸 L'argent ira directement au coach ({coach_connect_account_id})")
                         
                         return JSONResponse({
                             "success": True,
@@ -5174,8 +5189,8 @@ async def confirm_booking(request: ConfirmBookingRequest):
                             "booking_id": booking_id,
                             "status": "awaiting_payment",
                             "payment_required": True,
-                            "checkout_url": checkout_session.url,
-                            "checkout_session_id": checkout_session.id
+                            "checkout_url": checkout_result.get("checkout_url"),
+                            "checkout_session_id": checkout_result.get("session_id")
                         })
                         
                     except Exception as stripe_error:
@@ -6171,6 +6186,47 @@ async def stripe_webhook(request: Request):
                         subscription_status="past_due"
                     )
                     print(f"⚠️ Paiement échoué pour {coach_email}")
+        
+        elif event_type == "account.updated":
+            # Mise à jour du compte Stripe Connect d'un coach
+            account_id = data.get("id")
+            account_email = data.get("email")
+            details_submitted = data.get("details_submitted", False)
+            charges_enabled = data.get("charges_enabled", False)
+            payouts_enabled = data.get("payouts_enabled", False)
+            
+            print(f"🔄 Compte Connect mis à jour: {account_id}")
+            print(f"   Email: {account_email}, Charges: {charges_enabled}, Payouts: {payouts_enabled}")
+            
+            from db_service import update_stripe_connect_status, find_coach_by_stripe_connect_account
+            
+            try:
+                # Chercher le coach par account_id dans la base de données PostgreSQL
+                coach_found = find_coach_by_stripe_connect_account(account_id)
+                
+                if coach_found:
+                    # Déterminer le statut
+                    if charges_enabled and payouts_enabled:
+                        status = "active"
+                    elif details_submitted:
+                        status = "pending"
+                    else:
+                        status = "incomplete"
+                    
+                    update_stripe_connect_status(
+                        email=coach_found,
+                        account_id=account_id,
+                        status=status,
+                        charges_enabled=charges_enabled,
+                        payouts_enabled=payouts_enabled,
+                        details_submitted=details_submitted
+                    )
+                    print(f"✅ Statut Stripe Connect synchronisé pour {coach_found}: {status}")
+                else:
+                    print(f"⚠️ Coach non trouvé pour account_id: {account_id}")
+                    
+            except Exception as connect_error:
+                print(f"❌ Erreur synchronisation compte Connect: {connect_error}")
         
         return JSONResponse({"received": True})
     
