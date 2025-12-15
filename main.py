@@ -868,6 +868,13 @@ def require_active_subscription(user = Depends(require_coach_role)):
         headers={"Location": "/coach/subscription"}
     )
 
+# Route favicon
+@app.get("/favicon.ico")
+async def favicon():
+    """Retourne le favicon du site."""
+    from fastapi.responses import FileResponse
+    return FileResponse("static/favicon.ico", media_type="image/x-icon")
+
 # Routes publiques
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
