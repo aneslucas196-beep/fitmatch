@@ -4,14 +4,50 @@ import random
 import secrets
 import hashlib
 import json
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Tuple
+from datetime import datetime, timedelta, date
+from typing import List, Dict, Optional, Tuple, Any
 from pathlib import Path
+from decimal import Decimal
+from uuid import UUID
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
 # Géocodeur global
 geolocator = Nominatim(user_agent="coach_fitness_app")
+
+def serialize_for_json(obj: Any) -> Any:
+    """
+    Convertit récursivement tous les objets non-sérialisables en JSON.
+    Gère datetime, date, Decimal, UUID, etc.
+    """
+    if obj is None:
+        return None
+    elif isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, date):
+        return obj.isoformat()
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, UUID):
+        return str(obj)
+    elif isinstance(obj, dict):
+        return {k: serialize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [serialize_for_json(item) for item in obj]
+    else:
+        return obj
+
+def json_serial_default(obj: Any) -> str:
+    """Fonction default pour json.dump qui gère les types non-sérialisables."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, date):
+        return obj.isoformat()
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, UUID):
+        return str(obj)
+    raise TypeError(f"Type {type(obj)} not JSON serializable")
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
@@ -1572,13 +1608,15 @@ def use_database() -> bool:
     return os.environ.get("DATABASE_URL") is not None
 
 def load_demo_users() -> Dict:
-    """Charge les utilisateurs depuis PostgreSQL (ou JSON en fallback)."""
+    """Charge les utilisateurs depuis PostgreSQL (ou JSON en fallback).
+    Convertit automatiquement les datetime en strings ISO."""
     if use_database():
         try:
             from db_service import load_users_from_db
             users = load_users_from_db()
             if users:
-                return users
+                # Sérialiser les datetime venant de la DB
+                return serialize_for_json(users)
         except Exception as e:
             print(f"⚠️ Erreur DB, fallback JSON: {e}")
     
@@ -1593,19 +1631,23 @@ def load_demo_users() -> Dict:
         return {}
 
 def save_demo_user(email: str, user_data: Dict) -> bool:
-    """Sauvegarde un utilisateur dans PostgreSQL (ou JSON en fallback)."""
+    """Sauvegarde un utilisateur dans PostgreSQL (ou JSON en fallback).
+    Convertit automatiquement les datetime en strings ISO."""
+    # Sérialiser les données avant sauvegarde
+    serialized_data = serialize_for_json(user_data)
+    
     if use_database():
         try:
             from db_service import save_user_to_db
-            return save_user_to_db(email, user_data)
+            return save_user_to_db(email, serialized_data)
         except Exception as e:
             print(f"⚠️ Erreur DB, fallback JSON: {e}")
     
     try:
         users = load_demo_users()
-        users[email] = user_data
+        users[email] = serialized_data
         with open("demo_users.json", 'w', encoding='utf-8') as f:
-            json.dump(users, f, ensure_ascii=False, indent=2)
+            json.dump(users, f, ensure_ascii=False, indent=2, default=json_serial_default)
         print(f"✅ Utilisateur {email} sauvegardé")
         return True
     except Exception as e:
@@ -1613,11 +1655,15 @@ def save_demo_user(email: str, user_data: Dict) -> bool:
         return False
 
 def save_demo_users(users: Dict) -> bool:
-    """Sauvegarde tous les utilisateurs."""
+    """Sauvegarde tous les utilisateurs.
+    Convertit automatiquement les datetime en strings ISO."""
+    # Sérialiser les données avant sauvegarde
+    serialized_users = serialize_for_json(users)
+    
     if use_database():
         try:
             from db_service import save_user_to_db
-            for email, user_data in users.items():
+            for email, user_data in serialized_users.items():
                 save_user_to_db(email, user_data)
             return True
         except Exception as e:
@@ -1625,7 +1671,7 @@ def save_demo_users(users: Dict) -> bool:
     
     try:
         with open("demo_users.json", 'w', encoding='utf-8') as f:
-            json.dump(users, f, ensure_ascii=False, indent=2)
+            json.dump(serialized_users, f, ensure_ascii=False, indent=2, default=json_serial_default)
         return True
     except Exception as e:
         print(f"❌ Erreur sauvegarde: {e}")
