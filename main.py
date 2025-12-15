@@ -2282,7 +2282,11 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     
     # Vérifier si l'abonnement est actif (données fraîches du fichier)
     subscription_status = coach_data_fresh.get("subscription_status", "")
+    email_verified = coach_data_fresh.get("email_verified", False)
+    print(f"🔍 Portal check: email={coach_email}, subscription_status='{subscription_status}', email_verified={email_verified}")
+    
     if subscription_status not in ["active", "trialing"]:
+        print(f"⚠️ Redirection vers subscription car status='{subscription_status}'")
         return RedirectResponse(url="/coach/subscription", status_code=303)
     
     # Vérifier si l'email est vérifié (données fraîches du fichier)
