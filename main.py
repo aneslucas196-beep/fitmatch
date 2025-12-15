@@ -5555,9 +5555,8 @@ async def respond_to_booking(request: CoachBookingRequest):
         # Mettre à jour pending_bookings
         coach_data["pending_bookings"] = pending_bookings
         
-        # Sauvegarder avec conversion automatique datetime -> string
-        with open("demo_users.json", "w", encoding="utf-8") as f:
-            json.dump(serialize_for_json(demo_users), f, ensure_ascii=False, indent=2, default=json_serial_default)
+        # Sauvegarder dans la DB ET le fichier JSON
+        save_demo_user(request.coach_email, coach_data)
         
         print(f"✅ Réservation {request.booking_id} {action_label} par {request.coach_email}")
         
