@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réservation confirmée - FitMatch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-white flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+        <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+        
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Paiement réussi !</h1>
+        <p class="text-gray-600 mb-6">Votre séance est maintenant confirmée. Vous allez recevoir un email de confirmation avec tous les détails.</p>
+        
+        {% if booking_id %}
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+            <p class="text-sm text-gray-500">Numéro de réservation</p>
+            <p class="text-lg font-semibold text-gray-900">#{{ booking_id }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="space-y-3">
+            <a href="/" class="block w-full bg-emerald-500 text-white py-3 px-6 rounded-lg hover:bg-emerald-600 transition font-medium">
+                Retour à l'accueil
+            </a>
+            <a href="/client/dashboard" class="block w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-200 transition font-medium">
+                Voir mes réservations
+            </a>
+        </div>
+        
+        <p class="text-sm text-gray-500 mt-6">Merci de votre confiance !</p>
+    </div>
+</body>
+</html>

@@ -3478,6 +3478,42 @@ async def set_coach_payment_mode(request: Request, user = Depends(require_coach_
         print(f"Erreur mise a jour mode paiement: {e}")
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
+@app.get("/api/coach/{coach_id}/payment-mode")
+async def get_coach_payment_mode(coach_id: str):
+    """Récupère le mode de paiement d'un coach (public, pour le frontend de réservation)."""
+    try:
+        demo_users = load_demo_users()
+        
+        # Chercher le coach par ID, email ou slug
+        coach_email = None
+        for email, user_data in demo_users.items():
+            if user_data.get("role") != "coach":
+                continue
+            encoded_email = email.replace("@", "_").replace(".", "_")
+            user_slug = user_data.get("profile_slug", "")
+            if (email == coach_id or 
+                encoded_email == coach_id or
+                user_slug == coach_id):
+                coach_email = email
+                break
+        
+        if not coach_email:
+            return {"payment_mode": "disabled"}  # Par défaut si coach non trouvé
+        
+        coach_data = demo_users.get(coach_email, {})
+        payment_mode = coach_data.get("payment_mode", "disabled")
+        
+        return {
+            "payment_mode": payment_mode,
+            "coach_email": coach_email,
+            "coach_name": coach_data.get("full_name", "Coach"),
+            "price_from": coach_data.get("price_from", 50)
+        }
+        
+    except Exception as e:
+        print(f"Erreur récupération mode paiement: {e}")
+        return {"payment_mode": "disabled"}
+
 @app.get("/api/bookings")
 async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to"), include_pending: bool = Query(False)):
     """Récupère les réservations existantes d'un coach.
@@ -4809,9 +4845,12 @@ class CoachBookingRequest(BaseModel):
 
 @app.post("/api/confirm-booking")
 async def confirm_booking(request: ConfirmBookingRequest):
-    """Enregistre une demande de réservation et notifie le coach. L'email de confirmation sera envoyé au client quand le coach acceptera."""
+    """Enregistre une demande de réservation selon le mode de paiement du coach.
+    - Mode 'disabled': réservation en attente, coach notifié pour accepter/refuser
+    - Mode 'required': paiement Stripe requis, réservation confirmée automatiquement après paiement
+    """
     try:
-        from resend_service import send_coach_notification_email
+        from resend_service import send_coach_notification_email, send_booking_confirmation_email
         import uuid
         
         # Formater la date en français
@@ -4876,37 +4915,119 @@ async def confirm_booking(request: ConfirmBookingRequest):
             
             if not coach_email:
                 print(f"⚠️ Coach non trouvé - email: {request.coach_email}, nom: {request.coach_name}")
+                return JSONResponse({
+                    "success": False,
+                    "message": "Coach non trouvé",
+                    "error": "coach_not_found"
+                }, status_code=404)
             
-            if coach_email:
+            # Vérifier le mode de paiement du coach
+            coach_data = demo_users[coach_email]
+            payment_mode = coach_data.get("payment_mode", "disabled")
+            print(f"💳 Mode de paiement du coach: {payment_mode}")
+            
+            # Créer l'objet réservation
+            new_booking = {
+                "id": booking_id,
+                "client_name": request.client_name,
+                "client_email": request.client_email,
+                "gym_name": request.gym_name,
+                "gym_address": request.gym_address or "",
+                "date": request.date,
+                "time": request.time,
+                "service": request.service,
+                "duration": request.duration,
+                "price": request.price,
+                "created_at": datetime.now().isoformat()
+            }
+            
+            if payment_mode == "required":
+                # MODE PAIEMENT OBLIGATOIRE
+                # La réservation nécessite un paiement Stripe avant confirmation
+                new_booking["status"] = "awaiting_payment"
+                new_booking["payment_required"] = True
+                
+                # Stocker temporairement la réservation en attente de paiement
                 if "pending_bookings" not in demo_users[coach_email]:
                     demo_users[coach_email]["pending_bookings"] = []
-                
-                # Ajouter la réservation en attente
-                new_booking = {
-                    "id": booking_id,
-                    "client_name": request.client_name,
-                    "client_email": request.client_email,
-                    "gym_name": request.gym_name,
-                    "gym_address": request.gym_address or "",
-                    "date": request.date,
-                    "time": request.time,
-                    "service": request.service,
-                    "duration": request.duration,
-                    "price": request.price,
-                    "status": "pending",
-                    "created_at": datetime.now().isoformat()
-                }
                 demo_users[coach_email]["pending_bookings"].append(new_booking)
+                save_demo_user(coach_email, demo_users[coach_email])
                 
-                # Sauvegarder
-                with open("demo_users.json", "w", encoding="utf-8") as f:
-                    import json
-                    json.dump(demo_users, f, ensure_ascii=False, indent=2)
+                print(f"💳 Réservation {booking_id} en attente de paiement")
+                
+                # Créer une session Stripe Checkout pour le paiement de la séance
+                if STRIPE_AVAILABLE:
+                    try:
+                        import stripe
+                        from stripe_service import init_stripe
+                        init_stripe()
+                        
+                        # Prix en centimes
+                        price_cents = int(float(request.price)) * 100
+                        
+                        checkout_session = stripe.checkout.Session.create(
+                            payment_method_types=['card'],
+                            line_items=[{
+                                'price_data': {
+                                    'currency': 'eur',
+                                    'product_data': {
+                                        'name': f"Séance avec {request.coach_name}",
+                                        'description': f"{request.service} - {request.duration} min @ {request.gym_name}"
+                                    },
+                                    'unit_amount': price_cents,
+                                },
+                                'quantity': 1,
+                            }],
+                            mode='payment',
+                            success_url=f"{os.environ.get('REPLIT_DEV_DOMAIN', 'https://fitmatch.replit.app')}/booking-success?booking_id={booking_id}&session_id={{CHECKOUT_SESSION_ID}}",
+                            cancel_url=f"{os.environ.get('REPLIT_DEV_DOMAIN', 'https://fitmatch.replit.app')}/booking-cancelled?booking_id={booking_id}",
+                            metadata={
+                                'booking_id': booking_id,
+                                'coach_email': coach_email,
+                                'client_email': request.client_email,
+                                'booking_type': 'session_payment'
+                            }
+                        )
+                        
+                        print(f"✅ Session Stripe créée: {checkout_session.id}")
+                        
+                        return JSONResponse({
+                            "success": True,
+                            "message": "Paiement requis pour confirmer la réservation",
+                            "booking_id": booking_id,
+                            "status": "awaiting_payment",
+                            "payment_required": True,
+                            "checkout_url": checkout_session.url,
+                            "checkout_session_id": checkout_session.id
+                        })
+                        
+                    except Exception as stripe_error:
+                        print(f"❌ Erreur Stripe: {stripe_error}")
+                        return JSONResponse({
+                            "success": False,
+                            "message": "Erreur lors de la création du paiement",
+                            "error": str(stripe_error)
+                        }, status_code=500)
+                else:
+                    return JSONResponse({
+                        "success": False,
+                        "message": "Le paiement en ligne n'est pas disponible",
+                        "error": "stripe_not_available"
+                    }, status_code=503)
+            
+            else:
+                # MODE PAIEMENT DÉSACTIVÉ (flux standard)
+                # La réservation est en attente de confirmation du coach
+                new_booking["status"] = "pending"
+                
+                if "pending_bookings" not in demo_users[coach_email]:
+                    demo_users[coach_email]["pending_bookings"] = []
+                demo_users[coach_email]["pending_bookings"].append(new_booking)
+                save_demo_user(coach_email, demo_users[coach_email])
                 
                 print(f"✅ Réservation {booking_id} sauvegardée pour coach {coach_email}")
                 
                 # Envoyer notification au coach
-                coach_data = demo_users[coach_email]
                 coach_notification = send_coach_notification_email(
                     to_email=coach_email,
                     coach_name=coach_data.get("full_name", "Coach"),
@@ -4922,28 +5043,32 @@ async def confirm_booking(request: ConfirmBookingRequest):
                     booking_id=booking_id
                 )
                 print(f"📧 Notification coach: {coach_notification}")
+                
+                print(f"📋 Réservation en attente de confirmation du coach")
+                
+                return JSONResponse({
+                    "success": True,
+                    "message": "Demande de réservation envoyée au coach",
+                    "booking_id": booking_id,
+                    "coach_notified": True,
+                    "client_email_sent": False,
+                    "status": "pending",
+                    "payment_required": False
+                })
+                
         except Exception as save_error:
             print(f"⚠️ Erreur sauvegarde réservation: {save_error}")
-        
-        # La réservation est en attente de confirmation du coach
-        # L'email de confirmation sera envoyé au client quand le coach acceptera
-        print(f"📋 Réservation en attente de confirmation du coach")
-        
-        return JSONResponse({
-            "success": True,
-            "message": "Demande de réservation envoyée au coach",
-            "booking_id": booking_id,
-            "coach_notified": True,  # Notification envoyée au coach
-            "client_email_sent": False,  # L'email au client sera envoyé après confirmation du coach
-            "status": "pending"
-        })
+            return JSONResponse({
+                "success": False,
+                "message": "Erreur lors de la sauvegarde de la réservation",
+                "error": str(save_error)
+            }, status_code=500)
             
     except Exception as e:
         print(f"❌ Erreur confirmation réservation: {e}")
-        # On retourne quand même un succès car la réservation est faite côté client
         return JSONResponse({
-            "success": True,
-            "message": "Réservation confirmée (erreur email)",
+            "success": False,
+            "message": "Erreur lors de la réservation",
             "email_sent": False,
             "error": str(e)
         })
@@ -5726,7 +5851,79 @@ async def stripe_webhook(request: Request):
         print(f"📩 Webhook Stripe reçu: {event_type}")
         
         if event_type == "checkout.session.completed":
-            # Paiement réussi - activer l'abonnement
+            metadata = data.get("metadata", {})
+            booking_type = metadata.get("booking_type")
+            
+            # PAIEMENT DE SÉANCE (mode paiement obligatoire)
+            if booking_type == "session_payment":
+                booking_id = metadata.get("booking_id")
+                coach_email = metadata.get("coach_email")
+                client_email = metadata.get("client_email")
+                
+                print(f"💳 Paiement séance réussi - booking_id: {booking_id}, coach: {coach_email}")
+                
+                if coach_email and booking_id:
+                    try:
+                        from resend_service import send_booking_confirmation_email
+                        
+                        demo_users = load_demo_users()
+                        if coach_email in demo_users:
+                            coach_data = demo_users[coach_email]
+                            pending = coach_data.get("pending_bookings", [])
+                            
+                            # Trouver et déplacer la réservation vers confirmed_bookings
+                            booking_to_confirm = None
+                            for i, booking in enumerate(pending):
+                                if booking.get("id") == booking_id:
+                                    booking_to_confirm = pending.pop(i)
+                                    break
+                            
+                            if booking_to_confirm:
+                                booking_to_confirm["status"] = "confirmed"
+                                booking_to_confirm["payment_status"] = "paid"
+                                booking_to_confirm["confirmed_at"] = datetime.now().isoformat()
+                                
+                                if "confirmed_bookings" not in coach_data:
+                                    coach_data["confirmed_bookings"] = []
+                                coach_data["confirmed_bookings"].append(booking_to_confirm)
+                                coach_data["pending_bookings"] = pending
+                                
+                                save_demo_user(coach_email, coach_data)
+                                print(f"✅ Réservation {booking_id} confirmée après paiement")
+                                
+                                # Programmer les rappels
+                                schedule_booking_reminders(booking_to_confirm, coach_data.get("full_name", "Coach"))
+                                
+                                # Envoyer emails de confirmation
+                                try:
+                                    from datetime import datetime as dt
+                                    date_obj = dt.strptime(booking_to_confirm.get("date"), "%Y-%m-%d")
+                                    jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+                                    mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+                                    date_fr = f"{jours[date_obj.weekday()]} {date_obj.day} {mois[date_obj.month - 1]} {date_obj.year}"
+                                    
+                                    send_booking_confirmation_email(
+                                        to_email=booking_to_confirm.get("client_email"),
+                                        client_name=booking_to_confirm.get("client_name"),
+                                        coach_name=coach_data.get("full_name", "Coach"),
+                                        gym_name=booking_to_confirm.get("gym_name"),
+                                        gym_address=booking_to_confirm.get("gym_address", ""),
+                                        date_str=date_fr,
+                                        time_str=booking_to_confirm.get("time"),
+                                        service_name=booking_to_confirm.get("service"),
+                                        duration=f"{booking_to_confirm.get('duration')} min",
+                                        price=f"{booking_to_confirm.get('price')}€",
+                                        booking_id=booking_id
+                                    )
+                                    print(f"📧 Email confirmation envoyé au client")
+                                except Exception as email_error:
+                                    print(f"⚠️ Erreur email confirmation: {email_error}")
+                    except Exception as booking_error:
+                        print(f"❌ Erreur confirmation réservation après paiement: {booking_error}")
+                
+                return JSONResponse({"received": True})
+            
+            # PAIEMENT ABONNEMENT COACH (flux existant)
             coach_email = data.get("metadata", {}).get("coach_email")
             subscription_id = data.get("subscription")
             customer_id = data.get("customer")
@@ -5819,6 +6016,27 @@ async def api_coach_subscription_status(request: Request, user = Depends(require
         })
     except Exception as e:
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+# ============================================
+# PAGES PAIEMENT SÉANCE
+# ============================================
+
+@app.get("/booking-success", response_class=HTMLResponse)
+async def booking_success_page(request: Request, booking_id: str = None, session_id: str = None):
+    """Page de confirmation après paiement réussi d'une séance."""
+    return templates.TemplateResponse("booking_success.html", {
+        "request": request,
+        "booking_id": booking_id,
+        "session_id": session_id
+    })
+
+@app.get("/booking-cancelled", response_class=HTMLResponse)
+async def booking_cancelled_page(request: Request, booking_id: str = None):
+    """Page affichée si le paiement est annulé."""
+    return templates.TemplateResponse("booking_cancelled.html", {
+        "request": request,
+        "booking_id": booking_id
+    })
 
 # ============================================
 
