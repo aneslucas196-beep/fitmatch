@@ -2275,16 +2275,18 @@ async def coach_login_submit(
 async def coach_portal(request: Request, user = Depends(require_coach_role)):
     """Dashboard coach - avec vérification du profil complété et de l'abonnement."""
     
-    # Vérifier si l'abonnement est actif
-    subscription_status = user.get("subscription_status", "")
-    if subscription_status != "active":
-        return RedirectResponse(url="/coach/subscription", status_code=303)
-    
-    # Vérifier si l'email est vérifié
+    # Charger les données fraîches depuis le fichier JSON
     coach_email = user.get("email")
     demo_users = load_demo_users()
-    coach_data_check = demo_users.get(coach_email, {})
-    if not coach_data_check.get("email_verified", False):
+    coach_data_fresh = demo_users.get(coach_email, {})
+    
+    # Vérifier si l'abonnement est actif (données fraîches du fichier)
+    subscription_status = coach_data_fresh.get("subscription_status", "")
+    if subscription_status not in ["active", "trialing"]:
+        return RedirectResponse(url="/coach/subscription", status_code=303)
+    
+    # Vérifier si l'email est vérifié (données fraîches du fichier)
+    if not coach_data_fresh.get("email_verified", False):
         return RedirectResponse(url="/coach/verify-email", status_code=303)
     
     # Vérifier si le profil est complété
@@ -3040,10 +3042,13 @@ async def verify_coach_email(request: Request, user = Depends(require_coach_or_p
             return JSONResponse({"success": False, "error": "Aucun code en attente"}, status_code=400)
         
         # Vérifier l'expiration
-        if otp_expiry:
-            expiry_dt = datetime.fromisoformat(otp_expiry)
-            if datetime.now() > expiry_dt:
-                return JSONResponse({"success": False, "error": "Code expiré. Demandez un nouveau code."}, status_code=400)
+        if otp_expiry and isinstance(otp_expiry, str):
+            try:
+                expiry_dt = datetime.fromisoformat(otp_expiry)
+                if datetime.now() > expiry_dt:
+                    return JSONResponse({"success": False, "error": "Code expiré. Demandez un nouveau code."}, status_code=400)
+            except (ValueError, TypeError):
+                pass  # Ignorer si format invalide
         
         # Vérifier le code
         if otp_code != stored_otp:
