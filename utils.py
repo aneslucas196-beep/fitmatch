@@ -18,7 +18,7 @@ geolocator = Nominatim(user_agent="coach_fitness_app")
 def serialize_for_json(obj: Any) -> Any:
     """
     Convertit récursivement tous les objets non-sérialisables en JSON.
-    Gère datetime, date, Decimal, UUID, etc.
+    Gère datetime, date, Decimal, UUID, bytes, set, etc.
     """
     if obj is None:
         return None
@@ -30,14 +30,22 @@ def serialize_for_json(obj: Any) -> Any:
         return float(obj)
     elif isinstance(obj, UUID):
         return str(obj)
+    elif isinstance(obj, bytes):
+        try:
+            return obj.decode('utf-8')
+        except UnicodeDecodeError:
+            import base64
+            return base64.b64encode(obj).decode('ascii')
+    elif isinstance(obj, (set, frozenset)):
+        return [serialize_for_json(item) for item in obj]
     elif isinstance(obj, dict):
-        return {k: serialize_for_json(v) for k, v in obj.items()}
+        return {str(k): serialize_for_json(v) for k, v in obj.items()}
     elif isinstance(obj, (list, tuple)):
         return [serialize_for_json(item) for item in obj]
     else:
         return obj
 
-def json_serial_default(obj: Any) -> str:
+def json_serial_default(obj: Any) -> Any:
     """Fonction default pour json.dump qui gère les types non-sérialisables."""
     if isinstance(obj, datetime):
         return obj.isoformat()
@@ -47,6 +55,14 @@ def json_serial_default(obj: Any) -> str:
         return float(obj)
     elif isinstance(obj, UUID):
         return str(obj)
+    elif isinstance(obj, bytes):
+        try:
+            return obj.decode('utf-8')
+        except UnicodeDecodeError:
+            import base64
+            return base64.b64encode(obj).decode('ascii')
+    elif isinstance(obj, (set, frozenset)):
+        return list(obj)
     raise TypeError(f"Type {type(obj)} not JSON serializable")
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
