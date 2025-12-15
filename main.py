@@ -2350,12 +2350,7 @@ async def coach_portal_update(
 # Route onboarding coach
 @app.get("/coach/profile-setup", response_class=HTMLResponse)
 async def coach_profile_setup_get(request: Request, user = Depends(require_coach_role)):
-    """Page d'onboarding/configuration du profil coach (nécessite abonnement actif)."""
-    
-    # Vérifier si l'abonnement est actif
-    subscription_status = user.get("subscription_status", "")
-    if subscription_status != "active":
-        return RedirectResponse(url="/coach/subscription", status_code=303)
+    """Page d'onboarding/configuration du profil coach."""
     
     # Vérifier si l'email est vérifié
     coach_email = user.get("email")

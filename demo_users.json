@@ -285,7 +285,9 @@
     "country_code": "AT",
     "password": "Anasking1234!",
     "coach_gender_preference": "aucune",
-    "selected_gyms": []
+    "selected_gyms": [],
+    "stripe_customer_id": "cus_TbqxQIve8EJhY7",
+    "subscription_status": "active"
   },
   "dressbynk@gmail.com": {
     "full_name": "zazakj",
