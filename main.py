@@ -2972,19 +2972,21 @@ async def coach_subscription_page(
             # Rediriger vers la page de vérification email
             return RedirectResponse(url="/coach/verify-email", status_code=303)
     
+    # Charger les données fraîches depuis le fichier JSON
+    demo_users = load_demo_users()
+    coach_data_fresh = demo_users.get(coach_email, {})
+    subscription_status_fresh = coach_data_fresh.get("subscription_status", "")
+    
     subscription_info = get_coach_subscription_info(coach_email)
     
-    # Si abonnement déjà actif, vérifier si email vérifié
-    if subscription_info and subscription_info.get("subscription_status") == "active":
-        # Vérifier si l'email est vérifié
-        demo_users = load_demo_users()
-        coach_data = demo_users.get(coach_email, {})
-        email_verified = coach_data.get("email_verified", False)
+    # Si abonnement déjà actif (vérification données fraîches), vérifier si email vérifié
+    if subscription_status_fresh in ["active", "trialing"]:
+        email_verified = coach_data_fresh.get("email_verified", False)
         
         if not email_verified:
             return RedirectResponse(url="/coach/verify-email", status_code=303)
         
-        profile_completed = user.get("profile_completed", False)
+        profile_completed = coach_data_fresh.get("profile_completed", False)
         redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
         return RedirectResponse(url=redirect_url, status_code=303)
     
