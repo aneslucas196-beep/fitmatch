@@ -135,11 +135,11 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
                 subscription_status, stripe_customer_id, stripe_subscription_id,
                 subscription_period_end, otp_code, otp_expiry,
                 pending_bookings, confirmed_bookings, rejected_bookings,
-                unavailable_days, unavailable_slots, payment_mode, updated_at
+                unavailable_days, unavailable_slots, payment_mode, session_duration, updated_at
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
             )
             ON CONFLICT (email) DO UPDATE SET
                 password = COALESCE(EXCLUDED.password, users.password),
@@ -173,6 +173,7 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
                 unavailable_days = COALESCE(EXCLUDED.unavailable_days, users.unavailable_days),
                 unavailable_slots = COALESCE(EXCLUDED.unavailable_slots, users.unavailable_slots),
                 payment_mode = COALESCE(EXCLUDED.payment_mode, users.payment_mode),
+                session_duration = COALESCE(EXCLUDED.session_duration, users.session_duration),
                 updated_at = CURRENT_TIMESTAMP
         """, (
             email,
@@ -206,7 +207,8 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
             json.dumps(rejected_bookings),
             json.dumps(unavailable_days),
             json.dumps(unavailable_slots),
-            user_data.get('payment_mode', 'disabled')
+            user_data.get('payment_mode', 'disabled'),
+            user_data.get('session_duration', 60)
         ))
         
         conn.commit()
