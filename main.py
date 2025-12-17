@@ -3455,6 +3455,45 @@ async def set_coach_working_hours(request: Request):
         print(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.get("/api/coach/session-duration")
+async def get_coach_session_duration(coach_email: str):
+    """Récupère la durée de séance d'un coach."""
+    try:
+        demo_users = load_demo_users()
+        coach_data = demo_users.get(coach_email, {})
+        duration = coach_data.get("session_duration", 60)  # 60 min par défaut
+        return {"success": True, "duration": duration}
+    except Exception as e:
+        print(f"Erreur: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
+@app.post("/api/coach/session-duration")
+async def set_coach_session_duration(request: Request):
+    """Définit la durée de séance d'un coach."""
+    try:
+        data = await request.json()
+        coach_email = data.get("coach_email")
+        duration = data.get("duration")
+        
+        if not coach_email or duration not in [30, 60, 90, 120]:
+            return JSONResponse(status_code=400, content={"success": False, "error": "Données invalides"})
+        
+        demo_users = load_demo_users()
+        
+        if coach_email not in demo_users:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Coach non trouvé"})
+        
+        demo_users[coach_email]["session_duration"] = duration
+        save_demo_user(coach_email, demo_users[coach_email])
+        
+        print(f"Durée de séance mise à jour pour {coach_email}: {duration} min")
+        
+        return {"success": True, "duration": duration}
+        
+    except Exception as e:
+        print(f"Erreur: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
 @app.post("/api/coach/payment-mode")
 async def set_coach_payment_mode(request: Request, user = Depends(require_coach_role)):
     """Definit le mode de paiement d'un coach (disabled ou required)."""

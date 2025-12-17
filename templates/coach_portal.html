@@ -416,6 +416,41 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                     </a>
                 </div>
 
+                <!-- Durée des séances -->
+                <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="bg-gradient-to-r from-purple-500 to-indigo-500 p-3 rounded-full mr-4">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">Durée des séances</h3>
+                            <p class="text-sm text-gray-600">Choisissez la durée de vos séances</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setSessionDuration(30)" id="duration-30" 
+                                class="duration-btn py-3 px-4 rounded-lg border-2 text-center font-medium transition hover:border-purple-500">
+                            30 min
+                        </button>
+                        <button onclick="setSessionDuration(60)" id="duration-60" 
+                                class="duration-btn py-3 px-4 rounded-lg border-2 text-center font-medium transition hover:border-purple-500">
+                            1h
+                        </button>
+                        <button onclick="setSessionDuration(90)" id="duration-90" 
+                                class="duration-btn py-3 px-4 rounded-lg border-2 text-center font-medium transition hover:border-purple-500">
+                            1h30
+                        </button>
+                        <button onclick="setSessionDuration(120)" id="duration-120" 
+                                class="duration-btn py-3 px-4 rounded-lg border-2 text-center font-medium transition hover:border-purple-500">
+                            2h
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-3 text-center">Les clients verront les créneaux selon cette durée</p>
+                </div>
+
                 <!-- Gérer mes disponibilités -->
                 <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6">
                     <div class="flex items-center mb-4">
@@ -656,6 +691,59 @@ let unavailabilityData = {
     unavailable_days: [],
     unavailable_slots: []
 };
+
+// Durée de séance (en minutes)
+let sessionDuration = {{ coach.session_duration or 60 }};
+
+// ===== GESTION DE LA DURÉE DE SÉANCE =====
+
+async function loadSessionDuration() {
+    try {
+        const response = await fetch(`/api/coach/session-duration?coach_email=${encodeURIComponent(COACH_EMAIL)}`);
+        const data = await response.json();
+        if (data.success && data.duration) {
+            sessionDuration = data.duration;
+        }
+        updateDurationButtons();
+    } catch (error) {
+        console.error("Erreur chargement durée:", error);
+    }
+}
+
+function updateDurationButtons() {
+    document.querySelectorAll('.duration-btn').forEach(btn => {
+        btn.classList.remove('border-purple-500', 'bg-purple-50', 'text-purple-700');
+        btn.classList.add('border-gray-200', 'text-gray-700');
+    });
+    const activeBtn = document.getElementById(`duration-${sessionDuration}`);
+    if (activeBtn) {
+        activeBtn.classList.remove('border-gray-200', 'text-gray-700');
+        activeBtn.classList.add('border-purple-500', 'bg-purple-50', 'text-purple-700');
+    }
+}
+
+async function setSessionDuration(minutes) {
+    try {
+        const response = await fetch('/api/coach/session-duration', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                coach_email: COACH_EMAIL,
+                duration: minutes
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            sessionDuration = minutes;
+            updateDurationButtons();
+        } else {
+            alert('Erreur lors de la sauvegarde');
+        }
+    } catch (error) {
+        console.error("Erreur sauvegarde durée:", error);
+        alert('Erreur lors de la sauvegarde');
+    }
+}
 
 // ===== GESTION DES DISPONIBILITÉS =====
 
@@ -1116,6 +1204,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadBookingsFromAPI();
     await loadUnavailability();
     await loadWorkingHours();
+    await loadSessionDuration();
     initializeCalendar();
     loadUpcomingBookings();
     loadNotifications();
@@ -1202,13 +1291,13 @@ function generateWeekCalendar() {
     const calendar = document.getElementById('calendar-grid');
     const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
     
-    // Générer les créneaux de 30 minutes de 8h à 20h
+    // Générer les créneaux selon la durée de séance définie par le coach
     const timeSlots = [];
-    for (let h = 8; h <= 20; h++) {
-        timeSlots.push(`${h.toString().padStart(2, '0')}:00`);
-        if (h < 20) {
-            timeSlots.push(`${h.toString().padStart(2, '0')}:30`);
-        }
+    const slotMinutes = sessionDuration || 60;
+    for (let minutes = 8 * 60; minutes <= 20 * 60; minutes += slotMinutes) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        timeSlots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
     }
     
     let html = '<div class="grid grid-cols-8 gap-0 text-xs">';

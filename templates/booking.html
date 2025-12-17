@@ -159,7 +159,7 @@ const COACH_EMAIL = "{{ coach.email or '' }}";
 const COACH_PHOTO = "{{ coach.profile_photo_url or coach.profile_photo or coach.photo or '' }}";
 const GYM_NAME = "{{ coach.gyms[0].name if coach.gyms else 'Salle de sport' }}";
 const GYM_ADDRESS = "{{ coach.gyms[0].address if coach.gyms else '' }}";
-const SLOT_MINUTES = 60;
+const SLOT_MINUTES = {{ coach.session_duration or 60 }};
 const DAY_START = "08:00";
 const DAY_END = "23:00";
 
