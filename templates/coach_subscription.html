@@ -122,10 +122,20 @@ if (urlParams.get('cancelled')) {
                 </div>
             </div>
 
+            {% if subscription_info.stripe_customer_id %}
             <button onclick="openPortal()" 
                     class="w-full bg-slate-900 text-white py-4 rounded-xl font-semibold hover:bg-slate-800 transition duration-200">
                 Gérer mon abonnement
             </button>
+            <p class="text-center text-sm text-slate-500 mt-3">
+                Modifier votre carte, télécharger vos factures ou résilier votre abonnement
+            </p>
+            {% else %}
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+                <p class="text-emerald-800 font-medium">Compte offert</p>
+                <p class="text-sm text-emerald-600 mt-1">Votre abonnement FitMatch Pro est actif sans prélèvement automatique.</p>
+            </div>
+            {% endif %}
         </div>
 
         {% else %}
