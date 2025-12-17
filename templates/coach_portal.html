@@ -1317,12 +1317,11 @@ function generateWeekCalendar() {
         </div>`;
     }
     
-    // Time slots
+    // Time slots - afficher TOUS les créneaux avec leur heure
     timeSlots.forEach((timeSlot, idx) => {
-        const isFullHour = timeSlot.endsWith(':00');
-        const hourClass = isFullHour ? 'border-t border-gray-300' : 'border-t border-gray-100';
+        const hourClass = 'border-t border-gray-200';
         
-        html += `<div class="font-medium text-gray-500 p-1 text-right border-r bg-gray-50 ${hourClass}">${isFullHour ? timeSlot : ''}</div>`;
+        html += `<div class="font-medium text-gray-500 p-1 text-right border-r bg-gray-50 ${hourClass}">${timeSlot}</div>`;
         
         for (let day = 0; day < 7; day++) {
             const date = new Date(currentWeekStart);
