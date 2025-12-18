@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" dir="{{ text_direction|default('ltr') }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FitMatch - Réservez en salle</title>
+  <title>FitMatch - {{ t.home.hero_title|default('Réservez en salle') }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -434,16 +434,39 @@
   <header class="navbar">
     <div class="logo">FitMatch</div>
     <div class="nav-buttons">
-      <a href="/partner" class="btn-coach">Je suis un coach</a>
-      <a href="/login" class="btn-compte">Mon compte</a>
+      <div class="language-selector" style="position: relative; margin-right: 12px;">
+        <button onclick="toggleLanguageMenu()" class="btn-lang" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+          🌐 {{ locale|default('fr')|upper }}
+        </button>
+        <div id="langMenu" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); min-width: 150px; z-index: 1000; overflow: hidden;">
+          {% for lang in available_languages|default([]) %}
+          <a href="/set-language/{{ lang.code }}" style="display: block; padding: 12px 16px; color: #1f2937; text-decoration: none; font-size: 14px; border-bottom: 1px solid #f3f4f6; {% if lang.code == locale %}background: #f0fdf4; font-weight: 600;{% endif %}">
+            {{ lang.name }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      <a href="/partner" class="btn-coach">{{ t.nav.become_coach|default('Je suis un coach') }}</a>
+      <a href="/login" class="btn-compte">{{ t.nav.my_account|default('Mon compte') }}</a>
     </div>
   </header>
+  <script>
+    function toggleLanguageMenu() {
+      const menu = document.getElementById('langMenu');
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+    document.addEventListener('click', function(e) {
+      const menu = document.getElementById('langMenu');
+      const btn = e.target.closest('.language-selector');
+      if (!btn && menu) menu.style.display = 'none';
+    });
+  </script>
 
   <section class="hero">
     <div class="overlay"></div>
     <div class="content">
-      <h1>Réservez en salle</h1>
-      <p>Simple • Immédiat • 24h/24</p>
+      <h1>{{ t.home.hero_title|default('Trouvez votre coach fitness idéal') }}</h1>
+      <p>{{ t.home.hero_subtitle|default('Réservez des séances avec les meilleurs coachs près de chez vous') }}</p>
 
       <div class="gym-search-wrapper">
         <span class="gym-search-icon">🏋️</span>
@@ -451,7 +474,7 @@
           type="text" 
           id="gymSearchInput" 
           class="gym-search-input"
-          placeholder="Cherchez n'importe quelle salle (ex: Fitness Park Maurepas)"
+          placeholder="{{ t.home.search_placeholder|default('Rechercher par ville ou code postal...') }}"
           autocomplete="off"
         />
         <div id="gymAutocomplete" class="gym-autocomplete"></div>
@@ -467,25 +490,25 @@
         <div class="selected-gym-address" id="selectedGymAddress"></div>
       </div>
     </div>
-    <button class="selected-gym-clear" onclick="clearSelectedGym()">✕ Changer de salle</button>
+    <button class="selected-gym-clear" onclick="clearSelectedGym()">✕ {{ t.common.cancel|default('Changer de salle') }}</button>
   </div>
 
   <section id="resultsSection" class="results-section" style="display: none;">
     <div class="results-container">
       <div id="resultsHeader" class="results-header">
-        <h2 id="resultsTitle">Coaches disponibles</h2>
+        <h2 id="resultsTitle">{{ t.home.featured_coaches|default('Coaches disponibles') }}</h2>
         <p id="resultsCount"></p>
       </div>
 
       <div id="loadingState" class="loading-state" style="display: none;">
         <div class="loading-spinner"></div>
-        <p>Recherche des coaches...</p>
+        <p>{{ t.common.loading|default('Recherche des coaches...') }}</p>
       </div>
 
       <div id="emptyState" class="empty-state" style="display: none;">
         <div class="empty-state-icon">😔</div>
-        <h3>Aucun coach dans cette salle</h3>
-        <p>Essayez une autre salle ou revenez bientôt !</p>
+        <h3>{{ t.search.no_results|default('Aucun coach dans cette salle') }}</h3>
+        <p>{{ t.search.try_another|default('Essayez une autre salle ou revenez bientôt !') }}</p>
       </div>
 
       <div id="resultsGrid" class="results-grid"></div>
@@ -498,17 +521,17 @@
         <img src="/static/coach-section.png?v=2" alt="Coach sportif FitMatch">
       </div>
       <div class="discover-text">
-        <h2>Découvrez nos Coachs FitMatch</h2>
-        <p>Envie d'un accompagnement personnalisé ? FitMatch vous connecte avec les meilleurs coachs près de chez vous. Que vous visiez la musculation, la perte de poids ou la remise en forme, trouvez le coach parfait pour atteindre vos objectifs.</p>
-        <a href="/signup?role=client" class="btn-discover">Découvrir FitMatch</a>
+        <h2>{{ t.home.featured_coaches|default('Découvrez nos Coachs FitMatch') }}</h2>
+        <p>{{ t.home.hero_subtitle|default('FitMatch vous connecte avec les meilleurs coachs près de chez vous. Trouvez le coach parfait pour atteindre vos objectifs.') }}</p>
+        <a href="/signup?role=client" class="btn-discover">{{ t.home.view_all_coaches|default('Découvrir FitMatch') }}</a>
       </div>
     </div>
   </section>
 
   <section class="fitmatch-stats">
-    <h2>Tu es coach sportif ? Découvre la puissance de FitMatch !</h2>
+    <h2>{{ t.home.become_coach_title|default('Tu es coach sportif ?') }}</h2>
     <p class="subtitle">
-      Développe ton activité, attire plus de clients et gère tes réservations en ligne, simplement et sans commission.
+      {{ t.home.become_coach_desc|default('Développe ton activité, attire plus de clients et gère tes réservations en ligne.') }}
     </p>
 
     <div class="stats-grid">
@@ -541,7 +564,7 @@
 
   <section class="faq-section">
     <div class="faq-container">
-      <h2 class="faq-title">Les questions fréquentes</h2>
+      <h2 class="faq-title">{{ t.home.faq_title|default('Les questions fréquentes') }}</h2>
 
       <details class="faq-item">
         <summary>Qu'est-ce que FitMatch ?</summary>
@@ -797,40 +820,33 @@
       </div>
 
       <div class="footer-column">
-        <h3>À propos de FitMatch</h3>
-        <a href="#">Devenir coach partenaire</a>
-        <a href="#">Rejoindre l'équipe</a>
-        <a href="#">CGU</a>
-        <a href="#">Politique de confidentialité</a>
-        <a href="#">Politique d'annulation</a>
-        <a href="#">Politique de cookies</a>
-        <a href="#">Contact support</a>
+        <h3>{{ t.footer.about_us|default('À propos de FitMatch') }}</h3>
+        <a href="/partner">{{ t.nav.become_coach|default('Devenir coach partenaire') }}</a>
+        <a href="#">{{ t.footer.terms|default('CGU') }}</a>
+        <a href="#">{{ t.footer.privacy|default('Confidentialité') }}</a>
+        <a href="#">{{ t.footer.contact|default('Contact support') }}</a>
       </div>
 
       <div class="footer-column">
-        <h3>Trouver votre coach</h3>
-        <a href="#">Coach sportif</a>
-        <a href="#">Coach musculation</a>
-        <a href="#">Coach perte de poids</a>
-        <a href="#">Coach boxe</a>
-        <a href="#">Coach pilates</a>
-        <a href="#">Coach yoga</a>
+        <h3>{{ t.nav.find_coach|default('Trouver votre coach') }}</h3>
+        <a href="/search?specialty=fitness">Coach Fitness</a>
+        <a href="/search?specialty=musculation">Coach Musculation</a>
+        <a href="/search?specialty=boxe">Coach Boxe</a>
+        <a href="/search?specialty=yoga">Coach Yoga</a>
       </div>
 
       <div class="footer-column">
-        <h3>Recherches fréquentes</h3>
+        <h3>{{ t.home.popular_cities|default('Recherches fréquentes') }}</h3>
         <a href="#">Basic-Fit</a>
         <a href="#">Fitness Park</a>
-        <a href="#">On air</a>
         <a href="#">McFIT</a>
         <a href="#">PureGym</a>
-        <a href="#">Anytime Fitness</a>
       </div>
 
     </div>
 
     <div class="footer-bottom">
-      © 2025 FitMatch – Tous droits réservés
+      © 2025 FitMatch – {{ t.footer.all_rights|default('Tous droits réservés') }}
     </div>
   </footer>
 
