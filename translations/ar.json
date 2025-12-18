@@ -2,7 +2,6 @@
   "lang_code": "ar",
   "lang_name": "العربية",
   "dir": "rtl",
-  
   "nav": {
     "home": "الرئيسية",
     "find_coach": "ابحث عن مدرب",
@@ -14,7 +13,6 @@
     "coach_portal": "بوابة المدرب",
     "client_dashboard": "لوحتي"
   },
-  
   "home": {
     "hero_title": "اعثر على مدربك الرياضي المثالي",
     "hero_subtitle": "احجز جلسات مع أفضل المدربين بالقرب منك",
@@ -34,9 +32,20 @@
     "faq_title": "الأسئلة الشائعة",
     "become_coach_title": "هل أنت مدرب؟",
     "become_coach_desc": "انضم إلى FitMatch ونمِّ قاعدة عملائك",
-    "become_coach_btn": "كن مدرباً"
+    "become_coach_btn": "كن مدرباً",
+    "stat1": "+60%",
+    "stat1_desc": "حجوزات إضافية مع FitMatch",
+    "stat2": "4x",
+    "stat2_desc": "عدم الحضور أقل مع التذكيرات التلقائية",
+    "stat3": "70%",
+    "stat3_desc": "من الجلسات المحجوزة خارج ساعات العمل",
+    "stat4": "+10 000",
+    "stat4_desc": "المدربون مسجلون بالفعل على FitMatch",
+    "stat5": "1 حجز",
+    "stat5_desc": "كل 10 ثوان",
+    "stat6": "> 2 مليون €",
+    "stat6_desc": "من الجلسات المحجوزة عبر FitMatch"
   },
-  
   "search": {
     "results_for": "نتائج البحث عن",
     "no_results": "لم يتم العثور على نتائج",
@@ -50,7 +59,6 @@
     "specialties": "التخصصات",
     "all_specialties": "جميع التخصصات"
   },
-  
   "coach": {
     "about": "نبذة",
     "specialties": "التخصصات",
@@ -68,7 +76,6 @@
     "share": "مشاركة",
     "report": "إبلاغ"
   },
-  
   "booking": {
     "title": "احجز جلسة",
     "select_date": "اختر تاريخاً",
@@ -96,7 +103,6 @@
     "afternoon": "بعد الظهر",
     "evening": "مساءً"
   },
-  
   "auth": {
     "login_title": "تسجيل الدخول",
     "signup_title": "إنشاء حساب",
@@ -121,7 +127,6 @@
     "resend_code": "إعادة إرسال الرمز",
     "verify": "تحقق"
   },
-  
   "coach_portal": {
     "dashboard": "لوحة التحكم",
     "bookings": "الحجوزات",
@@ -149,7 +154,6 @@
     "payment_optional": "الدفع في الموقع",
     "payment_required": "الدفع عبر الإنترنت مطلوب"
   },
-  
   "emails": {
     "booking_confirmation_subject": "تم تأكيد الحجز - FitMatch",
     "booking_reminder_subject": "تذكير: جلستك غداً",
@@ -187,7 +191,6 @@
     "follow_us": "تابعنا",
     "your_session_with": "جلستك مع"
   },
-  
   "common": {
     "loading": "جاري التحميل...",
     "error": "حدث خطأ",
@@ -227,7 +230,6 @@
     "warning": "تحذير",
     "info": "معلومات"
   },
-  
   "footer": {
     "about_us": "من نحن",
     "contact": "اتصل بنا",
@@ -237,7 +239,6 @@
     "legal": "قانوني",
     "all_rights": "جميع الحقوق محفوظة"
   },
-  
   "errors": {
     "required_field": "هذا الحقل مطلوب",
     "invalid_email": "بريد إلكتروني غير صالح",

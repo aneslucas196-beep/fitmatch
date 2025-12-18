@@ -2,7 +2,6 @@
   "lang_code": "en",
   "lang_name": "English",
   "dir": "ltr",
-  
   "nav": {
     "home": "Home",
     "find_coach": "Find a Coach",
@@ -14,7 +13,6 @@
     "coach_portal": "Coach Portal",
     "client_dashboard": "My Dashboard"
   },
-  
   "home": {
     "hero_title": "Find Your Ideal Fitness Coach",
     "hero_subtitle": "Book sessions with the best coaches near you",
@@ -33,10 +31,21 @@
     "testimonials": "What Our Clients Say",
     "faq_title": "Frequently Asked Questions",
     "become_coach_title": "Are You a Coach?",
-    "become_coach_desc": "Join FitMatch and grow your client base",
-    "become_coach_btn": "Become a Coach"
+    "become_coach_desc": "Grow your client base, manage bookings, and increase your earnings with FitMatch",
+    "become_coach_btn": "Become a Coach",
+    "stat1": "+60%",
+    "stat1_desc": "Additional bookings with FitMatch",
+    "stat2": "4x",
+    "stat2_desc": "Fewer no-shows with automatic reminders",
+    "stat3": "70%",
+    "stat3_desc": "Of sessions booked outside business hours",
+    "stat4": "+10,000",
+    "stat4_desc": "Coaches already registered on FitMatch",
+    "stat5": "1 booking",
+    "stat5_desc": "Every 10 seconds",
+    "stat6": "> €2 million",
+    "stat6_desc": "Of sessions booked via FitMatch"
   },
-  
   "search": {
     "results_for": "Results for",
     "no_results": "No results found",
@@ -50,7 +59,6 @@
     "specialties": "Specialties",
     "all_specialties": "All Specialties"
   },
-  
   "coach": {
     "about": "About",
     "specialties": "Specialties",
@@ -68,7 +76,6 @@
     "share": "Share",
     "report": "Report"
   },
-  
   "booking": {
     "title": "Book a Session",
     "select_date": "Select a Date",
@@ -96,7 +103,6 @@
     "afternoon": "Afternoon",
     "evening": "Evening"
   },
-  
   "auth": {
     "login_title": "Log In",
     "signup_title": "Create an Account",
@@ -121,7 +127,6 @@
     "resend_code": "Resend Code",
     "verify": "Verify"
   },
-  
   "coach_portal": {
     "dashboard": "Dashboard",
     "bookings": "Bookings",
@@ -149,7 +154,6 @@
     "payment_optional": "Pay on Site",
     "payment_required": "Online Payment Required"
   },
-  
   "emails": {
     "booking_confirmation_subject": "Booking Confirmed - FitMatch",
     "booking_reminder_subject": "Reminder: Your Session Tomorrow",
@@ -187,7 +191,6 @@
     "follow_us": "Follow us",
     "your_session_with": "Your session with"
   },
-  
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",
@@ -227,7 +230,6 @@
     "warning": "Warning",
     "info": "Info"
   },
-  
   "footer": {
     "about_us": "About Us",
     "contact": "Contact",
@@ -237,7 +239,6 @@
     "legal": "Legal",
     "all_rights": "All rights reserved"
   },
-  
   "errors": {
     "required_field": "This field is required",
     "invalid_email": "Invalid email",

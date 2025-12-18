@@ -2,7 +2,6 @@
   "lang_code": "pt",
   "lang_name": "Português",
   "dir": "ltr",
-  
   "nav": {
     "home": "Início",
     "find_coach": "Encontrar um Coach",
@@ -14,7 +13,6 @@
     "coach_portal": "Portal do Coach",
     "client_dashboard": "Minha Área"
   },
-  
   "home": {
     "hero_title": "Encontre Seu Coach Fitness Ideal",
     "hero_subtitle": "Agende sessões com os melhores coaches perto de você",
@@ -34,9 +32,20 @@
     "faq_title": "Perguntas Frequentes",
     "become_coach_title": "Você é Coach?",
     "become_coach_desc": "Junte-se ao FitMatch e aumente sua clientela",
-    "become_coach_btn": "Ser Coach"
+    "become_coach_btn": "Ser Coach",
+    "stat1": "+60%",
+    "stat1_desc": "Agendamentos adicionais com FitMatch",
+    "stat2": "4x",
+    "stat2_desc": "Menos faltas com lembretes automáticos",
+    "stat3": "70%",
+    "stat3_desc": "De sessões marcadas fora do horário comercial",
+    "stat4": "+10 000",
+    "stat4_desc": "Treinadores já registrados no FitMatch",
+    "stat5": "1 agendamento",
+    "stat5_desc": "A cada 10 segundos",
+    "stat6": "> 2 milhões €",
+    "stat6_desc": "De sessões marcadas via FitMatch"
   },
-  
   "search": {
     "results_for": "Resultados para",
     "no_results": "Nenhum resultado encontrado",
@@ -50,7 +59,6 @@
     "specialties": "Especialidades",
     "all_specialties": "Todas as Especialidades"
   },
-  
   "coach": {
     "about": "Sobre",
     "specialties": "Especialidades",
@@ -68,7 +76,6 @@
     "share": "Compartilhar",
     "report": "Denunciar"
   },
-  
   "booking": {
     "title": "Agendar uma Sessão",
     "select_date": "Selecione uma Data",
@@ -96,7 +103,6 @@
     "afternoon": "Tarde",
     "evening": "Noite"
   },
-  
   "auth": {
     "login_title": "Entrar",
     "signup_title": "Criar uma Conta",
@@ -121,7 +127,6 @@
     "resend_code": "Reenviar Código",
     "verify": "Verificar"
   },
-  
   "coach_portal": {
     "dashboard": "Painel",
     "bookings": "Agendamentos",
@@ -149,7 +154,6 @@
     "payment_optional": "Pagar no Local",
     "payment_required": "Pagamento Online Obrigatório"
   },
-  
   "emails": {
     "booking_confirmation_subject": "Agendamento Confirmado - FitMatch",
     "booking_reminder_subject": "Lembrete: Sua Sessão Amanhã",
@@ -187,7 +191,6 @@
     "follow_us": "Siga-nos",
     "your_session_with": "Sua sessão com"
   },
-  
   "common": {
     "loading": "Carregando...",
     "error": "Ocorreu um erro",
@@ -227,7 +230,6 @@
     "warning": "Atenção",
     "info": "Info"
   },
-  
   "footer": {
     "about_us": "Sobre Nós",
     "contact": "Contato",
@@ -237,7 +239,6 @@
     "legal": "Legal",
     "all_rights": "Todos os direitos reservados"
   },
-  
   "errors": {
     "required_field": "Este campo é obrigatório",
     "invalid_email": "Email inválido",

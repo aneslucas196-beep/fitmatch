@@ -2,7 +2,6 @@
   "lang_code": "de",
   "lang_name": "Deutsch",
   "dir": "ltr",
-  
   "nav": {
     "home": "Startseite",
     "find_coach": "Coach finden",
@@ -14,7 +13,6 @@
     "coach_portal": "Coach-Portal",
     "client_dashboard": "Mein Bereich"
   },
-  
   "home": {
     "hero_title": "Finde deinen idealen Fitness-Coach",
     "hero_subtitle": "Buche Sitzungen mit den besten Coaches in deiner Nähe",
@@ -34,9 +32,20 @@
     "faq_title": "Häufig gestellte Fragen",
     "become_coach_title": "Bist du Coach?",
     "become_coach_desc": "Tritt FitMatch bei und erweitere deinen Kundenstamm",
-    "become_coach_btn": "Coach werden"
+    "become_coach_btn": "Coach werden",
+    "stat1": "+60%",
+    "stat1_desc": "Zusätzliche Buchungen mit FitMatch",
+    "stat2": "4x",
+    "stat2_desc": "Weniger Ausfälle mit automatischen Erinnerungen",
+    "stat3": "70%",
+    "stat3_desc": "Von Sitzungen außerhalb der Geschäftszeiten gebucht",
+    "stat4": "+10 000",
+    "stat4_desc": "Trainer bereits auf FitMatch registriert",
+    "stat5": "1 Buchung",
+    "stat5_desc": "Alle 10 Sekunden",
+    "stat6": "> 2 Millionen €",
+    "stat6_desc": "Von Sitzungen über FitMatch gebucht"
   },
-  
   "search": {
     "results_for": "Ergebnisse für",
     "no_results": "Keine Ergebnisse gefunden",
@@ -50,7 +59,6 @@
     "specialties": "Spezialgebiete",
     "all_specialties": "Alle Spezialgebiete"
   },
-  
   "coach": {
     "about": "Über",
     "specialties": "Spezialgebiete",
@@ -68,7 +76,6 @@
     "share": "Teilen",
     "report": "Melden"
   },
-  
   "booking": {
     "title": "Sitzung buchen",
     "select_date": "Datum wählen",
@@ -96,7 +103,6 @@
     "afternoon": "Nachmittag",
     "evening": "Abend"
   },
-  
   "auth": {
     "login_title": "Anmelden",
     "signup_title": "Konto erstellen",
@@ -121,7 +127,6 @@
     "resend_code": "Code erneut senden",
     "verify": "Bestätigen"
   },
-  
   "coach_portal": {
     "dashboard": "Dashboard",
     "bookings": "Buchungen",
@@ -149,7 +154,6 @@
     "payment_optional": "Vor Ort bezahlen",
     "payment_required": "Online-Zahlung erforderlich"
   },
-  
   "emails": {
     "booking_confirmation_subject": "Buchung bestätigt - FitMatch",
     "booking_reminder_subject": "Erinnerung: Deine Sitzung morgen",
@@ -187,7 +191,6 @@
     "follow_us": "Folge uns",
     "your_session_with": "Deine Sitzung mit"
   },
-  
   "common": {
     "loading": "Laden...",
     "error": "Ein Fehler ist aufgetreten",
@@ -227,7 +230,6 @@
     "warning": "Warnung",
     "info": "Info"
   },
-  
   "footer": {
     "about_us": "Über uns",
     "contact": "Kontakt",
@@ -237,7 +239,6 @@
     "legal": "Impressum",
     "all_rights": "Alle Rechte vorbehalten"
   },
-  
   "errors": {
     "required_field": "Dieses Feld ist erforderlich",
     "invalid_email": "Ungültige E-Mail",

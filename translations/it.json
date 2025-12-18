@@ -2,7 +2,6 @@
   "lang_code": "it",
   "lang_name": "Italiano",
   "dir": "ltr",
-  
   "nav": {
     "home": "Home",
     "find_coach": "Trova un Coach",
@@ -14,7 +13,6 @@
     "coach_portal": "Portale Coach",
     "client_dashboard": "La Mia Area"
   },
-  
   "home": {
     "hero_title": "Trova il Tuo Coach Fitness Ideale",
     "hero_subtitle": "Prenota sessioni con i migliori coach vicino a te",
@@ -34,9 +32,20 @@
     "faq_title": "Domande Frequenti",
     "become_coach_title": "Sei un Coach?",
     "become_coach_desc": "Unisciti a FitMatch e fai crescere la tua clientela",
-    "become_coach_btn": "Diventa Coach"
+    "become_coach_btn": "Diventa Coach",
+    "stat1": "+60%",
+    "stat1_desc": "Prenotazioni aggiuntive con FitMatch",
+    "stat2": "4x",
+    "stat2_desc": "Meno no-show con promemoria automatici",
+    "stat3": "70%",
+    "stat3_desc": "Di sessioni prenotate al di fuori dell'orario di apertura",
+    "stat4": "+10 000",
+    "stat4_desc": "Allenatori già registrati su FitMatch",
+    "stat5": "1 prenotazione",
+    "stat5_desc": "Ogni 10 secondi",
+    "stat6": "> 2 milioni €",
+    "stat6_desc": "Di sessioni prenotate tramite FitMatch"
   },
-  
   "search": {
     "results_for": "Risultati per",
     "no_results": "Nessun risultato trovato",
@@ -50,7 +59,6 @@
     "specialties": "Specialità",
     "all_specialties": "Tutte le Specialità"
   },
-  
   "coach": {
     "about": "Info",
     "specialties": "Specialità",
@@ -68,7 +76,6 @@
     "share": "Condividi",
     "report": "Segnala"
   },
-  
   "booking": {
     "title": "Prenota una Sessione",
     "select_date": "Seleziona una Data",
@@ -96,7 +103,6 @@
     "afternoon": "Pomeriggio",
     "evening": "Sera"
   },
-  
   "auth": {
     "login_title": "Accedi",
     "signup_title": "Crea un Account",
@@ -121,7 +127,6 @@
     "resend_code": "Invia di Nuovo il Codice",
     "verify": "Verifica"
   },
-  
   "coach_portal": {
     "dashboard": "Dashboard",
     "bookings": "Prenotazioni",
@@ -149,7 +154,6 @@
     "payment_optional": "Paga sul Posto",
     "payment_required": "Pagamento Online Obbligatorio"
   },
-  
   "emails": {
     "booking_confirmation_subject": "Prenotazione Confermata - FitMatch",
     "booking_reminder_subject": "Promemoria: La Tua Sessione Domani",
@@ -187,7 +191,6 @@
     "follow_us": "Seguici",
     "your_session_with": "La tua sessione con"
   },
-  
   "common": {
     "loading": "Caricamento...",
     "error": "Si è verificato un errore",
@@ -227,7 +230,6 @@
     "warning": "Attenzione",
     "info": "Info"
   },
-  
   "footer": {
     "about_us": "Chi Siamo",
     "contact": "Contatti",
@@ -237,7 +239,6 @@
     "legal": "Note Legali",
     "all_rights": "Tutti i diritti riservati"
   },
-  
   "errors": {
     "required_field": "Questo campo è obbligatorio",
     "invalid_email": "Email non valida",
