@@ -1125,10 +1125,10 @@ async def gym_detail_page(request: Request, gym_id: str, name: Optional[str] = N
         "gym_name": gym_name,
         "gym_address": gym_address,
         "gym_id": gym_id,
-        "coaches": coaches_sorted
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
-    return templates.TemplateResponse("partner.html", {"request": request, "t": translations, "locale": locale})
+        "coaches": coaches_sorted,
+        "t": translations,
+        "locale": locale
+    })
 
 @app.get("/test-coaches", response_class=HTMLResponse)
 async def test_coaches_page(request: Request):
@@ -1155,8 +1155,6 @@ async def coach_signup_page(request: Request):
 async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription."""
     countries = get_countries_list()
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
     locale = get_locale_from_request(request)
     translations = get_translations(locale)
     return templates.TemplateResponse("signup.html", {
