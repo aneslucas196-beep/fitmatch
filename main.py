@@ -938,7 +938,8 @@ async def search_coaches(
     # Si on cherche par salle spécifique - charger les VRAIS coaches
     if gym:
         coaches = get_coaches_by_gym_id(gym)
-        
+        locale = get_locale_from_request(request)
+        translations = get_translations(locale)
         return templates.TemplateResponse("results.html", {
             "request": request,
             "coaches": coaches,
@@ -978,6 +979,8 @@ async def search_coaches(
     if specialty:
         coaches = [c for c in coaches if specialty.lower() in [s.lower() for s in c.get("specialties", [])]]
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("results.html", {
         "request": request,
         "coaches": coaches,
@@ -1023,12 +1026,16 @@ async def mon_compte(request: Request, user = Depends(get_current_user)):
 @app.get("/gyms/search", response_class=HTMLResponse)
 async def gym_search_page(request: Request):
     """Page de recherche de salles de sport avec géolocalisation."""
-    return templates.TemplateResponse("gym_search.html", {"request": request})
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
+    return templates.TemplateResponse("gym_search.html", {"request": request, "t": translations, "locale": locale})
 
 @app.get("/gyms-map", response_class=HTMLResponse)
 async def gyms_map_page(request: Request, address: str = "", radius_km: int = 25):
     """Page de recherche de salles avec Google Maps."""
     google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("gyms_map.html", {
         "request": request,
         "address": address,
@@ -1111,35 +1118,51 @@ async def gym_detail_page(request: Request, gym_id: str, name: Optional[str] = N
         key=lambda c: (-int(c.get("verified", False)), -c.get("rating", 0))
     )
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("gym_detail.html", {
         "request": request,
         "gym_name": gym_name,
         "gym_address": gym_address,
         "gym_id": gym_id,
         "coaches": coaches_sorted
-    })
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
+    return templates.TemplateResponse("partner.html", {"request": request, "t": translations, "locale": locale})
 
 @app.get("/test-coaches", response_class=HTMLResponse)
 async def test_coaches_page(request: Request):
     """Page de test pour vérifier que les VRAIS coaches sont chargés."""
-    return templates.TemplateResponse("test_coaches.html", {"request": request})
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
+    return templates.TemplateResponse("test_coaches.html", {"request": request, "t": translations, "locale": locale})
 
 @app.get("/partner", response_class=HTMLResponse)
 async def partner_page(request: Request):
     """Page Devenir partenaire FitMatch Pro."""
-    return templates.TemplateResponse("partner.html", {"request": request})
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
+    return templates.TemplateResponse("partner.html", {"request": request, "t": translations, "locale": locale})
 
 @app.get("/coach-signup", response_class=HTMLResponse)
 async def coach_signup_page(request: Request):
     """Page d'inscription coach avec hero section."""
-    return templates.TemplateResponse("coach_signup.html", {"request": request})
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
+    return templates.TemplateResponse("coach_signup.html", {"request": request, "t": translations, "locale": locale})
 
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription."""
     countries = get_countries_list()
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("signup.html", {
         "request": request, 
+        "t": translations,
+        "locale": locale,
         "role": role,
         "countries": countries
     })
@@ -1298,6 +1321,8 @@ async def signup_submit(
     
     # Validation du mot de passe
     if not is_valid_password(password):
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("signup.html", {
             "request": request,
             "error": "Mot de passe trop faible (minimum 8 caractères, 1 lettre et 1 chiffre)",
@@ -1312,6 +1337,8 @@ async def signup_submit(
     
     # Validation du genre
     if gender not in ["homme", "femme"]:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("signup.html", {
             "request": request,
             "error": "Veuillez sélectionner votre genre",
@@ -1327,6 +1354,8 @@ async def signup_submit(
     # Validation du pays
     valid_countries = [c["code"] for c in countries]
     if not country or country not in valid_countries:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("signup.html", {
             "request": request,
             "error": "Veuillez sélectionner votre pays",
@@ -1356,6 +1385,8 @@ async def signup_submit(
             if selected_gyms and not selected_gyms_list:
                 # L'utilisateur a fourni des données invalides
                 print(f"⚠️ Salles invalides reçues pour {email}: {selected_gyms}")
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
                 return templates.TemplateResponse("signup.html", {
                     "request": request,
                     "error": "Salles sélectionnées invalides. Veuillez réessayer.",
@@ -1390,6 +1421,8 @@ async def signup_submit(
             if email_result.get("mode") == "resend":
                 success_message += f" (Email ID: {email_result.get('email_id', 'N/A')})"
         
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
@@ -1405,6 +1438,8 @@ async def signup_submit(
             validated_gyms_list = validate_selected_gyms(selected_gyms)
             if selected_gyms and not validated_gyms_list:
                 print(f"⚠️ Salles invalides reçues pour {email}: {selected_gyms}")
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
                 return templates.TemplateResponse("signup.html", {
                     "request": request,
                     "error": "Salles sélectionnées invalides. Veuillez réessayer.",
@@ -1439,6 +1474,8 @@ async def signup_submit(
         
         if signup_result.get("success"):
             # Succès - rediriger vers la page d'attente de confirmation email
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("email_confirmation_sent.html", {
                 "request": request,
                 "email": email,
@@ -1452,6 +1489,8 @@ async def signup_submit(
             
             print(f"💥 Détails erreur inscription Supabase: {error_message}")
             
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("signup.html", {
                 "request": request,
                 "error": error_message,
@@ -1466,6 +1505,8 @@ async def signup_submit(
             
     except Exception as e:
         print(f"❌ Erreur inscription OTP: {e}")
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("signup.html", {
             "request": request,
             "error": "Erreur lors de l'inscription. Veuillez réessayer.",
@@ -1498,6 +1539,8 @@ async def resend_confirmation_email(request: Request):
 @app.get("/auth/email-confirmed")
 async def email_confirmed_callback(request: Request):
     """Page affichée après confirmation d'email via Supabase."""
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("email_confirmed.html", {
         "request": request,
         "success": "Email confirmé avec succès ! Vous pouvez maintenant vous connecter."
@@ -1516,6 +1559,8 @@ async def verify_otp_submit(
     
     # Validation du format du code
     if not otp_code.isdigit() or len(otp_code) < 4 or len(otp_code) > 6:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
@@ -1551,6 +1596,8 @@ async def verify_otp_submit(
             )
             return response
         else:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1562,6 +1609,8 @@ async def verify_otp_submit(
         otp_valid = verify_otp_code(supabase_anon, email, otp_code)
         
         if not otp_valid:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1572,6 +1621,8 @@ async def verify_otp_submit(
         pending_data = get_pending_otp_data(supabase_anon, email)
         
         if not pending_data:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1582,6 +1633,8 @@ async def verify_otp_submit(
         response = supabase_anon.table("otp_codes").select("user_id").eq("email", email).eq("consumed", True).order("created_at", desc=True).limit(1).execute()
         
         if not response.data:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1635,6 +1688,8 @@ async def verify_otp_submit(
         
     except Exception as e:
             print(f"❌ Erreur récupération utilisateur: {e}")
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1643,6 +1698,8 @@ async def verify_otp_submit(
             
     except Exception as e:
         print(f"❌ Erreur vérification OTP: {e}")
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
@@ -1672,12 +1729,16 @@ async def resend_otp_submit(
         email_result = send_otp_email_resend(email, new_otp_code, full_name)
         
         if email_result.get("success"):
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
                 "success": "Nouveau code envoyé à votre adresse email"
             })
         else:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1689,6 +1750,8 @@ async def resend_otp_submit(
         pending_data = get_pending_otp_data(supabase_anon, email)
         
         if not pending_data:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1705,6 +1768,8 @@ async def resend_otp_submit(
         otp_stored = store_otp_code(supabase_anon, email, full_name, role, new_otp_code)
         
         if not otp_stored:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1715,6 +1780,8 @@ async def resend_otp_submit(
         email_result = send_otp_email_resend(email, new_otp_code, full_name)
         
         if email_result.get("success"):
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1730,6 +1797,8 @@ async def resend_otp_submit(
             
             print(f"💥 Détails erreur renvoi email: {error_details}")
             
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1738,6 +1807,8 @@ async def resend_otp_submit(
             
     except Exception as e:
         print(f"❌ Erreur renvoi OTP: {e}")
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
@@ -1798,6 +1869,8 @@ async def api_login(request: Request):
 @app.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request, message: Optional[str] = None, password_changed: Optional[str] = None):
     """Formulaire de connexion."""
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("login.html", {
         "request": request,
         "message": message,
@@ -1866,6 +1939,8 @@ async def login_submit(
             return response
         else:
             # Identifiants incorrects même en mode démo
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
@@ -1913,6 +1988,8 @@ async def login_submit(
         
         if result.get("mode") == "email_not_confirmed":
             # Email non confirmé - proposer de renvoyer l'email
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Email non confirmé. Vérifiez votre boîte mail ou renvoyez l'email de confirmation.",
@@ -1921,6 +1998,8 @@ async def login_submit(
             }, status_code=401)
         elif result.get("mode") == "invalid_credentials":
             # Identifiants incorrects
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
@@ -1929,6 +2008,8 @@ async def login_submit(
         else:
             # Autre erreur
             print(f"💥 Erreur connexion: {error_message}")
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Erreur de connexion. Veuillez réessayer.",
@@ -1946,6 +2027,8 @@ async def resend_confirmation(
     
     if not supabase_anon:
         # Mode démo - pas de renvoi d'email
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("verify_email.html", {
             "request": request,
             "email": email,
@@ -1954,12 +2037,16 @@ async def resend_confirmation(
     
     success = resend_confirmation_email(supabase_anon, email)
     if success:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("verify_email.html", {
             "request": request,
             "email": email,
             "success": "Email de confirmation renvoyé ! Vérifiez votre boîte mail."
         })
     else:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("verify_email.html", {
             "request": request,
             "email": email,
@@ -2100,6 +2187,8 @@ async def reset_password_page(request: Request, token: str = ""):
             del password_reset_tokens[token]
             error = "Ce lien a expiré. Veuillez demander un nouveau lien."
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("reset_password.html", {
         "request": request,
         "token": token,
@@ -2170,6 +2259,8 @@ async def api_reset_password(request: Request):
 @app.get("/coach-login", response_class=HTMLResponse)
 async def coach_login_page(request: Request, tab: Optional[str] = None):
     """Page de connexion/inscription pour les coaches."""
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("coach_login.html", {
         "request": request,
         "tab": tab
@@ -2189,6 +2280,8 @@ async def coach_login_submit(
     if action == "signup":
         # Inscription coach
         if not name or len(name.strip()) < 2:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Le nom est requis (minimum 2 caractères).",
@@ -2196,6 +2289,8 @@ async def coach_login_submit(
             }, status_code=400)
         
         if len(password) < 8:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Le mot de passe doit contenir au moins 8 caractères.",
@@ -2205,6 +2300,8 @@ async def coach_login_submit(
         # Vérifier si l'email existe déjà
         existing_user = get_demo_user(email)
         if existing_user:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Un compte existe déjà avec cet email.",
@@ -2255,6 +2352,8 @@ async def coach_login_submit(
                     if cached_user.get("role") == "coach":
                         user_found = cached_user
                     else:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
                         return templates.TemplateResponse("coach_login.html", {
                             "request": request,
                             "error": "Ce compte n'est pas un compte coach. Utilisez la connexion client.",
@@ -2304,6 +2403,8 @@ async def coach_login_submit(
             )
             return response
         else:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
@@ -2350,6 +2451,8 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
             return RedirectResponse(url="/coach/profile-setup", status_code=302)
         transformations = get_transformations_by_coach_mock(1)
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("coach_portal.html", {
         "request": request,
         "coach": user,
@@ -2383,6 +2486,8 @@ async def coach_portal_update(
         user_id = user.get("id", user.get("email", "demo_user"))
         success = update_coach_profile(user_supabase, user_id, profile_data)
         if not success:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
             return templates.TemplateResponse("coach_portal.html", {
                 "request": request,
                 "coach": user,
@@ -2423,6 +2528,8 @@ async def coach_profile_setup_get(request: Request, user = Depends(require_coach
         profile_completed = user.get("profile_completed", False)
         print(f"🔧 Mode démo - Chargement des données du profil pour {user.get('email', 'coach')}")
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("coach_profile_setup.html", {
         "request": request,
         "coach": coach_data,
@@ -2620,6 +2727,8 @@ async def coach_profile_setup_post(
         error_message = "Une erreur s'est produite lors de la sauvegarde."
     
     # En cas d'erreur, recharger la page avec le message d'erreur
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("coach_profile_setup.html", {
         "request": request,
         "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km},
@@ -2826,6 +2935,8 @@ async def reserver_by_slug(request: Request, slug: str):
     coach = find_coach_by_slug(slug)
     
     if not coach:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("404.html", {
             "request": request,
             "message": f"Le coach '{slug}' n'a pas été trouvé. Il a peut-être changé de nom ou n'existe plus."
@@ -2859,6 +2970,8 @@ async def reserver_by_slug(request: Request, slug: str):
     
     print(f"📋 Profil coach {slug}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("coach_profile.html", {
         "request": request,
         "coach": coach,
@@ -2873,6 +2986,8 @@ async def booking_by_slug(request: Request, slug: str):
     coach = find_coach_by_slug(slug)
     
     if not coach:
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("404.html", {
             "request": request,
             "message": f"Le coach '{slug}' n'a pas été trouvé."
@@ -2891,6 +3006,8 @@ async def booking_by_slug(request: Request, slug: str):
         except:
             pass
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("booking.html", {
         "request": request,
         "coach": coach,
@@ -3011,6 +3128,8 @@ async def coach_subscription_page(
     
     # Afficher la page d'abonnement (pas de redirection automatique)
     # Les coachs peuvent voir leur statut, gérer ou résilier leur abonnement
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("coach_subscription.html", {
         "request": request,
         "coach": user,
@@ -3038,6 +3157,8 @@ async def coach_verify_email_page(request: Request, user = Depends(require_coach
         redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
         return RedirectResponse(url=redirect_url, status_code=303)
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("coach_verify_email.html", {
         "request": request,
         "coach": user,
@@ -3200,6 +3321,8 @@ async def view_coach_profile(request: Request, coach_id: str):
     
     print(f"📋 Profil coach {coach_id}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("coach_profile.html", {
         "request": request,
         "coach": coach,
@@ -3258,6 +3381,8 @@ async def booking_page(request: Request, coach_id: str):
     elif not coach.get("gyms"):
         coach["gyms"] = []
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("booking.html", {
         "request": request,
         "coach": coach
@@ -3266,6 +3391,8 @@ async def booking_page(request: Request, coach_id: str):
 @app.get("/reservation", response_class=HTMLResponse)
 async def reservation_page(request: Request):
     """Page de confirmation de réservation avec identification."""
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("reservation.html", {
         "request": request
     })
@@ -3273,6 +3400,8 @@ async def reservation_page(request: Request):
 @app.get("/account", response_class=HTMLResponse)
 async def account_page(request: Request):
     """Page Mon compte avec les séances."""
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("account.html", {
         "request": request
     })
@@ -4888,12 +5017,16 @@ async def gym_finder_page(request: Request, user = Depends(get_current_user)):
     google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     if not google_maps_api_key:
         # En mode de développement, rediriger vers une page d'erreur
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
         return templates.TemplateResponse("error.html", {
             "request": request,
             "error": "Configuration Google Maps manquante. Contactez l'administrateur.",
             "user": user
         }, status_code=500)
     
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("gym_finder.html", {
         "request": request,
         "user": user,
@@ -5475,7 +5608,9 @@ async def cancel_booking(request: CancelBookingRequest):
 @app.get("/reservation-cancelled", response_class=HTMLResponse)
 async def reservation_cancelled(request: Request):
     """Page de confirmation d'annulation de réservation."""
-    return templates.TemplateResponse("reservation_cancelled.html", {"request": request})
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
+    return templates.TemplateResponse("reservation_cancelled.html", {"request": request, "t": translations, "locale": locale})
 
 
 # ===== API COACH - GESTION DES RÉSERVATIONS =====
@@ -5970,6 +6105,8 @@ async def mark_messages_read(booking_id: str, reader_role: str):
 @app.get("/conversation/{booking_id}", response_class=HTMLResponse)
 async def conversation_page(request: Request, booking_id: str):
     """Page de conversation pour client ou coach."""
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("conversation.html", {
         "request": request,
         "booking_id": booking_id
@@ -6330,6 +6467,8 @@ async def api_coach_subscription_status(request: Request, user = Depends(require
 @app.get("/booking-success", response_class=HTMLResponse)
 async def booking_success_page(request: Request, booking_id: str = None, session_id: str = None):
     """Page de confirmation après paiement réussi d'une séance."""
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("booking_success.html", {
         "request": request,
         "booking_id": booking_id,
@@ -6339,6 +6478,8 @@ async def booking_success_page(request: Request, booking_id: str = None, session
 @app.get("/booking-cancelled", response_class=HTMLResponse)
 async def booking_cancelled_page(request: Request, booking_id: str = None):
     """Page affichée si le paiement est annulé."""
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
     return templates.TemplateResponse("booking_cancelled.html", {
         "request": request,
         "booking_id": booking_id
