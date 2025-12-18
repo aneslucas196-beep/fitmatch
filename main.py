@@ -1319,8 +1319,6 @@ async def signup_submit(
     
     # Validation du mot de passe
     if not is_valid_password(password):
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("signup.html", {
             "request": request,
             "error": "Mot de passe trop faible (minimum 8 caractères, 1 lettre et 1 chiffre)",
@@ -1335,8 +1333,6 @@ async def signup_submit(
     
     # Validation du genre
     if gender not in ["homme", "femme"]:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("signup.html", {
             "request": request,
             "error": "Veuillez sélectionner votre genre",
@@ -1352,8 +1348,6 @@ async def signup_submit(
     # Validation du pays
     valid_countries = [c["code"] for c in countries]
     if not country or country not in valid_countries:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("signup.html", {
             "request": request,
             "error": "Veuillez sélectionner votre pays",
@@ -1557,8 +1551,6 @@ async def verify_otp_submit(
     
     # Validation du format du code
     if not otp_code.isdigit() or len(otp_code) < 4 or len(otp_code) > 6:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
@@ -1607,8 +1599,6 @@ async def verify_otp_submit(
         otp_valid = verify_otp_code(supabase_anon, email, otp_code)
         
         if not otp_valid:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1619,8 +1609,6 @@ async def verify_otp_submit(
         pending_data = get_pending_otp_data(supabase_anon, email)
         
         if not pending_data:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1631,8 +1619,6 @@ async def verify_otp_submit(
         response = supabase_anon.table("otp_codes").select("user_id").eq("email", email).eq("consumed", True).order("created_at", desc=True).limit(1).execute()
         
         if not response.data:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1727,8 +1713,6 @@ async def resend_otp_submit(
         email_result = send_otp_email_resend(email, new_otp_code, full_name)
         
         if email_result.get("success"):
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1748,8 +1732,6 @@ async def resend_otp_submit(
         pending_data = get_pending_otp_data(supabase_anon, email)
         
         if not pending_data:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1766,8 +1748,6 @@ async def resend_otp_submit(
         otp_stored = store_otp_code(supabase_anon, email, full_name, role, new_otp_code)
         
         if not otp_stored:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1778,8 +1758,6 @@ async def resend_otp_submit(
         email_result = send_otp_email_resend(email, new_otp_code, full_name)
         
         if email_result.get("success"):
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -2035,8 +2013,6 @@ async def resend_confirmation(
     
     success = resend_confirmation_email(supabase_anon, email)
     if success:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("verify_email.html", {
             "request": request,
             "email": email,
@@ -2278,8 +2254,6 @@ async def coach_login_submit(
     if action == "signup":
         # Inscription coach
         if not name or len(name.strip()) < 2:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Le nom est requis (minimum 2 caractères).",
@@ -2287,8 +2261,6 @@ async def coach_login_submit(
             }, status_code=400)
         
         if len(password) < 8:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Le mot de passe doit contenir au moins 8 caractères.",
@@ -2298,8 +2270,6 @@ async def coach_login_submit(
         # Vérifier si l'email existe déjà
         existing_user = get_demo_user(email)
         if existing_user:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Un compte existe déjà avec cet email.",
@@ -2484,8 +2454,6 @@ async def coach_portal_update(
         user_id = user.get("id", user.get("email", "demo_user"))
         success = update_coach_profile(user_supabase, user_id, profile_data)
         if not success:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("coach_portal.html", {
                 "request": request,
                 "coach": user,
@@ -2933,8 +2901,6 @@ async def reserver_by_slug(request: Request, slug: str):
     coach = find_coach_by_slug(slug)
     
     if not coach:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("404.html", {
             "request": request,
             "message": f"Le coach '{slug}' n'a pas été trouvé. Il a peut-être changé de nom ou n'existe plus."
@@ -2984,8 +2950,6 @@ async def booking_by_slug(request: Request, slug: str):
     coach = find_coach_by_slug(slug)
     
     if not coach:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("404.html", {
             "request": request,
             "message": f"Le coach '{slug}' n'a pas été trouvé."
