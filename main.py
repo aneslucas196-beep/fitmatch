@@ -76,6 +76,17 @@ from utils import (
 from resend_service import send_otp_email_resend
 from supabase_auth_service import signup_with_supabase_email_confirmation, resend_email_confirmation, sign_in_with_email_password, get_user_role
 
+# Import du service d'internationalisation (i18n)
+from i18n_service import (
+    get_locale_from_request,
+    get_translations,
+    get_available_languages,
+    preload_all_translations,
+    SUPPORTED_LOCALES,
+    DEFAULT_LOCALE,
+    COOKIE_NAME as LOCALE_COOKIE_NAME
+)
+
 # Import Stripe service (gestion des abonnements coachs)
 try:
     from stripe_service import (
@@ -306,6 +317,9 @@ def cleanup_old_reminders():
 # ============================================
 
 app = FastAPI()
+
+# Précharger les traductions au démarrage
+preload_all_translations()
 
 # Helper function pour charger les coaches depuis JSON
 def load_coaches_from_json() -> List[Dict]:
@@ -880,9 +894,36 @@ async def favicon():
 
 # Routes publiques
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    """Page d'accueil avec formulaire de recherche."""
-    return templates.TemplateResponse("index.html", {"request": request})
+async def home(request: Request, response: Response):
+    """Page d'accueil avec formulaire de recherche et détection de langue."""
+    # Détecter la langue du visiteur
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
+    available_languages = get_available_languages()
+    
+    # Sauvegarder la langue dans un cookie
+    resp = templates.TemplateResponse("index.html", {
+        "request": request,
+        "t": translations,
+        "locale": locale,
+        "available_languages": available_languages,
+        "text_direction": translations.get("dir", "ltr")
+    })
+    resp.set_cookie(key=LOCALE_COOKIE_NAME, value=locale, max_age=31536000)  # 1 an
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
+@app.get("/set-language/{locale}")
+async def set_language(request: Request, locale: str):
+    """Change la langue de l'utilisateur."""
+    if locale not in SUPPORTED_LOCALES:
+        locale = DEFAULT_LOCALE
+    
+    # Rediriger vers la page précédente ou l'accueil
+    referer = request.headers.get("referer", "/")
+    response = RedirectResponse(url=referer, status_code=303)
+    response.set_cookie(key=LOCALE_COOKIE_NAME, value=locale, max_age=31536000)
+    return response
 
 @app.get("/search", response_class=HTMLResponse)
 async def search_coaches(
