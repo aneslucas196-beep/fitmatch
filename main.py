@@ -1377,8 +1377,6 @@ async def signup_submit(
             if selected_gyms and not selected_gyms_list:
                 # L'utilisateur a fourni des données invalides
                 print(f"⚠️ Salles invalides reçues pour {email}: {selected_gyms}")
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
                 return templates.TemplateResponse("signup.html", {
                     "request": request,
                     "error": "Salles sélectionnées invalides. Veuillez réessayer.",
@@ -1413,8 +1411,6 @@ async def signup_submit(
             if email_result.get("mode") == "resend":
                 success_message += f" (Email ID: {email_result.get('email_id', 'N/A')})"
         
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
@@ -1430,8 +1426,6 @@ async def signup_submit(
             validated_gyms_list = validate_selected_gyms(selected_gyms)
             if selected_gyms and not validated_gyms_list:
                 print(f"⚠️ Salles invalides reçues pour {email}: {selected_gyms}")
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
                 return templates.TemplateResponse("signup.html", {
                     "request": request,
                     "error": "Salles sélectionnées invalides. Veuillez réessayer.",
@@ -1466,8 +1460,6 @@ async def signup_submit(
         
         if signup_result.get("success"):
             # Succès - rediriger vers la page d'attente de confirmation email
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("email_confirmation_sent.html", {
                 "request": request,
                 "email": email,
@@ -1481,8 +1473,6 @@ async def signup_submit(
             
             print(f"💥 Détails erreur inscription Supabase: {error_message}")
             
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("signup.html", {
                 "request": request,
                 "error": error_message,
@@ -1497,8 +1487,6 @@ async def signup_submit(
             
     except Exception as e:
         print(f"❌ Erreur inscription OTP: {e}")
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("signup.html", {
             "request": request,
             "error": "Erreur lors de l'inscription. Veuillez réessayer.",
@@ -1586,8 +1574,6 @@ async def verify_otp_submit(
             )
             return response
         else:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1672,8 +1658,6 @@ async def verify_otp_submit(
         
     except Exception as e:
             print(f"❌ Erreur récupération utilisateur: {e}")
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1682,8 +1666,6 @@ async def verify_otp_submit(
             
     except Exception as e:
         print(f"❌ Erreur vérification OTP: {e}")
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
@@ -1719,8 +1701,6 @@ async def resend_otp_submit(
                 "success": "Nouveau code envoyé à votre adresse email"
             })
         else:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1773,8 +1753,6 @@ async def resend_otp_submit(
             
             print(f"💥 Détails erreur renvoi email: {error_details}")
             
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
@@ -1783,8 +1761,6 @@ async def resend_otp_submit(
             
     except Exception as e:
         print(f"❌ Erreur renvoi OTP: {e}")
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
@@ -1915,8 +1891,6 @@ async def login_submit(
             return response
         else:
             # Identifiants incorrects même en mode démo
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
@@ -1964,8 +1938,6 @@ async def login_submit(
         
         if result.get("mode") == "email_not_confirmed":
             # Email non confirmé - proposer de renvoyer l'email
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Email non confirmé. Vérifiez votre boîte mail ou renvoyez l'email de confirmation.",
@@ -1974,8 +1946,6 @@ async def login_submit(
             }, status_code=401)
         elif result.get("mode") == "invalid_credentials":
             # Identifiants incorrects
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
@@ -1984,8 +1954,6 @@ async def login_submit(
         else:
             # Autre erreur
             print(f"💥 Erreur connexion: {error_message}")
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Erreur de connexion. Veuillez réessayer.",
@@ -2003,8 +1971,6 @@ async def resend_confirmation(
     
     if not supabase_anon:
         # Mode démo - pas de renvoi d'email
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("verify_email.html", {
             "request": request,
             "email": email,
@@ -2019,8 +1985,6 @@ async def resend_confirmation(
             "success": "Email de confirmation renvoyé ! Vérifiez votre boîte mail."
         })
     else:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("verify_email.html", {
             "request": request,
             "email": email,
@@ -2320,8 +2284,6 @@ async def coach_login_submit(
                     if cached_user.get("role") == "coach":
                         user_found = cached_user
                     else:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
                         return templates.TemplateResponse("coach_login.html", {
                             "request": request,
                             "error": "Ce compte n'est pas un compte coach. Utilisez la connexion client.",
@@ -2371,8 +2333,6 @@ async def coach_login_submit(
             )
             return response
         else:
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
@@ -4979,8 +4939,6 @@ async def gym_finder_page(request: Request, user = Depends(get_current_user)):
     google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     if not google_maps_api_key:
         # En mode de développement, rediriger vers une page d'erreur
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
         return templates.TemplateResponse("error.html", {
             "request": request,
             "error": "Configuration Google Maps manquante. Contactez l'administrateur.",
