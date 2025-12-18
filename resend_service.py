@@ -1355,12 +1355,16 @@ def send_reminder_email(
     duration: str,
     price: str,
     reminder_type: str = "24h",
-    booking_id: Optional[str] = None
+    booking_id: Optional[str] = None,
+    locale: str = "fr"
 ) -> dict:
     """
     Envoie un email de rappel de rendez-vous au client
     reminder_type: "24h" ou "2h" pour indiquer le type de rappel
+    locale: code langue pour les traductions (fr, en, es, ar, de, it, pt)
     """
+    from i18n_service import load_translations
+    
     resend_key = os.environ.get('RESEND_API_KEY')
     mail_from = 'Fitmatch <contact@fitmatch.fr>'
     site_url = os.environ.get('REPLIT_DEV_DOMAIN', os.environ.get('SITE_URL', 'http://localhost:5000'))
@@ -1370,7 +1374,11 @@ def send_reminder_email(
     
     account_url = f"{site_url}/account"
     
-    print(f"📧 Préparation email rappel ({reminder_type}):")
+    # Charger les traductions
+    t = load_translations(locale)
+    emails = t.get('emails', {})
+    
+    print(f"📧 Préparation email rappel ({reminder_type}) - Langue: {locale}:")
     print(f"  - Client: {client_name} ({to_email})")
     print(f"  - Coach: {coach_name}")
     print(f"  - Date: {date_str} à {time_str}")
@@ -1382,15 +1390,30 @@ def send_reminder_email(
     first_name = client_name.split()[0] if client_name else "Client"
     
     if reminder_type == "24h":
-        reminder_text = "C'est demain !"
+        reminder_text = emails.get('tomorrow', "C'est demain !")
         emoji = "📅"
-        subject_prefix = "Rappel J-1"
+        subject_prefix = emails.get('reminder_24h', 'Rappel J-1')
         header_color = "#3b82f6"
     else:
-        reminder_text = "C'est dans 2 heures !"
+        reminder_text = emails.get('in_2_hours', "C'est dans 2 heures !")
         emoji = "⏰"
-        subject_prefix = "Rappel"
+        subject_prefix = emails.get('reminder_2h', 'Rappel')
         header_color = "#f59e0b"
+    
+    # Textes traduits
+    dont_forget = emails.get('dont_forget', "N'oublie pas ta séance de coaching")
+    date_time_label = emails.get('date_time', 'Date & Heure')
+    with_coach = emails.get('with_coach', 'Avec')
+    your_session = emails.get('your_session', 'Votre séance')
+    address_label = emails.get('address', 'Adresse')
+    view_on_maps = emails.get('view_on_maps', 'Voir sur Google Maps')
+    view_booking = emails.get('view_booking', 'Voir ma réservation')
+    tips_title = emails.get('tips_title', 'Conseils')
+    tip_arrive = emails.get('tip_arrive_early', 'Arrive 5 minutes en avance')
+    tip_sportswear = emails.get('tip_sportswear', 'Prévois une tenue de sport confortable')
+    tip_water = emails.get('tip_water', "N'oublie pas ta bouteille d'eau !")
+    your_platform = emails.get('your_platform', 'Votre plateforme de coaching fitness')
+    your_session_with = emails.get('your_session_with', 'Ta séance avec')
     
     maps_url = f"https://www.google.com/maps/search/?api=1&query={gym_address.replace(' ', '+')}" if gym_address else "#"
     
@@ -1412,7 +1435,7 @@ def send_reminder_email(
                         {reminder_text}
                     </h1>
                     <p style="margin:10px 0 0 0; color:rgba(255,255,255,0.9); font-size:15px;">
-                        N'oublie pas ta séance de coaching
+                        {dont_forget}
                     </p>
                 </div>
                 
@@ -1426,7 +1449,7 @@ def send_reminder_email(
                         
                         <div style="display:flex; justify-content:center; margin-bottom:15px;">
                             <div style="background:white; border:2px solid {header_color}; border-radius:10px; padding:15px 25px; text-align:center;">
-                                <p style="margin:0 0 5px 0; font-size:13px; color:#666; text-transform:uppercase;">Date & Heure</p>
+                                <p style="margin:0 0 5px 0; font-size:13px; color:#666; text-transform:uppercase;">{date_time_label}</p>
                                 <p style="margin:0; font-size:18px; font-weight:700; color:#111;">
                                     {date_str}
                                 </p>
@@ -1437,14 +1460,14 @@ def send_reminder_email(
                         </div>
                         
                         <p style="margin:0; text-align:center; font-size:15px; color:#666;">
-                            Avec <strong style="color:#111;">{coach_name}</strong>
+                            {with_coach} <strong style="color:#111;">{coach_name}</strong>
                         </p>
                     </div>
                     
                     <!-- Infos prestation -->
                     <div style="border-top:1px solid #eee; padding-top:20px; margin-bottom:20px;">
                         <h3 style="margin:0 0 10px 0; font-size:13px; text-transform:uppercase; color:#888; letter-spacing:1px;">
-                            💪 Votre séance
+                            💪 {your_session}
                         </h3>
                         <p style="margin:0; font-size:15px; color:#333;">
                             {service_name}<br>
@@ -1455,7 +1478,7 @@ def send_reminder_email(
                     <!-- Adresse avec Maps -->
                     <div style="border-top:1px solid #eee; padding-top:20px; margin-bottom:25px;">
                         <h3 style="margin:0 0 10px 0; font-size:13px; text-transform:uppercase; color:#888; letter-spacing:1px;">
-                            📍 Adresse
+                            📍 {address_label}
                         </h3>
                         <a href="{maps_url}" style="color:#3b82f6; text-decoration:none; font-size:15px;">
                             {gym_address}
@@ -1468,7 +1491,7 @@ def send_reminder_email(
                             <td style="padding:5px;">
                                 <a href="{maps_url}" 
                                    style="display:block; background:#111; color:white; padding:14px; text-decoration:none; border-radius:8px; font-weight:600; font-size:14px; text-align:center;">
-                                    🗺️ Voir sur Google Maps
+                                    🗺️ {view_on_maps}
                                 </a>
                             </td>
                         </tr>
@@ -1476,7 +1499,7 @@ def send_reminder_email(
                             <td style="padding:5px;">
                                 <a href="{account_url}" 
                                    style="display:block; background:#f5f5f5; color:#333; padding:14px; text-decoration:none; border-radius:8px; font-weight:500; font-size:14px; text-align:center;">
-                                    📋 Voir ma réservation
+                                    📋 {view_booking}
                                 </a>
                             </td>
                         </tr>
@@ -1486,10 +1509,10 @@ def send_reminder_email(
                 <!-- Conseils -->
                 <div style="padding:20px 30px; background:#f0fdf4; border-top:1px solid #bbf7d0;">
                     <p style="margin:0; font-size:14px; color:#166534; line-height:1.6;">
-                        <strong>💡 Conseils :</strong><br>
-                        • Arrive 5 minutes en avance<br>
-                        • Prévois une tenue de sport confortable<br>
-                        • N'oublie pas ta bouteille d'eau !
+                        <strong>💡 {tips_title} :</strong><br>
+                        • {tip_arrive}<br>
+                        • {tip_sportswear}<br>
+                        • {tip_water}
                     </p>
                 </div>
                 
@@ -1501,7 +1524,7 @@ def send_reminder_email(
                         Fitmatch
                     </p>
                     <p style="margin:0; font-size:12px; color:#888;">
-                        Votre plateforme de coaching fitness<br>
+                        {your_platform}<br>
                         <a href="{site_url}" style="color:#3b82f6; text-decoration:none;">fitmatch.fr</a>
                     </p>
                 </div>
@@ -1514,30 +1537,27 @@ def send_reminder_email(
         text_content = f"""
 {emoji} {reminder_text}
 
-Bonjour {first_name} !
-
-N'oublie pas ta séance de coaching :
+{dont_forget}
 
 📍 {gym_name}
-📅 {date_str} à {time_str}
-👤 Avec {coach_name}
+📅 {date_str} - {time_str}
+👤 {with_coach} {coach_name}
 
-Prestation : {service_name}
-Durée : {duration}
-Prix : {price}
+{your_session}: {service_name}
+{duration} • {price}
 
-Adresse : {gym_address}
-Google Maps : {maps_url}
+{address_label}: {gym_address}
+Google Maps: {maps_url}
 
-💡 Conseils :
-• Arrive 5 minutes en avance
-• Prévois une tenue de sport confortable
-• N'oublie pas ta bouteille d'eau !
+💡 {tips_title}:
+• {tip_arrive}
+• {tip_sportswear}
+• {tip_water}
 
-Voir ta réservation : {account_url}
+{view_booking}: {account_url}
 
 ---
-Fitmatch - Votre plateforme fitness
+Fitmatch - {your_platform}
         """
         
         url = "https://api.resend.com/emails"
@@ -1549,7 +1569,7 @@ Fitmatch - Votre plateforme fitness
         data = {
             "from": mail_from,
             "to": [to_email],
-            "subject": f"{emoji} {subject_prefix} : Ta séance avec {coach_name} - {time_str}",
+            "subject": f"{emoji} {subject_prefix} : {your_session_with} {coach_name} - {time_str}",
             "html": html_content,
             "text": text_content
         }
