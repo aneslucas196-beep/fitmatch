@@ -3316,7 +3316,10 @@ async def reservation_page(request: Request):
     locale = get_locale_from_request(request)
     translations = get_translations(locale)
     return templates.TemplateResponse("reservation.html", {
-        "request": request
+        "request": request,
+        "locale": locale,
+        "translations": translations,
+        "t": lambda trans_dict, key, default="": trans_dict.get(key, default)
     })
 
 @app.get("/account", response_class=HTMLResponse)
