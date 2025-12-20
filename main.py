@@ -6430,10 +6430,64 @@ async def booking_success_page(request: Request, booking_id: str = None, session
     """Page de confirmation après paiement réussi d'une séance."""
     locale = get_locale_from_request(request)
     translations = get_translations(locale)
+    
+    # Confirmer la réservation en attente de paiement
+    if booking_id:
+        try:
+            from resend_service import send_booking_confirmation_email
+            demo_users = load_demo_users()
+            
+            # Chercher la réservation en attente
+            for coach_email, coach_data in demo_users.items():
+                if coach_data.get("role") != "coach":
+                    continue
+                
+                pending = coach_data.get("pending_bookings", [])
+                for booking in pending:
+                    if booking.get("id") == booking_id:
+                        # Déplacer de pending à confirmed_bookings
+                        booking["status"] = "confirmed"
+                        booking["payment_status"] = "paid"
+                        booking["stripe_session_id"] = session_id
+                        booking["confirmed_at"] = datetime.now().isoformat()
+                        
+                        # Mettre à jour les listes
+                        coach_data["pending_bookings"] = [b for b in pending if b.get("id") != booking_id]
+                        if "confirmed_bookings" not in coach_data:
+                            coach_data["confirmed_bookings"] = []
+                        coach_data["confirmed_bookings"].append(booking)
+                        
+                        # Sauvegarder
+                        save_demo_user(coach_email, coach_data)
+                        print(f"✅ Réservation {booking_id} confirmée après paiement Stripe")
+                        
+                        # Envoyer email de confirmation au client
+                        try:
+                            send_booking_confirmation_email(
+                                to_email=booking.get("client_email"),
+                                client_name=booking.get("client_name"),
+                                coach_name=coach_data.get("full_name"),
+                                gym_name=booking.get("gym_name"),
+                                gym_address=booking.get("gym_address", ""),
+                                date_str=booking.get("date"),
+                                time_str=booking.get("time"),
+                                service_name=booking.get("service"),
+                                booking_id=booking_id
+                            )
+                            print(f"📧 Email de confirmation envoyé à {booking.get('client_email')}")
+                        except Exception as email_err:
+                            print(f"⚠️ Erreur email: {email_err}")
+                        break
+        except Exception as e:
+            print(f"⚠️ Erreur confirmation réservation: {e}")
+    
     return templates.TemplateResponse("booking_success.html", {
         "request": request,
         "booking_id": booking_id,
-        "session_id": session_id
+        "session_id": session_id,
+        "locale": locale,
+        "translations": translations,
+        "t": lambda trans_dict, key, default="": trans_dict.get(key, default)
     })
 
 @app.get("/booking-cancelled", response_class=HTMLResponse)

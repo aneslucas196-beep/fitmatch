@@ -609,6 +609,12 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
     console.log('⚠️ Demande non envoyée:', emailErr);
   }
   
-  // Rediriger vers la page Mon Compte
-  window.location.href = '/mon-compte';
+  // Si paiement requis, rediriger vers Stripe
+  if (confirmData && confirmData.checkout_url) {
+    console.log('💳 Redirection vers Stripe pour paiement:', confirmData.checkout_url);
+    window.location.href = confirmData.checkout_url;
+  } else {
+    // Sinon rediriger vers la page Mon Compte
+    window.location.href = '/mon-compte';
+  }
 });
