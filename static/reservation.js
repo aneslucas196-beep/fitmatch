@@ -571,7 +571,24 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
   // Envoyer la demande de réservation au coach
   btn.textContent = 'Envoi de la demande…';
   let confirmData = null;
+  let actualPrice = price;  // Utiliser le prix par défaut au départ
+  
   try {
+    // Récupérer le prix ACTUEL du coach (au cas où il aurait changé)
+    if (coachEmail) {
+      try {
+        const priceRes = await fetch(`/api/coach/pricing?coach_email=${encodeURIComponent(coachEmail)}`);
+        const priceData = await priceRes.json();
+        if (priceData.success && priceData.price) {
+          actualPrice = priceData.price;
+          console.log('💰 Prix actuel du coach:', actualPrice);
+          $('#price').textContent = actualPrice;  // Mettre à jour l'affichage
+        }
+      } catch(priceErr) {
+        console.log('⚠️ Impossible de récupérer le prix actuel:', priceErr);
+      }
+    }
+    
     const confirmRes = await fetch('/api/confirm-booking', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -586,7 +603,7 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
         time: booking.time,
         service: service,
         duration: duration,
-        price: price,
+        price: actualPrice,  // Utiliser le prix actualisé
         coach_photo: coachPhoto || null
       })
     });

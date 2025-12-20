@@ -3579,6 +3579,18 @@ async def set_coach_session_duration(request: Request):
         print(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
+@app.get("/api/coach/pricing")
+async def get_coach_pricing(coach_email: str):
+    """Récupère le prix actuel d'une séance d'un coach."""
+    try:
+        demo_users = load_demo_users()
+        coach_data = demo_users.get(coach_email, {})
+        price = coach_data.get("session_price", 40)  # 40€ par défaut
+        return {"success": True, "price": price}
+    except Exception as e:
+        print(f"Erreur: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
 @app.post("/api/coach/payment-mode")
 async def set_coach_payment_mode(request: Request, user = Depends(require_coach_role)):
     """Definit le mode de paiement d'un coach (disabled ou required)."""
