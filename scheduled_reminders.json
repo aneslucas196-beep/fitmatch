@@ -110,8 +110,9 @@
       "service": "Séance de coaching",
       "duration": "60",
       "price": "40",
-      "sent": false,
-      "created_at": "2025-12-15T18:38:49.945949"
+      "sent": true,
+      "created_at": "2025-12-15T18:38:49.945949",
+      "sent_at": "2025-12-19T14:33:53.300065"
     },
     {
       "id": "0370f123_2h",
@@ -128,8 +129,9 @@
       "service": "Séance de coaching",
       "duration": "60",
       "price": "40",
-      "sent": false,
-      "created_at": "2025-12-15T18:38:49.945949"
+      "sent": true,
+      "created_at": "2025-12-15T18:38:49.945949",
+      "sent_at": "2025-12-20T11:48:54.854974"
     },
     {
       "id": "88203d6b_24h",
@@ -184,8 +186,9 @@
       "service": "Séance de coaching",
       "duration": "60",
       "price": "40",
-      "sent": false,
-      "created_at": "2025-12-15T18:47:54.773354"
+      "sent": true,
+      "created_at": "2025-12-15T18:47:54.773354",
+      "sent_at": "2025-12-19T14:33:53.300065"
     },
     {
       "id": "0370f123_2h",
@@ -202,8 +205,9 @@
       "service": "Séance de coaching",
       "duration": "60",
       "price": "40",
-      "sent": false,
-      "created_at": "2025-12-15T18:47:54.773354"
+      "sent": true,
+      "created_at": "2025-12-15T18:47:54.773354",
+      "sent_at": "2025-12-20T11:48:54.854974"
     },
     {
       "id": "49ee4b87_24h",
@@ -239,8 +243,9 @@
       "service": "Séance de coaching",
       "duration": "60",
       "price": "40",
-      "sent": false,
-      "created_at": "2025-12-17T16:57:11.200574"
+      "sent": true,
+      "created_at": "2025-12-17T16:57:11.200574",
+      "sent_at": "2025-12-19T14:38:54.570088"
     }
   ]
 }
