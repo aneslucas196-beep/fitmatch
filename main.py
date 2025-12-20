@@ -3596,22 +3596,35 @@ async def set_coach_payment_mode(request: Request, user = Depends(require_coach_
         
         if payment_mode == "required":
             connect_info = get_stripe_connect_info(coach_email)
-            if not connect_info or not connect_info.get("charges_enabled"):
+            print(f"📋 Vérification Stripe Connect pour {coach_email}")
+            print(f"   Connect Info: {connect_info}")
+            if not connect_info:
+                print(f"   ❌ Pas de compte Stripe Connect")
                 return JSONResponse(status_code=400, content={
                     "success": False, 
                     "error": "Vous devez d'abord connecter votre compte Stripe pour activer le paiement en ligne.",
                     "need_stripe_connect": True
                 })
+            if not connect_info.get("charges_enabled"):
+                print(f"   ❌ charges_enabled = {connect_info.get('charges_enabled')} (doit être True)")
+                print(f"   Details submitted: {connect_info.get('details_submitted')}")
+                return JSONResponse(status_code=400, content={
+                    "success": False, 
+                    "error": "Votre compte Stripe n'a pas été complètement vérifié. Veuillez attendre 1-2 jours ou vérifier votre email Stripe.",
+                    "need_stripe_connect": True,
+                    "charges_enabled": False,
+                    "details_submitted": connect_info.get("details_submitted", False)
+                })
         
         demo_users[coach_email]["payment_mode"] = payment_mode
         save_demo_user(coach_email, demo_users[coach_email])
         
-        print(f"Mode de paiement mis a jour pour {coach_email}: {payment_mode}")
+        print(f"✅ Mode de paiement mis a jour pour {coach_email}: {payment_mode}")
         
         return {"success": True, "payment_mode": payment_mode}
         
     except Exception as e:
-        print(f"Erreur mise a jour mode paiement: {e}")
+        print(f"❌ Erreur mise a jour mode paiement: {e}")
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 @app.get("/api/coach/{coach_id}/payment-mode")
