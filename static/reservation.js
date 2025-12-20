@@ -445,12 +445,27 @@ evSubmit.addEventListener('click', async ()=>{
     localStorage.setItem(LS_USER_KEY, JSON.stringify(verifiedUser));
     clearOtp();
     
-    // Sauvegarder la réservation avec toutes les données
-    const booking = {
+    // Récupérer le prix ACTUEL du coach
+    let actualPrice = String(price);
+    if (coachEmail) {
+      try {
+        const priceRes = await fetch(`/api/coach/pricing?coach_email=${encodeURIComponent(coachEmail)}`);
+        const priceData = await priceRes.json();
+        if (priceData.success && priceData.price !== undefined) {
+          actualPrice = String(priceData.price);
+          console.log('💰 Prix actuel du coach (OTP):', actualPrice);
+        }
+      } catch(priceErr) {
+        console.log('⚠️ Prix non récupéré:', priceErr);
+      }
+    }
+    
+    // Préparer la réservation (mais NE PAS sauvegarder avant l'API)
+    const bookingData = {
       coach,
       service,
-      duration,
-      price,
+      duration: String(duration),
+      price: actualPrice,
       gym,
       gym_address: gymAddress || '',
       coach_photo: coachPhoto || '',
@@ -459,54 +474,61 @@ evSubmit.addEventListener('click', async ()=>{
       createdAt: new Date().toISOString()
     };
     
-    const fmData = JSON.parse(localStorage.getItem('fitmatch') || '{}');
-    fmData.user = verifiedUser;
-    fmData.bookings = fmData.bookings || [];
-    fmData.bookings.push(booking);
-    localStorage.setItem('fitmatch', JSON.stringify(fmData));
-    
     // Envoyer la demande de réservation au coach
     evSubmit.textContent = 'Envoi de la demande…';
-    try {
-      const confirmRes = await fetch('/api/confirm-booking', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          client_name: verifiedUser.fullName,
-          client_email: verifiedUser.email,
-          coach_name: coach,
-          coach_email: coachEmail || null,
-          gym_name: gym,
-          gym_address: gymAddress || 'Adresse non renseignée',
-          date: booking.date,
-          time: booking.time,
-          service: service,
-          duration: duration,
-          price: price,
-          coach_photo: coachPhoto || null
-        })
-      });
-      const confirmData = await confirmRes.json();
-      console.log('📋 Demande envoyée au coach:', confirmData);
-      
-      // Mettre à jour le booking avec l'ID du serveur et l'email du coach
-      if (confirmData.booking_id) {
-        const fmDataUpdated = JSON.parse(localStorage.getItem('fitmatch') || '{}');
-        const lastBookingIndex = (fmDataUpdated.bookings || []).length - 1;
-        if (lastBookingIndex >= 0) {
-          fmDataUpdated.bookings[lastBookingIndex].id = confirmData.booking_id;
-          fmDataUpdated.bookings[lastBookingIndex].booking_id = confirmData.booking_id;
-          fmDataUpdated.bookings[lastBookingIndex].coach_email = coachEmail || '';
-          fmDataUpdated.bookings[lastBookingIndex].status = 'pending';
-          localStorage.setItem('fitmatch', JSON.stringify(fmDataUpdated));
-          console.log('✅ Booking mis à jour avec ID:', confirmData.booking_id);
-        }
-      }
-    } catch(emailErr) {
-      console.log('⚠️ Demande non envoyée:', emailErr);
+    const confirmRes = await fetch('/api/confirm-booking', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        client_name: verifiedUser.fullName,
+        client_email: verifiedUser.email,
+        coach_name: coach,
+        coach_email: coachEmail || null,
+        gym_name: gym,
+        gym_address: gymAddress || 'Adresse non renseignée',
+        date: bookingData.date,
+        time: bookingData.time,
+        service: service,
+        duration: String(duration),
+        price: actualPrice,
+        coach_photo: coachPhoto || null
+      })
+    });
+    const confirmData = await confirmRes.json();
+    console.log('📋 Réponse du serveur (OTP):', confirmData);
+    
+    // Vérifier si l'API a réussi
+    if (!confirmRes.ok) {
+      console.error('❌ Erreur API:', confirmData);
+      toast(confirmData.message || 'Erreur lors de la réservation');
+      evSubmit.disabled = false;
+      evSubmit.textContent = 'Enregistrer';
+      return;
     }
     
-    // Rediriger vers la page Mon Compte
+    // SEULEMENT maintenant sauvegarder le booking (après succès API)
+    if (confirmData.success && confirmData.booking_id) {
+      bookingData.id = confirmData.booking_id;
+      bookingData.booking_id = confirmData.booking_id;
+      bookingData.coach_email = coachEmail || '';
+      bookingData.status = confirmData.status || 'pending';
+      
+      const fmData = JSON.parse(localStorage.getItem('fitmatch') || '{}');
+      fmData.user = verifiedUser;
+      fmData.bookings = fmData.bookings || [];
+      fmData.bookings.push(bookingData);
+      localStorage.setItem('fitmatch', JSON.stringify(fmData));
+      console.log('✅ Booking sauvegardé avec ID (OTP):', confirmData.booking_id);
+    }
+    
+    // Si paiement requis, rediriger vers Stripe
+    if (confirmData.checkout_url) {
+      console.log('💳 Redirection vers Stripe pour paiement:', confirmData.checkout_url);
+      window.location.href = confirmData.checkout_url;
+      return;
+    }
+    
+    // Sinon rediriger vers la page Mon Compte
     window.location.href = '/mon-compte';
     
   }catch(e){
