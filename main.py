@@ -6221,9 +6221,27 @@ async def stripe_webhook(request: Request):
     
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
+    webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
     
     try:
-        event = json.loads(payload)
+        # Vérifier la signature du webhook si la clé secrète est configurée
+        if webhook_secret and sig_header:
+            try:
+                event = stripe.Webhook.construct_event(
+                    payload, sig_header, webhook_secret
+                )
+                print(f"✅ Signature webhook vérifiée")
+            except ValueError as e:
+                print(f"❌ Erreur signature invalide: {e}")
+                return JSONResponse({"error": "Signature invalide"}, status_code=400)
+            except stripe.error.SignatureVerificationError as e:
+                print(f"❌ Erreur vérification signature: {e}")
+                return JSONResponse({"error": "Erreur signature"}, status_code=400)
+        else:
+            # Mode développement: sans signature
+            print(f"⚠️ STRIPE_WEBHOOK_SECRET non configuré, vérification signature désactivée")
+            event = json.loads(payload)
+        
         event_type = event.get("type")
         data = event.get("data", {}).get("object", {})
         
