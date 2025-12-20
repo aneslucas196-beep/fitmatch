@@ -548,12 +548,31 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
     console.log('⚠️ Session non créée:', sessionErr);
   }
   
-  // Sauvegarder la réservation avec toutes les données
-  const booking = {
+  // D'abord récupérer le prix ACTUEL du coach
+  let actualPrice = price;
+  if (coachEmail) {
+    try {
+      const priceRes = await fetch(`/api/coach/pricing?coach_email=${encodeURIComponent(coachEmail)}`);
+      const priceData = await priceRes.json();
+      if (priceData.success && priceData.price !== undefined) {
+        actualPrice = String(priceData.price);
+        console.log('💰 Prix actuel du coach:', actualPrice);
+        $('#price').textContent = actualPrice;
+      }
+    } catch(priceErr) {
+      console.log('⚠️ Impossible de récupérer le prix actuel:', priceErr);
+      actualPrice = String(price);
+    }
+  } else {
+    actualPrice = String(price);
+  }
+  
+  // Préparer les données de réservation (mais ne PAS sauvegarder avant la réponse API)
+  const bookingData = {
     coach,
     service,
     duration,
-    price,
+    price: actualPrice,
     gym,
     gym_address: gymAddress || '',
     coach_photo: coachPhoto || '',
@@ -562,33 +581,11 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
     createdAt: new Date().toISOString()
   };
   
-  const fmData = JSON.parse(localStorage.getItem('fitmatch') || '{}');
-  fmData.user = u;
-  fmData.bookings = fmData.bookings || [];
-  fmData.bookings.push(booking);
-  localStorage.setItem('fitmatch', JSON.stringify(fmData));
-  
   // Envoyer la demande de réservation au coach
   btn.textContent = 'Envoi de la demande…';
   let confirmData = null;
-  let actualPrice = price;  // Utiliser le prix par défaut au départ
   
   try {
-    // Récupérer le prix ACTUEL du coach (au cas où il aurait changé)
-    if (coachEmail) {
-      try {
-        const priceRes = await fetch(`/api/coach/pricing?coach_email=${encodeURIComponent(coachEmail)}`);
-        const priceData = await priceRes.json();
-        if (priceData.success && priceData.price) {
-          actualPrice = priceData.price;
-          console.log('💰 Prix actuel du coach:', actualPrice);
-          $('#price').textContent = actualPrice;  // Mettre à jour l'affichage
-        }
-      } catch(priceErr) {
-        console.log('⚠️ Impossible de récupérer le prix actuel:', priceErr);
-      }
-    }
-    
     const confirmRes = await fetch('/api/confirm-booking', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -599,40 +596,56 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
         coach_email: coachEmail || null,
         gym_name: gym,
         gym_address: gymAddress || 'Adresse non renseignée',
-        date: booking.date,
-        time: booking.time,
+        date: bookingData.date,
+        time: bookingData.time,
         service: service,
-        duration: duration,
-        price: String(actualPrice),  // Convertir en string
+        duration: String(duration),
+        price: actualPrice,
         coach_photo: coachPhoto || null
       })
     });
-    confirmData = await confirmRes.json();
-    console.log('📋 Demande envoyée au coach:', confirmData);
     
-    // Mettre à jour le booking avec l'ID du serveur et l'email du coach
-    if (confirmData.booking_id) {
-      const fmDataUpdated = JSON.parse(localStorage.getItem('fitmatch') || '{}');
-      const lastBookingIndex = (fmDataUpdated.bookings || []).length - 1;
-      if (lastBookingIndex >= 0) {
-        fmDataUpdated.bookings[lastBookingIndex].id = confirmData.booking_id;
-        fmDataUpdated.bookings[lastBookingIndex].booking_id = confirmData.booking_id;
-        fmDataUpdated.bookings[lastBookingIndex].coach_email = coachEmail || '';
-        fmDataUpdated.bookings[lastBookingIndex].status = 'pending';
-        localStorage.setItem('fitmatch', JSON.stringify(fmDataUpdated));
-        console.log('✅ Booking mis à jour avec ID:', confirmData.booking_id);
-      }
+    confirmData = await confirmRes.json();
+    console.log('📋 Réponse du serveur:', confirmData);
+    
+    // Vérifier si l'API a réussi
+    if (!confirmRes.ok) {
+      console.error('❌ Erreur API:', confirmData);
+      toast(confirmData.message || 'Erreur lors de la réservation');
+      btn.disabled = false;
+      btn.textContent = 'Confirmer la séance';
+      return;
     }
-  } catch(emailErr) {
-    console.log('⚠️ Demande non envoyée:', emailErr);
-  }
-  
-  // Si paiement requis, rediriger vers Stripe
-  if (confirmData && confirmData.checkout_url) {
-    console.log('💳 Redirection vers Stripe pour paiement:', confirmData.checkout_url);
-    window.location.href = confirmData.checkout_url;
-  } else {
+    
+    // SEULEMENT maintenant sauvegarder le booking (après succès API)
+    if (confirmData.success && confirmData.booking_id) {
+      bookingData.id = confirmData.booking_id;
+      bookingData.booking_id = confirmData.booking_id;
+      bookingData.coach_email = coachEmail || '';
+      bookingData.status = confirmData.status || 'pending';
+      
+      const fmData = JSON.parse(localStorage.getItem('fitmatch') || '{}');
+      fmData.user = u;
+      fmData.bookings = fmData.bookings || [];
+      fmData.bookings.push(bookingData);
+      localStorage.setItem('fitmatch', JSON.stringify(fmData));
+      console.log('✅ Booking sauvegardé avec ID:', confirmData.booking_id);
+    }
+    
+    // Si paiement requis, rediriger vers Stripe
+    if (confirmData.checkout_url) {
+      console.log('💳 Redirection vers Stripe pour paiement:', confirmData.checkout_url);
+      window.location.href = confirmData.checkout_url;
+      return;
+    }
+    
     // Sinon rediriger vers la page Mon Compte
     window.location.href = '/mon-compte';
+    
+  } catch(err) {
+    console.error('❌ Erreur réseau:', err);
+    toast('Erreur de connexion. Veuillez réessayer.');
+    btn.disabled = false;
+    btn.textContent = 'Confirmer la séance';
   }
 });

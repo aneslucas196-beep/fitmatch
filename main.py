@@ -3315,11 +3315,13 @@ async def reservation_page(request: Request):
     """Page de confirmation de réservation avec identification."""
     locale = get_locale_from_request(request)
     translations = get_translations(locale)
+    import time
     return templates.TemplateResponse("reservation.html", {
         "request": request,
         "locale": locale,
         "translations": translations,
-        "t": lambda trans_dict, key, default="": trans_dict.get(key, default)
+        "t": lambda trans_dict, key, default="": trans_dict.get(key, default),
+        "cache_bust": int(time.time())
     })
 
 @app.get("/account", response_class=HTMLResponse)
