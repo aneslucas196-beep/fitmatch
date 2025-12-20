@@ -570,6 +570,7 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
   
   // Envoyer la demande de réservation au coach
   btn.textContent = 'Envoi de la demande…';
+  let confirmData = null;
   try {
     const confirmRes = await fetch('/api/confirm-booking', {
       method: 'POST',
@@ -589,7 +590,7 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
         coach_photo: coachPhoto || null
       })
     });
-    const confirmData = await confirmRes.json();
+    confirmData = await confirmRes.json();
     console.log('📋 Demande envoyée au coach:', confirmData);
     
     // Mettre à jour le booking avec l'ID du serveur et l'email du coach
