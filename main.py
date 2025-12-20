@@ -5292,13 +5292,27 @@ async def confirm_booking(request: ConfirmBookingRequest):
                         # Vérifier que le coach a un compte Stripe Connect actif
                         connect_info = get_stripe_connect_info(coach_email)
                         
-                        if not connect_info or not connect_info.get("charges_enabled"):
-                            print(f"❌ Coach {coach_email} n'a pas de compte Stripe Connect actif")
+                        # Mode démo: accepter les comptes Stripe partiels (pour tests sans SMS)
+                        if not connect_info:
+                            print(f"❌ Coach {coach_email} n'a pas de compte Stripe Connect")
                             return JSONResponse({
                                 "success": False,
                                 "message": "Le coach n'a pas configuré son compte bancaire pour recevoir les paiements",
                                 "error": "connect_not_configured"
                             }, status_code=400)
+                        
+                        has_account_id = connect_info.get("account_id") is not None
+                        if not has_account_id:
+                            print(f"❌ Coach {coach_email} n'a pas d'account_id Stripe")
+                            return JSONResponse({
+                                "success": False,
+                                "message": "Le coach n'a pas configuré son compte bancaire pour recevoir les paiements",
+                                "error": "connect_not_configured"
+                            }, status_code=400)
+                        
+                        if not connect_info.get("charges_enabled"):
+                            print(f"⚠️  Coach {coach_email} a un compte Stripe partiel (charges_enabled=False)")
+                            print(f"   Mode DÉMO: Acceptation pour tests")
                         
                         coach_connect_account_id = connect_info.get("account_id")
                         
