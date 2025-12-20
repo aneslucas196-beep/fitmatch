@@ -401,8 +401,12 @@ def get_coaches_by_gym_id(gym_id: str) -> List[Dict]:
     demo_users = load_demo_users()
     
     for email, user_data in demo_users.items():
-        # Vérifier si c'est un coach avec profil complété
-        if user_data.get("role") == "coach" and user_data.get("profile_completed"):
+        # Exclure les coaches bloqués ou sans abonnement actif
+        subscription_status = user_data.get("subscription_status", "")
+        is_blocked = subscription_status in ["blocked", "cancelled", "past_due"]
+        
+        # Vérifier si c'est un coach avec profil complété et abonnement actif
+        if user_data.get("role") == "coach" and user_data.get("profile_completed") and not is_blocked:
             # selected_gyms_data est stocké en STRING JSON, il faut le parser
             selected_gyms_data = user_data.get("selected_gyms_data", "[]")
             
@@ -959,7 +963,11 @@ async def search_coaches(
     coaches = []
     
     for email, user_data in demo_users.items():
-        if user_data.get("role") == "coach" and user_data.get("profile_completed"):
+        # Exclure les coaches bloqués ou sans abonnement actif
+        subscription_status = user_data.get("subscription_status", "")
+        is_blocked = subscription_status in ["blocked", "cancelled", "past_due"]
+        
+        if user_data.get("role") == "coach" and user_data.get("profile_completed") and not is_blocked:
             coaches.append({
                 "id": email.replace("@", "_").replace(".", "_"),
                 "email": email,
@@ -1779,28 +1787,15 @@ async def api_login(request: Request):
         if not email or not password:
             raise HTTPException(status_code=400, detail="Email et mot de passe requis")
         
-        # Mode démo - vérifier identifiants
-        demo_users_hardcoded = {
-            "coach@demo.com": {"password": "demopass123", "role": "coach", "full_name": "Coach Demo"},
-            "client@demo.com": {"password": "demopass123", "role": "client", "full_name": "Client Demo"}
-        }
-        
         user_found = None
         
-        # Vérifier les comptes démo hardcodés
-        demo_user = demo_users_hardcoded.get(email)
-        if demo_user and demo_user["password"] == password:
-            user_found = demo_user
-            print(f"✅ API Login: compte démo hardcodé")
-        
-        # Si pas trouvé, vérifier les utilisateurs inscrits
-        if not user_found:
-            cached_user = get_demo_user(email)
-            if cached_user:
-                stored_password = cached_user.get("password", "").strip()
-                if stored_password and stored_password == password.strip():
-                    user_found = cached_user
-                    print(f"✅ API Login: compte inscrit trouvé")
+        # Vérifier les utilisateurs inscrits
+        cached_user = get_demo_user(email)
+        if cached_user:
+            stored_password = cached_user.get("password", "").strip()
+            if stored_password and stored_password == password.strip():
+                user_found = cached_user
+                print(f"✅ API Login: compte trouvé")
         
         if user_found:
             return {
@@ -1840,30 +1835,17 @@ async def login_submit(
     email = email.lower().strip()
     
     if not supabase_anon:
-        # Mode démo sans Supabase - vérifier identifiants démo avec rôles
-        demo_users = {
-            "coach@demo.com": {"password": "demopass123", "role": "coach"},
-            "client@demo.com": {"password": "demopass123", "role": "client"}
-        }
-        
         user_found = None
         
-        # D'abord vérifier les comptes démo hardcodés
-        demo_user = demo_users.get(email)
-        if demo_user and demo_user["password"] == password:
-            user_found = demo_user
-            print(f"✅ Connexion avec compte démo hardcodé")
-        
-        # Si pas trouvé, vérifier les utilisateurs inscrits dans le stockage persistant
-        if not user_found:
-            cached_user = get_demo_user(email)
-            if cached_user:
-                # Normaliser les mots de passe pour la comparaison
-                stored_password = cached_user.get("password", "").strip()
-                submitted_password = password.strip()
-                if stored_password and stored_password == submitted_password:
-                    user_found = cached_user
-                    print(f"✅ Connexion avec compte inscrit (stockage persistant)")
+        # Vérifier les utilisateurs inscrits dans le stockage persistant
+        cached_user = get_demo_user(email)
+        if cached_user:
+            # Normaliser les mots de passe pour la comparaison
+            stored_password = cached_user.get("password", "").strip()
+            submitted_password = password.strip()
+            if stored_password and stored_password == submitted_password:
+                user_found = cached_user
+                print(f"✅ Connexion avec compte inscrit")
         
         if user_found:
             # Redirection selon le rôle en mode démo
@@ -2270,25 +2252,20 @@ async def coach_login_submit(
         # Connexion coach
         user_found = None
         
-        # Vérifier les comptes demo hardcodés
-        if email == "coach@demo.com" and password == "demopass123":
-            user_found = {"email": email, "role": "coach", "full_name": "Coach Demo"}
-        
         # Vérifier les utilisateurs inscrits
-        if not user_found:
-            cached_user = get_demo_user(email)
-            if cached_user:
-                stored_password = cached_user.get("password", "").strip()
-                if stored_password and stored_password == password.strip():
-                    # Vérifier que c'est bien un coach
-                    if cached_user.get("role") == "coach":
-                        user_found = cached_user
-                    else:
-                        return templates.TemplateResponse("coach_login.html", {
-                            "request": request,
-                            "error": "Ce compte n'est pas un compte coach. Utilisez la connexion client.",
-                            "tab": "login"
-                        }, status_code=401)
+        cached_user = get_demo_user(email)
+        if cached_user:
+            stored_password = cached_user.get("password", "").strip()
+            if stored_password and stored_password == password.strip():
+                # Vérifier que c'est bien un coach
+                if cached_user.get("role") == "coach":
+                    user_found = cached_user
+                else:
+                    return templates.TemplateResponse("coach_login.html", {
+                        "request": request,
+                        "error": "Ce compte n'est pas un compte coach. Utilisez la connexion client.",
+                        "tab": "login"
+                    }, status_code=401)
         
         if user_found:
             import hashlib
@@ -3207,6 +3184,16 @@ async def view_coach_profile(request: Request, coach_id: str):
     
     if not coach:
         raise HTTPException(status_code=404, detail="Coach non trouvé")
+    
+    # Vérifier si le coach est bloqué - cacher son profil
+    subscription_status = coach.get("subscription_status", "")
+    is_blocked = subscription_status in ["blocked", "cancelled", "past_due"]
+    if is_blocked:
+        raise HTTPException(status_code=404, detail="Profil temporairement indisponible")
+    
+    # Cacher le lien Instagram si abonnement non actif
+    if subscription_status not in ["active", "trialing", ""]:
+        coach["instagram"] = None
     
     # Assurer qu'il y a une photo (profile_photo_url ou photo, sinon défaut)
     if not coach.get("photo"):
@@ -6129,14 +6116,64 @@ async def api_get_pending_reminders():
 import threading
 import time
 
+def check_and_block_unpaid_coaches():
+    """Vérifie les coaches avec paiement échoué depuis 24h+ et les bloque."""
+    try:
+        demo_users = load_demo_users()
+        blocked_count = 0
+        now = datetime.now()
+        
+        for email, user_data in demo_users.items():
+            if user_data.get("role") != "coach":
+                continue
+            
+            # Vérifier si le coach a un paiement échoué depuis 24h+
+            payment_failed_at = user_data.get("payment_failed_at")
+            subscription_status = user_data.get("subscription_status")
+            
+            if payment_failed_at and subscription_status == "past_due":
+                failed_date = datetime.fromisoformat(payment_failed_at)
+                hours_since_failure = (now - failed_date).total_seconds() / 3600
+                
+                if hours_since_failure >= 24:
+                    # Bloquer le compte
+                    user_data["subscription_status"] = "blocked"
+                    user_data["blocked_at"] = now.isoformat()
+                    save_demo_user(email, user_data)
+                    blocked_count += 1
+                    
+                    # Envoyer email de blocage
+                    from resend_service import send_account_blocked_email
+                    base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                    if base_url and not base_url.startswith("http"):
+                        base_url = f"https://{base_url}"
+                    send_account_blocked_email(
+                        to_email=email,
+                        coach_name=user_data.get("full_name", "Coach"),
+                        retry_url=f"{base_url}/coach/subscription"
+                    )
+                    print(f"🚫 Compte bloqué pour non-paiement: {email}")
+        
+        return blocked_count
+    except Exception as e:
+        print(f"⚠️ Erreur vérification blocage: {e}")
+        return 0
+
 def reminder_checker_thread():
-    """Thread qui vérifie les rappels toutes les 5 minutes."""
+    """Thread qui vérifie les rappels et blocages toutes les 5 minutes."""
     print("🔔 Démarrage du thread de vérification des rappels...")
     while True:
         try:
+            # Vérifier les rappels
             sent = process_due_reminders()
             if sent > 0:
                 print(f"🔔 {sent} rappel(s) envoyé(s) automatiquement")
+            
+            # Vérifier les coaches à bloquer (paiement échoué depuis 24h+)
+            blocked = check_and_block_unpaid_coaches()
+            if blocked > 0:
+                print(f"🚫 {blocked} compte(s) bloqué(s) pour non-paiement")
+                
         except Exception as e:
             print(f"⚠️ Erreur thread rappels: {e}")
         
@@ -6341,6 +6378,20 @@ async def stripe_webhook(request: Request):
                         current_period_end=period_end
                     )
                     print(f"✅ Abonnement activé pour {coach_email}")
+                    
+                    # Envoyer email de bienvenue
+                    from resend_service import send_subscription_success_email
+                    coach_data = get_demo_user(coach_email)
+                    base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                    if base_url and not base_url.startswith("http"):
+                        base_url = f"https://{base_url}"
+                    send_subscription_success_email(
+                        to_email=coach_email,
+                        coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
+                        subscription_url=f"{base_url}/coach/portal"
+                    )
+                    print(f"📧 Email de bienvenue envoyé à {coach_email}")
+                    
                 except Exception as sub_error:
                     print(f"❌ Erreur récupération subscription: {sub_error}")
             elif coach_email:
@@ -6351,6 +6402,18 @@ async def stripe_webhook(request: Request):
                     subscription_status="active"
                 )
                 print(f"✅ Abonnement activé (sans sub ID) pour {coach_email}")
+                
+                # Envoyer email de bienvenue
+                from resend_service import send_subscription_success_email
+                coach_data = get_demo_user(coach_email)
+                base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                if base_url and not base_url.startswith("http"):
+                    base_url = f"https://{base_url}"
+                send_subscription_success_email(
+                    to_email=coach_email,
+                    coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
+                    subscription_url=f"{base_url}/coach/portal"
+                )
         
         elif event_type == "customer.subscription.updated":
             # Mise à jour de l'abonnement
@@ -6366,6 +6429,27 @@ async def stripe_webhook(request: Request):
                     current_period_end=period_end
                 )
                 print(f"🔄 Abonnement mis à jour pour {coach_email}: {status}")
+                
+                # Si le statut revient à active, débloquer le compte
+                if status == "active":
+                    coach_data = get_demo_user(coach_email)
+                    if coach_data and coach_data.get("subscription_status") == "blocked":
+                        coach_data["subscription_status"] = "active"
+                        coach_data["blocked_at"] = None
+                        coach_data["payment_failed_at"] = None
+                        save_demo_user(coach_email, coach_data)
+                        print(f"✅ Compte débloqué pour {coach_email}")
+                        
+                        # Email de compte restauré
+                        from resend_service import send_account_restored_email
+                        base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                        if base_url and not base_url.startswith("http"):
+                            base_url = f"https://{base_url}"
+                        send_account_restored_email(
+                            to_email=coach_email,
+                            coach_name=coach_data.get("full_name", "Coach"),
+                            dashboard_url=f"{base_url}/coach/portal"
+                        )
         
         elif event_type == "customer.subscription.deleted":
             # Abonnement annulé
@@ -6377,9 +6461,27 @@ async def stripe_webhook(request: Request):
                     subscription_status="cancelled"
                 )
                 print(f"🚫 Abonnement annulé pour {coach_email}")
+                
+                # Bloquer le compte immédiatement
+                coach_data = get_demo_user(coach_email)
+                if coach_data:
+                    coach_data["subscription_status"] = "blocked"
+                    coach_data["blocked_at"] = datetime.now().isoformat()
+                    save_demo_user(coach_email, coach_data)
+                    
+                    # Email de compte bloqué
+                    from resend_service import send_account_blocked_email
+                    base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                    if base_url and not base_url.startswith("http"):
+                        base_url = f"https://{base_url}"
+                    send_account_blocked_email(
+                        to_email=coach_email,
+                        coach_name=coach_data.get("full_name", "Coach"),
+                        retry_url=f"{base_url}/coach/subscription"
+                    )
         
         elif event_type == "invoice.payment_failed":
-            # Paiement échoué
+            # Paiement échoué - envoyer email d'avertissement
             subscription_id = data.get("subscription")
             if subscription_id:
                 subscription = stripe.Subscription.retrieve(subscription_id)
@@ -6390,7 +6492,66 @@ async def stripe_webhook(request: Request):
                         coach_email=coach_email,
                         subscription_status="past_due"
                     )
-                    print(f"⚠️ Paiement échoué pour {coach_email}")
+                    
+                    # Enregistrer la date d'échec pour le blocage 24h
+                    coach_data = get_demo_user(coach_email)
+                    if coach_data:
+                        coach_data["payment_failed_at"] = datetime.now().isoformat()
+                        coach_data["subscription_status"] = "past_due"
+                        save_demo_user(coach_email, coach_data)
+                    
+                    # Envoyer email d'avertissement
+                    from resend_service import send_payment_failed_email
+                    base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                    if base_url and not base_url.startswith("http"):
+                        base_url = f"https://{base_url}"
+                    send_payment_failed_email(
+                        to_email=coach_email,
+                        coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
+                        retry_url=f"{base_url}/coach/subscription"
+                    )
+                    print(f"⚠️ Paiement échoué pour {coach_email} - email envoyé")
+        
+        elif event_type == "invoice.payment_succeeded":
+            # Paiement réussi (renouvellement) - débloquer si nécessaire
+            subscription_id = data.get("subscription")
+            if subscription_id:
+                try:
+                    subscription = stripe.Subscription.retrieve(subscription_id)
+                    coach_email = subscription.metadata.get("coach_email")
+                    
+                    if coach_email:
+                        coach_data = get_demo_user(coach_email)
+                        was_blocked = coach_data and coach_data.get("subscription_status") == "blocked"
+                        
+                        # Mettre à jour le statut
+                        update_coach_subscription(
+                            coach_email=coach_email,
+                            subscription_status="active"
+                        )
+                        
+                        if coach_data:
+                            coach_data["subscription_status"] = "active"
+                            coach_data["blocked_at"] = None
+                            coach_data["payment_failed_at"] = None
+                            save_demo_user(coach_email, coach_data)
+                        
+                        # Si le compte était bloqué, envoyer email de restauration
+                        if was_blocked:
+                            from resend_service import send_account_restored_email
+                            base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                            if base_url and not base_url.startswith("http"):
+                                base_url = f"https://{base_url}"
+                            send_account_restored_email(
+                                to_email=coach_email,
+                                coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
+                                dashboard_url=f"{base_url}/coach/portal"
+                            )
+                            print(f"✅ Compte restauré pour {coach_email}")
+                        else:
+                            print(f"✅ Renouvellement réussi pour {coach_email}")
+                except Exception as renewal_error:
+                    print(f"⚠️ Erreur traitement renouvellement: {renewal_error}")
         
         elif event_type == "account.updated":
             # Mise à jour du compte Stripe Connect d'un coach

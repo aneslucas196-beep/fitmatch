@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 
 # Prix de l'abonnement mensuel coach (en centimes)
-COACH_MONTHLY_PRICE = 100  # 1€/mois
+COACH_MONTHLY_PRICE = 2900  # 29€/mois
 
 
 async def get_stripe_credentials() -> Dict[str, str]:

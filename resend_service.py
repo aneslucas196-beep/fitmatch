@@ -1604,3 +1604,446 @@ Fitmatch - {your_platform}
             "mode": "error",
             "error": error_msg
         }
+
+
+def send_subscription_success_email(
+    to_email: str,
+    coach_name: str,
+    subscription_url: str,
+    locale: str = "fr"
+) -> dict:
+    """
+    Envoie un email de confirmation de paiement d'abonnement au coach.
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    
+    if not resend_key:
+        print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi d'email")
+        return {"success": True, "mode": "demo", "message": "Email simulé"}
+    
+    first_name = coach_name.split()[0] if coach_name else "Coach"
+    
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"></head>
+        <body style="margin:0; padding:0; font-family: 'Inter', Arial, sans-serif; background-color:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:white;">
+                <div style="background: linear-gradient(135deg, #008f57 0%, #00b36b 100%); padding:40px; text-align:center;">
+                    <h1 style="color:white; margin:0; font-size:28px;">🎉 Bienvenue chez FitMatch Pro !</h1>
+                </div>
+                
+                <div style="padding:40px;">
+                    <h2 style="color:#1e293b; margin-bottom:20px;">Félicitations {first_name} !</h2>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6;">
+                        Votre abonnement FitMatch Pro est maintenant <strong style="color:#008f57;">actif</strong> ! 
+                        Vous avez désormais accès à toutes les fonctionnalités de la plateforme.
+                    </p>
+                    
+                    <div style="background:#f0fdf4; border:2px solid #008f57; border-radius:12px; padding:25px; margin:30px 0; text-align:center;">
+                        <p style="margin:0 0 10px 0; color:#008f57; font-size:18px; font-weight:600;">✅ Abonnement activé</p>
+                        <p style="margin:0; color:#64748b; font-size:14px;">Votre profil est maintenant visible par tous les clients</p>
+                    </div>
+                    
+                    <h3 style="color:#1e293b; margin-top:30px;">Ce que vous pouvez faire maintenant :</h3>
+                    <ul style="color:#64748b; font-size:15px; line-height:2;">
+                        <li>📝 Compléter votre profil coach</li>
+                        <li>🏋️ Ajouter vos salles de sport</li>
+                        <li>💰 Configurer vos tarifs</li>
+                        <li>📅 Gérer vos réservations</li>
+                        <li>💳 Connecter Stripe pour recevoir les paiements</li>
+                    </ul>
+                    
+                    <div style="text-align:center; margin:40px 0;">
+                        <a href="{subscription_url}" style="display:inline-block; background:#008f57; color:white; padding:15px 40px; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px;">
+                            Accéder à mon espace coach
+                        </a>
+                    </div>
+                </div>
+                
+                {SOCIAL_FOOTER_HTML}
+                
+                <div style="padding:20px; text-align:center; background:#f8fafc;">
+                    <p style="margin:0; color:#94a3b8; font-size:12px;">
+                        FitMatch - Votre plateforme de coaching fitness
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+🎉 Bienvenue chez FitMatch Pro !
+
+Félicitations {first_name} !
+
+Votre abonnement FitMatch Pro est maintenant actif !
+Vous avez désormais accès à toutes les fonctionnalités de la plateforme.
+
+Ce que vous pouvez faire maintenant :
+- Compléter votre profil coach
+- Ajouter vos salles de sport
+- Configurer vos tarifs
+- Gérer vos réservations
+- Connecter Stripe pour recevoir les paiements
+
+Accéder à mon espace coach : {subscription_url}
+
+---
+FitMatch - Votre plateforme de coaching fitness
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {resend_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": "🎉 Votre abonnement FitMatch Pro est activé !",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            email_id = response.json().get('id', 'N/A')
+            print(f"✅ Email abonnement succès envoyé à {to_email} (ID: {email_id})")
+            return {"success": True, "mode": "resend", "email_id": email_id}
+        else:
+            error_msg = f"Erreur Resend: {response.text}"
+            print(f"❌ {error_msg}")
+            return {"success": False, "error": error_msg}
+            
+    except Exception as e:
+        print(f"❌ Erreur envoi email abonnement: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def send_payment_failed_email(
+    to_email: str,
+    coach_name: str,
+    retry_url: str,
+    locale: str = "fr"
+) -> dict:
+    """
+    Envoie un email quand un paiement d'abonnement échoue.
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    
+    if not resend_key:
+        return {"success": True, "mode": "demo", "message": "Email simulé"}
+    
+    first_name = coach_name.split()[0] if coach_name else "Coach"
+    
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"></head>
+        <body style="margin:0; padding:0; font-family: 'Inter', Arial, sans-serif; background-color:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:white;">
+                <div style="background:#fef2f2; padding:40px; text-align:center; border-bottom:3px solid #ef4444;">
+                    <h1 style="color:#dc2626; margin:0; font-size:24px;">⚠️ Échec du paiement</h1>
+                </div>
+                
+                <div style="padding:40px;">
+                    <h2 style="color:#1e293b; margin-bottom:20px;">Bonjour {first_name},</h2>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6;">
+                        Nous n'avons pas pu prélever le paiement de votre abonnement FitMatch Pro.
+                        Cela peut arriver pour plusieurs raisons :
+                    </p>
+                    
+                    <ul style="color:#64748b; font-size:15px; line-height:2;">
+                        <li>Carte expirée ou bloquée</li>
+                        <li>Fonds insuffisants</li>
+                        <li>Problème technique temporaire</li>
+                    </ul>
+                    
+                    <div style="background:#fef3c7; border:2px solid #f59e0b; border-radius:12px; padding:25px; margin:30px 0; text-align:center;">
+                        <p style="margin:0 0 10px 0; color:#92400e; font-size:16px; font-weight:600;">
+                            ⏰ Vous avez 24 heures pour régulariser
+                        </p>
+                        <p style="margin:0; color:#92400e; font-size:14px;">
+                            Passé ce délai, votre compte sera temporairement suspendu.
+                        </p>
+                    </div>
+                    
+                    <div style="text-align:center; margin:40px 0;">
+                        <a href="{retry_url}" style="display:inline-block; background:#008f57; color:white; padding:15px 40px; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px;">
+                            Réessayer le paiement
+                        </a>
+                    </div>
+                    
+                    <p style="color:#94a3b8; font-size:13px; text-align:center;">
+                        Si vous avez des questions, contactez-nous à contact@fitmatch.fr
+                    </p>
+                </div>
+                
+                {SOCIAL_FOOTER_HTML}
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+⚠️ Échec du paiement
+
+Bonjour {first_name},
+
+Nous n'avons pas pu prélever le paiement de votre abonnement FitMatch Pro.
+
+Vous avez 24 heures pour régulariser votre situation.
+Passé ce délai, votre compte sera temporairement suspendu.
+
+Réessayer le paiement : {retry_url}
+
+---
+FitMatch
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"}
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": "⚠️ Échec du paiement - Action requise",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            email_id = response.json().get('id', 'N/A')
+            print(f"✅ Email échec paiement envoyé à {to_email}")
+            return {"success": True, "email_id": email_id}
+        else:
+            return {"success": False, "error": response.text}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def send_account_blocked_email(
+    to_email: str,
+    coach_name: str,
+    retry_url: str,
+    locale: str = "fr"
+) -> dict:
+    """
+    Envoie un email quand le compte coach est bloqué pour non-paiement.
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    
+    if not resend_key:
+        return {"success": True, "mode": "demo", "message": "Email simulé"}
+    
+    first_name = coach_name.split()[0] if coach_name else "Coach"
+    
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"></head>
+        <body style="margin:0; padding:0; font-family: 'Inter', Arial, sans-serif; background-color:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:white;">
+                <div style="background:#dc2626; padding:40px; text-align:center;">
+                    <h1 style="color:white; margin:0; font-size:24px;">🚫 Compte suspendu</h1>
+                </div>
+                
+                <div style="padding:40px;">
+                    <h2 style="color:#1e293b; margin-bottom:20px;">Bonjour {first_name},</h2>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6;">
+                        Votre abonnement FitMatch Pro n'a pas été renouvelé. 
+                        Votre compte est maintenant <strong style="color:#dc2626;">suspendu</strong>.
+                    </p>
+                    
+                    <div style="background:#fef2f2; border:2px solid #dc2626; border-radius:12px; padding:25px; margin:30px 0;">
+                        <h3 style="color:#dc2626; margin:0 0 15px 0;">Ce qui est désactivé :</h3>
+                        <ul style="color:#64748b; font-size:14px; line-height:2; margin:0; padding-left:20px;">
+                            <li>❌ Votre profil n'est plus visible</li>
+                            <li>❌ Votre lien Instagram est masqué</li>
+                            <li>❌ Les clients ne peuvent plus vous réserver</li>
+                            <li>❌ Accès à l'espace coach bloqué</li>
+                        </ul>
+                    </div>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6;">
+                        <strong>Bonne nouvelle :</strong> Dès que vous régularisez votre paiement, 
+                        votre compte sera <strong style="color:#008f57;">immédiatement réactivé</strong>.
+                    </p>
+                    
+                    <div style="text-align:center; margin:40px 0;">
+                        <a href="{retry_url}" style="display:inline-block; background:#008f57; color:white; padding:15px 40px; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px;">
+                            Réactiver mon compte
+                        </a>
+                    </div>
+                </div>
+                
+                {SOCIAL_FOOTER_HTML}
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+🚫 Compte suspendu
+
+Bonjour {first_name},
+
+Votre abonnement FitMatch Pro n'a pas été renouvelé.
+Votre compte est maintenant suspendu.
+
+Ce qui est désactivé :
+- Votre profil n'est plus visible
+- Votre lien Instagram est masqué
+- Les clients ne peuvent plus vous réserver
+- Accès à l'espace coach bloqué
+
+Bonne nouvelle : Dès que vous régularisez votre paiement,
+votre compte sera immédiatement réactivé.
+
+Réactiver mon compte : {retry_url}
+
+---
+FitMatch
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"}
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": "🚫 Votre compte FitMatch est suspendu",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            email_id = response.json().get('id', 'N/A')
+            print(f"✅ Email compte bloqué envoyé à {to_email}")
+            return {"success": True, "email_id": email_id}
+        else:
+            return {"success": False, "error": response.text}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def send_account_restored_email(
+    to_email: str,
+    coach_name: str,
+    dashboard_url: str,
+    locale: str = "fr"
+) -> dict:
+    """
+    Envoie un email quand le compte coach est restauré après paiement.
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    
+    if not resend_key:
+        return {"success": True, "mode": "demo", "message": "Email simulé"}
+    
+    first_name = coach_name.split()[0] if coach_name else "Coach"
+    
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"></head>
+        <body style="margin:0; padding:0; font-family: 'Inter', Arial, sans-serif; background-color:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:white;">
+                <div style="background: linear-gradient(135deg, #008f57 0%, #00b36b 100%); padding:40px; text-align:center;">
+                    <h1 style="color:white; margin:0; font-size:24px;">✅ Compte réactivé !</h1>
+                </div>
+                
+                <div style="padding:40px;">
+                    <h2 style="color:#1e293b; margin-bottom:20px;">Bienvenue à nouveau {first_name} !</h2>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6;">
+                        Merci d'avoir régularisé votre abonnement. 
+                        Votre compte FitMatch Pro est maintenant <strong style="color:#008f57;">actif</strong> !
+                    </p>
+                    
+                    <div style="background:#f0fdf4; border:2px solid #008f57; border-radius:12px; padding:25px; margin:30px 0;">
+                        <h3 style="color:#008f57; margin:0 0 15px 0;">✅ Tout est réactivé :</h3>
+                        <ul style="color:#64748b; font-size:14px; line-height:2; margin:0; padding-left:20px;">
+                            <li>✅ Votre profil est à nouveau visible</li>
+                            <li>✅ Votre lien Instagram est affiché</li>
+                            <li>✅ Les clients peuvent vous réserver</li>
+                            <li>✅ Accès complet à l'espace coach</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="text-align:center; margin:40px 0;">
+                        <a href="{dashboard_url}" style="display:inline-block; background:#008f57; color:white; padding:15px 40px; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px;">
+                            Accéder à mon espace coach
+                        </a>
+                    </div>
+                </div>
+                
+                {SOCIAL_FOOTER_HTML}
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+✅ Compte réactivé !
+
+Bienvenue à nouveau {first_name} !
+
+Merci d'avoir régularisé votre abonnement.
+Votre compte FitMatch Pro est maintenant actif !
+
+Tout est réactivé :
+- Votre profil est à nouveau visible
+- Votre lien Instagram est affiché
+- Les clients peuvent vous réserver
+- Accès complet à l'espace coach
+
+Accéder à mon espace coach : {dashboard_url}
+
+---
+FitMatch
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"}
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": "✅ Votre compte FitMatch est réactivé !",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            email_id = response.json().get('id', 'N/A')
+            print(f"✅ Email compte restauré envoyé à {to_email}")
+            return {"success": True, "email_id": email_id}
+        else:
+            return {"success": False, "error": response.text}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
