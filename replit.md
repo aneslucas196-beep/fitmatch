@@ -62,6 +62,17 @@ Preferred communication style: Simple, everyday language.
 - **API Endpoints**: For creating checkout sessions, customer portal sessions, handling webhooks, and retrieving subscription status.
 - **Grandfathered Accounts**: Legacy coach accounts are automatically upgraded to "active" subscription status upon login.
 
+### Subscription Lifecycle & Enforcement
+- **Status Lifecycle**: active → past_due (payment fails) → blocked (after 24h grace period) → active (on payment success)
+- **Coach Visibility**: Coaches with status "blocked", "cancelled", or "past_due" are hidden from all public pages (search results, gym pages, public profiles)
+- **Background Worker**: Runs every 5 minutes checking for coaches with payment failed 24h+ ago and automatically blocks them
+- **Email Notifications**:
+    - `send_subscription_success_email()` - Sent on checkout.session.completed
+    - `send_payment_failed_email()` - Sent on invoice.payment_failed with 24h warning
+    - `send_account_blocked_email()` - Sent when coach is blocked after 24h grace period
+    - `send_account_restored_email()` - Sent when blocked coach pays and account is restored
+- **Webhook Events**: Handles checkout.session.completed, invoice.payment_failed, invoice.payment_succeeded, customer.subscription.deleted, account.updated
+
 ### Stripe Connect (Session Payments to Coaches)
 - **Business Model**: FitMatch receives 29€/month from coaches. Clients pay sessions directly to coaches' bank accounts.
 - **Coach Onboarding**: Coaches connect their bank account via Stripe Connect Standard accounts.
