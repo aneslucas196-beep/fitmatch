@@ -3605,16 +3605,27 @@ async def set_coach_payment_mode(request: Request, user = Depends(require_coach_
                     "error": "Vous devez d'abord connecter votre compte Stripe pour activer le paiement en ligne.",
                     "need_stripe_connect": True
                 })
+            
+            # En mode démo, accepter les comptes Stripe partiels (pour tester sans SMS)
             if not connect_info.get("charges_enabled"):
-                print(f"   ❌ charges_enabled = {connect_info.get('charges_enabled')} (doit être True)")
-                print(f"   Details submitted: {connect_info.get('details_submitted')}")
-                return JSONResponse(status_code=400, content={
-                    "success": False, 
-                    "error": "Votre compte Stripe n'a pas été complètement vérifié. Veuillez attendre 1-2 jours ou vérifier votre email Stripe.",
-                    "need_stripe_connect": True,
-                    "charges_enabled": False,
-                    "details_submitted": connect_info.get("details_submitted", False)
-                })
+                has_account_id = connect_info.get("account_id") is not None
+                details_submitted = connect_info.get("details_submitted", False)
+                
+                print(f"   ⚠️  charges_enabled = False")
+                print(f"   Account ID: {connect_info.get('account_id')}")
+                print(f"   Details submitted: {details_submitted}")
+                
+                # Mode démo: si le compte existe, on accepte même sans vérification complète
+                if has_account_id:
+                    print(f"   ✅ Mode DÉMO: Acceptation du compte Stripe partiel pour tests")
+                else:
+                    return JSONResponse(status_code=400, content={
+                        "success": False, 
+                        "error": "Votre compte Stripe n'a pas été correctement créé. Veuillez réessayer la connexion.",
+                        "need_stripe_connect": True,
+                        "charges_enabled": False,
+                        "details_submitted": details_submitted
+                    })
         
         demo_users[coach_email]["payment_mode"] = payment_mode
         save_demo_user(coach_email, demo_users[coach_email])
