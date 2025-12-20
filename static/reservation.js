@@ -603,7 +603,7 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
         time: booking.time,
         service: service,
         duration: duration,
-        price: actualPrice,  // Utiliser le prix actualisé
+        price: String(actualPrice),  // Convertir en string
         coach_photo: coachPhoto || null
       })
     });
