@@ -10,7 +10,7 @@ const coach   = p.get('coach')   || 'Coach Anas';
 const coachEmail = p.get('coach_email') || '';  // Email du coach pour identification fiable
 const service = p.get('service') || 'Séance musculation';
 const duration= p.get('duration')|| '60';
-const price   = p.get('price')   || '40';
+let price   = p.get('price')   || '40';  // Sera mis à jour dynamiquement
 const gym     = p.get('gym')     || 'BasicFit Élancourt';
 const gymAddress = p.get('gym_address') || '';
 const coachPhoto = p.get('coach_photo') || '';
@@ -26,6 +26,24 @@ $('#serviceName').textContent = service;
 $('#duration').textContent = duration;
 $('#price').textContent = price;
 $('#gymName').textContent = gym;
+
+// RAFRAÎCHIR le prix au chargement de la page
+async function refreshPrice() {
+  if (!coachEmail) return;
+  try {
+    const res = await fetch(`/api/coach/pricing?coach_email=${encodeURIComponent(coachEmail)}`);
+    const data = await res.json();
+    if (data.success && data.price !== undefined) {
+      price = String(data.price);
+      $('#price').textContent = price;
+      console.log('💰 Prix actualisé au chargement:', price + '€');
+    }
+  } catch(err) {
+    console.log('⚠️ Impossible de rafraîchir le prix:', err);
+  }
+}
+// Appeler au chargement
+refreshPrice();
 
 let selDate = defDate;
 let selTime = defTime;

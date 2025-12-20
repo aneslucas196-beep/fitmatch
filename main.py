@@ -3587,7 +3587,9 @@ async def get_coach_pricing(coach_email: str):
     try:
         demo_users = load_demo_users()
         coach_data = demo_users.get(coach_email, {})
-        price = coach_data.get("session_price", 40)  # 40€ par défaut
+        # Essayer session_price puis price_from
+        price = coach_data.get("session_price") or coach_data.get("price_from") or 40
+        print(f"💰 Prix coach {coach_email}: {price}€")
         return {"success": True, "price": price}
     except Exception as e:
         print(f"Erreur: {e}")
