@@ -292,7 +292,8 @@ let allSuggestions = [];
 // ✅ Charger les salles sauvegardées au chargement de la page
 {% if coach and coach.selected_gyms_data %}
 try {
-    selectedGyms = JSON.parse('{{ coach.selected_gyms_data | replace("'", "\\'") | safe }}');
+    const rawData = {{ coach.selected_gyms_data | tojson | safe }};
+    selectedGyms = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
     console.log('✅ Salles chargées depuis le profil:', selectedGyms.length);
 } catch (e) {
     console.error('❌ Erreur lors du chargement des salles:', e);
