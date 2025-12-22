@@ -2047,3 +2047,406 @@ FitMatch
             
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+def send_subscription_payment_receipt(
+    to_email: str,
+    coach_name: str,
+    amount: str,
+    billing_period: str,
+    subscription_start: str,
+    subscription_end: str,
+    payment_date: str = None
+) -> dict:
+    """
+    Envoie un certificat/reçu de paiement d'abonnement au coach.
+    billing_period: "monthly" ou "annual"
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    site_url = os.environ.get('REPLIT_DEV_DOMAIN', os.environ.get('SITE_URL', 'http://localhost:5000'))
+    
+    if site_url and not site_url.startswith('http'):
+        site_url = f"https://{site_url}"
+    
+    dashboard_url = f"{site_url}/coach/portal"
+    
+    first_name = coach_name.split()[0] if coach_name else "Coach"
+    period_label = "Annuel" if billing_period == "annual" else "Mensuel"
+    
+    from datetime import datetime
+    if not payment_date:
+        payment_date = datetime.now().strftime("%d/%m/%Y à %H:%M")
+    
+    print(f"📧 Envoi certificat paiement abonnement:")
+    print(f"  - Coach: {coach_name} ({to_email})")
+    print(f"  - Montant: {amount}")
+    print(f"  - Période: {period_label}")
+    
+    if not resend_key:
+        print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi")
+        return {"success": True, "mode": "demo"}
+    
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; font-family: 'Inter', Arial, sans-serif; background-color:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:white;">
+                
+                <!-- Header -->
+                <div style="background:linear-gradient(135deg, #008f57 0%, #00b36b 100%); padding:40px; text-align:center;">
+                    <h1 style="color:white; margin:0; font-size:28px;">FitMatch</h1>
+                    <p style="color:rgba(255,255,255,0.9); margin:10px 0 0 0; font-size:14px;">Certificat de Paiement</p>
+                </div>
+                
+                <!-- Badge de confirmation -->
+                <div style="padding:25px; text-align:center; background:#f0fdf4; border-bottom:1px solid #dcfce7;">
+                    <div style="display:inline-block; background:#22c55e; color:white; padding:10px 25px; border-radius:50px; font-size:15px; font-weight:600;">
+                        ✓ Paiement confirmé
+                    </div>
+                </div>
+                
+                <!-- Contenu principal -->
+                <div style="padding:35px;">
+                    <h2 style="color:#1e293b; margin:0 0 20px 0; font-size:22px;">
+                        Bonjour {first_name} !
+                    </h2>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6; margin-bottom:30px;">
+                        Nous avons bien reçu votre paiement pour votre abonnement FitMatch Pro. 
+                        Voici votre certificat de paiement :
+                    </p>
+                    
+                    <!-- Certificat de paiement -->
+                    <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:12px; padding:25px; margin-bottom:30px;">
+                        <h3 style="color:#0f172a; margin:0 0 20px 0; font-size:18px; border-bottom:1px solid #e2e8f0; padding-bottom:15px;">
+                            📄 Certificat de Paiement
+                        </h3>
+                        
+                        <table style="width:100%; font-size:15px; color:#334155;">
+                            <tr>
+                                <td style="padding:10px 0; color:#64748b;">Date du paiement</td>
+                                <td style="padding:10px 0; text-align:right; font-weight:600;">{payment_date}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 0; color:#64748b;">Abonnement</td>
+                                <td style="padding:10px 0; text-align:right; font-weight:600;">FitMatch Pro ({period_label})</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px 0; color:#64748b;">Période de validité</td>
+                                <td style="padding:10px 0; text-align:right; font-weight:600;">{subscription_start} → {subscription_end}</td>
+                            </tr>
+                            <tr style="border-top:2px solid #e2e8f0;">
+                                <td style="padding:15px 0 10px 0; color:#0f172a; font-weight:700; font-size:16px;">Montant payé</td>
+                                <td style="padding:15px 0 10px 0; text-align:right; font-weight:700; font-size:20px; color:#008f57;">{amount}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Avantages inclus -->
+                    <div style="background:#f0fdf4; border-radius:10px; padding:20px; margin-bottom:30px;">
+                        <h4 style="color:#166534; margin:0 0 15px 0; font-size:15px;">Avantages inclus dans votre abonnement :</h4>
+                        <ul style="margin:0; padding-left:20px; color:#166534; font-size:14px; line-height:1.8;">
+                            <li>Profil coach premium visible</li>
+                            <li>Salles illimitées</li>
+                            <li>Réservations en ligne</li>
+                            <li>Paiement en ligne disponible</li>
+                            <li>Lien spécialisé pour les réseaux sociaux</li>
+                            <li>Rappels email automatiques</li>
+                            <li>Support prioritaire</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Bouton CTA -->
+                    <div style="text-align:center; margin:35px 0;">
+                        <a href="{dashboard_url}" style="display:inline-block; background:#008f57; color:white; padding:15px 40px; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px;">
+                            Accéder à mon espace coach
+                        </a>
+                    </div>
+                    
+                    <p style="color:#94a3b8; font-size:13px; text-align:center; margin-top:30px;">
+                        Ce document fait office de justificatif de paiement.<br>
+                        Conservez-le pour vos archives.
+                    </p>
+                </div>
+                
+                {SOCIAL_FOOTER_HTML}
+                
+                <!-- Footer -->
+                <div style="padding:20px; background:#f8fafc; text-align:center;">
+                    <p style="color:#008f57; font-size:16px; font-weight:600; margin:0 0 5px 0;">FitMatch</p>
+                    <p style="color:#94a3b8; font-size:12px; margin:0;">
+                        La plateforme qui connecte coachs et clients
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        CERTIFICAT DE PAIEMENT - FitMatch Pro
+        
+        Bonjour {first_name} !
+        
+        Nous avons bien reçu votre paiement pour votre abonnement FitMatch Pro.
+        
+        DÉTAILS DU PAIEMENT :
+        - Date : {payment_date}
+        - Abonnement : FitMatch Pro ({period_label})
+        - Période : {subscription_start} → {subscription_end}
+        - Montant payé : {amount}
+        
+        AVANTAGES INCLUS :
+        - Profil coach premium visible
+        - Salles illimitées
+        - Réservations en ligne
+        - Paiement en ligne disponible
+        - Lien spécialisé pour les réseaux sociaux
+        - Rappels email automatiques
+        - Support prioritaire
+        
+        Accéder à mon espace coach : {dashboard_url}
+        
+        Ce document fait office de justificatif de paiement.
+        
+        ---
+        FitMatch
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"}
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": f"✓ Certificat de paiement - Abonnement FitMatch Pro ({period_label})",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            email_id = response.json().get('id', 'N/A')
+            print(f"✅ Certificat paiement abonnement envoyé à {to_email}")
+            return {"success": True, "email_id": email_id}
+        else:
+            return {"success": False, "error": response.text}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def send_session_payment_receipt(
+    to_email: str,
+    client_name: str,
+    coach_name: str,
+    gym_name: str,
+    gym_address: str,
+    session_date: str,
+    session_time: str,
+    service_name: str,
+    duration: str,
+    amount: str,
+    payment_date: str = None
+) -> dict:
+    """
+    Envoie un certificat/reçu de paiement de séance au client.
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    site_url = os.environ.get('REPLIT_DEV_DOMAIN', os.environ.get('SITE_URL', 'http://localhost:5000'))
+    
+    if site_url and not site_url.startswith('http'):
+        site_url = f"https://{site_url}"
+    
+    account_url = f"{site_url}/account"
+    
+    first_name = client_name.split()[0] if client_name else "Client"
+    
+    from datetime import datetime
+    if not payment_date:
+        payment_date = datetime.now().strftime("%d/%m/%Y à %H:%M")
+    
+    print(f"📧 Envoi certificat paiement séance:")
+    print(f"  - Client: {client_name} ({to_email})")
+    print(f"  - Coach: {coach_name}")
+    print(f"  - Montant: {amount}")
+    
+    if not resend_key:
+        print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi")
+        return {"success": True, "mode": "demo"}
+    
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin:0; padding:0; font-family: 'Inter', Arial, sans-serif; background-color:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:white;">
+                
+                <!-- Header -->
+                <div style="background:linear-gradient(135deg, #008f57 0%, #00b36b 100%); padding:40px; text-align:center;">
+                    <h1 style="color:white; margin:0; font-size:28px;">FitMatch</h1>
+                    <p style="color:rgba(255,255,255,0.9); margin:10px 0 0 0; font-size:14px;">Confirmation de Paiement</p>
+                </div>
+                
+                <!-- Badge de confirmation -->
+                <div style="padding:25px; text-align:center; background:#f0fdf4; border-bottom:1px solid #dcfce7;">
+                    <div style="display:inline-block; background:#22c55e; color:white; padding:10px 25px; border-radius:50px; font-size:15px; font-weight:600;">
+                        ✓ Paiement confirmé
+                    </div>
+                </div>
+                
+                <!-- Contenu principal -->
+                <div style="padding:35px;">
+                    <h2 style="color:#1e293b; margin:0 0 20px 0; font-size:22px;">
+                        Bonjour {first_name} !
+                    </h2>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6; margin-bottom:30px;">
+                        Votre paiement a été effectué avec succès. Voici votre certificat de paiement et les détails de votre séance :
+                    </p>
+                    
+                    <!-- Certificat de paiement -->
+                    <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:12px; padding:25px; margin-bottom:25px;">
+                        <h3 style="color:#0f172a; margin:0 0 20px 0; font-size:18px; border-bottom:1px solid #e2e8f0; padding-bottom:15px;">
+                            💳 Certificat de Paiement
+                        </h3>
+                        
+                        <table style="width:100%; font-size:15px; color:#334155;">
+                            <tr>
+                                <td style="padding:8px 0; color:#64748b;">Date du paiement</td>
+                                <td style="padding:8px 0; text-align:right; font-weight:600;">{payment_date}</td>
+                            </tr>
+                            <tr style="border-top:2px solid #e2e8f0;">
+                                <td style="padding:12px 0 8px 0; color:#0f172a; font-weight:700; font-size:16px;">Montant payé</td>
+                                <td style="padding:12px 0 8px 0; text-align:right; font-weight:700; font-size:20px; color:#008f57;">{amount}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Détails de la séance -->
+                    <div style="background:#fff7ed; border:2px solid #fed7aa; border-radius:12px; padding:25px; margin-bottom:30px;">
+                        <h3 style="color:#c2410c; margin:0 0 20px 0; font-size:18px; border-bottom:1px solid #fed7aa; padding-bottom:15px;">
+                            💪 Détails de votre séance
+                        </h3>
+                        
+                        <table style="width:100%; font-size:15px; color:#334155;">
+                            <tr>
+                                <td style="padding:8px 0; color:#64748b;">Coach</td>
+                                <td style="padding:8px 0; text-align:right; font-weight:600;">{coach_name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 0; color:#64748b;">Salle</td>
+                                <td style="padding:8px 0; text-align:right; font-weight:600;">{gym_name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 0; color:#64748b;">Adresse</td>
+                                <td style="padding:8px 0; text-align:right; font-weight:500; font-size:13px;">{gym_address}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 0; color:#64748b;">Date</td>
+                                <td style="padding:8px 0; text-align:right; font-weight:600;">{session_date}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 0; color:#64748b;">Heure</td>
+                                <td style="padding:8px 0; text-align:right; font-weight:600;">{session_time}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 0; color:#64748b;">Prestation</td>
+                                <td style="padding:8px 0; text-align:right; font-weight:600;">{service_name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 0; color:#64748b;">Durée</td>
+                                <td style="padding:8px 0; text-align:right; font-weight:600;">{duration}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <!-- Bouton CTA -->
+                    <div style="text-align:center; margin:35px 0;">
+                        <a href="{account_url}" style="display:inline-block; background:#008f57; color:white; padding:15px 40px; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px;">
+                            Voir mes réservations
+                        </a>
+                    </div>
+                    
+                    <p style="color:#94a3b8; font-size:13px; text-align:center; margin-top:30px;">
+                        Ce document fait office de justificatif de paiement et de confirmation de séance.<br>
+                        Conservez-le pour vos archives.
+                    </p>
+                </div>
+                
+                {SOCIAL_FOOTER_HTML}
+                
+                <!-- Footer -->
+                <div style="padding:20px; background:#f8fafc; text-align:center;">
+                    <p style="color:#008f57; font-size:16px; font-weight:600; margin:0 0 5px 0;">FitMatch</p>
+                    <p style="color:#94a3b8; font-size:12px; margin:0;">
+                        La plateforme qui connecte coachs et clients
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        CERTIFICAT DE PAIEMENT - FitMatch
+        
+        Bonjour {first_name} !
+        
+        Votre paiement a été effectué avec succès.
+        
+        DÉTAILS DU PAIEMENT :
+        - Date : {payment_date}
+        - Montant payé : {amount}
+        
+        DÉTAILS DE VOTRE SÉANCE :
+        - Coach : {coach_name}
+        - Salle : {gym_name}
+        - Adresse : {gym_address}
+        - Date : {session_date}
+        - Heure : {session_time}
+        - Prestation : {service_name}
+        - Durée : {duration}
+        
+        Voir mes réservations : {account_url}
+        
+        Ce document fait office de justificatif de paiement et de confirmation de séance.
+        
+        ---
+        FitMatch
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"}
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": f"✓ Paiement confirmé - Séance avec {coach_name} le {session_date}",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            email_id = response.json().get('id', 'N/A')
+            print(f"✅ Certificat paiement séance envoyé à {to_email}")
+            return {"success": True, "email_id": email_id}
+        else:
+            return {"success": False, "error": response.text}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
