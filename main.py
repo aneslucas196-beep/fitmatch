@@ -6354,6 +6354,22 @@ async def stripe_webhook(request: Request):
                                         booking_id=booking_id
                                     )
                                     print(f"📧 Email confirmation envoyé au client")
+                                    
+                                    # Envoyer le certificat de paiement au client
+                                    from resend_service import send_session_payment_receipt
+                                    send_session_payment_receipt(
+                                        to_email=booking_to_confirm.get("client_email"),
+                                        client_name=booking_to_confirm.get("client_name"),
+                                        coach_name=coach_data.get("full_name", "Coach"),
+                                        gym_name=booking_to_confirm.get("gym_name"),
+                                        gym_address=booking_to_confirm.get("gym_address", ""),
+                                        session_date=date_fr,
+                                        session_time=booking_to_confirm.get("time"),
+                                        service_name=booking_to_confirm.get("service"),
+                                        duration=f"{booking_to_confirm.get('duration')} min",
+                                        amount=f"{booking_to_confirm.get('price')}€"
+                                    )
+                                    print(f"📧 Certificat paiement séance envoyé au client")
                                 except Exception as email_error:
                                     print(f"⚠️ Erreur email confirmation: {email_error}")
                     except Exception as booking_error:
@@ -6384,7 +6400,7 @@ async def stripe_webhook(request: Request):
                     print(f"✅ Abonnement activé pour {coach_email}")
                     
                     # Envoyer email de bienvenue
-                    from resend_service import send_subscription_success_email
+                    from resend_service import send_subscription_success_email, send_subscription_payment_receipt
                     coach_data = get_demo_user(coach_email)
                     base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
                     if base_url and not base_url.startswith("http"):
@@ -6395,6 +6411,22 @@ async def stripe_webhook(request: Request):
                         subscription_url=f"{base_url}/coach/portal"
                     )
                     print(f"📧 Email de bienvenue envoyé à {coach_email}")
+                    
+                    # Envoyer le certificat de paiement au coach
+                    subscription_type = data.get("metadata", {}).get("subscription_type", "monthly")
+                    amount_total = data.get("amount_total", 0) / 100  # Convertir centimes en euros
+                    period_start = datetime.fromtimestamp(subscription.current_period_start)
+                    period_end_date = datetime.fromtimestamp(subscription.current_period_end)
+                    
+                    send_subscription_payment_receipt(
+                        to_email=coach_email,
+                        coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
+                        amount=f"{amount_total:.2f}€",
+                        billing_period=subscription_type,
+                        subscription_start=period_start.strftime("%d/%m/%Y"),
+                        subscription_end=period_end_date.strftime("%d/%m/%Y")
+                    )
+                    print(f"📧 Certificat paiement abonnement envoyé à {coach_email}")
                     
                 except Exception as sub_error:
                     print(f"❌ Erreur récupération subscription: {sub_error}")
@@ -6407,8 +6439,8 @@ async def stripe_webhook(request: Request):
                 )
                 print(f"✅ Abonnement activé (sans sub ID) pour {coach_email}")
                 
-                # Envoyer email de bienvenue
-                from resend_service import send_subscription_success_email
+                # Envoyer email de bienvenue et certificat
+                from resend_service import send_subscription_success_email, send_subscription_payment_receipt
                 coach_data = get_demo_user(coach_email)
                 base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
                 if base_url and not base_url.startswith("http"):
@@ -6418,6 +6450,25 @@ async def stripe_webhook(request: Request):
                     coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
                     subscription_url=f"{base_url}/coach/portal"
                 )
+                
+                # Certificat de paiement
+                subscription_type = data.get("metadata", {}).get("subscription_type", "monthly")
+                amount_total = data.get("amount_total", 0) / 100
+                today = datetime.now()
+                if subscription_type == "annual":
+                    end_date = today.replace(year=today.year + 1)
+                else:
+                    end_date = today.replace(month=today.month + 1) if today.month < 12 else today.replace(year=today.year + 1, month=1)
+                
+                send_subscription_payment_receipt(
+                    to_email=coach_email,
+                    coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
+                    amount=f"{amount_total:.2f}€",
+                    billing_period=subscription_type,
+                    subscription_start=today.strftime("%d/%m/%Y"),
+                    subscription_end=end_date.strftime("%d/%m/%Y")
+                )
+                print(f"📧 Certificat paiement abonnement envoyé à {coach_email}")
         
         elif event_type == "customer.subscription.updated":
             # Mise à jour de l'abonnement
