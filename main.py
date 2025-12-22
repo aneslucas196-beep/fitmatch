@@ -6414,14 +6414,22 @@ async def stripe_webhook(request: Request):
                     
                     # Envoyer le certificat de paiement au coach
                     subscription_type = data.get("metadata", {}).get("subscription_type", "monthly")
-                    amount_total = data.get("amount_total", 0) / 100  # Convertir centimes en euros
+                    
+                    # Récupérer le montant depuis la dernière facture Stripe
+                    try:
+                        latest_invoice = stripe.Invoice.retrieve(subscription.latest_invoice)
+                        amount_paid = latest_invoice.amount_paid / 100  # Convertir centimes en euros
+                    except:
+                        # Fallback: utiliser le prix défini
+                        amount_paid = 560.0 if subscription_type == "annual" else 29.0
+                    
                     period_start = datetime.fromtimestamp(subscription.current_period_start)
                     period_end_date = datetime.fromtimestamp(subscription.current_period_end)
                     
                     send_subscription_payment_receipt(
                         to_email=coach_email,
                         coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                        amount=f"{amount_total:.2f}€",
+                        amount=f"{amount_paid:.2f}€",
                         billing_period=subscription_type,
                         subscription_start=period_start.strftime("%d/%m/%Y"),
                         subscription_end=period_end_date.strftime("%d/%m/%Y")
@@ -6453,17 +6461,22 @@ async def stripe_webhook(request: Request):
                 
                 # Certificat de paiement
                 subscription_type = data.get("metadata", {}).get("subscription_type", "monthly")
-                amount_total = data.get("amount_total", 0) / 100
+                
+                # Utiliser les prix définis
+                amount_paid = 560.0 if subscription_type == "annual" else 29.0
+                
+                # Calcul des dates de manière sûre avec timedelta
+                from datetime import timedelta
                 today = datetime.now()
                 if subscription_type == "annual":
-                    end_date = today.replace(year=today.year + 1)
+                    end_date = today + timedelta(days=365)
                 else:
-                    end_date = today.replace(month=today.month + 1) if today.month < 12 else today.replace(year=today.year + 1, month=1)
+                    end_date = today + timedelta(days=30)
                 
                 send_subscription_payment_receipt(
                     to_email=coach_email,
                     coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                    amount=f"{amount_total:.2f}€",
+                    amount=f"{amount_paid:.2f}€",
                     billing_period=subscription_type,
                     subscription_start=today.strftime("%d/%m/%Y"),
                     subscription_end=end_date.strftime("%d/%m/%Y")
