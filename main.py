@@ -6662,6 +6662,60 @@ async def stripe_webhook(request: Request):
             except Exception as connect_error:
                 print(f"❌ Erreur synchronisation compte Connect: {connect_error}")
         
+        elif event_type == "checkout.session.expired":
+            # Session de paiement expirée ou échec
+            metadata = data.get("metadata", {})
+            booking_type = metadata.get("booking_type")
+            coach_email = metadata.get("coach_email")
+            client_email = metadata.get("client_email")
+            
+            base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+            if base_url and not base_url.startswith("http"):
+                base_url = f"https://{base_url}"
+            
+            # Échec paiement SÉANCE CLIENT
+            if booking_type == "session_payment" and client_email:
+                print(f"❌ Paiement séance expiré pour client: {client_email}")
+                try:
+                    from resend_service import send_session_payment_failed_email
+                    
+                    coach_name = metadata.get("coach_name", "Coach")
+                    session_date = metadata.get("session_date", "")
+                    session_time = metadata.get("session_time", "")
+                    coach_slug = metadata.get("coach_slug", "")
+                    
+                    retry_url = f"{base_url}/coach/{coach_slug}" if coach_slug else base_url
+                    
+                    send_session_payment_failed_email(
+                        to_email=client_email,
+                        client_name=metadata.get("client_name", "Client"),
+                        coach_name=coach_name,
+                        session_date=session_date,
+                        session_time=session_time,
+                        retry_url=retry_url
+                    )
+                    print(f"📧 Email échec paiement séance envoyé à {client_email}")
+                except Exception as email_error:
+                    print(f"⚠️ Erreur envoi email échec séance: {email_error}")
+            
+            # Échec paiement ABONNEMENT COACH (inscription initiale)
+            elif coach_email and not booking_type:
+                print(f"❌ Paiement abonnement expiré pour coach: {coach_email}")
+                try:
+                    from resend_service import send_coach_signup_payment_failed_email
+                    
+                    coach_data = get_demo_user(coach_email)
+                    coach_name = coach_data.get("full_name", "Coach") if coach_data else "Coach"
+                    
+                    send_coach_signup_payment_failed_email(
+                        to_email=coach_email,
+                        coach_name=coach_name,
+                        retry_url=f"{base_url}/coach-signup"
+                    )
+                    print(f"📧 Email échec paiement inscription envoyé à {coach_email}")
+                except Exception as email_error:
+                    print(f"⚠️ Erreur envoi email échec inscription: {email_error}")
+        
         return JSONResponse({"received": True})
     
     except Exception as e:

@@ -2450,3 +2450,279 @@ def send_session_payment_receipt(
             
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+def send_coach_signup_payment_failed_email(
+    to_email: str,
+    coach_name: str,
+    retry_url: str
+) -> dict:
+    """
+    Envoie un email quand le paiement d'inscription coach échoue.
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    
+    first_name = coach_name.split()[0] if coach_name else "Coach"
+    
+    print(f"📧 Envoi email échec paiement inscription coach:")
+    print(f"  - Coach: {coach_name} ({to_email})")
+    
+    if not resend_key:
+        print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi")
+        return {"success": True, "mode": "demo"}
+    
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"></head>
+        <body style="margin:0; padding:0; font-family: 'Inter', Arial, sans-serif; background-color:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:white;">
+                
+                <!-- Header -->
+                <div style="background:#fef2f2; padding:40px; text-align:center; border-bottom:3px solid #ef4444;">
+                    <h1 style="color:#dc2626; margin:0; font-size:24px;">❌ Échec du paiement</h1>
+                    <p style="color:#991b1b; margin:10px 0 0 0; font-size:14px;">Votre inscription n'a pas pu être finalisée</p>
+                </div>
+                
+                <!-- Contenu -->
+                <div style="padding:40px;">
+                    <h2 style="color:#1e293b; margin-bottom:20px;">Bonjour {first_name},</h2>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6;">
+                        Nous n'avons pas pu traiter votre paiement pour l'abonnement FitMatch Pro.
+                        Votre inscription n'est donc pas encore finalisée.
+                    </p>
+                    
+                    <div style="background:#fef3c7; border-radius:10px; padding:20px; margin:25px 0;">
+                        <h4 style="color:#92400e; margin:0 0 10px 0;">Causes possibles :</h4>
+                        <ul style="margin:0; padding-left:20px; color:#92400e; font-size:14px; line-height:1.8;">
+                            <li>Carte bancaire expirée ou invalide</li>
+                            <li>Fonds insuffisants sur le compte</li>
+                            <li>Plafond de paiement atteint</li>
+                            <li>Problème technique temporaire</li>
+                        </ul>
+                    </div>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6;">
+                        Pas de panique ! Vous pouvez réessayer à tout moment avec une autre carte ou après avoir vérifié vos informations bancaires.
+                    </p>
+                    
+                    <div style="text-align:center; margin:35px 0;">
+                        <a href="{retry_url}" style="display:inline-block; background:#008f57; color:white; padding:15px 40px; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px;">
+                            Réessayer mon inscription
+                        </a>
+                    </div>
+                    
+                    <p style="color:#94a3b8; font-size:13px; text-align:center;">
+                        Besoin d'aide ? Contactez-nous à contact@fitmatch.fr
+                    </p>
+                </div>
+                
+                {SOCIAL_FOOTER_HTML}
+                
+                <div style="padding:20px; background:#f8fafc; text-align:center;">
+                    <p style="color:#008f57; font-size:16px; font-weight:600; margin:0 0 5px 0;">FitMatch</p>
+                    <p style="color:#94a3b8; font-size:12px; margin:0;">La plateforme qui connecte coachs et clients</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        ÉCHEC DU PAIEMENT - FitMatch
+        
+        Bonjour {first_name},
+        
+        Nous n'avons pas pu traiter votre paiement pour l'abonnement FitMatch Pro.
+        Votre inscription n'est donc pas encore finalisée.
+        
+        Causes possibles :
+        - Carte bancaire expirée ou invalide
+        - Fonds insuffisants sur le compte
+        - Plafond de paiement atteint
+        - Problème technique temporaire
+        
+        Réessayer mon inscription : {retry_url}
+        
+        Besoin d'aide ? Contactez-nous à contact@fitmatch.fr
+        
+        ---
+        FitMatch
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"}
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": "❌ Échec du paiement - Inscription FitMatch Pro",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            email_id = response.json().get('id', 'N/A')
+            print(f"✅ Email échec paiement inscription envoyé à {to_email}")
+            return {"success": True, "email_id": email_id}
+        else:
+            return {"success": False, "error": response.text}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def send_session_payment_failed_email(
+    to_email: str,
+    client_name: str,
+    coach_name: str,
+    session_date: str,
+    session_time: str,
+    retry_url: str
+) -> dict:
+    """
+    Envoie un email quand le paiement d'une séance échoue.
+    """
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    
+    first_name = client_name.split()[0] if client_name else "Client"
+    
+    print(f"📧 Envoi email échec paiement séance:")
+    print(f"  - Client: {client_name} ({to_email})")
+    print(f"  - Coach: {coach_name}")
+    
+    if not resend_key:
+        print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi")
+        return {"success": True, "mode": "demo"}
+    
+    try:
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"></head>
+        <body style="margin:0; padding:0; font-family: 'Inter', Arial, sans-serif; background-color:#f5f5f5;">
+            <div style="max-width:600px; margin:0 auto; background:white;">
+                
+                <!-- Header -->
+                <div style="background:#fef2f2; padding:40px; text-align:center; border-bottom:3px solid #ef4444;">
+                    <h1 style="color:#dc2626; margin:0; font-size:24px;">❌ Échec du paiement</h1>
+                    <p style="color:#991b1b; margin:10px 0 0 0; font-size:14px;">Votre réservation n'a pas pu être confirmée</p>
+                </div>
+                
+                <!-- Contenu -->
+                <div style="padding:40px;">
+                    <h2 style="color:#1e293b; margin-bottom:20px;">Bonjour {first_name},</h2>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6;">
+                        Nous n'avons pas pu traiter votre paiement pour la séance avec <strong>{coach_name}</strong>.
+                        Votre réservation n'est donc pas confirmée.
+                    </p>
+                    
+                    <!-- Détails de la séance -->
+                    <div style="background:#f8fafc; border:2px solid #e2e8f0; border-radius:12px; padding:20px; margin:25px 0;">
+                        <h4 style="color:#0f172a; margin:0 0 15px 0;">Séance concernée :</h4>
+                        <table style="width:100%; font-size:14px; color:#334155;">
+                            <tr>
+                                <td style="padding:5px 0; color:#64748b;">Coach</td>
+                                <td style="padding:5px 0; text-align:right; font-weight:600;">{coach_name}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 0; color:#64748b;">Date</td>
+                                <td style="padding:5px 0; text-align:right; font-weight:600;">{session_date}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:5px 0; color:#64748b;">Heure</td>
+                                <td style="padding:5px 0; text-align:right; font-weight:600;">{session_time}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div style="background:#fef3c7; border-radius:10px; padding:20px; margin:25px 0;">
+                        <h4 style="color:#92400e; margin:0 0 10px 0;">Causes possibles :</h4>
+                        <ul style="margin:0; padding-left:20px; color:#92400e; font-size:14px; line-height:1.8;">
+                            <li>Carte bancaire expirée ou invalide</li>
+                            <li>Fonds insuffisants</li>
+                            <li>Paiement refusé par votre banque</li>
+                        </ul>
+                    </div>
+                    
+                    <p style="color:#64748b; font-size:16px; line-height:1.6;">
+                        Vous pouvez réessayer de réserver avec une autre carte ou après avoir vérifié vos informations.
+                    </p>
+                    
+                    <div style="text-align:center; margin:35px 0;">
+                        <a href="{retry_url}" style="display:inline-block; background:#008f57; color:white; padding:15px 40px; text-decoration:none; border-radius:8px; font-weight:600; font-size:16px;">
+                            Réessayer la réservation
+                        </a>
+                    </div>
+                    
+                    <p style="color:#94a3b8; font-size:13px; text-align:center;">
+                        Besoin d'aide ? Contactez-nous à contact@fitmatch.fr
+                    </p>
+                </div>
+                
+                {SOCIAL_FOOTER_HTML}
+                
+                <div style="padding:20px; background:#f8fafc; text-align:center;">
+                    <p style="color:#008f57; font-size:16px; font-weight:600; margin:0 0 5px 0;">FitMatch</p>
+                    <p style="color:#94a3b8; font-size:12px; margin:0;">La plateforme qui connecte coachs et clients</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        ÉCHEC DU PAIEMENT - FitMatch
+        
+        Bonjour {first_name},
+        
+        Nous n'avons pas pu traiter votre paiement pour la séance avec {coach_name}.
+        Votre réservation n'est donc pas confirmée.
+        
+        Séance concernée :
+        - Coach : {coach_name}
+        - Date : {session_date}
+        - Heure : {session_time}
+        
+        Causes possibles :
+        - Carte bancaire expirée ou invalide
+        - Fonds insuffisants
+        - Paiement refusé par votre banque
+        
+        Réessayer la réservation : {retry_url}
+        
+        Besoin d'aide ? Contactez-nous à contact@fitmatch.fr
+        
+        ---
+        FitMatch
+        """
+        
+        url = "https://api.resend.com/emails"
+        headers = {"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"}
+        
+        data = {
+            "from": mail_from,
+            "to": [to_email],
+            "subject": f"❌ Échec du paiement - Séance avec {coach_name}",
+            "html": html_content,
+            "text": text_content
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=10)
+        
+        if response.status_code == 200:
+            email_id = response.json().get('id', 'N/A')
+            print(f"✅ Email échec paiement séance envoyé à {to_email}")
+            return {"success": True, "email_id": email_id}
+        else:
+            return {"success": False, "error": response.text}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
