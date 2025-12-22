@@ -10,6 +10,7 @@ from typing import Optional, Dict, Any
 
 # Prix de l'abonnement mensuel coach (en centimes)
 COACH_MONTHLY_PRICE = 2900  # 29€/mois
+COACH_ANNUAL_PRICE = 56000  # 560€/an (réduit de 20% par rapport à 720€)
 
 
 async def get_stripe_credentials() -> Dict[str, str]:
@@ -103,12 +104,23 @@ def create_checkout_session(
     customer_id: str,
     success_url: str,
     cancel_url: str,
-    coach_email: str
+    coach_email: str,
+    billing_period: str = "monthly"
 ) -> stripe.checkout.Session:
     """
-    Crée une session Checkout Stripe pour l'abonnement mensuel.
+    Crée une session Checkout Stripe pour l'abonnement.
+    billing_period: "monthly" (29€/mois) ou "annual" (560€/an avec -20% réduction)
     """
     init_stripe()
+    
+    if billing_period == "annual":
+        unit_amount = COACH_ANNUAL_PRICE
+        interval = "year"
+        subscription_type = "coach_annual"
+    else:
+        unit_amount = COACH_MONTHLY_PRICE
+        interval = "month"
+        subscription_type = "coach_monthly"
     
     session = stripe.checkout.Session.create(
         customer=customer_id,
@@ -122,9 +134,9 @@ def create_checkout_session(
                     "description": "Accès complet à la plateforme FitMatch pour les coachs",
                     "images": ["https://fitmatch.fr/logo.png"]
                 },
-                "unit_amount": COACH_MONTHLY_PRICE,
+                "unit_amount": unit_amount,
                 "recurring": {
-                    "interval": "month"
+                    "interval": interval
                 }
             },
             "quantity": 1
@@ -133,12 +145,12 @@ def create_checkout_session(
         cancel_url=cancel_url,
         metadata={
             "coach_email": coach_email,
-            "subscription_type": "coach_monthly"
+            "subscription_type": subscription_type
         },
         subscription_data={
             "metadata": {
                 "coach_email": coach_email,
-                "subscription_type": "coach_monthly"
+                "subscription_type": subscription_type
             }
         }
     )

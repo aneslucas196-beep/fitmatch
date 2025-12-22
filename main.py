@@ -6194,6 +6194,9 @@ reminder_thread.start()
 async def api_create_checkout_session(request: Request, user = Depends(require_coach_or_pending)):
     """Crée une session Checkout Stripe pour l'abonnement (accessible même sans abonnement actif)."""
     try:
+        body = await request.json()
+        billing_period = body.get("billing_period", "monthly")
+        
         coach_email = user.get("email")
         coach_name = user.get("full_name", user.get("name", "Coach"))
         coach_id = user.get("id", coach_email)
@@ -6214,7 +6217,8 @@ async def api_create_checkout_session(request: Request, user = Depends(require_c
             customer_id=customer.id,
             success_url=success_url,
             cancel_url=cancel_url,
-            coach_email=coach_email
+            coach_email=coach_email,
+            billing_period=billing_period
         )
         
         return JSONResponse({"url": session.url})
