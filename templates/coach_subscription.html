@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" dir="{{ t.dir|default('ltr') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Abonnement Coach - FitMatch</title>
+    <title>{{ t.subscription.page_title|default('Abonnement Coach - FitMatch') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -21,11 +21,11 @@
         </a>
         {% if subscription_info and subscription_info.subscription_status == 'active' %}
         <a href="/coach/portal" class="text-slate-600 hover:text-slate-900 font-medium">
-            &larr; Retour au dashboard
+            &larr; {{ t.subscription.back_to_dashboard|default('Retour au dashboard') }}
         </a>
         {% else %}
         <a href="/coach-login" class="text-slate-600 hover:text-slate-900 font-medium">
-            &larr; Retour
+            &larr; {{ t.subscription.back|default('Retour') }}
         </a>
         {% endif %}
     </div>
@@ -34,11 +34,11 @@
 <div class="h-16"></div>
 
 <div id="successToast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium hidden">
-    Abonnement activé avec succès !
+    {{ t.subscription.success_toast|default('Abonnement activé avec succès !') }}
 </div>
 
 <div id="cancelledToast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium hidden">
-    Abonnement annulé
+    {{ t.subscription.cancelled_toast|default('Abonnement annulé') }}
 </div>
 
 <script>
@@ -69,21 +69,21 @@ if (urlParams.get('cancelled')) {
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
-                Bienvenue {{ coach.full_name }} ! Dernière étape avant de commencer
+                {{ t.subscription.welcome_message|default('Bienvenue {name} ! Dernière étape avant de commencer')|replace('{name}', coach.full_name|default('')) }}
             </div>
             {% endif %}
             <h1 class="text-3xl md:text-4xl font-bold mb-3 text-slate-900">
                 {% if subscription_info and subscription_info.subscription_status == 'active' %}
-                Abonnement FitMatch Pro
+                {{ t.subscription.title_active|default('Abonnement FitMatch Pro') }}
                 {% else %}
-                Activez votre compte coach
+                {{ t.subscription.title_inactive|default('Activez votre compte coach') }}
                 {% endif %}
             </h1>
             <p class="text-lg md:text-xl text-slate-600">
                 {% if subscription_info and subscription_info.subscription_status == 'active' %}
-                Tout ce dont vous avez besoin pour développer votre activité de coaching
+                {{ t.subscription.subtitle_active|default('Tout ce dont vous avez besoin pour développer votre activité de coaching') }}
                 {% else %}
-                Choisissez votre abonnement pour accéder à votre espace coach et commencer à recevoir des réservations
+                {{ t.subscription.subtitle_inactive|default('Choisissez votre abonnement pour accéder à votre espace coach et commencer à recevoir des réservations') }}
                 {% endif %}
             </p>
         </div>
@@ -100,18 +100,18 @@ if (urlParams.get('cancelled')) {
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-900">Abonnement actif</h2>
-                    <p class="text-slate-600">Vous profitez de tous les avantages FitMatch Pro</p>
+                    <h2 class="text-2xl font-bold text-slate-900">{{ t.subscription.active_subscription|default('Abonnement actif') }}</h2>
+                    <p class="text-slate-600">{{ t.subscription.enjoy_benefits|default('Vous profitez de tous les avantages FitMatch Pro') }}</p>
                 </div>
             </div>
             
             <div class="grid md:grid-cols-2 gap-6 mb-8">
                 <div class="bg-slate-50 rounded-xl p-5">
-                    <p class="text-sm text-slate-500 mb-1">Statut</p>
-                    <p class="text-lg font-semibold text-emerald-600">Actif</p>
+                    <p class="text-sm text-slate-500 mb-1">{{ t.subscription.status|default('Statut') }}</p>
+                    <p class="text-lg font-semibold text-emerald-600">{{ t.subscription.status_active|default('Actif') }}</p>
                 </div>
                 <div class="bg-slate-50 rounded-xl p-5">
-                    <p class="text-sm text-slate-500 mb-1">Prochain renouvellement</p>
+                    <p class="text-sm text-slate-500 mb-1">{{ t.subscription.next_renewal|default('Prochain renouvellement') }}</p>
                     <p class="text-lg font-semibold text-slate-900">
                         {% if subscription_info.subscription_period_end %}
                             {{ subscription_info.subscription_period_end[:10] }}
@@ -125,15 +125,15 @@ if (urlParams.get('cancelled')) {
             {% if subscription_info.stripe_customer_id %}
             <button onclick="openPortal()" 
                     class="w-full bg-slate-900 text-white py-4 rounded-xl font-semibold hover:bg-slate-800 transition duration-200">
-                Gérer mon abonnement
+                {{ t.subscription.manage_subscription|default('Gérer mon abonnement') }}
             </button>
             <p class="text-center text-sm text-slate-500 mt-3">
-                Modifier votre carte, télécharger vos factures ou résilier votre abonnement
+                {{ t.subscription.manage_subtitle|default('Modifier votre carte, télécharger vos factures ou résilier votre abonnement') }}
             </p>
             {% else %}
             <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
-                <p class="text-emerald-800 font-medium">Compte offert</p>
-                <p class="text-sm text-emerald-600 mt-1">Votre abonnement FitMatch Pro est actif sans prélèvement automatique.</p>
+                <p class="text-emerald-800 font-medium">{{ t.subscription.free_account|default('Compte offert') }}</p>
+                <p class="text-sm text-emerald-600 mt-1">{{ t.subscription.free_account_desc|default('Votre abonnement FitMatch Pro est actif sans prélèvement automatique.') }}</p>
             </div>
             {% endif %}
         </div>
@@ -143,12 +143,12 @@ if (urlParams.get('cancelled')) {
             
             <div class="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
                 <div class="text-center mb-8">
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">Plan Annuel</h3>
-                    <div class="text-4xl font-bold text-slate-900">560€<span class="text-lg text-slate-500">/an</span></div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">{{ t.subscription.annual_plan|default('Plan Annuel') }}</h3>
+                    <div class="text-4xl font-bold text-slate-900">560€<span class="text-lg text-slate-500">{{ t.subscription.per_year|default('/an') }}</span></div>
                     <div class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold mt-2">
-                        -20% de réduction
+                        {{ t.subscription.discount|default('-20% de réduction') }}
                     </div>
-                    <p class="text-slate-500 text-sm mt-2">Au lieu de 720€/an</p>
+                    <p class="text-slate-500 text-sm mt-2">{{ t.subscription.instead_of|default('Au lieu de 720€/an') }}</p>
                 </div>
                 
                 <ul class="space-y-4 mb-8">
@@ -156,61 +156,61 @@ if (urlParams.get('cancelled')) {
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        <strong>Profil coach premium</strong>
+                        <strong>{{ t.subscription.premium_profile|default('Profil coach premium') }}</strong>
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        <strong>Salles illimitées</strong>
+                        <strong>{{ t.subscription.unlimited_gyms|default('Salles illimitées') }}</strong>
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Réservations en ligne
+                        {{ t.subscription.online_booking|default('Réservations en ligne') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Paiement en ligne disponible
+                        {{ t.subscription.online_payment|default('Paiement en ligne disponible') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Lien spécialisé pour les réseaux sociaux
+                        {{ t.subscription.social_link|default('Lien spécialisé pour les réseaux sociaux') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Rappels email automatiques
+                        {{ t.subscription.email_reminders|default('Rappels email automatiques') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Messagerie avec clients
+                        {{ t.subscription.client_messaging|default('Messagerie avec clients') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Statistiques détaillées
+                        {{ t.subscription.detailed_stats|default('Statistiques détaillées') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Support prioritaire
+                        {{ t.subscription.priority_support|default('Support prioritaire') }}
                     </li>
                 </ul>
                 
                 <button onclick="subscribeAnnual()" id="subscribeAnnualBtn"
                         class="w-full bg-slate-900 text-white py-4 rounded-xl font-semibold hover:bg-slate-800 transition duration-200 flex items-center justify-center">
-                    <span id="btnAnnualText">S'abonner pour 1 an</span>
+                    <span id="btnAnnualText">{{ t.subscription.subscribe_annual|default("S'abonner pour 1 an") }}</span>
                     <svg id="btnAnnualSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -218,19 +218,19 @@ if (urlParams.get('cancelled')) {
                 </button>
                 
                 <p class="text-center text-slate-500 text-sm mt-4">
-                    Facturé 560€ pour 1 an
+                    {{ t.subscription.billed_annually|default('Facturé 560€ pour 1 an') }}
                 </p>
             </div>
 
             <div class="bg-white rounded-2xl shadow-xl p-8 border-2 border-emerald-500 relative">
                 <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                    Recommandé
+                    {{ t.subscription.recommended|default('Recommandé') }}
                 </div>
                 
                 <div class="text-center mb-8">
-                    <h3 class="text-xl font-bold text-slate-900 mb-2">FitMatch Pro</h3>
-                    <div class="text-4xl font-bold text-emerald-600">{{ monthly_price }}€<span class="text-lg text-slate-500">/mois</span></div>
-                    <p class="text-slate-500">Développez votre activité</p>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">{{ t.subscription.monthly_plan|default('FitMatch Pro') }}</h3>
+                    <div class="text-4xl font-bold text-emerald-600">{{ monthly_price }}€<span class="text-lg text-slate-500">{{ t.subscription.per_month|default('/mois') }}</span></div>
+                    <p class="text-slate-500">{{ t.subscription.grow_business|default('Développez votre activité') }}</p>
                 </div>
                 
                 <ul class="space-y-4 mb-8">
@@ -238,61 +238,61 @@ if (urlParams.get('cancelled')) {
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        <strong>Profil coach premium</strong>
+                        <strong>{{ t.subscription.premium_profile|default('Profil coach premium') }}</strong>
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        <strong>Salles illimitées</strong>
+                        <strong>{{ t.subscription.unlimited_gyms|default('Salles illimitées') }}</strong>
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Réservations en ligne
+                        {{ t.subscription.online_booking|default('Réservations en ligne') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Paiement en ligne disponible
+                        {{ t.subscription.online_payment|default('Paiement en ligne disponible') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Lien spécialisé pour les réseaux sociaux
+                        {{ t.subscription.social_link|default('Lien spécialisé pour les réseaux sociaux') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Rappels email automatiques
+                        {{ t.subscription.email_reminders|default('Rappels email automatiques') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Messagerie avec clients
+                        {{ t.subscription.client_messaging|default('Messagerie avec clients') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Statistiques détaillées
+                        {{ t.subscription.detailed_stats|default('Statistiques détaillées') }}
                     </li>
                     <li class="flex items-center text-slate-700">
                         <svg class="w-5 h-5 text-emerald-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        Support prioritaire
+                        {{ t.subscription.priority_support|default('Support prioritaire') }}
                     </li>
                 </ul>
                 
                 <button onclick="subscribe()" id="subscribeBtn"
                         class="w-full bg-emerald-500 text-white py-4 rounded-xl font-semibold hover:bg-emerald-600 transition duration-200 flex items-center justify-center">
-                    <span id="btnText">S'abonner maintenant</span>
+                    <span id="btnText">{{ t.subscription.subscribe_now|default("S'abonner maintenant") }}</span>
                     <svg id="btnSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -300,49 +300,49 @@ if (urlParams.get('cancelled')) {
                 </button>
                 
                 <p class="text-center text-slate-500 text-sm mt-4">
-                    Sans engagement - Annulable à tout moment
+                    {{ t.subscription.no_commitment|default('Sans engagement - Annulable à tout moment') }}
                 </p>
             </div>
         </div>
         {% endif %}
 
         <div class="mt-12 bg-white rounded-2xl shadow-lg p-8">
-            <h3 class="text-xl font-bold text-slate-900 mb-6 text-center">Questions fréquentes</h3>
+            <h3 class="text-xl font-bold text-slate-900 mb-6 text-center">{{ t.subscription.faq_title|default('Questions fréquentes') }}</h3>
             
             <div class="space-y-4">
                 <details class="group border border-slate-200 rounded-xl">
                     <summary class="flex justify-between items-center cursor-pointer p-5 font-medium text-slate-900">
-                        Comment fonctionne l'abonnement ?
+                        {{ t.subscription.faq1_question|default('Comment fonctionne l\'abonnement ?') }}
                         <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </summary>
                     <div class="px-5 pb-5 text-slate-600">
-                        L'abonnement est mensuel et se renouvelle automatiquement. Vous pouvez l'annuler à tout moment depuis votre espace de gestion.
+                        {{ t.subscription.faq1_answer|default('L\'abonnement est mensuel et se renouvelle automatiquement. Vous pouvez l\'annuler à tout moment depuis votre espace de gestion.') }}
                     </div>
                 </details>
                 
                 <details class="group border border-slate-200 rounded-xl">
                     <summary class="flex justify-between items-center cursor-pointer p-5 font-medium text-slate-900">
-                        Puis-je annuler à tout moment ?
+                        {{ t.subscription.faq2_question|default('Puis-je annuler à tout moment ?') }}
                         <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </summary>
                     <div class="px-5 pb-5 text-slate-600">
-                        Oui, vous pouvez annuler votre abonnement à tout moment. Vous conserverez l'accès jusqu'à la fin de la période payée.
+                        {{ t.subscription.faq2_answer|default('Oui, vous pouvez annuler votre abonnement à tout moment. Vous conserverez l\'accès jusqu\'à la fin de la période payée.') }}
                     </div>
                 </details>
                 
                 <details class="group border border-slate-200 rounded-xl">
                     <summary class="flex justify-between items-center cursor-pointer p-5 font-medium text-slate-900">
-                        Quels moyens de paiement acceptez-vous ?
+                        {{ t.subscription.faq3_question|default('Quels moyens de paiement acceptez-vous ?') }}
                         <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </summary>
                     <div class="px-5 pb-5 text-slate-600">
-                        Nous acceptons les cartes bancaires Visa, Mastercard et American Express. Le paiement est sécurisé par Stripe.
+                        {{ t.subscription.faq3_answer|default('Nous acceptons les cartes bancaires Visa, Mastercard et American Express. Le paiement est sécurisé par Stripe.') }}
                     </div>
                 </details>
             </div>
@@ -352,13 +352,20 @@ if (urlParams.get('cancelled')) {
 </div>
 
 <script>
+const i18n = {
+    redirecting: '{{ t.subscription.redirecting|default("Redirection...") }}',
+    error: '{{ t.subscription.error_occurred|default("Une erreur est survenue. Veuillez réessayer.") }}',
+    subscribeNow: '{{ t.subscription.subscribe_now|default("S\'abonner maintenant") }}',
+    subscribeAnnual: '{{ t.subscription.subscribe_annual|default("S\'abonner pour 1 an") }}'
+};
+
 async function subscribe() {
     const btn = document.getElementById('subscribeBtn');
     const btnText = document.getElementById('btnText');
     const btnSpinner = document.getElementById('btnSpinner');
     
     btn.disabled = true;
-    btnText.textContent = 'Redirection...';
+    btnText.textContent = i18n.redirecting;
     btnSpinner.classList.remove('hidden');
     
     try {
@@ -376,9 +383,9 @@ async function subscribe() {
         }
     } catch (error) {
         console.error('Erreur:', error);
-        alert('Une erreur est survenue. Veuillez réessayer.');
+        alert(i18n.error);
         btn.disabled = false;
-        btnText.textContent = "S'abonner maintenant";
+        btnText.textContent = i18n.subscribeNow;
         btnSpinner.classList.add('hidden');
     }
 }
@@ -389,7 +396,7 @@ async function subscribeAnnual() {
     const btnSpinner = document.getElementById('btnAnnualSpinner');
     
     btn.disabled = true;
-    btnText.textContent = 'Redirection...';
+    btnText.textContent = i18n.redirecting;
     btnSpinner.classList.remove('hidden');
     
     try {
@@ -408,9 +415,9 @@ async function subscribeAnnual() {
         }
     } catch (error) {
         console.error('Erreur:', error);
-        alert('Une erreur est survenue. Veuillez réessayer.');
+        alert(i18n.error);
         btn.disabled = false;
-        btnText.textContent = "S'abonner pour 1 an";
+        btnText.textContent = i18n.subscribeAnnual;
         btnSpinner.classList.add('hidden');
     }
 }
@@ -431,7 +438,7 @@ async function openPortal() {
         }
     } catch (error) {
         console.error('Erreur:', error);
-        alert('Une erreur est survenue. Veuillez réessayer.');
+        alert(i18n.error);
     }
 }
 </script>

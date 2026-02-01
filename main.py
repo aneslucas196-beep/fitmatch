@@ -3084,7 +3084,9 @@ async def coach_subscription_page(
         "coach": user,
         "subscription_info": subscription_info,
         "monthly_price": COACH_MONTHLY_PRICE / 100,
-        "publishable_key": get_publishable_key()
+        "publishable_key": get_publishable_key(),
+        "t": translations,
+        "locale": locale
     })
 
 # ======================================
