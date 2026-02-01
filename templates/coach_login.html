@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" dir="{{ text_direction|default('ltr') }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Espace Coach – FitMatch</title>
+<title>{{ t.coach_portal.title|default('Espace') }} {{ t.coach_portal.title_space|default('Coach') }} – FitMatch</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{box-sizing:border-box}
@@ -405,13 +405,13 @@
   </a>
   
   <div class="nav-links">
-    <a href="/">Accueil</a>
-    <a href="/coach-signup">Devenir coach</a>
+    <a href="/">{{ t.coach_portal.nav_home|default('Accueil') }}</a>
+    <a href="/coach-signup">{{ t.coach_portal.nav_become_coach|default('Devenir coach') }}</a>
   </div>
   
   <div class="nav-right">
-    <a href="/login" class="cta-outline">Je suis client</a>
-    <a href="/" class="cta">Accueil</a>
+    <a href="/login" class="cta-outline">{{ t.coach_portal.nav_client|default('Je suis client') }}</a>
+    <a href="/" class="cta">{{ t.coach_portal.nav_home|default('Accueil') }}</a>
   </div>
 </nav>
 
@@ -420,15 +420,15 @@
     <div class="fm-card">
       <header class="fm-head">
         <div class="fm-icon">🏋️</div>
-        <h1>Espace <span class="fm-brand">Coach</span></h1>
-        <p>Connectez-vous ou créez votre compte coach</p>
+        <h1>{{ t.coach_portal.title|default('Espace') }} <span class="fm-brand">{{ t.coach_portal.title_space|default('Coach') }}</span></h1>
+        <p>{{ t.coach_portal.subtitle|default('Connectez-vous ou créez votre compte coach') }}</p>
       </header>
 
       {% if error %}
       <div class="fm-alert fm-alert-error">
         <span class="fm-alert-icon">⚠️</span>
         <div class="fm-alert-content">
-          <div class="fm-alert-title">Erreur</div>
+          <div class="fm-alert-title">{{ t.coach_portal.error_title|default('Erreur') }}</div>
           <div>{{ error }}</div>
         </div>
       </div>
@@ -438,7 +438,7 @@
       <div class="fm-alert fm-alert-success">
         <span class="fm-alert-icon">✅</span>
         <div class="fm-alert-content">
-          <div class="fm-alert-title">Succès</div>
+          <div class="fm-alert-title">{{ t.coach_portal.success_title|default('Succès') }}</div>
           <div>{{ success }}</div>
         </div>
       </div>
@@ -446,8 +446,8 @@
 
       <!-- Tabs -->
       <div class="fm-tabs">
-        <button type="button" class="fm-tab active" id="tab-login" onclick="showTab('login')">Se connecter</button>
-        <button type="button" class="fm-tab" id="tab-signup" onclick="showTab('signup')">S'inscrire</button>
+        <button type="button" class="fm-tab active" id="tab-login" onclick="showTab('login')">{{ t.coach_portal.tab_login|default('Se connecter') }}</button>
+        <button type="button" class="fm-tab" id="tab-signup" onclick="showTab('signup')">{{ t.coach_portal.tab_signup|default("S'inscrire") }}</button>
       </div>
 
       <!-- Login Form -->
@@ -455,20 +455,20 @@
         <input type="hidden" name="action" value="login">
         
         <div class="fm-field">
-          <label for="login-email" class="fm-label">Adresse email</label>
+          <label for="login-email" class="fm-label">{{ t.coach_portal.email_label|default('Adresse email') }}</label>
           <input 
             type="email" 
             name="email" 
             id="login-email" 
             required 
             class="fm-input"
-            placeholder="coach@exemple.com"
+            placeholder="{{ t.coach_portal.email_placeholder|default('coach@exemple.com') }}"
             autocomplete="email"
           >
         </div>
         
         <div class="fm-field">
-          <label for="login-password" class="fm-label">Mot de passe</label>
+          <label for="login-password" class="fm-label">{{ t.coach_portal.password_label|default('Mot de passe') }}</label>
           <div class="fm-password-wrap">
             <input 
               type="password" 
@@ -476,7 +476,7 @@
               id="login-password" 
               required
               class="fm-input"
-              placeholder="Votre mot de passe"
+              placeholder="{{ t.coach_portal.password_placeholder|default('Votre mot de passe') }}"
               autocomplete="current-password"
             >
             <button type="button" class="fm-password-toggle" onclick="togglePassword('login-password', 'login-eye')" aria-label="Afficher le mot de passe">
@@ -488,7 +488,7 @@
           </div>
         </div>
         
-        <button type="submit" class="fm-btn">Se connecter</button>
+        <button type="submit" class="fm-btn">{{ t.coach_portal.login_button|default('Se connecter') }}</button>
       </form>
 
       <!-- Signup Form -->
@@ -496,33 +496,33 @@
         <input type="hidden" name="action" value="signup">
         
         <div class="fm-field">
-          <label for="signup-name" class="fm-label">Nom complet</label>
+          <label for="signup-name" class="fm-label">{{ t.coach_portal.full_name|default('Nom complet') }}</label>
           <input 
             type="text" 
             name="name" 
             id="signup-name" 
             required 
             class="fm-input"
-            placeholder="Votre nom"
+            placeholder="{{ t.coach_portal.name_placeholder|default('Votre nom') }}"
             autocomplete="name"
           >
         </div>
         
         <div class="fm-field">
-          <label for="signup-email" class="fm-label">Adresse email</label>
+          <label for="signup-email" class="fm-label">{{ t.coach_portal.email_label|default('Adresse email') }}</label>
           <input 
             type="email" 
             name="email" 
             id="signup-email" 
             required 
             class="fm-input"
-            placeholder="coach@exemple.com"
+            placeholder="{{ t.coach_portal.email_placeholder|default('coach@exemple.com') }}"
             autocomplete="email"
           >
         </div>
         
         <div class="fm-field">
-          <label for="signup-password" class="fm-label">Mot de passe</label>
+          <label for="signup-password" class="fm-label">{{ t.coach_portal.password_label|default('Mot de passe') }}</label>
           <div class="fm-password-wrap">
             <input 
               type="password" 
@@ -531,7 +531,7 @@
               required
               minlength="8"
               class="fm-input"
-              placeholder="Minimum 8 caractères"
+              placeholder="{{ t.coach_portal.password_min|default('Minimum 8 caractères') }}"
               autocomplete="new-password"
             >
             <button type="button" class="fm-password-toggle" onclick="togglePassword('signup-password', 'signup-eye')" aria-label="Afficher le mot de passe">
@@ -543,20 +543,20 @@
           </div>
         </div>
         
-        <button type="submit" class="fm-btn">Créer mon compte coach</button>
+        <button type="submit" class="fm-btn">{{ t.coach_portal.signup_button|default('Créer mon compte coach') }}</button>
       </form>
 
       <div class="fm-client-link">
-        <p>Vous êtes un client ?</p>
+        <p>{{ t.coach_portal.client_question|default('Vous êtes un client ?') }}</p>
         <a href="/login">
-          Connectez-vous ici
+          {{ t.coach_portal.client_link|default('Connectez-vous ici') }}
           <span>→</span>
         </a>
       </div>
     </div>
     
     <div class="fm-footer">
-      © 2024 FitMatch. Tous droits réservés.
+      © 2024 FitMatch. {{ t.coach_portal.footer|default('Tous droits réservés.') }}
     </div>
   </div>
 </section>

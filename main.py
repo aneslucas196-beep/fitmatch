@@ -2198,11 +2198,11 @@ async def api_reset_password(request: Request):
 @app.get("/coach-login", response_class=HTMLResponse)
 async def coach_login_page(request: Request, tab: Optional[str] = None):
     """Page de connexion/inscription pour les coaches."""
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n = get_i18n_context(request)
     return templates.TemplateResponse("coach_login.html", {
         "request": request,
-        "tab": tab
+        "tab": tab,
+        **i18n
     })
 
 @app.post("/coach-login")
