@@ -253,7 +253,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
             <div id="payment-mode-status" class="mt-6 p-4 rounded-lg bg-gray-50 border border-gray-200">
                 <div class="flex items-center justify-between">
                     <div>
-                        <span class="font-medium text-gray-700">Mode actuel: </span>
+                        <span class="font-medium text-gray-700">{{ t.coach_portal.current_mode|default('Mode actuel:') }} </span>
                         <span id="current-payment-mode" class="font-bold {{ 'text-gray-600' if coach.payment_mode == 'disabled' or not coach.payment_mode else 'text-emerald-600' }}">
                             {{ 'Paiement désactivé' if coach.payment_mode == 'disabled' or not coach.payment_mode else 'Paiement obligatoire' }}
                         </span>
@@ -261,7 +261,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                     <button id="save-payment-mode" 
                             onclick="savePaymentMode()"
                             class="hidden bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition font-medium">
-                        Enregistrer
+                        {{ t.coach_portal.save|default('Enregistrer') }}
                     </button>
                 </div>
             </div>
@@ -280,19 +280,19 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             </svg>
                         </div>
                         <div>
-                            <h2 class="text-2xl font-bold text-gray-900">Planning de la Semaine</h2>
-                            <p class="text-gray-600">Vos créneaux et réservations</p>
+                            <h2 class="text-2xl font-bold text-gray-900">{{ t.coach_portal.weekly_planning|default('Planning de la Semaine') }}</h2>
+                            <p class="text-gray-600">{{ t.coach_portal.your_slots|default('Vos créneaux et réservations') }}</p>
                         </div>
                     </div>
                     <div class="flex space-x-2">
                         <button id="view-week" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                            Semaine
+                            {{ t.coach_portal.week|default('Semaine') }}
                         </button>
                         <button id="view-month" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
-                            Mois
+                            {{ t.coach_portal.month|default('Mois') }}
                         </button>
                         <button id="add-availability" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
-                            + Disponibilités
+                            {{ t.coach_portal.add_availability|default('+ Disponibilités') }}
                         </button>
                     </div>
                 </div>
@@ -303,13 +303,13 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                         <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
-                        Précédent
+                        {{ t.coach_portal.previous|default('Précédent') }}
                     </button>
                     <h3 id="current-week" class="text-lg font-semibold text-gray-900">
                         <!-- Sera rempli par JavaScript -->
                     </h3>
                     <button id="next-week" class="flex items-center text-gray-600 hover:text-gray-900">
-                        Suivant
+                        {{ t.coach_portal.next|default('Suivant') }}
                         <svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                         </svg>
@@ -334,8 +334,8 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900">Prochaines Séances</h3>
-                            <p class="text-sm text-gray-600">Réservations confirmées</p>
+                            <h3 class="text-lg font-bold text-gray-900">{{ t.coach_portal.upcoming_sessions|default('Prochaines Séances') }}</h3>
+                            <p class="text-sm text-gray-600">{{ t.coach_portal.confirmed_bookings|default('Réservations confirmées') }}</p>
                         </div>
                     </div>
 
@@ -353,8 +353,8 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900">Mon lien de réservation</h3>
-                            <p class="text-sm text-gray-600">Partagez sur vos réseaux</p>
+                            <h3 class="text-lg font-bold text-gray-900">{{ t.coach_portal.booking_link|default('Mon lien de réservation') }}</h3>
+                            <p class="text-sm text-gray-600">{{ t.coach_portal.share_networks|default('Partagez sur vos réseaux') }}</p>
                         </div>
                     </div>
                     
@@ -374,7 +374,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
                         </svg>
-                        <span id="copyText">Copier le lien</span>
+                        <span id="copyText">{{ t.coach_portal.copy_link|default('Copier le lien') }}</span>
                     </button>
                     
                     <!-- Boutons réseaux sociaux -->
@@ -412,7 +412,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                         </svg>
-                        Voir mon profil public
+                        {{ t.coach_portal.view_public_profile|default('Voir mon profil public') }}
                     </a>
                 </div>
 
@@ -425,8 +425,8 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900">Durée des séances</h3>
-                            <p class="text-sm text-gray-600">Choisissez la durée de vos séances</p>
+                            <h3 class="text-lg font-bold text-gray-900">{{ t.coach_portal.session_duration_title|default('Durée des séances') }}</h3>
+                            <p class="text-sm text-gray-600">{{ t.coach_portal.choose_duration|default('Choisissez la durée de vos séances') }}</p>
                         </div>
                     </div>
                     
