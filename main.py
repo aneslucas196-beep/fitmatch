@@ -2406,12 +2406,12 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
             return RedirectResponse(url="/coach/profile-setup", status_code=302)
         transformations = get_transformations_by_coach_mock(1)
     
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n = get_i18n_context(request)
     return templates.TemplateResponse("coach_portal.html", {
         "request": request,
         "coach": user,
-        "transformations": transformations
+        "transformations": transformations,
+        **i18n
     })
 
 @app.post("/coach/portal")
