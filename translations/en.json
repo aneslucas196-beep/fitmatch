@@ -360,7 +360,17 @@
     "testimonial6_quote": "I train fighters but also people who want to get in shape. With FitMatch, new gym members now find me in one click: they see my Insta, they book via FitMatch, I don't even need to answer. Efficiency at max.",
     "testimonial6_tags": "MMA,Physical Prep,Conditioning",
     "instagram_title": "Your Instagram link becomes a booking machine",
-    "instagram_desc": "Put your FitMatch link in your bio. Every new gym member who discovers you on Insta can now book you in one click, without DM, without hassle."
+    "instagram_desc": "Put your FitMatch link in your bio. Every new gym member who discovers you on Insta can now book you in one click, without DM, without hassle.",
+    "mockup_email_subject": "Tomorrow! Your FitMatch Session Reminder",
+    "mockup_inbox": "Inbox",
+    "mockup_to_me": "to me",
+    "mockup_tomorrow": "It's Tomorrow!",
+    "mockup_session_approaching": "Your coaching session is coming up",
+    "mockup_session_details": "Session Details",
+    "mockup_coach": "Coach",
+    "mockup_date_time": "Date & Time",
+    "mockup_date_example": "Monday, December 9, 2024 at 10:00 AM",
+    "mockup_location": "Location"
   },
   "login": {
     "title": "Log in to",
