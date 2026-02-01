@@ -358,7 +358,19 @@
     "testimonial6_quote": "J'entraîne des combattants mais aussi des gens qui veulent se remettre en forme. Avec FitMatch, les nouveaux de la salle me trouvent maintenant en un clic : ils voient mon Insta, ils réservent via FitMatch, j'ai même pas besoin de répondre. Efficacité au max.",
     "testimonial6_tags": "MMA,Prépa physique,Conditionnement",
     "instagram_title": "Ton lien Instagram devient une machine à réserver",
-    "instagram_desc": "Mets ton lien FitMatch dans ta bio. Chaque nouveau de la salle qui te découvre sur Insta peut désormais te réserver en un clic, sans DM, sans prise de tête."
+    "instagram_desc": "Mets ton lien FitMatch dans ta bio. Chaque nouveau de la salle qui te découvre sur Insta peut désormais te réserver en un clic, sans DM, sans prise de tête.",
+    "faq8_q": "Puis-je connecter mes réseaux sociaux à mon profil FitMatch ?",
+    "faq8_a": "Oui ! Sur ton profil FitMatch, tu peux ajouter des liens vers ton Instagram, TikTok ou autres réseaux. Les clients peuvent voir tes transformations, tes posts et l'ambiance de tes séances.",
+    "mockup_email_subject": "Demain ! Rappel de ta séance FitMatch",
+    "mockup_inbox": "Boîte de réception",
+    "mockup_to_me": "pour moi",
+    "mockup_tomorrow": "C'est demain !",
+    "mockup_session_approaching": "Ta séance de coaching approche",
+    "mockup_session_details": "Détails de la Séance",
+    "mockup_coach": "Coach",
+    "mockup_date_time": "Date et Heure",
+    "mockup_date_example": "Lundi 9 décembre 2024 à 10h00",
+    "mockup_location": "Lieu"
   },
   "login": {
     "title": "Connexion à",
