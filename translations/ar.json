@@ -239,6 +239,17 @@
     "legal": "قانوني",
     "all_rights": "جميع الحقوق محفوظة"
   },
+  "partner": {
+    "title": "كن شريكاً",
+    "brand": "FitMatch Pro",
+    "subtitle": "كن مرئياً لآلاف الرياضيين والعملاء المتحمسين.",
+    "no_commitment": "بدون التزام",
+    "no_commission": "بدون عمولة",
+    "coach_title": "أنا مدرب رياضي",
+    "coach_desc": "كمال الأجسام، فقدان الوزن، اللياقة...",
+    "client_title": "أنا عميل",
+    "client_desc": "أريد حجز جلسة تدريب."
+  },
   "errors": {
     "required_field": "هذا الحقل مطلوب",
     "invalid_email": "بريد إلكتروني غير صالح",

@@ -289,9 +289,9 @@
 <!-- Navbar minimaliste -->
 <nav style="display: flex; justify-content: space-between; align-items: center;">
   <div style="display: flex; gap: 20px;">
-    <a href="/">Accueil</a>
-    <a href="/partner">Devenir partenaire</a>
-    <a href="/coach-signup" class="cta">Je suis coach</a>
+    <a href="/">{{ t.nav.home|default('Accueil') }}</a>
+    <a href="/partner">{{ t.nav.become_coach|default('Devenir partenaire') }}</a>
+    <a href="/coach-signup" class="cta">{{ t.partner.coach_title|default('Je suis coach') }}</a>
   </div>
   <!-- Sélecteur de langue -->
   <div class="language-selector" style="position: relative;">

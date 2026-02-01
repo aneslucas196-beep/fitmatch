@@ -239,6 +239,17 @@
     "legal": "Legal",
     "all_rights": "Todos os direitos reservados"
   },
+  "partner": {
+    "title": "Torne-se parceiro",
+    "brand": "FitMatch Pro",
+    "subtitle": "Seja visível para milhares de atletas e clientes motivados.",
+    "no_commitment": "Sem compromisso",
+    "no_commission": "Sem comissão",
+    "coach_title": "Sou personal trainer",
+    "coach_desc": "Musculação, perda de peso, fitness...",
+    "client_title": "Sou cliente",
+    "client_desc": "Quero reservar uma sessão de coaching."
+  },
   "errors": {
     "required_field": "Este campo é obrigatório",
     "invalid_email": "Email inválido",

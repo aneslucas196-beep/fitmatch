@@ -506,8 +506,8 @@
   </a>
   
   <div class="nav-links">
-    <a href="/">Accueil</a>
-    <a href="/partner">Devenir partenaire</a>
+    <a href="/">{{ t.nav.home|default('Accueil') }}</a>
+    <a href="/partner">{{ t.nav.become_coach|default('Devenir partenaire') }}</a>
   </div>
   
   <div class="nav-right" style="display: flex; align-items: center; gap: 12px;">
@@ -524,8 +524,8 @@
         {% endfor %}
       </div>
     </div>
-    <a href="/coach-login" class="cta-outline">Espace Coach</a>
-    <a href="/signup" class="cta">S'inscrire</a>
+    <a href="/coach-login" class="cta-outline">{{ t.nav.coach_portal|default('Espace Coach') }}</a>
+    <a href="/signup" class="cta">{{ t.nav.signup|default("S'inscrire") }}</a>
   </div>
 </nav>
 <script>

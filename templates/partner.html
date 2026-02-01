@@ -108,9 +108,9 @@
 <!-- Navbar minimaliste -->
 <nav style="display: flex; justify-content: space-between; align-items: center;">
   <div style="display: flex; gap: 20px;">
-    <a href="/">Accueil</a>
-    <a href="/partner">Devenir partenaire</a>
-    <a href="/signup?role=coach" class="cta">Je suis coach</a>
+    <a href="/">{{ t.nav.home|default('Accueil') }}</a>
+    <a href="/partner">{{ t.nav.become_coach|default('Devenir partenaire') }}</a>
+    <a href="/signup?role=coach" class="cta">{{ t.partner.coach_title|default('Je suis coach') }}</a>
   </div>
   <!-- Sélecteur de langue -->
   <div class="language-selector" style="position: relative;">
@@ -141,11 +141,11 @@
 <section class="fm-partner">
   <div class="fm-wrap">
     <header class="fm-head">
-      <h1>Devenir partenaire <span class="fm-brand">FitMatch Pro</span></h1>
-      <p class="fm-sub">Soyez visible auprès de <strong>milliers de sportifs</strong> et de clients motivés.</p>
+      <h1>{{ t.partner.title|default('Devenir partenaire') }} <span class="fm-brand">{{ t.partner.brand|default('FitMatch Pro') }}</span></h1>
+      <p class="fm-sub">{{ t.partner.subtitle|default('Soyez visible auprès de milliers de sportifs et de clients motivés.') }}</p>
       <ul class="fm-bullets">
-        <li><span class="fm-check"></span>Sans engagement</li>
-        <li><span class="fm-check"></span>Sans commission</li>
+        <li><span class="fm-check"></span>{{ t.partner.no_commitment|default('Sans engagement') }}</li>
+        <li><span class="fm-check"></span>{{ t.partner.no_commission|default('Sans commission') }}</li>
       </ul>
     </header>
 
@@ -156,8 +156,8 @@
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3 10h2v4H3v-4Zm16 0h2v4h-2v-4ZM7 8h2v8H7V8Zm8 0h2v8h-2V8Zm-4 3h2v2h-2v-2Z" fill="currentColor"/></svg>
         </div>
         <div class="fm-card-body">
-          <div class="fm-card-title">Je suis coach sportif</div>
-          <div class="fm-card-desc">Musculation, perte de poids, remise en forme…</div>
+          <div class="fm-card-title">{{ t.partner.coach_title|default('Je suis coach sportif') }}</div>
+          <div class="fm-card-desc">{{ t.partner.coach_desc|default('Musculation, perte de poids, remise en forme…') }}</div>
         </div>
         <div class="fm-card-arrow" aria-hidden="true">→</div>
       </a>
@@ -168,8 +168,8 @@
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M7 2h2v2H7V2Zm8 0h2v2h-2V2ZM4 6h16a2 2 0 0 1 2 2v10a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V8a2 2 0 0 1 2-2Zm0 4v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8H4Z" fill="currentColor"/></svg>
         </div>
         <div class="fm-card-body">
-          <div class="fm-card-title">Je suis un client</div>
-          <div class="fm-card-desc">Je souhaite réserver une séance de coaching.</div>
+          <div class="fm-card-title">{{ t.partner.client_title|default('Je suis un client') }}</div>
+          <div class="fm-card-desc">{{ t.partner.client_desc|default('Je souhaite réserver une séance de coaching.') }}</div>
         </div>
         <div class="fm-card-arrow" aria-hidden="true">→</div>
       </a>
