@@ -544,16 +544,16 @@
   <div class="fm-wrap">
     <div class="fm-card">
       <header class="fm-head">
-        <h1>Connexion à <span class="fm-brand">FitMatch</span></h1>
-        <p>Entrez vos identifiants pour accéder à votre espace</p>
+        <h1>{{ t.login.title|default("Connexion à") }} <span class="fm-brand">FitMatch</span></h1>
+        <p>{{ t.login.subtitle|default("Entrez vos identifiants pour accéder à votre espace") }}</p>
       </header>
 
       {% if password_changed %}
       <div class="fm-alert fm-alert-success fm-toast-alert" id="passwordChangedToast">
         <span class="fm-alert-icon">✅</span>
         <div class="fm-alert-content">
-          <div class="fm-alert-title">Votre mot de passe a été modifié</div>
-          <div>Vous pouvez maintenant vous connecter.</div>
+          <div class="fm-alert-title">{{ t.login.password_changed|default("Votre mot de passe a été modifié") }}</div>
+          <div>{{ t.login.you_can_login|default("Vous pouvez maintenant vous connecter.") }}</div>
         </div>
       </div>
       {% endif %}
@@ -562,7 +562,7 @@
       <div class="fm-alert fm-alert-error">
         <span class="fm-alert-icon">⚠️</span>
         <div class="fm-alert-content">
-          <div class="fm-alert-title">Erreur de connexion</div>
+          <div class="fm-alert-title">{{ t.login.login_error|default("Erreur de connexion") }}</div>
           <div>{{ error }}</div>
         </div>
       </div>
@@ -572,16 +572,16 @@
       <div class="fm-alert fm-alert-info">
         <span class="fm-alert-icon">📧</span>
         <div class="fm-alert-content">
-          <div class="fm-alert-title">Email envoyé</div>
-          <div>Un email de confirmation a été envoyé. Vérifiez votre boîte mail.</div>
+          <div class="fm-alert-title">{{ t.login.email_sent|default("Email envoyé") }}</div>
+          <div>{{ t.login.check_inbox|default("Un email de confirmation a été envoyé. Vérifiez votre boîte mail.") }}</div>
         </div>
       </div>
       {% elif message == 'inscription_reussie' %}
       <div class="fm-alert fm-alert-success">
         <span class="fm-alert-icon">✅</span>
         <div class="fm-alert-content">
-          <div class="fm-alert-title">Inscription réussie !</div>
-          <div>Vous pouvez maintenant vous connecter.</div>
+          <div class="fm-alert-title">{{ t.login.registration_success|default("Inscription réussie !") }}</div>
+          <div>{{ t.login.you_can_login|default("Vous pouvez maintenant vous connecter.") }}</div>
         </div>
       </div>
       {% endif %}
@@ -590,11 +590,11 @@
       <div class="fm-alert fm-alert-warning">
         <span class="fm-alert-icon">⏳</span>
         <div class="fm-alert-content">
-          <div class="fm-alert-title">Email non confirmé</div>
-          <div>Vérifiez votre boîte mail ou renvoyez l'email de confirmation.</div>
+          <div class="fm-alert-title">{{ t.login.email_not_confirmed|default("Email non confirmé") }}</div>
+          <div>{{ t.login.check_inbox_or_resend|default("Vérifiez votre boîte mail ou renvoyez l'email de confirmation.") }}</div>
           <form action="/auth/resend-confirmation" method="POST" style="display:inline">
             <input type="hidden" name="email" value="{{ email }}">
-            <button type="submit" class="fm-resend-btn">Renvoyer le mail</button>
+            <button type="submit" class="fm-resend-btn">{{ t.login.resend_email|default("Renvoyer le mail") }}</button>
           </form>
         </div>
       </div>
@@ -602,7 +602,7 @@
 
       <form action="/login" method="POST" class="fm-form">
         <div class="fm-field">
-          <label for="email" class="fm-label">Adresse email</label>
+          <label for="email" class="fm-label">{{ t.login.email_label|default("Adresse email") }}</label>
           <input 
             type="email" 
             name="email" 
@@ -610,13 +610,13 @@
             required 
             value="{{ email or '' }}"
             class="fm-input"
-            placeholder="vous@exemple.com"
+            placeholder="{{ t.login.email_placeholder|default('vous@exemple.com') }}"
             autocomplete="email"
           >
         </div>
         
         <div class="fm-field">
-          <label for="password" class="fm-label">Mot de passe</label>
+          <label for="password" class="fm-label">{{ t.login.password_label|default("Mot de passe") }}</label>
           <div class="fm-password-wrap">
             <input 
               type="password" 
@@ -624,7 +624,7 @@
               id="password" 
               required
               class="fm-input"
-              placeholder="Votre mot de passe"
+              placeholder="{{ t.login.password_placeholder|default('Votre mot de passe') }}"
               autocomplete="current-password"
             >
             <button type="button" class="fm-password-toggle" onclick="togglePassword()" aria-label="Afficher le mot de passe">
@@ -634,28 +634,28 @@
               </svg>
             </button>
           </div>
-          <a href="#" class="fm-forgot-link" onclick="showForgotModal(); return false;">Mot de passe oublié ?</a>
+          <a href="#" class="fm-forgot-link" onclick="showForgotModal(); return false;">{{ t.login.forgot_password|default("Mot de passe oublié ?") }}</a>
         </div>
         
-        <button type="submit" class="fm-btn">Se connecter</button>
+        <button type="submit" class="fm-btn">{{ t.login.login_button|default("Se connecter") }}</button>
       </form>
 
       <div class="fm-divider">
         <div class="fm-divider-line"></div>
-        <span class="fm-divider-text">Nouveau sur FitMatch ?</span>
+        <span class="fm-divider-text">{{ t.login.new_to_fitmatch|default("Nouveau sur FitMatch ?") }}</span>
         <div class="fm-divider-line"></div>
       </div>
 
       <div class="fm-signup-link">
         <a href="/signup">
-          Créer un compte gratuitement
+          {{ t.login.create_account|default("Créer un compte gratuitement") }}
           <span>→</span>
         </a>
       </div>
     </div>
     
     <div class="fm-footer">
-      © 2024 FitMatch. Tous droits réservés.
+      © 2024 FitMatch. {{ t.footer.all_rights|default("Tous droits réservés") }}.
     </div>
   </div>
 </section>
@@ -667,39 +667,39 @@
       
       <div id="forgotFormView">
         <div class="fm-modal-header">
-          <h2>Mot de passe oublié ?</h2>
-          <p>Entrez votre adresse email pour recevoir un lien de réinitialisation.</p>
+          <h2>{{ t.login.forgot_password|default("Mot de passe oublié ?") }}</h2>
+          <p>{{ t.login.forgot_password_desc|default("Entrez votre adresse email pour recevoir un lien de réinitialisation.") }}</p>
         </div>
         
         <form id="forgotPasswordForm" class="fm-form">
           <div class="fm-field">
-            <label for="forgot-email" class="fm-label">Adresse email</label>
+            <label for="forgot-email" class="fm-label">{{ t.login.email_label|default("Adresse email") }}</label>
             <input 
               type="email" 
               id="forgot-email" 
               required
               class="fm-input"
-              placeholder="vous@exemple.com"
+              placeholder="{{ t.login.email_placeholder|default('vous@exemple.com') }}"
             >
           </div>
           
           <button type="submit" class="fm-btn" id="forgotSubmitBtn">
-            Réinitialiser mon mot de passe
+            {{ t.login.reset_password|default("Réinitialiser mon mot de passe") }}
           </button>
         </form>
         
         <div class="fm-modal-footer">
-          <a onclick="closeForgotModal()">Retour à la connexion</a>
+          <a onclick="closeForgotModal()">{{ t.login.back_to_login|default("Retour à la connexion") }}</a>
         </div>
       </div>
       
       <div id="forgotSuccessView" style="display:none;">
         <div class="fm-success-message">
           <div class="fm-icon">📧</div>
-          <h3>Email envoyé !</h3>
-          <p>Si un compte existe avec cette adresse, vous recevrez un lien de réinitialisation.</p>
+          <h3>{{ t.login.email_sent_title|default("Email envoyé !") }}</h3>
+          <p>{{ t.login.email_sent_desc|default("Si un compte existe avec cette adresse, vous recevrez un lien de réinitialisation.") }}</p>
         </div>
-        <button class="fm-btn" onclick="closeForgotModal()" style="margin-top:20px;">Fermer</button>
+        <button class="fm-btn" onclick="closeForgotModal()" style="margin-top:20px;">{{ t.common.close|default("Fermer") }}</button>
       </div>
     </div>
   </div>

@@ -1,5 +1,6 @@
 # Service email avec Resend API
 import os
+import json
 import requests
 from typing import Optional
 
@@ -7,11 +8,33 @@ from typing import Optional
 INSTAGRAM_URL = "https://www.instagram.com/fitmatch__?igsh=MXkwcTE5dmFhaDQ3OQ%3D%3D&utm_source=qr"
 FACEBOOK_URL = "https://www.facebook.com/share/17f5yGSk86/?mibextid=wwXIfr"
 
-# Footer social commun à tous les emails (utilise images PNG pour compatibilité Gmail)
-SOCIAL_FOOTER_HTML = f'''
-<!-- Suivez-nous -->
+# Cache pour les traductions des emails
+_email_translations_cache = {}
+
+def get_email_translations(lang: str = 'fr') -> dict:
+    """Charge les traductions pour les emails"""
+    global _email_translations_cache
+    if lang in _email_translations_cache:
+        return _email_translations_cache[lang]
+    
+    try:
+        translations_path = f'translations/{lang}.json'
+        with open(translations_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            _email_translations_cache[lang] = data.get('emails', {})
+            return _email_translations_cache[lang]
+    except Exception as e:
+        print(f"Error loading translations for {lang}: {e}")
+        return {}
+
+def get_social_footer(lang: str = 'fr') -> str:
+    """Génère le footer social traduit"""
+    t = get_email_translations(lang)
+    follow_us = t.get('follow_us', 'Suivez-nous')
+    return f'''
+<!-- {follow_us} -->
 <div style="padding:25px; background:#f9f9f9; border-top:1px solid #eee; text-align:center;">
-    <p style="margin:0 0 15px 0; font-size:15px; color:#374151; font-weight:500;">Suivez-nous</p>
+    <p style="margin:0 0 15px 0; font-size:15px; color:#374151; font-weight:500;">{follow_us}</p>
     <table align="center" cellpadding="0" cellspacing="0" border="0">
         <tr>
             <td style="padding:0 8px;">
@@ -29,21 +52,28 @@ SOCIAL_FOOTER_HTML = f'''
 </div>
 '''
 
-def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str] = None) -> dict:
+# Footer social par défaut (français)
+SOCIAL_FOOTER_HTML = get_social_footer('fr')
+
+def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str] = None, lang: str = 'fr') -> dict:
     """
     Envoie un code OTP par email via Resend API
     Retourne un dictionnaire avec success (bool) et des détails pour le debugging
     """
     resend_key = os.environ.get('RESEND_API_KEY')
-    # Utiliser domaine vérifié fitmatch.fr par défaut
     mail_from = 'Fitmatch <contact@fitmatch.fr>'
     site_url = os.environ.get('SITE_URL', 'http://localhost:5000')
+    
+    # Traductions
+    t = get_email_translations(lang)
+    social_footer = get_social_footer(lang)
     
     print(f"🔧 Configuration email:")
     print(f"  - RESEND_API_KEY: {'✅ Configuré' if resend_key else '❌ Manquant'}")
     print(f"  - MAIL_FROM: {mail_from}")
     print(f"  - SITE_URL: {site_url}")
     print(f"  - Destinataire: {to_email}")
+    print(f"  - Langue: {lang}")
     
     if not resend_key:
         print("⚠️ RESEND_API_KEY non configuré, simulation d'envoi d'email")
@@ -51,70 +81,82 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
         return {"success": True, "mode": "demo", "message": "Email simulé"}
     
     try:
-        # Prénom pour personnaliser l'email
-        first_name = full_name.split()[0] if full_name else "utilisateur"
+        first_name = full_name.split()[0] if full_name else ("user" if lang == 'en' else "utilisateur")
         
-        # Contenu HTML de l'email - Style FitMatch
+        # Textes traduits
+        platform_tagline = t.get('platform_tagline', 'Votre plateforme de coaching fitness')
+        otp_title = t.get('otp_title', 'Bonjour')
+        otp_welcome = t.get('otp_welcome', 'Bienvenue sur FitMatch ! Voici votre code de vérification pour activer votre compte :')
+        otp_your_code = t.get('otp_your_code', 'Votre code')
+        otp_expires = t.get('otp_expires', 'Ce code expire dans')
+        otp_minutes = t.get('otp_minutes', '10 minutes')
+        otp_instruction = t.get('otp_instruction', 'Saisissez ce code sur la page de vérification pour activer votre compte et commencer à utiliser FitMatch.')
+        otp_ignore = t.get('otp_ignore', "Si vous n'avez pas créé de compte sur FitMatch, ignorez simplement cet email.")
+        platform_connects = t.get('platform_connects', 'La plateforme qui connecte coachs et clients')
+        
         html_content = f"""
         <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
             <div style="background: linear-gradient(135deg, #008f57 0%, #00b36b 100%); padding: 40px; text-align: center;">
                 <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700;">FitMatch</h1>
-                <p style="color: white; margin: 10px 0 0 0; opacity: 0.9; font-size: 14px;">Votre plateforme de coaching fitness</p>
+                <p style="color: white; margin: 10px 0 0 0; opacity: 0.9; font-size: 14px;">{platform_tagline}</p>
             </div>
             
             <div style="padding: 40px; background: white;">
-                <h2 style="color: #1e293b; margin-bottom: 20px; font-size: 22px;">Bonjour {first_name} !</h2>
+                <h2 style="color: #1e293b; margin-bottom: 20px; font-size: 22px;">{otp_title} {first_name} !</h2>
                 
                 <p style="color: #64748b; font-size: 16px; line-height: 1.6;">
-                    Bienvenue sur FitMatch ! Voici votre code de vérification pour activer votre compte :
+                    {otp_welcome}
                 </p>
                 
                 <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #008f57; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0;">
-                    <p style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Votre code</p>
+                    <p style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">{otp_your_code}</p>
                     <span style="font-size: 42px; font-weight: 700; color: #008f57; letter-spacing: 10px;">{otp_code}</span>
                 </div>
                 
                 <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin-bottom: 25px;">
                     <p style="color: #92400e; font-size: 14px; margin: 0;">
-                        ⏱️ Ce code expire dans <strong>10 minutes</strong>
+                        ⏱️ {otp_expires} <strong>{otp_minutes}</strong>
                     </p>
                 </div>
                 
                 <p style="color: #64748b; font-size: 14px; line-height: 1.8;">
-                    Saisissez ce code sur la page de vérification pour activer votre compte et commencer à utiliser FitMatch.
+                    {otp_instruction}
                 </p>
                 
                 <p style="color: #94a3b8; font-size: 13px; line-height: 1.6; margin-top: 30px;">
-                    Si vous n'avez pas créé de compte sur FitMatch, ignorez simplement cet email.
+                    {otp_ignore}
                 </p>
             </div>
             
-            {SOCIAL_FOOTER_HTML}
+            {social_footer}
             
             <div style="padding: 20px; background: #f8fafc; text-align: center;">
                 <p style="color: #008f57; font-size: 16px; font-weight: 600; margin: 0 0 5px 0;">FitMatch</p>
                 <p style="color: #94a3b8; font-size: 12px; margin: 0;">
-                    La plateforme qui connecte coachs et clients
+                    {platform_connects}
                 </p>
             </div>
         </div>
         """
         
-        # Contenu texte alternatif
+        # Contenu texte alternatif traduit
         text_content = f"""
-        Bonjour {first_name} !
+        {otp_title} {first_name} !
         
-        Voici votre code de vérification Fitmatch : {otp_code}
+        {otp_welcome}
+        {otp_your_code}: {otp_code}
         
-        Ce code expire dans 10 minutes.
-        Saisissez-le sur la page de vérification pour activer votre compte.
+        {otp_expires} {otp_minutes}.
+        {otp_instruction}
         
-        Si vous n'avez pas demandé ce code, ignorez cet email.
+        {otp_ignore}
         
-        L'équipe Fitmatch
+        FitMatch
         """
         
-        # Préparer la requête vers l'API Resend
+        # Sujet traduit
+        otp_subject = t.get('otp_subject', 'Votre code de vérification FitMatch')
+        
         url = "https://api.resend.com/emails"
         headers = {
             "Authorization": f"Bearer {resend_key}",
@@ -124,7 +166,7 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
         data = {
             "from": mail_from,
             "to": [to_email],
-            "subject": f"Votre code de vérification : {otp_code}",
+            "subject": f"{otp_subject}: {otp_code}",
             "html": html_content,
             "text": text_content
         }

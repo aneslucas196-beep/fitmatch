@@ -564,13 +564,15 @@
           <img src="/attached_assets/ChatGPT_Image_5_déc._2025,_19_57_05_1764961036343.png" alt="Coach Yacine">
           <div>
             <h3>Coach Yacine</h3>
-            <p class="fm-t-role">Coach Boxe</p>
+            <p class="fm-t-role">{{ t.coach_signup.testimonial1_role|default("Coach Boxe") }}</p>
           </div>
         </div>
         <div class="fm-t-stars" aria-label="5 étoiles">★★★★★</div>
-        <blockquote>"Franchement FitMatch a changé mon game. Les nouveaux de la salle me trouvent sur Insta, ils cliquent sur mon lien FitMatch… et ils réservent direct. Avant je devais répondre à 100 DM par jour, maintenant tout est organisé, paiement, planning, tout."</blockquote>
+        <blockquote>"{{ t.coach_signup.testimonial1_quote|default("Franchement FitMatch a changé mon game. Les nouveaux de la salle me trouvent sur Insta, ils cliquent sur mon lien FitMatch… et ils réservent direct.") }}"</blockquote>
         <ul class="fm-t-tags">
-          <li>Boxe</li><li>Cardio</li><li>Self-défense</li>
+          {% for tag in (t.coach_signup.testimonial1_tags|default("Boxe,Cardio,Self-défense")).split(',') %}
+          <li>{{ tag }}</li>
+          {% endfor %}
         </ul>
       </article>
 
@@ -579,13 +581,15 @@
           <img src="/attached_assets/snowwwwwwww_1764960321770.png" alt="Coach Mélina">
           <div>
             <h3>Coach Mélina</h3>
-            <p class="fm-t-role">Coach Femme</p>
+            <p class="fm-t-role">{{ t.coach_signup.testimonial2_role|default("Coach Femme") }}</p>
           </div>
         </div>
         <div class="fm-t-stars" aria-label="5 étoiles">★★★★★</div>
-        <blockquote>"Ce que j'aime avec FitMatch, c'est que les nouveaux de la salle peuvent me réserver sans me parler. Ils regardent mon Insta → clic sur le lien → réservation directe. Zéro perte de temps, zéro confusion."</blockquote>
+        <blockquote>"{{ t.coach_signup.testimonial2_quote|default("Ce que j'aime avec FitMatch, c'est que les nouveaux de la salle peuvent me réserver sans me parler.") }}"</blockquote>
         <ul class="fm-t-tags">
-          <li>Renforcement</li><li>Perte de poids</li><li>Bien-être</li>
+          {% for tag in (t.coach_signup.testimonial2_tags|default("Renforcement,Perte de poids,Bien-être")).split(',') %}
+          <li>{{ tag }}</li>
+          {% endfor %}
         </ul>
       </article>
 
@@ -594,13 +598,15 @@
           <img src="/attached_assets/snoww_1764960342165.png" alt="Coach Rayan">
           <div>
             <h3>Coach Rayan</h3>
-            <p class="fm-t-role">Prise de masse & Nutrition</p>
+            <p class="fm-t-role">{{ t.coach_signup.testimonial3_role|default("Prise de masse & Nutrition") }}</p>
           </div>
         </div>
         <div class="fm-t-stars" aria-label="5 étoiles">★★★★★</div>
-        <blockquote>"Depuis que j'ai mis FitMatch dans ma bio Insta, j'ai des réservations tous les jours. Les nouveaux membres de la salle viennent, ils cherchent 'coach', ils tombent sur mon Insta, ils cliquent… bam, rdv confirmé. Ça m'a doublé mes clients."</blockquote>
+        <blockquote>"{{ t.coach_signup.testimonial3_quote|default("Depuis que j'ai mis FitMatch dans ma bio Insta, j'ai des réservations tous les jours.") }}"</blockquote>
         <ul class="fm-t-tags">
-          <li>Prise de masse</li><li>Nutrition</li><li>Force</li>
+          {% for tag in (t.coach_signup.testimonial3_tags|default("Prise de masse,Nutrition,Force")).split(',') %}
+          <li>{{ tag }}</li>
+          {% endfor %}
         </ul>
       </article>
 
@@ -609,13 +615,15 @@
           <img src="/attached_assets/snowwwww_1764960327725.png" alt="Coach Léa">
           <div>
             <h3>Coach Léa</h3>
-            <p class="fm-t-role">HIIT / Cardio</p>
+            <p class="fm-t-role">{{ t.coach_signup.testimonial4_role|default("HIIT / Cardio") }}</p>
           </div>
         </div>
         <div class="fm-t-stars" aria-label="5 étoiles">★★★★★</div>
-        <blockquote>"Je croyais que c'était un truc en plus, mais en vrai FitMatch c'est devenu mon outil principal. Plus besoin d'expliquer comment réserver : les gens voient mon Insta, ils appuient sur le lien et tout est prêt. Mes séances sont complètes chaque semaine."</blockquote>
+        <blockquote>"{{ t.coach_signup.testimonial4_quote|default("Je croyais que c'était un truc en plus, mais en vrai FitMatch c'est devenu mon outil principal.") }}"</blockquote>
         <ul class="fm-t-tags">
-          <li>HIIT</li><li>Cardio</li><li>Coaching groupe</li>
+          {% for tag in (t.coach_signup.testimonial4_tags|default("HIIT,Cardio,Coaching groupe")).split(',') %}
+          <li>{{ tag }}</li>
+          {% endfor %}
         </ul>
       </article>
 
@@ -624,13 +632,15 @@
           <img src="/attached_assets/snowww_1764960334742.png" alt="Coach Sarah">
           <div>
             <h3>Coach Sarah</h3>
-            <p class="fm-t-role">Muscu & Perte de poids</p>
+            <p class="fm-t-role">{{ t.coach_signup.testimonial5_role|default("Muscu & Perte de poids") }}</p>
           </div>
         </div>
         <div class="fm-t-stars" aria-label="5 étoiles">★★★★★</div>
-        <blockquote>"J'ai mis FitMatch dans ma bio Insta, je te jure j'ai jamais eu autant de demandes. Les filles de la salle me découvrent sur Insta, elles appuient sur le lien, elles réservent direct. C'est carré, c'est pro, et ça me donne une vraie image de marque."</blockquote>
+        <blockquote>"{{ t.coach_signup.testimonial5_quote|default("J'ai mis FitMatch dans ma bio Insta, je te jure j'ai jamais eu autant de demandes.") }}"</blockquote>
         <ul class="fm-t-tags">
-          <li>Musculation</li><li>Perte de poids</li><li>Tonification</li>
+          {% for tag in (t.coach_signup.testimonial5_tags|default("Musculation,Perte de poids,Tonification")).split(',') %}
+          <li>{{ tag }}</li>
+          {% endfor %}
         </ul>
       </article>
 
