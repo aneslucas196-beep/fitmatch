@@ -98,9 +98,11 @@ def get_i18n_context(request: Request) -> dict:
     
     locale = get_locale_from_request(request)
     translations = get_translations(locale)
+    text_direction = "rtl" if locale == "ar" else "ltr"
     return {
         "locale": locale,
         "t": translations,
+        "text_direction": text_direction,
         "available_languages": _available_languages_cache
     }
 
@@ -2019,11 +2021,16 @@ async def api_forgot_password(request: Request):
         if not user:
             return {"success": True}
         
+        locale = get_locale_from_request(request)
+        translations = get_translations(locale)
+        pr = translations.get("password_reset", {})
+        
         token = secrets.token_urlsafe(32)
         expiry = datetime.now() + timedelta(hours=1)
         password_reset_tokens[token] = {
             "email": email,
-            "expiry": expiry
+            "expiry": expiry,
+            "locale": locale
         }
         
         host = request.headers.get("host", "localhost:5000")
@@ -2041,6 +2048,16 @@ async def api_forgot_password(request: Request):
                 from_field = sender_email
             else:
                 from_field = f"FitMatch <{sender_email}>"
+            
+            email_greeting = pr.get("email_greeting", "Bonjour,")
+            email_body = pr.get("email_body", "Cliquez sur ce lien pour réinitialiser votre mot de passe FitMatch pour le compte")
+            email_button = pr.get("email_button", "Réinitialiser mon mot de passe")
+            email_copy_link = pr.get("email_copy_link", "Ou copiez ce lien dans votre navigateur :")
+            email_ignore = pr.get("email_ignore", "Si vous n'avez pas demandé à réinitialiser votre mot de passe, vous pouvez ignorer cet e-mail.")
+            email_thanks = pr.get("email_thanks", "Merci,")
+            email_team = pr.get("email_team", "Votre équipe FitMatch")
+            email_footer = pr.get("email_footer", "Tous droits réservés.")
+            email_subject = pr.get("email_subject", "Réinitialisez votre mot de passe pour FitMatch")
             
             html_content = f"""
 <!DOCTYPE html>
@@ -2061,27 +2078,27 @@ async def api_forgot_password(request: Request):
           </tr>
           <tr>
             <td style="padding:32px;">
-              <p style="margin:0 0 16px;font-size:16px;color:#333;">Bonjour,</p>
+              <p style="margin:0 0 16px;font-size:16px;color:#333;">{email_greeting}</p>
               <p style="margin:0 0 24px;font-size:16px;color:#333;line-height:1.5;">
-                Cliquez sur ce lien pour réinitialiser votre mot de passe FitMatch pour le compte <a href="mailto:{email}" style="color:#008f57;text-decoration:none;">{email}</a>.
+                {email_body} <a href="mailto:{email}" style="color:#008f57;text-decoration:none;">{email}</a>.
               </p>
               <p style="margin:0 0 24px;">
-                <a href="{reset_link}" style="display:inline-block;background:#008f57;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Réinitialiser mon mot de passe</a>
+                <a href="{reset_link}" style="display:inline-block;background:#008f57;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">{email_button}</a>
               </p>
-              <p style="margin:0 0 8px;font-size:14px;color:#666;">Ou copiez ce lien dans votre navigateur :</p>
+              <p style="margin:0 0 8px;font-size:14px;color:#666;">{email_copy_link}</p>
               <p style="margin:0 0 24px;font-size:13px;color:#008f57;word-break:break-all;">
                 <a href="{reset_link}" style="color:#008f57;">{reset_link}</a>
               </p>
               <p style="margin:0 0 16px;font-size:14px;color:#999;line-height:1.5;">
-                Si vous n'avez pas demandé à réinitialiser votre mot de passe, vous pouvez ignorer cet e-mail.
+                {email_ignore}
               </p>
-              <p style="margin:24px 0 0;font-size:14px;color:#333;">Merci,</p>
-              <p style="margin:4px 0 0;font-size:14px;color:#333;font-weight:600;">Votre équipe FitMatch</p>
+              <p style="margin:24px 0 0;font-size:14px;color:#333;">{email_thanks}</p>
+              <p style="margin:4px 0 0;font-size:14px;color:#333;font-weight:600;">{email_team}</p>
             </td>
           </tr>
           <tr>
             <td style="padding:20px 32px;background:#f9f9f9;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#999;">© 2024 FitMatch. Tous droits réservés.</p>
+              <p style="margin:0;font-size:12px;color:#999;">© 2024 FitMatch. {email_footer}</p>
             </td>
           </tr>
         </table>
@@ -2096,10 +2113,10 @@ async def api_forgot_password(request: Request):
                 resend.Emails.send({
                     "from": from_field,
                     "to": [email],
-                    "subject": "Réinitialisez votre mot de passe pour FitMatch",
+                    "subject": email_subject,
                     "html": html_content
                 })
-                print(f"✅ Email de réinitialisation envoyé à {email}")
+                print(f"✅ Email de réinitialisation envoyé à {email} (langue: {locale})")
             except Exception as e:
                 print(f"❌ Erreur envoi email: {e}")
         else:
@@ -2115,23 +2132,37 @@ async def api_forgot_password(request: Request):
 async def reset_password_page(request: Request, token: str = ""):
     """Page de réinitialisation du mot de passe."""
     error = None
+    locale = "fr"
     
     if not token:
-        error = "Lien invalide ou expiré."
+        locale = get_locale_from_request(request)
+        i18n = get_i18n_context(request)
+        pr = i18n.get("t", {}).get("password_reset", {})
+        error = pr.get("error_invalid", "Lien invalide ou expiré.")
     elif token not in password_reset_tokens:
-        error = "Lien invalide ou expiré."
+        locale = get_locale_from_request(request)
+        i18n = get_i18n_context(request)
+        pr = i18n.get("t", {}).get("password_reset", {})
+        error = pr.get("error_invalid", "Lien invalide ou expiré.")
     else:
         token_data = password_reset_tokens[token]
+        locale = token_data.get("locale", "fr")
+        translations = get_translations(locale)
+        text_direction = "rtl" if locale == "ar" else "ltr"
+        i18n = {"t": translations, "locale": locale, "text_direction": text_direction}
         if datetime.now() > token_data["expiry"]:
             del password_reset_tokens[token]
-            error = "Ce lien a expiré. Veuillez demander un nouveau lien."
+            pr = translations.get("password_reset", {})
+            error = pr.get("error_expired", "Ce lien a expiré. Veuillez demander un nouveau lien.")
     
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    if 'i18n' not in locals():
+        i18n = get_i18n_context(request)
+    
     return templates.TemplateResponse("reset_password.html", {
         "request": request,
         "token": token,
-        "error": error
+        "error": error,
+        **i18n
     })
 
 @app.post("/api/reset-password")

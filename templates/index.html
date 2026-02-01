@@ -567,57 +567,44 @@
       <h2 class="faq-title">{{ t.home.faq_title|default('Les questions fréquentes') }}</h2>
 
       <details class="faq-item">
-        <summary>Qu'est-ce que FitMatch ?</summary>
+        <summary>{{ t.home.faq1_q|default("Qu'est-ce que FitMatch ?") }}</summary>
         <div class="faq-content">
-          FitMatch est la plateforme qui met en relation les <b>clients</b> et les <b>coachs sportifs</b> proches de chez eux.  
-          Tu peux rechercher par ville, code postal ou salle, consulter les profils (avis, spécialités, tarifs) et réserver ta séance facilement.
+          {{ t.home.faq1_a|default("FitMatch est la plateforme qui met en relation les <b>clients</b> et les <b>coachs sportifs</b> proches de chez eux. Tu peux rechercher par ville, code postal ou salle, consulter les profils (avis, spécialités, tarifs) et réserver ta séance facilement.")|safe }}
         </div>
       </details>
 
       <details class="faq-item">
-        <summary>Comment réserver une séance sur FitMatch ?</summary>
+        <summary>{{ t.home.faq2_q|default('Comment réserver une séance sur FitMatch ?') }}</summary>
         <div class="faq-content">
-          <b>Méthode 1 : Via la plateforme FitMatch</b><br>
-          1️⃣ Entre le nom de ta <b>salle de sport</b>.<br>
-          2️⃣ Choisis un <b>coach</b> parmi ceux qui travaillent dans cette salle.<br>
-          3️⃣ Clique sur son profil et réserve directement ta séance.<br><br>
-          <b>Méthode 2 : Via le lien privé du coach</b><br>
-          1️⃣ Visite les <b>réseaux sociaux</b> (Instagram, TikTok, Facebook) de ton coach.<br>
-          2️⃣ Clique sur le <b>lien privé FitMatch</b> qu'il a partagé dans sa bio.<br>
-          3️⃣ Réserve ta séance directement en ligne — simple et rapide !
+          {{ t.home.faq2_a|default("<b>Méthode 1 : Via la plateforme FitMatch</b><br>1️⃣ Entre le nom de ta <b>salle de sport</b>.<br>2️⃣ Choisis un <b>coach</b> parmi ceux qui travaillent dans cette salle.<br>3️⃣ Clique sur son profil et réserve directement ta séance.<br><br><b>Méthode 2 : Via le lien privé du coach</b><br>1️⃣ Visite les <b>réseaux sociaux</b> (Instagram, TikTok, Facebook) de ton coach.<br>2️⃣ Clique sur le <b>lien privé FitMatch</b> qu'il a partagé dans sa bio.<br>3️⃣ Réserve ta séance directement en ligne — simple et rapide !")|safe }}
         </div>
       </details>
 
       <details class="faq-item">
-        <summary>Comment fonctionne le paiement sur FitMatch ?</summary>
+        <summary>{{ t.home.faq3_q|default('Comment fonctionne le paiement sur FitMatch ?') }}</summary>
         <div class="faq-content">
-          💳 <b>Le paiement en ligne est disponible !</b> Tu peux payer ta séance directement sur FitMatch  
-          via un <b>système sécurisé Stripe</b> (carte bancaire Visa, Mastercard, American Express).  
-          Le coach reçoit le paiement automatiquement sur son compte.
+          {{ t.home.faq3_a|default("💳 <b>Le paiement en ligne est disponible !</b> Tu peux payer ta séance directement sur FitMatch via un <b>système sécurisé Stripe</b> (carte bancaire Visa, Mastercard, American Express). Le coach reçoit le paiement automatiquement sur son compte.")|safe }}
         </div>
       </details>
 
       <details class="faq-item">
-        <summary>Le paiement en ligne est-il obligatoire ?</summary>
+        <summary>{{ t.home.faq4_q|default('Le paiement en ligne est-il obligatoire ?') }}</summary>
         <div class="faq-content">
-          🔄 Ça dépend du coach ! Chaque coach choisit s'il souhaite <b>activer le paiement en ligne</b> ou non.  
-          Si le paiement est désactivé, tu t'arranges directement avec lui (espèces, virement, etc.).
+          {{ t.home.faq4_a|default("🔄 Ça dépend du coach ! Chaque coach choisit s'il souhaite <b>activer le paiement en ligne</b> ou non. Si le paiement est désactivé, tu t'arranges directement avec lui (espèces, virement, etc.).")|safe }}
         </div>
       </details>
 
       <details class="faq-item">
-        <summary>Comment gérer mes séances sur FitMatch ?</summary>
+        <summary>{{ t.home.faq5_q|default('Comment gérer mes séances sur FitMatch ?') }}</summary>
         <div class="faq-content">
-          Depuis ton espace personnel, tu peux <b>voir</b>, <b>modifier</b> ou <b>annuler</b> tes séances.  
-          Tu reçois aussi des rappels automatiques avant chaque rendez-vous.
+          {{ t.home.faq5_a|default("Depuis ton espace personnel, tu peux <b>voir</b>, <b>modifier</b> ou <b>annuler</b> tes séances. Tu reçois aussi des rappels automatiques avant chaque rendez-vous.")|safe }}
         </div>
       </details>
 
       <details class="faq-item">
-        <summary>Comment faire apparaître mon profil de coach sur FitMatch ?</summary>
+        <summary>{{ t.home.faq6_q|default('Comment faire apparaître mon profil de coach sur FitMatch ?') }}</summary>
         <div class="faq-content">
-          Inscris-toi en tant que <b>coach</b>, complète ton profil (spécialités, photos, tarifs, salles où tu coaches).  
-          Tu seras visible dès qu'un client recherche dans ta zone ou clique sur ta salle.
+          {{ t.home.faq6_a|default("Inscris-toi en tant que <b>coach</b>, complète ton profil (spécialités, photos, tarifs, salles où tu coaches). Tu seras visible dès qu'un client recherche dans ta zone ou clique sur ta salle.")|safe }}
         </div>
       </details>
     </div>
