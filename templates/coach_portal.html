@@ -448,7 +448,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             2h
                         </button>
                     </div>
-                    <p class="text-xs text-gray-500 mt-3 text-center">Les clients verront les créneaux selon cette durée</p>
+                    <p class="text-xs text-gray-500 mt-3 text-center">{{ t.coach_portal.clients_see_slots|default('Les clients verront les créneaux selon cette durée') }}</p>
                 </div>
 
                 <!-- Gérer mes disponibilités -->
@@ -460,8 +460,8 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900">Mes disponibilités</h3>
-                            <p class="text-sm text-gray-600">Horaires par jour de la semaine</p>
+                            <h3 class="text-lg font-bold text-gray-900">{{ t.coach_portal.my_availability|default('Mes disponibilités') }}</h3>
+                            <p class="text-sm text-gray-600">{{ t.coach_portal.hours_by_day|default('Horaires par jour de la semaine') }}</p>
                         </div>
                     </div>
                     
@@ -475,7 +475,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
-                        + Disponibilité
+                        {{ t.coach_portal.add_availability_btn|default('+ Disponibilité') }}
                     </button>
                 </div>
 
@@ -488,8 +488,8 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold text-gray-900">Jours bloqués</h3>
-                            <p class="text-sm text-gray-600">Bloquer/débloquer des jours</p>
+                            <h3 class="text-lg font-bold text-gray-900">{{ t.coach_portal.blocked_days|default('Jours bloqués') }}</h3>
+                            <p class="text-sm text-gray-600">{{ t.coach_portal.block_unblock_days|default('Bloquer/débloquer des jours') }}</p>
                         </div>
                     </div>
                     
@@ -508,7 +508,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
-                        Bloquer un créneau spécifique
+                        {{ t.coach_portal.block_specific_slot|default('Bloquer un créneau spécifique') }}
                     </button>
                     
                     <!-- Liste des créneaux spécifiques bloqués -->
@@ -518,28 +518,28 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
 
                 <!-- Actions rapides -->
                 <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Actions Rapides</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">{{ t.coach_portal.quick_actions|default('Actions Rapides') }}</h3>
                     
                     <div class="space-y-3">
                         <a href="/coach/profile-setup" class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition flex items-center">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                             </svg>
-                            Gérer mon profil
+                            {{ t.coach_portal.manage_my_profile|default('Gérer mon profil') }}
                         </a>
                         
                         <button class="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-purple-600 hover:to-purple-700 transition flex items-center">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                             </svg>
-                            Voir les stats
+                            {{ t.coach_portal.view_stats|default('Voir les stats') }}
                         </button>
                     </div>
                 </div>
 
                 <!-- Notifications récentes -->
                 <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Notifications</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">{{ t.coach_portal.notifications_title|default('Notifications') }}</h3>
                     
                     <div id="notifications-list" class="space-y-3">
                         <!-- Sera rempli par JavaScript -->
@@ -556,7 +556,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
         <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
             <div class="p-6 border-b bg-gradient-to-r from-green-500 to-emerald-500">
                 <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-semibold text-white">Définir mes disponibilités</h3>
+                    <h3 class="text-xl font-semibold text-white">{{ t.coach_portal.define_availability|default('Définir mes disponibilités') }}</h3>
                     <button onclick="closeAvailabilityModalNew()" class="text-white hover:text-gray-200">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -566,29 +566,29 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
             </div>
             
             <div class="p-6">
-                <p class="text-sm text-gray-600 mb-4">Définissez vos heures de disponibilité. Les clients ne pourront réserver que pendant ces horaires.</p>
+                <p class="text-sm text-gray-600 mb-4">{{ t.coach_portal.availability_description|default('Définissez vos heures de disponibilité. Les clients ne pourront réserver que pendant ces horaires.') }}</p>
                 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Jour de la semaine</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t.coach_portal.day_of_week|default('Jour de la semaine') }}</label>
                         <select id="day-select" class="w-full border border-gray-300 rounded-lg px-3 py-2">
-                            <option value="1">Lundi</option>
-                            <option value="2">Mardi</option>
-                            <option value="3">Mercredi</option>
-                            <option value="4">Jeudi</option>
-                            <option value="5">Vendredi</option>
-                            <option value="6">Samedi</option>
-                            <option value="0">Dimanche</option>
+                            <option value="1">{{ t.coach_portal.monday|default('Lundi') }}</option>
+                            <option value="2">{{ t.coach_portal.tuesday|default('Mardi') }}</option>
+                            <option value="3">{{ t.coach_portal.wednesday|default('Mercredi') }}</option>
+                            <option value="4">{{ t.coach_portal.thursday|default('Jeudi') }}</option>
+                            <option value="5">{{ t.coach_portal.friday|default('Vendredi') }}</option>
+                            <option value="6">{{ t.coach_portal.saturday|default('Samedi') }}</option>
+                            <option value="0">{{ t.coach_portal.sunday|default('Dimanche') }}</option>
                         </select>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Heure début</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ t.coach_portal.start_time|default('Heure début') }}</label>
                             <input type="time" id="start-time" class="w-full border border-gray-300 rounded-lg px-3 py-2" value="15:00">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Heure fin</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">{{ t.coach_portal.end_time|default('Heure fin') }}</label>
                             <input type="time" id="end-time" class="w-full border border-gray-300 rounded-lg px-3 py-2" value="19:00">
                         </div>
                     </div>
@@ -596,10 +596,10 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                 
                 <div class="mt-6 flex space-x-3">
                     <button type="button" onclick="closeAvailabilityModalNew()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">
-                        Annuler
+                        {{ t.coach_portal.cancel|default('Annuler') }}
                     </button>
                     <button type="button" onclick="saveAvailability()" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
-                        Valider
+                        {{ t.coach_portal.validate|default('Valider') }}
                     </button>
                 </div>
             </div>
@@ -613,7 +613,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
         <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
             <div class="p-6 border-b bg-gradient-to-r from-red-500 to-orange-500">
                 <div class="flex justify-between items-center">
-                    <h3 class="text-xl font-semibold text-white">Ajouter une indisponibilité</h3>
+                    <h3 class="text-xl font-semibold text-white">{{ t.coach_portal.add_unavailability|default('Ajouter une indisponibilité') }}</h3>
                     <button onclick="closeUnavailabilityModal()" class="text-white hover:text-gray-200">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -625,20 +625,20 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
             <div class="p-6">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Type d'indisponibilité</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t.coach_portal.unavailability_type|default("Type d'indisponibilité") }}</label>
                         <select id="unavail-type" class="w-full border border-gray-300 rounded-lg px-3 py-2" onchange="toggleUnavailType()">
-                            <option value="day">Journée complète</option>
-                            <option value="slot">Créneau spécifique</option>
+                            <option value="day">{{ t.coach_portal.full_day|default('Journée complète') }}</option>
+                            <option value="slot">{{ t.coach_portal.specific_slot|default('Créneau spécifique') }}</option>
                         </select>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t.coach_portal.date|default('Date') }}</label>
                         <input type="date" id="unavail-date" class="w-full border border-gray-300 rounded-lg px-3 py-2">
                     </div>
                     
                     <div id="unavail-time-container" class="hidden">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Heure du créneau</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">{{ t.coach_portal.slot_time|default('Heure du créneau') }}</label>
                         <select id="unavail-time" class="w-full border border-gray-300 rounded-lg px-3 py-2">
                             <option value="10:00">10:00</option>
                             <option value="11:00">11:00</option>
@@ -659,10 +659,10 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                 
                 <div class="mt-6 flex space-x-3">
                     <button type="button" onclick="closeUnavailabilityModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">
-                        Annuler
+                        {{ t.coach_portal.cancel|default('Annuler') }}
                     </button>
                     <button type="button" onclick="addUnavailability()" class="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition">
-                        Bloquer
+                        {{ t.coach_portal.block|default('Bloquer') }}
                     </button>
                 </div>
             </div>
@@ -751,9 +751,32 @@ async function setSessionDuration(minutes) {
 
 const dayNamesMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const dayLabelsMap = { 
-    monday: 'Lundi', tuesday: 'Mardi', wednesday: 'Mercredi', 
-    thursday: 'Jeudi', friday: 'Vendredi', saturday: 'Samedi', sunday: 'Dimanche' 
+    monday: '{{ t.coach_portal.monday|default("Lundi") }}', 
+    tuesday: '{{ t.coach_portal.tuesday|default("Mardi") }}', 
+    wednesday: '{{ t.coach_portal.wednesday|default("Mercredi") }}', 
+    thursday: '{{ t.coach_portal.thursday|default("Jeudi") }}', 
+    friday: '{{ t.coach_portal.friday|default("Vendredi") }}', 
+    saturday: '{{ t.coach_portal.saturday|default("Samedi") }}', 
+    sunday: '{{ t.coach_portal.sunday|default("Dimanche") }}' 
 };
+const dayShortLabels = {
+    0: '{{ t.coach_portal.sun_short|default("Dim") }}',
+    1: '{{ t.coach_portal.mon_short|default("Lun") }}',
+    2: '{{ t.coach_portal.tue_short|default("Mar") }}',
+    3: '{{ t.coach_portal.wed_short|default("Mer") }}',
+    4: '{{ t.coach_portal.thu_short|default("Jeu") }}',
+    5: '{{ t.coach_portal.fri_short|default("Ven") }}',
+    6: '{{ t.coach_portal.sat_short|default("Sam") }}'
+};
+const i18nLabels = {
+    noNotification: '{{ t.coach_portal.no_notification|default("Aucune notification") }}',
+    otherBlockedDays: '{{ t.coach_portal.other_blocked_days|default("Autres jours bloqués :") }}',
+    blockedSlots: '{{ t.coach_portal.blocked_slots|default("Créneaux bloqués :") }}',
+    unblock: '{{ t.coach_portal.unblock|default("Débloquer") }}'
+};
+const currentLocale = '{{ locale|default("fr") }}';
+const localeMap = { 'fr': 'fr-FR', 'en': 'en-US', 'es': 'es-ES', 'de': 'de-DE', 'it': 'it-IT', 'pt': 'pt-PT', 'ar': 'ar-SA' };
+const jsLocale = localeMap[currentLocale] || 'fr-FR';
 
 function openAvailabilityModal() {
     document.getElementById('availability-modal').classList.remove('hidden');
@@ -1006,9 +1029,9 @@ function renderUnavailabilityList() {
         next7Days.push(dateStr);
         
         const isBlocked = days.includes(dateStr);
-        const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+        const dayName = date.toLocaleDateString(jsLocale, { weekday: 'short' });
         const dayNum = date.getDate();
-        const monthName = date.toLocaleDateString('fr-FR', { month: 'short' });
+        const monthName = date.toLocaleDateString(jsLocale, { month: 'short' });
         
         daysHtml += `
             <div class="flex items-center justify-between py-2 px-3 rounded-lg ${isBlocked ? 'bg-red-50' : 'bg-green-50'} transition-all">
@@ -1034,15 +1057,15 @@ function renderUnavailabilityList() {
     // Afficher les jours bloqués au-delà des 7 prochains jours
     const otherBlockedDays = days.filter(d => !next7Days.includes(d)).sort();
     if (otherBlockedDays.length > 0) {
-        let otherHtml = '<p class="text-xs text-gray-500 mb-2">Autres jours bloqués :</p>';
+        let otherHtml = `<p class="text-xs text-gray-500 mb-2">${i18nLabels.otherBlockedDays}</p>`;
         otherBlockedDays.forEach(dateStr => {
             const dateObj = new Date(dateStr + 'T00:00:00');
-            const formattedDate = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+            const formattedDate = dateObj.toLocaleDateString(jsLocale, { weekday: 'long', day: 'numeric', month: 'long' });
             otherHtml += `
                 <div class="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-1">
                     <span class="text-sm font-medium capitalize">${formattedDate}</span>
                     <button onclick="toggleDayAvailability('${dateStr}', true)" class="text-red-500 hover:text-red-700 text-xs bg-white px-2 py-1 rounded border border-red-200">
-                        Débloquer
+                        ${i18nLabels.unblock}
                     </button>
                 </div>
             `;
@@ -1058,10 +1081,10 @@ function renderUnavailabilityList() {
         return;
     }
     
-    let slotsHtml = '<p class="text-xs text-gray-500 mb-2">Créneaux bloqués :</p>';
+    let slotsHtml = `<p class="text-xs text-gray-500 mb-2">${i18nLabels.blockedSlots}</p>`;
     slots.forEach(slot => {
         const dateObj = new Date(slot.date + 'T00:00:00');
-        const formattedDate = dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+        const formattedDate = dateObj.toLocaleDateString(jsLocale, { weekday: 'short', day: 'numeric', month: 'short' });
         slotsHtml += `
             <div class="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
                 <div class="flex items-center">
