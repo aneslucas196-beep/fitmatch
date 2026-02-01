@@ -1027,9 +1027,14 @@ async def client_home(request: Request, user = Depends(get_current_user)):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     
+    lang = get_locale_from_request(request)
+    t = get_translations(lang)
+    
     response = templates.TemplateResponse("client_home.html", {
         "request": request, 
-        "user": user
+        "user": user,
+        "lang": lang,
+        "t": t
     })
     # Désactiver le cache pour éviter les problèmes de session
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -1040,9 +1045,14 @@ async def client_home(request: Request, user = Depends(get_current_user)):
 @app.get("/mon-compte", response_class=HTMLResponse)
 async def mon_compte(request: Request, user = Depends(get_current_user)):
     """Page compte client accessible via session ou localStorage."""
+    lang = get_locale_from_request(request)
+    t = get_translations(lang)
+    
     response = templates.TemplateResponse("client_home.html", {
         "request": request, 
-        "user": user  # Utiliser la session si disponible
+        "user": user,
+        "lang": lang,
+        "t": t
     })
     # Désactiver le cache pour éviter les problèmes de session
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -6854,19 +6864,20 @@ async def booking_success_page(request: Request, booking_id: str = None, session
         "request": request,
         "booking_id": booking_id,
         "session_id": session_id,
-        "locale": locale,
-        "translations": translations,
-        "t": lambda trans_dict, key, default="": trans_dict.get(key, default)
+        "lang": locale,
+        "t": translations
     })
 
 @app.get("/booking-cancelled", response_class=HTMLResponse)
 async def booking_cancelled_page(request: Request, booking_id: str = None):
     """Page affichée si le paiement est annulé."""
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    lang = get_locale_from_request(request)
+    t = get_translations(lang)
     return templates.TemplateResponse("booking_cancelled.html", {
         "request": request,
-        "booking_id": booking_id
+        "booking_id": booking_id,
+        "lang": lang,
+        "t": t
     })
 
 # ============================================

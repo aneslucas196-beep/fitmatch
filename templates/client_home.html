@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ lang }}" {% if lang == 'ar' %}dir="rtl"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Espace Client - FitMatch</title>
+    <title>{{ t.client.page_title }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,10 +17,10 @@
 <!-- Header Simple -->
 <header class="fixed inset-x-0 top-0 z-50 bg-white border-b border-slate-200">
     <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-        <a href="/" class="inline-flex items-center">
+        <a href="/?lang={{ lang }}" class="inline-flex items-center">
             <span class="text-2xl font-semibold tracking-tight text-slate-900">Fit<span class="text-emerald-500">Match</span></span>
         </a>
-        <a href="/logout" class="text-sm text-slate-600 hover:text-red-500 transition">Se déconnecter</a>
+        <a href="/logout" class="text-sm text-slate-600 hover:text-red-500 transition">{{ t.client.logout }}</a>
     </div>
 </header>
 
@@ -29,7 +29,7 @@
 
 <!-- Toast notification mot de passe modifié -->
 <div id="passwordToast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium hidden">
-    Votre mot de passe a été modifié
+    {{ t.client.password_changed }}
 </div>
 
 <script>
@@ -49,7 +49,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
     <div class="bg-white border-b border-slate-200">
         <div class="max-w-6xl mx-auto px-6 py-10 text-center">
             <h1 class="text-2xl md:text-3xl font-bold mb-2 text-slate-900" id="welcome-title">
-                Bienvenue Champion !
+                {{ t.client.welcome }} {{ t.client.champion }} !
             </h1>
             <p id="motivation-quote" class="text-base md:text-lg text-slate-600"></p>
         </div>
@@ -65,8 +65,8 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-900">Mes Prochaines Séances</h2>
-                    <p class="text-gray-600">Vos entraînements planifiés</p>
+                    <h2 class="text-2xl font-bold text-gray-900">{{ t.client.next_sessions }}</h2>
+                    <p class="text-gray-600">{{ t.client.planned_workouts }}</p>
                 </div>
             </div>
             
@@ -75,9 +75,9 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                     <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <p class="text-gray-500 text-lg mb-4">Aucune séance planifiée</p>
-                    <a href="/" class="inline-block bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-full font-medium hover:shadow-lg transition-all">
-                        Réserver une séance
+                    <p class="text-gray-500 text-lg mb-4">{{ t.client.no_session }}</p>
+                    <a href="/?lang={{ lang }}" class="inline-block bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-full font-medium hover:shadow-lg transition-all">
+                        {{ t.client.book_session }}
                     </a>
                 </div>
                 <div id="bookings-list"></div>
@@ -92,33 +92,33 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-900">Mes Statistiques</h2>
-                    <p class="text-gray-600">Votre progression</p>
+                    <h2 class="text-2xl font-bold text-gray-900">{{ t.client.my_stats }}</h2>
+                    <p class="text-gray-600">{{ t.client.your_progress }}</p>
                 </div>
             </div>
             
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="text-center p-4 bg-green-50 rounded-xl">
                     <div class="text-3xl font-bold text-green-600" id="stat-total">0</div>
-                    <div class="text-sm text-gray-600">Séances réservées</div>
+                    <div class="text-sm text-gray-600">{{ t.client.sessions_booked }}</div>
                 </div>
                 <div class="text-center p-4 bg-blue-50 rounded-xl">
                     <div class="text-3xl font-bold text-blue-600" id="stat-upcoming">0</div>
-                    <div class="text-sm text-gray-600">À venir</div>
+                    <div class="text-sm text-gray-600">{{ t.client.upcoming }}</div>
                 </div>
                 <div class="text-center p-4 bg-purple-50 rounded-xl">
                     <div class="text-3xl font-bold text-purple-600" id="stat-confirmed">0</div>
-                    <div class="text-sm text-gray-600">Confirmées</div>
+                    <div class="text-sm text-gray-600">{{ t.client.confirmed }}</div>
                 </div>
                 <div class="text-center p-4 bg-orange-50 rounded-xl">
                     <div class="text-3xl font-bold text-orange-600" id="stat-pending">0</div>
-                    <div class="text-sm text-gray-600">En attente</div>
+                    <div class="text-sm text-gray-600">{{ t.client.pending }}</div>
                 </div>
             </div>
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <a href="/" class="group">
+            <a href="/?lang={{ lang }}" class="group">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md hover:border-emerald-300 transition-all duration-200">
                     <div class="flex items-center">
                         <div class="bg-emerald-100 p-4 rounded-full mr-5">
@@ -128,14 +128,14 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-semibold text-slate-900 mb-1">Trouver le coach parfait</h3>
-                            <p class="text-slate-600">Recherchez un coach dans votre salle</p>
+                            <h3 class="text-lg font-semibold text-slate-900 mb-1">{{ t.client.find_coach }}</h3>
+                            <p class="text-slate-600">{{ t.client.search_coach_gym }}</p>
                         </div>
                     </div>
                 </div>
             </a>
             
-            <a href="/" class="group">
+            <a href="/?lang={{ lang }}" class="group">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md hover:border-emerald-300 transition-all duration-200">
                     <div class="flex items-center">
                         <div class="bg-blue-100 p-4 rounded-full mr-5">
@@ -144,8 +144,8 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-lg font-semibold text-slate-900 mb-1">Découvrir des coachs</h3>
-                            <p class="text-slate-600">Trouvez le coach parfait pour vous</p>
+                            <h3 class="text-lg font-semibold text-slate-900 mb-1">{{ t.client.discover_coaches }}</h3>
+                            <p class="text-slate-600">{{ t.client.find_perfect_coach }}</p>
                         </div>
                     </div>
                 </div>
@@ -156,11 +156,11 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
 
 <dialog id="cancel-modal" style="border:none;border-radius:12px;padding:0;max-width:500px;width:90%;background:white;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
     <div style="padding:24px;">
-        <h2 style="font-size:20px;font-weight:600;margin:0 0 12px;">Annuler cette séance ?</h2>
+        <h2 style="font-size:20px;font-weight:600;margin:0 0 12px;" id="cancel-modal-title">{{ t.client.cancel_confirm }}</h2>
         <p style="color:#666;margin:0 0 20px;" id="cancel-info"></p>
         <div style="display:flex;gap:12px;">
-            <button onclick="document.getElementById('cancel-modal').close()" style="flex:1;padding:12px;border-radius:8px;border:1px solid #ddd;background:white;font-weight:500;cursor:pointer;">Non, garder</button>
-            <button onclick="confirmCancel()" style="flex:1;padding:12px;border-radius:8px;border:none;background:#ef4444;color:white;font-weight:500;cursor:pointer;">Oui, annuler</button>
+            <button onclick="document.getElementById('cancel-modal').close()" style="flex:1;padding:12px;border-radius:8px;border:1px solid #ddd;background:white;font-weight:500;cursor:pointer;" id="btn-keep">{{ t.common.cancel if t.common and t.common.cancel else 'OK' }}</button>
+            <button onclick="confirmCancel()" style="flex:1;padding:12px;border-radius:8px;border:none;background:#ef4444;color:white;font-weight:500;cursor:pointer;" id="btn-confirm">{{ t.client.cancel }}</button>
         </div>
     </div>
 </dialog>

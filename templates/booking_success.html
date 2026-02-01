@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Réservation confirmée - FitMatch</title>
+    <title>{{ t.booking_pages.success_title }} - FitMatch</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,26 +19,26 @@
             </svg>
         </div>
         
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">Paiement réussi !</h1>
-        <p class="text-gray-600 mb-6">Votre séance est maintenant confirmée. Vous allez recevoir un email de confirmation avec tous les détails.</p>
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ t.booking_pages.success_title }}</h1>
+        <p class="text-gray-600 mb-6">{{ t.booking_pages.success_message }}</p>
         
         {% if booking_id %}
         <div class="bg-gray-50 rounded-lg p-4 mb-6">
-            <p class="text-sm text-gray-500">Numéro de réservation</p>
+            <p class="text-sm text-gray-500">{{ t.booking_pages.booking_number }}</p>
             <p class="text-lg font-semibold text-gray-900">#{{ booking_id }}</p>
         </div>
         {% endif %}
         
         <div class="space-y-3">
-            <a href="/" class="block w-full bg-emerald-500 text-white py-3 px-6 rounded-lg hover:bg-emerald-600 transition font-medium">
-                Retour à l'accueil
+            <a href="/?lang={{ lang }}" class="block w-full bg-emerald-500 text-white py-3 px-6 rounded-lg hover:bg-emerald-600 transition font-medium">
+                {{ t.booking_pages.back_home }}
             </a>
-            <a href="/client/dashboard" class="block w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-200 transition font-medium">
-                Voir mes réservations
+            <a href="/client/home?lang={{ lang }}" class="block w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-200 transition font-medium">
+                {{ t.booking_pages.view_bookings }}
             </a>
         </div>
         
-        <p class="text-sm text-gray-500 mt-6">Merci de votre confiance !</p>
+        <p class="text-sm text-gray-500 mt-6">{{ t.booking_pages.thank_you }}</p>
     </div>
 </body>
 </html>
