@@ -18,12 +18,36 @@
                 <div class="flex items-center">
                     <h1 class="text-xl font-bold">FitMatch</h1>
                 </div>
-                <div class="flex space-x-4">
+                <div class="flex space-x-4 items-center">
                     <a href="/" class="hover:text-blue-200">Accueil</a>
                     <a href="/signup" class="hover:text-blue-200">S'inscrire</a>
                     <a href="/login" class="hover:text-blue-200">Connexion</a>
                     <a href="/coach-login" class="hover:text-blue-200">Espace Coach</a>
+                    <!-- Sélecteur de langue -->
+                    <div class="language-selector relative ml-4">
+                        <button onclick="toggleLanguageMenu()" class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded-lg text-sm flex items-center gap-1">
+                            🌐 {{ locale|default('fr')|upper }}
+                        </button>
+                        <div id="langMenu" class="hidden absolute top-full right-0 mt-2 bg-white rounded-lg shadow-xl min-w-[150px] z-50 overflow-hidden">
+                            {% for lang in available_languages|default([]) %}
+                            <a href="/set-language/{{ lang.code }}" class="block px-4 py-3 text-gray-800 hover:bg-green-50 text-sm border-b border-gray-100 {% if lang.code == locale %}bg-green-50 font-semibold{% endif %}">
+                                {{ lang.name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
+                <script>
+                    function toggleLanguageMenu() {
+                        const menu = document.getElementById('langMenu');
+                        menu.classList.toggle('hidden');
+                    }
+                    document.addEventListener('click', function(e) {
+                        const menu = document.getElementById('langMenu');
+                        const btn = e.target.closest('.language-selector');
+                        if (!btn && menu) menu.classList.add('hidden');
+                    });
+                </script>
             </div>
         </div>
     </nav>

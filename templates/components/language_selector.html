@@ -1,0 +1,24 @@
+<!-- Sélecteur de langue global -->
+<div class="language-selector" style="position: relative; margin-left: auto;">
+  <button onclick="toggleLanguageMenu()" class="btn-lang" style="background: transparent; border: 1px solid #e5e7eb; color: #374151; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+    🌐 {{ locale|default('fr')|upper }}
+  </button>
+  <div id="langMenu" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); min-width: 150px; z-index: 1000; overflow: hidden;">
+    {% for lang in available_languages|default([]) %}
+    <a href="/set-language/{{ lang.code }}" style="display: block; padding: 12px 16px; color: #1f2937; text-decoration: none; font-size: 14px; border-bottom: 1px solid #f3f4f6; {% if lang.code == locale %}background: #f0fdf4; font-weight: 600;{% endif %}">
+      {{ lang.name }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+<script>
+  function toggleLanguageMenu() {
+    const menu = document.getElementById('langMenu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  }
+  document.addEventListener('click', function(e) {
+    const menu = document.getElementById('langMenu');
+    const btn = e.target.closest('.language-selector');
+    if (!btn && menu) menu.style.display = 'none';
+  });
+</script>

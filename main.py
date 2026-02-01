@@ -87,6 +87,23 @@ from i18n_service import (
     COOKIE_NAME as LOCALE_COOKIE_NAME
 )
 
+# Cache des langues disponibles (chargé une fois au démarrage)
+_available_languages_cache = None
+
+def get_i18n_context(request: Request) -> dict:
+    """Retourne le contexte i18n pour les templates (locale, translations, available_languages)."""
+    global _available_languages_cache
+    if _available_languages_cache is None:
+        _available_languages_cache = get_available_languages()
+    
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
+    return {
+        "locale": locale,
+        "t": translations,
+        "available_languages": _available_languages_cache
+    }
+
 # Import Stripe service (gestion des abonnements coachs)
 try:
     from stripe_service import (
@@ -942,15 +959,15 @@ async def search_coaches(
     # Si on cherche par salle spécifique - charger les VRAIS coaches
     if gym:
         coaches = get_coaches_by_gym_id(gym)
-        locale = get_locale_from_request(request)
-        translations = get_translations(locale)
+        i18n = get_i18n_context(request)
         return templates.TemplateResponse("results.html", {
             "request": request,
             "coaches": coaches,
             "specialty": None,
             "city": "",
             "gym": gym,
-            "radius_km": radius_km
+            "radius_km": radius_km,
+            **i18n
         })
     
     # Géocoder la ville
@@ -987,15 +1004,15 @@ async def search_coaches(
     if specialty:
         coaches = [c for c in coaches if specialty.lower() in [s.lower() for s in c.get("specialties", [])]]
     
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n = get_i18n_context(request)
     return templates.TemplateResponse("results.html", {
         "request": request,
         "coaches": coaches,
         "specialty": specialty,
         "city": city,
         "gym": None,
-        "radius_km": radius_km
+        "radius_km": radius_km,
+        **i18n
     })
 
 # Cette route sera déplacée après les routes spécifiques coach/portal, coach/specialties, etc.
@@ -1148,29 +1165,25 @@ async def test_coaches_page(request: Request):
 @app.get("/partner", response_class=HTMLResponse)
 async def partner_page(request: Request):
     """Page Devenir partenaire FitMatch Pro."""
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
-    return templates.TemplateResponse("partner.html", {"request": request, "t": translations, "locale": locale})
+    i18n = get_i18n_context(request)
+    return templates.TemplateResponse("partner.html", {"request": request, **i18n})
 
 @app.get("/coach-signup", response_class=HTMLResponse)
 async def coach_signup_page(request: Request):
     """Page d'inscription coach avec hero section."""
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
-    return templates.TemplateResponse("coach_signup.html", {"request": request, "t": translations, "locale": locale})
+    i18n = get_i18n_context(request)
+    return templates.TemplateResponse("coach_signup.html", {"request": request, **i18n})
 
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription."""
     countries = get_countries_list()
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n = get_i18n_context(request)
     return templates.TemplateResponse("signup.html", {
         "request": request, 
-        "t": translations,
-        "locale": locale,
         "role": role,
-        "countries": countries
+        "countries": countries,
+        **i18n
     })
 
 @app.get("/api/test-gym-data")
@@ -1816,12 +1829,12 @@ async def api_login(request: Request):
 @app.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request, message: Optional[str] = None, password_changed: Optional[str] = None):
     """Formulaire de connexion."""
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n = get_i18n_context(request)
     return templates.TemplateResponse("login.html", {
         "request": request,
         "message": message,
-        "password_changed": password_changed
+        "password_changed": password_changed,
+        **i18n
     })
 
 @app.post("/login")
@@ -1873,10 +1886,12 @@ async def login_submit(
             return response
         else:
             # Identifiants incorrects même en mode démo
+            i18n = get_i18n_context(request)
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
-                "email": email
+                "email": email,
+                **i18n
             }, status_code=401)
     
     # Mode Supabase - utiliser le nouveau service avec vérification d'email confirmé
@@ -1918,20 +1933,23 @@ async def login_submit(
         # Gérer les différents types d'erreurs
         error_message = result.get("error", "Erreur de connexion")
         
+        i18n = get_i18n_context(request)
         if result.get("mode") == "email_not_confirmed":
             # Email non confirmé - proposer de renvoyer l'email
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Email non confirmé. Vérifiez votre boîte mail ou renvoyez l'email de confirmation.",
                 "email": email,
-                "show_resend": True
+                "show_resend": True,
+                **i18n
             }, status_code=401)
         elif result.get("mode") == "invalid_credentials":
             # Identifiants incorrects
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
-                "email": email
+                "email": email,
+                **i18n
             }, status_code=401)
         else:
             # Autre erreur
@@ -1939,7 +1957,8 @@ async def login_submit(
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Erreur de connexion. Veuillez réessayer.",
-                "email": email
+                "email": email,
+                **i18n
             }, status_code=401)
 
 @app.post("/auth/resend-confirmation")
