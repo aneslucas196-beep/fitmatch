@@ -649,13 +649,15 @@
           <img src="/attached_assets/snow_1764960351066.png" alt="Coach Idriss">
           <div>
             <h3>Coach Idriss</h3>
-            <p class="fm-t-role">Préparation physique</p>
+            <p class="fm-t-role">{{ t.coach_signup.testimonial6_role|default("MMA & Prépa physique") }}</p>
           </div>
         </div>
-        <div class="fm-t-stars" aria-label="5 étoiles">★★★★★</div>
-        <blockquote>"Avant, les gens me disaient toujours : 'Comment on réserve ?' Maintenant je dis juste : clique sur mon FitMatch. Les nouveaux de la salle me trouvent sur Insta, ils réservent direct sans me déranger. Je gagne du temps et de l'argent."</blockquote>
+        <div class="fm-t-stars" aria-label="5 stars">★★★★★</div>
+        <blockquote>"{{ t.coach_signup.testimonial6_quote|default("Avant, les gens me disaient toujours : 'Comment on réserve ?' Maintenant je dis juste : clique sur mon FitMatch. Les nouveaux de la salle me trouvent sur Insta, ils réservent direct sans me déranger. Je gagne du temps et de l'argent.") }}"</blockquote>
         <ul class="fm-t-tags">
-          <li>Prépa physique</li><li>Performance</li><li>Athlètes</li>
+          {% for tag in (t.coach_signup.testimonial6_tags|default("Prépa physique,Performance,Athlètes")).split(',') %}
+          <li>{{ tag }}</li>
+          {% endfor %}
         </ul>
       </article>
     </div>
@@ -669,12 +671,8 @@
         </svg>
       </div>
       <div class="fm-t-ig-text">
-        <h4>Boostez votre crédibilité avec Instagram</h4>
-        <p>
-          Sur votre <strong>profil FitMatch</strong>, votre <strong>Instagram</strong> est affiché : on peut voir qui vous êtes et vos
-          <strong>transformations</strong>. Vous pouvez aussi mettre le lien FitMatch dans votre bio (ou autres réseaux) : ça
-          permet de montrer immédiatement <strong>dans quelles salles vous coachez</strong> et de <strong>réserver directement</strong>.
-        </p>
+        <h4>{{ t.coach_signup.instagram_title|default("Boostez votre crédibilité avec Instagram") }}</h4>
+        <p>{{ t.coach_signup.instagram_desc|default("Sur votre profil FitMatch, votre Instagram est affiché : on peut voir qui vous êtes et vos transformations. Vous pouvez aussi mettre le lien FitMatch dans votre bio (ou autres réseaux) : ça permet de montrer immédiatement dans quelles salles vous coachez et de réserver directement.") }}</p>
       </div>
     </div>
 
@@ -766,35 +764,30 @@
     </details>
 
     <details>
-      <summary>Comment se passe la mise en place de mon profil sur FitMatch ?</summary>
+      <summary>{{ t.coach_signup.faq5_q|default("Comment se passe la mise en place de mon profil sur FitMatch ?") }}</summary>
       <div class="answer">
-        <p>C'est très simple. Vous créez votre compte en quelques minutes, ajoutez vos spécialités, vos salles d'entraînement et vos photos.</p>
-        <p>Votre profil est ensuite validé et visible publiquement sur FitMatch.</p>
+        <p>{{ t.coach_signup.faq5_a|default("C'est très simple. Vous créez votre compte en quelques minutes, ajoutez vos spécialités, vos salles d'entraînement et vos photos. Votre profil est ensuite validé et visible publiquement sur FitMatch.") }}</p>
       </div>
     </details>
 
     <details>
-      <summary>Que faites-vous de mes données personnelles ?</summary>
+      <summary>{{ t.coach_signup.faq6_q|default("Que faites-vous de mes données personnelles ?") }}</summary>
       <div class="answer">
-        <p>Vos données sont protégées et utilisées uniquement pour la gestion de votre compte et vos réservations.</p>
-        <p>FitMatch respecte la confidentialité et ne partage jamais vos informations sans votre accord.</p>
+        <p>{{ t.coach_signup.faq6_a|default("Vos données sont protégées et utilisées uniquement pour la gestion de votre compte et vos réservations. FitMatch respecte la confidentialité et ne partage jamais vos informations sans votre accord.") }}</p>
       </div>
     </details>
 
     <details>
-      <summary>Comment partager mon profil FitMatch sur les réseaux sociaux ?</summary>
+      <summary>{{ t.coach_signup.faq7_q|default("Comment partager mon profil FitMatch sur les réseaux sociaux ?") }}</summary>
       <div class="answer">
-        <p>Chaque coach dispose d'un <strong>lien personnalisé unique</strong> vers son profil FitMatch.</p>
-        <p>Vous pouvez copier ce lien directement depuis votre espace coach et le partager sur Instagram, TikTok, Facebook ou dans votre bio.</p>
-        <p>Vos abonnés pourront voir vos salles, consulter vos créneaux disponibles et <strong>réserver directement</strong> sans passer par les DM.</p>
+        <p>{{ t.coach_signup.faq7_a|default("Chaque coach dispose d'un lien personnalisé unique vers son profil FitMatch. Vous pouvez copier ce lien directement depuis votre espace coach et le partager sur Instagram, TikTok, Facebook ou dans votre bio.") }}</p>
       </div>
     </details>
 
     <details>
-      <summary>Puis-je connecter mes réseaux sociaux à mon profil FitMatch ?</summary>
+      <summary>{{ t.coach_signup.faq8_q|default("Puis-je connecter mes réseaux sociaux à mon profil FitMatch ?") }}</summary>
       <div class="answer">
-        <p>Oui ! Sur votre profil FitMatch, vous pouvez ajouter le lien vers votre compte Instagram, TikTok ou autre réseau social.</p>
-        <p>Les clients peuvent ainsi voir vos transformations, vos publications et l'ambiance de vos coachings.</p>
+        <p>{{ t.coach_signup.faq8_a|default("Oui ! Sur votre profil FitMatch, vous pouvez ajouter le lien vers votre compte Instagram, TikTok ou autre réseau social. Les clients peuvent ainsi voir vos transformations, vos publications et l'ambiance de vos coachings.") }}</p>
       </div>
     </details>
   </div>
