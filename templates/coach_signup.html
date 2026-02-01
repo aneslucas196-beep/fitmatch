@@ -323,23 +323,23 @@
   <div class="fm-hero__wrap">
     <!-- Colonne gauche -->
     <div class="fm-hero__left">
-      <h1>La plateforme n°1 pour gérer ton activité de coaching sportif</h1>
+      <h1>{{ t.coach_signup.hero_title|default("La plateforme n°1 pour gérer ton activité de coaching sportif") }}</h1>
 
       <p class="fm-hero__lead">
-        50 000 coachs font confiance à la référence du coaching, utilisée par
-        <strong>14&nbsp;millions d'utilisateurs</strong>.
+        {{ t.coach_signup.hero_lead|default("50 000 coachs font confiance à la référence du coaching, utilisée par") }}
+        <strong>{{ t.coach_signup.hero_lead_users|default("14 millions d'utilisateurs") }}</strong>.
       </p>
 
       <ul class="fm-hero__checks">
-        <li>Agenda intelligent pour gérer tes réservations</li>
-        <li>Réservation en ligne disponible</li>
-        <li>Suivi client simplifié et professionnel</li>
-        <li>Sans engagement ni commission</li>
-        <li>Paiement facile et sécurisé</li>
+        <li>{{ t.coach_signup.check1|default("Agenda intelligent pour gérer tes réservations") }}</li>
+        <li>{{ t.coach_signup.check2|default("Réservation en ligne disponible") }}</li>
+        <li>{{ t.coach_signup.check3|default("Suivi client simplifié et professionnel") }}</li>
+        <li>{{ t.coach_signup.check4|default("Sans engagement ni commission") }}</li>
+        <li>{{ t.coach_signup.check5|default("Paiement facile et sécurisé") }}</li>
       </ul>
 
       <div class="fm-hero__rating">
-        ⭐ <strong>4,8/5</strong> sur FitTrust
+        ⭐ <strong>{{ t.coach_signup.rating|default("4,8/5 sur FitTrust") }}</strong>
       </div>
 
       <!-- Photo motivante sous la note -->
@@ -349,7 +349,7 @@
           alt="Équipe de coachs FitMatch"
           style="width:180px; height:120px; object-fit:cover; border-radius:12px; flex:0 0 180px;"
         />
-        <span>Rejoins les coachs qui font grandir leur activité avec FitMatch</span>
+        <span>{{ t.coach_signup.motivation|default("Rejoins les coachs qui font grandir leur activité avec FitMatch") }}</span>
       </div>
     </div>
 
@@ -363,49 +363,49 @@
           </svg>
         </div>
         <div class="fm-hero__cardBody">
-          <div class="fm-hero__cardTitle">Coach sportif</div>
-          <div class="fm-hero__cardDesc">Crée ton profil et deviens visible dès aujourd'hui</div>
+          <div class="fm-hero__cardTitle">{{ t.coach_signup.card_title|default("Coach sportif") }}</div>
+          <div class="fm-hero__cardDesc">{{ t.coach_signup.card_desc|default("Crée ton profil et deviens visible dès aujourd'hui") }}</div>
         </div>
         <div class="fm-hero__arrow" aria-hidden="true">→</div>
       </a>
 
       <a class="fm-hero__linkClient" href="/">
-        Je suis un client — je souhaite réserver un coach
+        {{ t.coach_signup.client_link|default("Je suis un client — je souhaite réserver un coach") }}
       </a>
     </div>
   </div>
 </section>
 
 <section class="fitmatch-dark">
-  <h2 class="fitmatch-title">La plateforme n°1 pour gérer ton activité de coaching sportif</h2>
+  <h2 class="fitmatch-title">{{ t.coach_signup.stats_title|default("La plateforme n°1 pour gérer ton activité de coaching sportif") }}</h2>
   <p class="fitmatch-subtitle">
-    50 000 coachs font confiance à la référence du coaching, utilisée par plus de 14 millions d'utilisateurs.
+    {{ t.coach_signup.stats_subtitle|default("50 000 coachs font confiance à la référence du coaching, utilisée par plus de 14 millions d'utilisateurs.") }}
   </p>
 
   <div class="fitmatch-stats">
     <div class="fitmatch-box">
-      <h3>+14 Millions</h3>
-      <p>d'utilisateurs</p>
+      <h3>{{ t.coach_signup.stat1_value|default("+14 Millions") }}</h3>
+      <p>{{ t.coach_signup.stat1_label|default("d'utilisateurs") }}</p>
     </div>
     <div class="fitmatch-box">
-      <h3>+50 000</h3>
-      <p>coachs inscrits</p>
+      <h3>{{ t.coach_signup.stat2_value|default("+50 000") }}</h3>
+      <p>{{ t.coach_signup.stat2_label|default("coachs inscrits") }}</p>
     </div>
     <div class="fitmatch-box">
-      <h3>72%</h3>
-      <p>Taux de clients qui reviennent</p>
+      <h3>{{ t.coach_signup.stat3_value|default("72%") }}</h3>
+      <p>{{ t.coach_signup.stat3_label|default("Taux de clients qui reviennent") }}</p>
     </div>
     <div class="fitmatch-box">
-      <h3>2h30</h3>
-      <p>Temps gagné par les coachs chaque jour</p>
+      <h3>{{ t.coach_signup.stat4_value|default("2h30") }}</h3>
+      <p>{{ t.coach_signup.stat4_label|default("de temps gagné par semaine") }}</p>
     </div>
     <div class="fitmatch-box">
-      <h3>+21</h3>
-      <p>Nouveaux clients / mois en moyenne</p>
+      <h3>{{ t.coach_signup.stat5_value|default("+21") }}</h3>
+      <p>{{ t.coach_signup.stat5_label|default("Nouveaux clients / mois en moyenne") }}</p>
     </div>
     <div class="fitmatch-box">
-      <h3>-35%</h3>
-      <p>d'annulations grâce aux rappels automatiques</p>
+      <h3>{{ t.coach_signup.stat6_value|default("-35%") }}</h3>
+      <p>{{ t.coach_signup.stat6_label|default("d'annulations grâce aux rappels automatiques") }}</p>
     </div>
   </div>
 
@@ -415,35 +415,35 @@
   <div class="fm-split__wrap">
     <!-- Colonne gauche -->
     <div class="fm-split__left">
-      <h2>Attire plus de clients et gagne une crédibilité incontestable dans le fitness</h2>
-      <p class="fm-lead">Deviens le coach que les clients choisissent en toute confiance.</p>
+      <h2>{{ t.coach_signup.attract_title|default("Attire plus de clients et gagne une crédibilité incontestable dans le fitness") }}</h2>
+      <p class="fm-lead">{{ t.coach_signup.attract_subtitle|default("Deviens le coach que les clients choisissent en toute confiance.") }}</p>
 
       <div class="fm-divider"></div>
 
-      <h3>Deviens inoubliable</h3>
-      <p>Avec FitMatch, ton profil inspire confiance, met en avant tes transformations, tes avis ⭐ et tes spécialités. Tu laisses une empreinte durable auprès de tes clients.</p>
+      <h3>{{ t.coach_signup.benefit1_title|default("Deviens inoubliable") }}</h3>
+      <p>{{ t.coach_signup.benefit1_desc|default("Avec FitMatch, ton profil inspire confiance, met en avant tes transformations, tes avis ⭐ et tes spécialités. Tu laisses une empreinte durable auprès de tes clients.") }}</p>
 
       <div class="fm-divider"></div>
 
-      <h3>Adapté à ton marché</h3>
-      <p>Ton profil est optimisé pour toucher directement ton audience cible : musculation, perte de poids, prise de masse, coaching femme… FitMatch met en avant tes points forts là où tes clients t'attendent.</p>
+      <h3>{{ t.coach_signup.benefit2_title|default("Adapté à ton marché") }}</h3>
+      <p>{{ t.coach_signup.benefit2_desc|default("Ton profil est optimisé pour toucher directement ton audience cible : musculation, perte de poids, prise de masse, coaching femme… FitMatch met en avant tes points forts là où tes clients t'attendent.") }}</p>
 
       <div class="fm-divider"></div>
 
-      <h3>Apparais comme un coach haut de gamme</h3>
-      <p>Sois perçu comme un professionnel crédible et premium, avec un profil clair, des photos pro, et une présence uniforme sur toutes les plateformes.</p>
+      <h3>{{ t.coach_signup.benefit3_title|default("Apparais comme un coach haut de gamme") }}</h3>
+      <p>{{ t.coach_signup.benefit3_desc|default("Sois perçu comme un professionnel crédible et premium, avec un profil clair, des photos pro, et une présence uniforme sur toutes les plateformes.") }}</p>
 
       <div class="fm-divider"></div>
 
-      <h3>Une image qui dure dans le temps</h3>
-      <p>Ton profil FitMatch ne vieillit pas. Avec tes avis, tes résultats et tes mises à jour simples, tu construis une réputation solide pour le long terme.</p>
+      <h3>{{ t.coach_signup.benefit4_title|default("Une image qui dure dans le temps") }}</h3>
+      <p>{{ t.coach_signup.benefit4_desc|default("Ton profil FitMatch ne vieillit pas. Avec tes avis, tes résultats et tes mises à jour simples, tu construis une réputation solide pour le long terme.") }}</p>
 
       <div class="fm-divider"></div>
 
-      <h3>Satisfaction garantie, 100% sans risque</h3>
-      <p>Ton succès est notre priorité. Si FitMatch ne t'apporte pas de valeur, tu peux arrêter ton abonnement à tout moment, sans frais cachés.</p>
+      <h3>{{ t.coach_signup.benefit5_title|default("Satisfaction garantie, 100% sans risque") }}</h3>
+      <p>{{ t.coach_signup.benefit5_desc|default("Ton succès est notre priorité. Si FitMatch ne t'apporte pas de valeur, tu peux arrêter ton abonnement à tout moment, sans frais cachés.") }}</p>
 
-      <a href="/signup?role=coach" class="fm-btn">Découvrir gratuitement</a>
+      <a href="/signup?role=coach" class="fm-btn">{{ t.coach_signup.discover_free|default("Découvrir gratuitement") }}</a>
     </div>
 
     <!-- Colonne droite : titres numérotés -->
@@ -452,68 +452,68 @@
         <li>
           <div class="fm-step__num">01</div>
           <div class="fm-step__content">
-            <h4>Plateforme de visibilité</h4>
+            <h4>{{ t.coach_signup.step1_title|default("Plateforme de visibilité") }}</h4>
             <ul>
-              <li>Référencement sur FitMatch & mobile</li>
-              <li>Page profil optimisée (avis, résultats, spécialités)</li>
-              <li>Lien personnalisé unique pour tes réseaux</li>
-              <li>CTA "Réserver" partout</li>
+              <li>{{ t.coach_signup.step1_item1|default("Référencement sur FitMatch & mobile") }}</li>
+              <li>{{ t.coach_signup.step1_item2|default("Page profil optimisée (avis, résultats, spécialités)") }}</li>
+              <li>{{ t.coach_signup.step1_item3|default("Lien personnalisé unique pour tes réseaux") }}</li>
+              <li>{{ t.coach_signup.step1_item4|default("CTA \"Réserver\" partout") }}</li>
             </ul>
           </div>
         </li>
         <li>
           <div class="fm-step__num">02</div>
           <div class="fm-step__content">
-            <h4>Agenda connecté</h4>
+            <h4>{{ t.coach_signup.step2_title|default("Agenda connecté") }}</h4>
             <ul>
-              <li>Créneaux, durées & lieux paramétrables</li>
-              <li>Rappels e-mail/SMS aux clients</li>
-              <li>Liste d'attente intelligente</li>
+              <li>{{ t.coach_signup.step2_item1|default("Créneaux, durées & lieux paramétrables") }}</li>
+              <li>{{ t.coach_signup.step2_item2|default("Rappels e-mail/SMS aux clients") }}</li>
+              <li>{{ t.coach_signup.step2_item3|default("Liste d'attente intelligente") }}</li>
             </ul>
           </div>
         </li>
         <li>
           <div class="fm-step__num">03</div>
           <div class="fm-step__content">
-            <h4>Confiance & crédibilité</h4>
+            <h4>{{ t.coach_signup.step3_title|default("Confiance & crédibilité") }}</h4>
             <ul>
-              <li>Avis vérifiés & transformations</li>
-              <li>Badges de spécialités</li>
-              <li>Note moyenne visible ⭐</li>
+              <li>{{ t.coach_signup.step3_item1|default("Avis vérifiés & transformations") }}</li>
+              <li>{{ t.coach_signup.step3_item2|default("Badges de spécialités") }}</li>
+              <li>{{ t.coach_signup.step3_item3|default("Note moyenne visible ⭐") }}</li>
             </ul>
           </div>
         </li>
         <li>
           <div class="fm-step__num">04</div>
           <div class="fm-step__content">
-            <h4>Sans engagement</h4>
+            <h4>{{ t.coach_signup.step4_title|default("Sans engagement") }}</h4>
             <ul>
-              <li>Abonnement mensuel, stop à tout moment</li>
-              <li>0% de commission sur tes séances</li>
-              <li>Support réactif</li>
+              <li>{{ t.coach_signup.step4_item1|default("Abonnement mensuel, stop à tout moment") }}</li>
+              <li>{{ t.coach_signup.step4_item2|default("0% de commission sur tes séances") }}</li>
+              <li>{{ t.coach_signup.step4_item3|default("Support réactif") }}</li>
             </ul>
           </div>
         </li>
         <li>
           <div class="fm-step__num">05</div>
           <div class="fm-step__content">
-            <h4>Lien spécialisé pour tes réseaux</h4>
+            <h4>{{ t.coach_signup.step5_title|default("Lien spécialisé pour tes réseaux") }}</h4>
             <ul>
-              <li>Les nouveaux de ta salle te trouvent sur Insta</li>
-              <li>Tu partages ton lien unique dans ta bio</li>
-              <li>Ils cliquent → réservation en ligne directe</li>
-              <li>Planning automatique, zéro perte de temps</li>
+              <li>{{ t.coach_signup.step5_item1|default("Les nouveaux de ta salle te trouvent sur Insta") }}</li>
+              <li>{{ t.coach_signup.step5_item2|default("Tu partages ton lien unique dans ta bio") }}</li>
+              <li>{{ t.coach_signup.step5_item3|default("Ils cliquent → réservation en ligne directe") }}</li>
+              <li>{{ t.coach_signup.step5_item4|default("Planning automatique, zéro perte de temps") }}</li>
             </ul>
           </div>
         </li>
         <li>
           <div class="fm-step__num">06</div>
           <div class="fm-step__content">
-            <h4>Clientèle qui arrive automatiquement</h4>
+            <h4>{{ t.coach_signup.step6_title|default("Clientèle qui arrive automatiquement") }}</h4>
             <ul>
-              <li>Un lien unique dans ta bio</li>
-              <li>Réservations 24/7</li>
-              <li>Moins de DM, plus de clients</li>
+              <li>{{ t.coach_signup.step6_item1|default("Un lien unique dans ta bio") }}</li>
+              <li>{{ t.coach_signup.step6_item2|default("Réservations 24/7") }}</li>
+              <li>{{ t.coach_signup.step6_item3|default("Moins de DM, plus de clients") }}</li>
             </ul>
           </div>
         </li>
@@ -532,19 +532,19 @@
 
   <!-- TEXTE DROITE -->
   <div style="max-width:460px;">
-    <h2 style="font-size:2rem; line-height:1.3; color:#111; margin-bottom:12px;">Des clients qui viennent au rendez-vous.</h2>
+    <h2 style="font-size:2rem; line-height:1.3; color:#111; margin-bottom:12px;">{{ t.coach_signup.reminder_title|default("Des clients qui viennent au rendez-vous.") }}</h2>
     <p style="color:#444; font-size:16px; line-height:1.6; margin-bottom:18px;">
-      Vous allez enfin pouvoir oublier ceux qui oublient. Avec les emails de rappel automatiques et la confirmation en ligne, vos clients reçoivent une notification avant chaque séance.
+      {{ t.coach_signup.reminder_desc|default("Vous allez enfin pouvoir oublier ceux qui oublient. Avec les emails de rappel automatiques et la confirmation en ligne, vos clients reçoivent une notification avant chaque séance.") }}
     </p>
 
     <ul style="list-style:none; padding:0; margin:0 0 24px 0;">
-      <li style="position:relative; padding-left:24px; margin-bottom:10px;"><span style="position:absolute; left:0; color:#000;">✓</span> Emails de rappel automatiques</li>
-      <li style="position:relative; padding-left:24px; margin-bottom:10px;"><span style="position:absolute; left:0; color:#000;">✓</span> Confirmation instantanée</li>
-      <li style="position:relative; padding-left:24px;"><span style="position:absolute; left:0; color:#000;">✓</span> Politique d'annulation flexible</li>
+      <li style="position:relative; padding-left:24px; margin-bottom:10px;"><span style="position:absolute; left:0; color:#000;">✓</span> {{ t.coach_signup.reminder_check1|default("Emails de rappel automatiques") }}</li>
+      <li style="position:relative; padding-left:24px; margin-bottom:10px;"><span style="position:absolute; left:0; color:#000;">✓</span> {{ t.coach_signup.reminder_check2|default("Confirmation instantanée") }}</li>
+      <li style="position:relative; padding-left:24px;"><span style="position:absolute; left:0; color:#000;">✓</span> {{ t.coach_signup.reminder_check3|default("Politique d'annulation flexible") }}</li>
     </ul>
 
     <a href="/signup?role=coach" style="display:inline-block; background:#111; color:#fff; border:none; padding:12px 26px; border-radius:6px; cursor:pointer; font-size:15px; text-decoration:none;">
-      Découvrir gratuitement
+      {{ t.coach_signup.discover_free|default("Découvrir gratuitement") }}
     </a>
   </div>
 </section>
@@ -554,8 +554,8 @@
   <div class="fm-t-wrap">
 
     <header class="fm-t-header">
-      <h2>Ils coachent avec <span>FitMatch</span></h2>
-      <p>Des profils vérifiés, des résultats concrets, et des clients qui réservent en confiance.</p>
+      <h2>{{ t.coach_signup.testimonials_title|default("Ils coachent avec") }} <span>FitMatch</span></h2>
+      <p>{{ t.coach_signup.testimonials_subtitle|default("Des profils vérifiés, des résultats concrets, et des clients qui réservent en confiance.") }}</p>
     </header>
 
     <div class="fm-t-grid">
@@ -724,38 +724,34 @@
 
 <!-- ============ FAQ Section ============ -->
 <section class="faq-section">
-  <h2 class="faq-title">Les questions fréquentes</h2>
+  <h2 class="faq-title">{{ t.coach_signup.faq_title|default("Les questions fréquentes") }}</h2>
 
   <div class="faq" role="list">
     <details>
-      <summary>Comment fonctionne FitMatch pour mes clients ?</summary>
+      <summary>{{ t.coach_signup.faq1_q|default("Comment fonctionne FitMatch pour mes clients ?") }}</summary>
       <div class="answer">
-        <p>Les clients trouvent facilement un coach sportif près de chez eux, selon la salle ou la ville de leur choix.</p>
-        <p>Ils peuvent consulter les profils, lire les avis et réserver une séance directement en ligne depuis FitMatch.</p>
+        <p>{{ t.coach_signup.faq1_a|default("Les clients trouvent facilement un coach sportif près de chez eux, selon la salle ou la ville de leur choix. Ils peuvent consulter les profils, lire les avis et réserver une séance directement en ligne depuis FitMatch.") }}</p>
       </div>
     </details>
 
     <details>
-      <summary>Est-ce que FitMatch va m'apporter de nouveaux clients ?</summary>
+      <summary>{{ t.coach_signup.faq2_q|default("Est-ce que FitMatch va m'apporter de nouveaux clients ?") }}</summary>
       <div class="answer">
-        <p>Oui. FitMatch met en avant votre profil auprès de milliers de sportifs actifs dans votre région.</p>
-        <p>Grâce au référencement local et aux avis clients, votre visibilité augmente et vous recevez des réservations régulières.</p>
+        <p>{{ t.coach_signup.faq2_a|default("Oui. FitMatch met en avant votre profil auprès de milliers de sportifs actifs dans votre région. Grâce au référencement local et aux avis clients, votre visibilité augmente et vous recevez des réservations régulières.") }}</p>
       </div>
     </details>
 
     <details>
-      <summary>Combien coûte l'abonnement à FitMatch Pro ?</summary>
+      <summary>{{ t.coach_signup.faq3_q|default("Combien coûte l'abonnement à FitMatch Pro ?") }}</summary>
       <div class="answer">
-        <p><strong>60€/mois</strong>, sans commission sur vos séances. Vous gardez 100% de vos revenus.</p>
-        <p>Sans engagement : vous pouvez annuler à tout moment depuis votre espace coach.</p>
+        <p>{{ t.coach_signup.faq3_a|default("29€/mois ou 560€/an (réduction 20%), sans commission sur vos séances. Vous gardez 100% de vos revenus. Sans engagement : vous pouvez annuler à tout moment depuis votre espace coach.") }}</p>
       </div>
     </details>
 
     <details>
-      <summary>L'abonnement FitMatch est-il rentable pour un coach ?</summary>
+      <summary>{{ t.coach_signup.faq4_q|default("L'abonnement FitMatch est-il rentable pour un coach ?") }}</summary>
       <div class="answer">
-        <p>Oui, dès vos premières réservations, l'abonnement est déjà rentabilisé.</p>
-        <p>De nombreux coachs déclarent remplir leurs créneaux rapidement grâce à FitMatch.</p>
+        <p>{{ t.coach_signup.faq4_a|default("Oui, dès vos premières réservations, l'abonnement est déjà rentabilisé. De nombreux coachs déclarent remplir leurs créneaux rapidement grâce à FitMatch.") }}</p>
       </div>
     </details>
 
