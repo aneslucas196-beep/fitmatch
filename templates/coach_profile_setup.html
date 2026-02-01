@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" {% if locale == 'ar' %}dir="rtl"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuration Profil Coach - FitMatch</title>
+    <title>{{ t.coach_profile.page_title|default('Configuration Profil Coach - FitMatch') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
         <a href="/" class="inline-flex items-center">
             <span class="text-2xl font-semibold tracking-tight text-slate-900">Fit<span class="text-emerald-500">Match</span></span>
         </a>
-        <a href="/coach/portal" class="text-sm text-slate-600 hover:text-emerald-500 transition">← Retour au dashboard</a>
+        <a href="/coach/portal" class="text-sm text-slate-600 hover:text-emerald-500 transition">← {{ t.coach_profile.back_to_dashboard|default('Retour au dashboard') }}</a>
     </div>
 </header>
 
@@ -34,10 +34,10 @@
     <div class="bg-white border-b border-slate-200">
         <div class="max-w-4xl mx-auto px-6 py-10 text-center">
             <h1 class="text-2xl md:text-3xl font-bold mb-2 text-slate-900">
-                {{ "Complétez votre profil" if profile_completed else "Bienvenue Coach !" }} 🎯
+                {{ t.coach_profile.complete_profile|default("Complétez votre profil") if profile_completed else t.coach_profile.welcome_coach|default("Bienvenue Coach !") }} 🎯
             </h1>
             <p class="text-base md:text-lg text-slate-600">
-                {{ "Modifiez vos informations" if profile_completed else "Configurons votre profil pour attirer vos premiers clients" }}
+                {{ t.coach_profile.edit_info|default("Modifiez vos informations") if profile_completed else t.coach_profile.setup_desc|default("Configurons votre profil pour attirer vos premiers clients") }}
             </p>
         </div>
     </div>
@@ -71,22 +71,22 @@
                 <div class="border-b border-gray-200 pb-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                         <div class="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">1</div>
-                        Informations de base
+                        {{ t.coach_profile.section1_title|default('Informations de base') }}
                     </h2>
                     
                     <!-- Photo de profil -->
                     <div class="mb-6 p-6 bg-gray-50 rounded-lg border border-gray-200">
                         <label class="block text-sm font-medium text-gray-700 mb-3">
-                            📸 Photo de profil *
+                            📸 {{ t.coach_profile.profile_photo|default('Photo de profil') }} *
                         </label>
-                        <p class="text-sm text-gray-600 mb-4">Une belle photo professionnelle augmente vos chances de décrocher des clients !</p>
+                        <p class="text-sm text-gray-600 mb-4">{{ t.coach_profile.photo_tip|default('Une belle photo professionnelle augmente vos chances de décrocher des clients !') }}</p>
                         
                         <div class="flex items-start gap-6">
                             <!-- Aperçu de l'image -->
                             <div class="flex-shrink-0">
                                 <div id="profile-photo-preview" class="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gray-200 flex items-center justify-center">
                                     {% if coach and coach.profile_photo_url %}
-                                    <img src="{{ coach.profile_photo_url }}" alt="Photo de profil" class="w-full h-full object-cover">
+                                    <img src="{{ coach.profile_photo_url }}" alt="{{ t.coach_profile.profile_photo|default('Photo de profil') }}" class="w-full h-full object-cover">
                                     {% else %}
                                     <span class="text-4xl text-gray-400">👤</span>
                                     {% endif %}
@@ -100,7 +100,7 @@
                                        id="profile_photo" 
                                        accept="image/*"
                                        class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                                <p class="text-xs text-gray-500 mt-2">Format accepté : JPG, PNG. Taille recommandée : 500x500px minimum</p>
+                                <p class="text-xs text-gray-500 mt-2">{{ t.coach_profile.photo_format_help|default('Format accepté : JPG, PNG. Taille recommandée : 500x500px minimum') }}</p>
                             </div>
                         </div>
                     </div>
@@ -108,51 +108,51 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="full_name" class="block text-sm font-medium text-gray-700 mb-2">
-                                Nom complet *
+                                {{ t.coach_profile.full_name|default('Nom complet') }} *
                             </label>
                             <input type="text" name="full_name" id="full_name" required
                                    value="{{ coach.full_name if coach else '' }}"
                                    class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                   placeholder="Votre nom et prénom">
+                                   placeholder="{{ t.coach_profile.full_name_placeholder|default('Votre nom et prénom') }}">
                         </div>
                         
                         <div>
                             <label for="city" class="block text-sm font-medium text-gray-700 mb-2">
-                                Ville *
+                                {{ t.coach_profile.city|default('Ville') }} *
                             </label>
                             <input type="text" name="city" id="city" required
                                    value="{{ coach.city if coach else '' }}"
                                    class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                   placeholder="Paris, Lyon, Marseille...">
+                                   placeholder="{{ t.coach_profile.city_placeholder|default('Paris, Lyon, Marseille...') }}">
                         </div>
                         
                         <div class="md:col-span-2">
                             <label for="bio" class="block text-sm font-medium text-gray-700 mb-2">
-                                Biographie *
+                                {{ t.coach_profile.bio|default('Biographie') }} *
                             </label>
                             <textarea name="bio" id="bio" rows="4" required
                                       class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      placeholder="Présentez-vous en quelques lignes : votre expérience, votre approche du coaching...">{{ coach.bio if coach else '' }}</textarea>
+                                      placeholder="{{ t.coach_profile.bio_placeholder|default('Présentez-vous en quelques lignes : votre expérience, votre approche du coaching...') }}">{{ coach.bio if coach else '' }}</textarea>
                         </div>
                         
                         <div>
                             <label for="instagram_url" class="block text-sm font-medium text-gray-700 mb-2">
-                                Instagram (optionnel)
+                                {{ t.coach_profile.instagram|default('Instagram (optionnel)') }}
                             </label>
                             <input type="url" name="instagram_url" id="instagram_url"
                                    value="{{ coach.instagram_url if coach else '' }}"
                                    class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                   placeholder="https://instagram.com/votre_compte">
+                                   placeholder="{{ t.coach_profile.instagram_placeholder|default('https://instagram.com/votre_compte') }}">
                         </div>
                         
                         <div>
                             <label for="price_from" class="block text-sm font-medium text-gray-700 mb-2">
-                                Tarif à partir de (€) *
+                                {{ t.coach_profile.price_from|default('Tarif à partir de (€)') }} *
                             </label>
                             <input type="number" name="price_from" id="price_from" min="1" max="500" required
                                    value="{{ coach.price_from if coach else '' }}"
                                    class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                   placeholder="50">
+                                   placeholder="{{ t.coach_profile.price_placeholder|default('50') }}">
                         </div>
                     </div>
                 </div>
@@ -161,21 +161,21 @@
                 <div class="border-b border-gray-200 pb-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                         <div class="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">2</div>
-                        Zone d'intervention
+                        {{ t.coach_profile.radius|default("Zone d'intervention") }}
                     </h2>
                     
                     <div>
                         <label for="radius_km" class="block text-sm font-medium text-gray-700 mb-2">
-                            Rayon d'action (km) *
+                            {{ t.coach_profile.radius_label|default("Rayon d'action (km)") }} *
                         </label>
                         <select name="radius_km" id="radius_km" required
                                 class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">Sélectionnez votre rayon</option>
-                            <option value="5" {% if coach and coach.radius_km == 5 %}selected{% endif %}>5 km</option>
-                            <option value="10" {% if coach and coach.radius_km == 10 %}selected{% endif %}>10 km</option>
-                            <option value="25" {% if coach and coach.radius_km == 25 %}selected{% endif %}>25 km</option>
-                            <option value="50" {% if coach and coach.radius_km == 50 %}selected{% endif %}>50 km</option>
-                            <option value="100" {% if coach and coach.radius_km == 100 %}selected{% endif %}>100 km</option>
+                            <option value="">{{ t.coach_profile.select_radius|default('Sélectionnez votre rayon') }}</option>
+                            <option value="5" {% if coach and coach.radius_km == 5 %}selected{% endif %}>5 {{ t.coach_profile.km|default('km') }}</option>
+                            <option value="10" {% if coach and coach.radius_km == 10 %}selected{% endif %}>10 {{ t.coach_profile.km|default('km') }}</option>
+                            <option value="25" {% if coach and coach.radius_km == 25 %}selected{% endif %}>25 {{ t.coach_profile.km|default('km') }}</option>
+                            <option value="50" {% if coach and coach.radius_km == 50 %}selected{% endif %}>50 {{ t.coach_profile.km|default('km') }}</option>
+                            <option value="100" {% if coach and coach.radius_km == 100 %}selected{% endif %}>100 {{ t.coach_profile.km|default('km') }}</option>
                         </select>
                     </div>
                 </div>
@@ -184,10 +184,10 @@
                 <div class="border-b border-gray-200 pb-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                         <div class="bg-purple-500 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">3</div>
-                        Vos spécialités
+                        {{ t.coach_profile.specialties|default('Vos spécialités') }}
                     </h2>
                     
-                    <p class="text-gray-600 mb-4">Sélectionnez au moins une spécialité (plusieurs recommandées)</p>
+                    <p class="text-gray-600 mb-4">{{ t.coach_profile.specialties_desc|default('Sélectionnez au moins une spécialité (plusieurs recommandées)') }}</p>
                     
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {% for specialty in ['musculation', 'cardio', 'yoga', 'crossfit', 'pilates', 'nutrition'] %}
@@ -209,7 +209,7 @@
                                 {% elif specialty == 'nutrition' %}
                                 <span class="text-2xl mr-2">🥗</span>
                                 {% endif %}
-                                <span class="capitalize font-medium">{{ specialty }}</span>
+                                <span class="font-medium">{{ t.coach_profile['specialty_' + specialty]|default(specialty|capitalize) }}</span>
                             </div>
                         </label>
                         {% endfor %}
@@ -220,18 +220,18 @@
                 <div class="pb-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                         <div class="bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">4</div>
-                        Lieux de coaching
+                        {{ t.coach_profile.coaching_locations|default('Lieux de coaching') }}
                     </h2>
                     
-                    <p class="text-gray-600 mb-4">Ajoutez les salles où vous entraînez vos clients</p>
+                    <p class="text-gray-600 mb-4">{{ t.coach_profile.add_locations_desc|default('Ajoutez les salles où vous entraînez vos clients') }}</p>
                     
                     <!-- Interface d'ajout de salles (simplifiée pour l'onboarding) -->
                     <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <h3 class="font-medium mb-4 text-blue-800">➕ Ajouter un lieu</h3>
+                        <h3 class="font-medium mb-4 text-blue-800">➕ {{ t.coach_profile.add_location|default('Ajouter un lieu') }}</h3>
                         
                         <div class="flex flex-col md:flex-row gap-3">
                             <div class="flex-1 relative">
-                                <input type="text" id="gym-search-input" placeholder="🌍 Cherchez n'importe quelle salle dans le monde (ex: Gold's Gym Los Angeles, Basic-Fit Paris)" 
+                                <input type="text" id="gym-search-input" placeholder="🌍 {{ t.coach_profile.search_gym_worldwide|default('Cherchez n\\'importe quelle salle dans le monde (ex: Gold\\'s Gym Los Angeles, Basic-Fit Paris)') }}" 
                                        class="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                        autocomplete="off">
                                 
@@ -243,18 +243,18 @@
                             <button type="button" id="add-gym-btn" 
                                     class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-200 font-medium whitespace-nowrap disabled:bg-gray-400"
                                     disabled>
-                                📍 Ajouter
+                                📍 {{ t.coach_profile.add|default('Ajouter') }}
                             </button>
                         </div>
                     </div>
                     
                     <!-- Liste des lieux sélectionnés -->
                     <div id="selected-gyms-list" class="space-y-3">
-                        <h3 class="font-medium text-gray-700">🏋️ Lieux sélectionnés</h3>
+                        <h3 class="font-medium text-gray-700">🏋️ {{ t.coach_profile.selected_locations|default('Lieux sélectionnés') }}</h3>
                         <div id="current-gyms" class="space-y-2">
                             <!-- Les lieux seront ajoutés ici -->
                             <div class="text-gray-500 text-center py-4 border border-gray-200 rounded-lg border-dashed">
-                                Aucun lieu ajouté pour le moment
+                                {{ t.coach_profile.no_locations|default('Aucun lieu ajouté pour le moment') }}
                             </div>
                         </div>
                     </div>
@@ -269,14 +269,14 @@
                 <div class="flex justify-between items-center pt-6 border-t border-gray-200">
                     {% if profile_completed %}
                     <a href="/coach/portal" class="text-gray-600 hover:text-gray-900 font-medium">
-                        ← Retour au dashboard
+                        ← {{ t.coach_profile.back_to_dashboard|default('Retour au dashboard') }}
                     </a>
                     {% else %}
                     <div></div>
                     {% endif %}
                     
                     <button type="submit" class="bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition duration-200 font-medium text-lg">
-                        {{ "Mettre à jour mon profil" if profile_completed else "Finaliser mon profil" }} ✨
+                        {{ t.coach_profile.update_profile|default("Mettre à jour mon profil") if profile_completed else t.coach_profile.finalize_profile|default("Finaliser mon profil") }} ✨
                     </button>
                 </div>
             </form>
@@ -286,6 +286,17 @@
 
 <!-- Scripts pour l'autocomplétion des salles et l'aperçu photo -->
 <script>
+const TRANSLATIONS = {
+    gym_type: "{{ t.coach_profile.gym_type|default('Gym') }}",
+    worldwide_gym: "{{ t.coach_profile.worldwide_gym|default('Worldwide') }}",
+    no_gym_found: "{{ t.coach_profile.no_gym_found|default('No gym found') }}",
+    no_gym_found_short: "{{ t.coach_profile.no_gym_found_short|default('No gym found') }}",
+    photo_preview: "{{ t.coach_profile.photo_preview|default('Preview') }}",
+    delete_btn: "{{ t.coach_profile.delete|default('Delete') }}",
+    search_error: "{{ t.coach_profile.search_error|default('Error during search') }}",
+    no_locations: "{{ t.coach_profile.no_locations|default('No location added yet') }}"
+};
+
 let selectedGyms = [];
 let allSuggestions = [];
 
@@ -314,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (file && file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
-                    photoPreview.innerHTML = `<img src="${event.target.result}" alt="Aperçu" class="w-full h-full object-cover">`;
+                    photoPreview.innerHTML = `<img src="${event.target.result}" alt="${TRANSLATIONS.photo_preview}" class="w-full h-full object-cover">`;
                 };
                 reader.readAsDataURL(file);
             }
@@ -388,7 +399,7 @@ function fetchGymSuggestions(query) {
                     city: '', // Google Places inclut la ville dans l'adresse
                     lat: gym.lat,
                     lng: gym.lng,
-                    chain: gym.chain || 'Salle de sport',
+                    chain: gym.chain || TRANSLATIONS.gym_type,
                     source: gym.source || 'Google Places',
                     display_name: `${gym.name} - ${gym.address}`
                 }));
@@ -400,14 +411,14 @@ function fetchGymSuggestions(query) {
             }
         })
         .catch(error => {
-            console.error('Erreur lors de la recherche mondiale:', error);
+            console.error(TRANSLATIONS.search_error, error);
             hideSuggestions();
         });
 }
 
 function showNoResults() {
     const suggestionsDiv = document.getElementById('gym-suggestions');
-    suggestionsDiv.innerHTML = '<div class="p-3 text-gray-500 text-sm">🌍 Aucune salle trouvée. Essayez avec un nom de ville ou de pays (ex: "gym tokyo")</div>';
+    suggestionsDiv.innerHTML = `<div class="p-3 text-gray-500 text-sm">🌍 ${TRANSLATIONS.no_gym_found}</div>`;
     suggestionsDiv.classList.remove('hidden');
 }
 
@@ -415,7 +426,7 @@ function showSuggestions(suggestions) {
     const suggestionsDiv = document.getElementById('gym-suggestions');
     
     if (suggestions.length === 0) {
-        suggestionsDiv.innerHTML = '<div class="p-3 text-gray-500 text-sm">Aucune salle trouvée</div>';
+        suggestionsDiv.innerHTML = `<div class="p-3 text-gray-500 text-sm">${TRANSLATIONS.no_gym_found_short}</div>`;
         suggestionsDiv.classList.remove('hidden');
         return;
     }
@@ -426,7 +437,7 @@ function showSuggestions(suggestions) {
             <div class="font-medium text-gray-900">🏋️ ${gym.name}</div>
             <div class="text-sm text-gray-600">📍 ${gym.address}</div>
             <div class="text-xs text-blue-500 mt-1">
-                <span class="inline-block bg-blue-100 px-2 py-1 rounded">🌍 ${gym.source || gym.chain || 'Salle mondiale'}</span>
+                <span class="inline-block bg-blue-100 px-2 py-1 rounded">🌍 ${gym.source || gym.chain || TRANSLATIONS.worldwide_gym}</span>
             </div>
         </div>
     `).join('');
@@ -455,7 +466,7 @@ function updateSelectedGymsList() {
     const hiddenInputData = document.getElementById('selected_gyms_data');
     
     if (selectedGyms.length === 0) {
-        container.innerHTML = '<div class="text-gray-500 text-center py-4 border border-gray-200 rounded-lg border-dashed">Aucun lieu ajouté pour le moment</div>';
+        container.innerHTML = `<div class="text-gray-500 text-center py-4 border border-gray-200 rounded-lg border-dashed">${TRANSLATIONS.no_locations}</div>`;
         hiddenInputIds.value = '';
         hiddenInputData.value = '';
         return;
@@ -469,7 +480,7 @@ function updateSelectedGymsList() {
             </div>
             <button type="button" onclick="removeGym('${gym.id}')" 
                     class="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition text-sm">
-                🗑️ Supprimer
+                🗑️ ${TRANSLATIONS.delete_btn}
             </button>
         </div>
     `).join('');

@@ -2491,13 +2491,13 @@ async def coach_profile_setup_get(request: Request, user = Depends(require_coach
         profile_completed = user.get("profile_completed", False)
         print(f"🔧 Mode démo - Chargement des données du profil pour {user.get('email', 'coach')}")
     
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n_context = get_i18n_context(request)
     return templates.TemplateResponse("coach_profile_setup.html", {
         "request": request,
         "coach": coach_data,
         "profile_completed": profile_completed,
-        "user": user
+        "user": user,
+        **i18n_context
     })
 
 @app.post("/coach/profile-setup")
@@ -2690,14 +2690,14 @@ async def coach_profile_setup_post(
         error_message = "Une erreur s'est produite lors de la sauvegarde."
     
     # En cas d'erreur, recharger la page avec le message d'erreur
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n_context = get_i18n_context(request)
     return templates.TemplateResponse("coach_profile_setup.html", {
         "request": request,
         "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km},
         "profile_completed": False,
         "error_message": error_message,
-        "user": user
+        "user": user,
+        **i18n_context
     })
 
 @app.post("/coach/specialties")
@@ -3362,15 +3362,12 @@ async def booking_page(request: Request, coach_id: str):
 @app.get("/reservation", response_class=HTMLResponse)
 async def reservation_page(request: Request):
     """Page de confirmation de réservation avec identification."""
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
     import time
+    i18n = get_i18n_context(request)
     return templates.TemplateResponse("reservation.html", {
         "request": request,
-        "locale": locale,
-        "translations": translations,
-        "t": lambda trans_dict, key, default="": trans_dict.get(key, default),
-        "cache_bust": int(time.time())
+        "cache_bust": int(time.time()),
+        **i18n
     })
 
 @app.get("/account", response_class=HTMLResponse)
@@ -6131,11 +6128,11 @@ async def mark_messages_read(booking_id: str, reader_role: str):
 @app.get("/conversation/{booking_id}", response_class=HTMLResponse)
 async def conversation_page(request: Request, booking_id: str):
     """Page de conversation pour client ou coach."""
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n_context = get_i18n_context(request)
     return templates.TemplateResponse("conversation.html", {
         "request": request,
-        "booking_id": booking_id
+        "booking_id": booking_id,
+        **i18n_context
     })
 
 

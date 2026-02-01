@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" {% if locale == 'ar' %}dir="rtl"{% endif %}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inscription – FitMatch</title>
+<title>{{ t.signup.page_title|default('Inscription – FitMatch') }}</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{box-sizing:border-box}
@@ -454,15 +454,15 @@
   <div class="fm-wrap">
     <div class="fm-card">
       <header class="fm-head">
-        <h1>Rejoindre <span class="fm-brand">FitMatch</span></h1>
-        <p>Créez votre compte en quelques secondes</p>
+        <h1>{{ t.signup.title|default('Rejoindre') }} <span class="fm-brand">FitMatch</span></h1>
+        <p>{{ t.signup.subtitle|default('Créez votre compte en quelques secondes') }}</p>
       </header>
 
       {% if error %}
       <div class="fm-alert fm-alert-error">
         <span class="fm-alert-icon">⚠️</span>
         <div class="fm-alert-content">
-          <div class="fm-alert-title">Erreur</div>
+          <div class="fm-alert-title">{{ t.signup.error_title|default('Erreur') }}</div>
           <div>{{ error }}</div>
         </div>
       </div>
@@ -483,16 +483,16 @@
         <div class="fm-role-toggle">
           <label class="fm-role-option {% if role != 'client' %}active{% endif %}" onclick="setRole('coach')">
             <input type="radio" name="role" value="coach" {% if role != 'client' %}checked{% endif %}>
-            Je suis coach
+            {{ t.signup.role_coach|default('Je suis coach') }}
           </label>
           <label class="fm-role-option {% if role == 'client' %}active{% endif %}" onclick="setRole('client')">
             <input type="radio" name="role" value="client" {% if role == 'client' %}checked{% endif %}>
-            Je cherche un coach
+            {{ t.signup.role_client|default('Je cherche un coach') }}
           </label>
         </div>
         
         <div class="fm-field">
-          <label for="full_name" class="fm-label">Nom complet</label>
+          <label for="full_name" class="fm-label">{{ t.signup.full_name_label|default('Nom complet') }}</label>
           <input 
             type="text" 
             name="full_name" 
@@ -500,13 +500,13 @@
             required 
             value="{{ full_name or '' }}"
             class="fm-input"
-            placeholder="Votre nom et prénom"
+            placeholder="{{ t.signup.full_name_placeholder|default('Votre nom et prénom') }}"
             autocomplete="name"
           >
         </div>
         
         <div class="fm-field">
-          <label for="email" class="fm-label">Adresse email</label>
+          <label for="email" class="fm-label">{{ t.signup.email_label|default('Adresse email') }}</label>
           <input 
             type="email" 
             name="email" 
@@ -514,26 +514,26 @@
             required 
             value="{{ email or '' }}"
             class="fm-input"
-            placeholder="vous@exemple.com"
+            placeholder="{{ t.signup.email_placeholder|default('vous@exemple.com') }}"
             autocomplete="email"
           >
         </div>
         
         <div class="fm-row">
           <div class="fm-field">
-            <label for="gender" class="fm-label">Genre</label>
+            <label for="gender" class="fm-label">{{ t.signup.gender_label|default('Genre') }}</label>
             <select name="gender" id="gender" required class="fm-select">
-              <option value="" disabled {% if not gender %}selected{% endif %}>Sélectionner</option>
-              <option value="homme" {% if gender == 'homme' %}selected{% endif %}>Homme</option>
-              <option value="femme" {% if gender == 'femme' %}selected{% endif %}>Femme</option>
-              <option value="autre" {% if gender == 'autre' %}selected{% endif %}>Autre</option>
+              <option value="" disabled {% if not gender %}selected{% endif %}>{{ t.signup.gender_select|default('Sélectionner') }}</option>
+              <option value="homme" {% if gender == 'homme' %}selected{% endif %}>{{ t.signup.gender_male|default('Homme') }}</option>
+              <option value="femme" {% if gender == 'femme' %}selected{% endif %}>{{ t.signup.gender_female|default('Femme') }}</option>
+              <option value="autre" {% if gender == 'autre' %}selected{% endif %}>{{ t.signup.gender_other|default('Autre') }}</option>
             </select>
           </div>
           
           <div class="fm-field">
-            <label for="country" class="fm-label">Pays</label>
+            <label for="country" class="fm-label">{{ t.signup.country_label|default('Pays') }}</label>
             <select name="country" id="country" required class="fm-select">
-              <option value="" disabled {% if not country_code %}selected{% endif %}>Sélectionner</option>
+              <option value="" disabled {% if not country_code %}selected{% endif %}>{{ t.signup.country_select|default('Sélectionner') }}</option>
               {% for c in countries %}
               <option value="{{ c.code }}" {% if country_code == c.code %}selected{% endif %}>{{ c.name }}</option>
               {% endfor %}
@@ -542,7 +542,7 @@
         </div>
         
         <div class="fm-field">
-          <label for="password" class="fm-label">Mot de passe</label>
+          <label for="password" class="fm-label">{{ t.signup.password_label|default('Mot de passe') }}</label>
           <div class="fm-password-wrap">
             <input 
               type="password" 
@@ -550,7 +550,7 @@
               id="password" 
               required
               class="fm-input"
-              placeholder="Créez un mot de passe"
+              placeholder="{{ t.signup.password_placeholder|default('Créez un mot de passe') }}"
               autocomplete="new-password"
             >
             <button type="button" class="fm-password-toggle" onclick="togglePassword()" aria-label="Afficher le mot de passe">
@@ -560,28 +560,28 @@
               </svg>
             </button>
           </div>
-          <p class="fm-hint">Minimum 8 caractères, 1 lettre et 1 chiffre</p>
+          <p class="fm-hint">{{ t.signup.password_hint|default('Minimum 8 caractères, 1 lettre et 1 chiffre') }}</p>
         </div>
         
-        <button type="submit" class="fm-btn">Créer mon compte</button>
+        <button type="submit" class="fm-btn">{{ t.signup.signup_button|default('Créer mon compte') }}</button>
       </form>
 
       <div class="fm-divider">
         <div class="fm-divider-line"></div>
-        <span class="fm-divider-text">Déjà inscrit ?</span>
+        <span class="fm-divider-text">{{ t.signup.already_registered|default('Déjà inscrit ?') }}</span>
         <div class="fm-divider-line"></div>
       </div>
 
       <div class="fm-login-link">
-        <a href="/login">
-          Se connecter
+        <a href="/login?lang={{ locale|default('fr') }}">
+          {{ t.signup.login_link|default('Se connecter') }}
           <span>→</span>
         </a>
       </div>
     </div>
     
     <div class="fm-footer">
-      © 2024 FitMatch. Tous droits réservés.
+      © 2024 FitMatch. {{ t.signup.footer_rights|default('Tous droits réservés') }}.
     </div>
   </div>
 </section>

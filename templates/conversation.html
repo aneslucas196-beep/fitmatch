@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" {% if locale == 'ar' %}dir="rtl"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Messagerie - FitMatch</title>
+    <title>{{ t.conversation.page_title|default('Messagerie - FitMatch') }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -223,18 +223,18 @@
             </svg>
         </button>
         <div class="chat-info">
-            <h1 id="chat-title">Chargement...</h1>
+            <h1 id="chat-title">{{ t.conversation.loading|default('Chargement...') }}</h1>
             <p id="chat-subtitle"></p>
         </div>
         <span class="status-badge" id="status-badge"></span>
     </header>
     
     <div class="chat-messages" id="messages-container">
-        <div class="loading">Chargement des messages...</div>
+        <div class="loading">{{ t.conversation.loading_messages|default('Chargement des messages...') }}</div>
     </div>
     
     <div class="chat-input">
-        <input type="text" id="message-input" placeholder="Écrivez votre message..." onkeypress="handleKeyPress(event)">
+        <input type="text" id="message-input" placeholder="{{ t.conversation.write_message|default('Écrivez votre message...') }}" onkeypress="handleKeyPress(event)">
         <button class="send-btn" id="send-btn" onclick="sendMessage()">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
@@ -246,6 +246,22 @@
         const BOOKING_ID = "{{ booking_id }}";
         const STORAGE_KEY = 'fitmatch';
         const USER_KEY = 'fitmatch.user';
+        
+        const TRANSLATIONS = {
+            today: "{{ t.conversation.today|default('Aujourd\\'hui') }}",
+            yesterday: "{{ t.conversation.yesterday|default('Hier') }}",
+            conversation_not_found: "{{ t.conversation.conversation_not_found|default('Conversation introuvable') }}",
+            no_access: "{{ t.conversation.no_access|default('Cette réservation n\\'existe pas ou vous n\\'y avez pas accès.') }}",
+            start_conversation: "{{ t.conversation.start_conversation|default('Démarrez la conversation') }}",
+            send_message_to_coach: "{{ t.conversation.send_message_to_coach|default('Envoyez un message à votre coach') }}",
+            send_message_to_client: "{{ t.conversation.send_message_to_client|default('Envoyez un message à votre client') }}",
+            confirmed: "{{ t.conversation.confirmed|default('Confirmée') }}",
+            pending: "{{ t.conversation.pending|default('En attente') }}",
+            coach: "{{ t.conversation.coach|default('Coach') }}",
+            client: "{{ t.conversation.client|default('Client') }}",
+            error: "{{ t.conversation.error|default('Erreur') }}",
+            send_error: "{{ t.conversation.send_error|default('Erreur lors de l\\'envoi du message') }}"
+        };
         
         let currentUser = null;
         let currentRole = null;
@@ -282,9 +298,10 @@
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             
-            if (date.toDateString() === today.toDateString()) return "Aujourd'hui";
-            if (date.toDateString() === yesterday.toDateString()) return "Hier";
-            return date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+            if (date.toDateString() === today.toDateString()) return TRANSLATIONS.today;
+            if (date.toDateString() === yesterday.toDateString()) return TRANSLATIONS.yesterday;
+            const locale = "{{ locale|default('fr') }}";
+            return date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
         }
         
         async function init() {
@@ -363,8 +380,8 @@
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                         </svg>
-                        <h2>Conversation introuvable</h2>
-                        <p>Cette réservation n'existe pas ou vous n'y avez pas accès.</p>
+                        <h2>${TRANSLATIONS.conversation_not_found}</h2>
+                        <p>${TRANSLATIONS.no_access}</p>
                     </div>
                 `;
                 return;
@@ -376,10 +393,10 @@
             
             const statusBadge = document.getElementById('status-badge');
             if (bookingData.status === 'confirmed') {
-                statusBadge.textContent = 'Confirmée';
+                statusBadge.textContent = TRANSLATIONS.confirmed;
                 statusBadge.className = 'status-badge confirmed';
             } else {
-                statusBadge.textContent = 'En attente';
+                statusBadge.textContent = TRANSLATIONS.pending;
                 statusBadge.className = 'status-badge pending';
             }
             
@@ -414,13 +431,14 @@
             const container = document.getElementById('messages-container');
             
             if (messages.length === 0) {
+                const sendToText = currentRole === 'client' ? TRANSLATIONS.send_message_to_coach : TRANSLATIONS.send_message_to_client;
                 container.innerHTML = `
                     <div class="empty-chat">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                         </svg>
-                        <h2>Démarrez la conversation</h2>
-                        <p>Envoyez un message à ${currentRole === 'client' ? 'votre coach' : 'votre client'}</p>
+                        <h2>${TRANSLATIONS.start_conversation}</h2>
+                        <p>${sendToText}</p>
                     </div>
                 `;
                 return;
@@ -508,11 +526,11 @@
                     await loadMessages();
                 } else {
                     console.error('❌ Erreur API:', data.error);
-                    alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+                    alert(TRANSLATIONS.error + ': ' + (data.error || TRANSLATIONS.error));
                 }
             } catch (e) {
                 console.error('❌ Erreur envoi message:', e);
-                alert('Erreur lors de l\'envoi du message');
+                alert(TRANSLATIONS.send_error);
             } finally {
                 sendBtn.disabled = false;
                 input.focus();

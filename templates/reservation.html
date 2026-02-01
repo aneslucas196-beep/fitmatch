@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" {% if locale == 'ar' %}dir="rtl"{% endif %}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>FitMatch – Réserver la séance</title>
+  <title>{{ t.reservation.page_title|default('FitMatch – Réserver la séance') }}</title>
   <style>
     :root{
       --text:#111; --muted:#6b7280; --border:#e5e7eb; --bg:#f7f7f7;
@@ -80,21 +80,21 @@
 <body>
   <div class="wrap">
     <div class="between" style="margin-bottom:16px;">
-      <h1 style="margin:0;">{{ t(translations, 'booking.title', 'Book a Session') }}</h1>
+      <h1 style="margin:0;">{{ t.booking.title|default('Book a Session') }}</h1>
       <a href="/client/home" class="btn btn-outline" style="padding:10px 16px;font-size:14px;text-decoration:none;">
-        {{ t(translations, 'booking.my_account', 'My Account') }}
+        {{ t.booking.my_account|default('My Account') }}
       </a>
     </div>
 
     <!-- Step 1 -->
     <section class="step">
-      <p class="title">1. Prestation sélectionnée</p>
+      <p class="title">1. {{ t.reservation.step1_title|default('Prestation sélectionnée') }}</p>
       <div class="card">
         <div class="row">
           <div>
-            <div id="serviceName" style="font-weight:700">Séance musculation</div>
+            <div id="serviceName" style="font-weight:700">{{ t.reservation.default_session|default('Séance musculation') }}</div>
             <div class="muted small">
-              avec <span id="coachName">Coach Anas</span> — <span id="gymName">BasicFit Élancourt</span>
+              {{ t.reservation.with|default('avec') }} <span id="coachName">Coach</span> — <span id="gymName">Gym</span>
             </div>
           </div>
         </div>
@@ -108,14 +108,14 @@
     <!-- Step 2 -->
     <section class="step">
       <p class="title between">
-        <span>2. Date et heure sélectionnées</span>
-        <a class="link" href="#" id="btnModify">Modifier</a>
+        <span>2. {{ t.reservation.step2_title|default('Date et heure sélectionnées') }}</span>
+        <a class="link" href="#" id="btnModify">{{ t.reservation.modify|default('Modifier') }}</a>
       </p>
       <div class="card">
         <div class="between">
           <div>
-            <div id="dateLabel" style="font-weight:700">Mardi 4 novembre 2025</div>
-            <div class="muted small">à <span id="timeLabel">13:30</span></div>
+            <div id="dateLabel" style="font-weight:700">—</div>
+            <div class="muted small">{{ t.reservation.at|default('à') }} <span id="timeLabel">—</span></div>
           </div>
         </div>
       </div>
@@ -123,100 +123,100 @@
 
     <!-- Step 3 -->
     <section class="step" id="step-3-identification">
-      <p class="title">3. Identification</p>
+      <p class="title">3. {{ t.reservation.step3_title|default('Identification') }}</p>
 
       <!-- Bloc identité (apparait après inscription/connexion) -->
       <div id="id-summary" class="hidden card">
         <div class="id-row">
           <div>
-            <div class="id-label">Identifié</div>
+            <div class="id-label">{{ t.reservation.identified|default('Identifié') }}</div>
             <div class="id-name" id="idFullName">—</div>
             <div class="id-email" id="idEmail">—</div>
           </div>
           <div class="id-actions">
-            <button type="button" class="btn-link" id="btnEdit">Modifier</button>
+            <button type="button" class="btn-link" id="btnEdit">{{ t.reservation.modify|default('Modifier') }}</button>
             <span class="sep">•</span>
-            <button type="button" class="btn-link danger" id="btnLogout">Se déconnecter</button>
+            <button type="button" class="btn-link danger" id="btnLogout">{{ t.reservation.logout|default('Se déconnecter') }}</button>
           </div>
         </div>
       </div>
 
       <!-- Bouton Confirmer (apparait après vérification email) -->
       <div id="confirm-section" class="hidden" style="margin-top:24px;">
-        <button id="btnConfirmBooking" class="btn-confirm">Confirmer la séance</button>
+        <button id="btnConfirmBooking" class="btn-confirm">{{ t.reservation.confirm_session|default('Confirmer la séance') }}</button>
       </div>
 
       <!-- Boutons initiaux -->
       <div class="card" id="guestCard">
-        <div class="section" style="margin-bottom:8px;font-weight:700">Vous avez déjà un compte ?</div>
+        <div class="section" style="margin-bottom:8px;font-weight:700">{{ t.reservation.have_account|default('Vous avez déjà un compte ?') }}</div>
         <div class="actions" style="margin-bottom:18px">
-          <button class="btn btn-primary" id="btnShowLogin">Se connecter</button>
+          <button class="btn btn-primary" id="btnShowLogin">{{ t.reservation.login|default('Se connecter') }}</button>
         </div>
-        <div class="muted small" style="text-align:center;margin:8px 0;">ou</div>
-        <div class="section" style="margin:10px 0 8px;font-weight:700">Nouveau sur FitMatch ?</div>
+        <div class="muted small" style="text-align:center;margin:8px 0;">{{ t.reservation.or|default('ou') }}</div>
+        <div class="section" style="margin:10px 0 8px;font-weight:700">{{ t.reservation.new_to_fitmatch|default('Nouveau sur FitMatch ?') }}</div>
         <div class="actions">
-          <button class="btn btn-outline" id="btnShowSignup">Créer mon compte</button>
+          <button class="btn btn-outline" id="btnShowSignup">{{ t.reservation.create_account|default('Créer mon compte') }}</button>
         </div>
       </div>
 
       <!-- Formulaire de connexion (caché par défaut) -->
       <form id="loginForm" class="card hidden">
         <div style="margin-bottom:16px;">
-          <label style="font-size:14px;font-weight:500;display:block;margin-bottom:6px;" for="loginEmail">Email *</label>
-          <input id="loginEmail" name="email" type="email" required placeholder="Email" 
+          <label style="font-size:14px;font-weight:500;display:block;margin-bottom:6px;" for="loginEmail">{{ t.reservation.email_label|default('Email') }} *</label>
+          <input id="loginEmail" name="email" type="email" required placeholder="{{ t.reservation.email_placeholder|default('Email') }}" 
                  style="width:100%;padding:11px 12px;border-radius:10px;border:1px solid #d1d5db;font-size:15px;outline:none;background:#f9fafb;">
         </div>
 
         <div style="margin-bottom:6px;">
-          <label style="font-size:14px;font-weight:500;display:block;margin-bottom:6px;" for="loginPassword">Mot de passe *</label>
-          <input id="loginPassword" name="password" type="password" required placeholder="Mot de passe" 
+          <label style="font-size:14px;font-weight:500;display:block;margin-bottom:6px;" for="loginPassword">{{ t.reservation.password_label|default('Mot de passe') }} *</label>
+          <input id="loginPassword" name="password" type="password" required placeholder="{{ t.reservation.password_placeholder|default('Mot de passe') }}" 
                  style="width:100%;padding:11px 12px;border-radius:10px;border:1px solid #d1d5db;font-size:15px;outline:none;background:#f9fafb;">
         </div>
 
         <div style="font-size:13px;color:#111;margin-top:6px;margin-bottom:16px;text-decoration:underline;cursor:pointer;" id="forgotPassword">
-          Mot de passe oublié ?
+          {{ t.reservation.forgot_password|default('Mot de passe oublié ?') }}
         </div>
 
         <button type="submit" style="width:100%;border:none;padding:13px 16px;border-radius:999px;background:#111;color:#fff;font-size:16px;font-weight:600;cursor:pointer;">
-          Se connecter
+          {{ t.reservation.login|default('Se connecter') }}
         </button>
 
         <div style="display:flex;align-items:center;margin:24px 0 16px;color:#9ca3af;font-size:13px;">
           <div style="flex:1;height:1px;background:#e5e7eb;"></div>
-          <div style="padding:0 10px;text-transform:uppercase;letter-spacing:0.08em;">ou</div>
+          <div style="padding:0 10px;text-transform:uppercase;letter-spacing:0.08em;">{{ t.reservation.or|default('ou') }}</div>
           <div style="flex:1;height:1px;background:#e5e7eb;"></div>
         </div>
 
         <button type="button" id="btnSwitchToSignup" 
                 style="width:100%;border-radius:999px;border:1px solid #111;background:#fff;color:#111;padding:12px 16px;font-size:15px;font-weight:500;cursor:pointer;">
-          Créer mon compte
+          {{ t.reservation.create_account|default('Créer mon compte') }}
         </button>
       </form>
 
       <!-- Formulaire de réinitialisation du mot de passe (caché par défaut) -->
       <div id="resetPasswordForm" class="card hidden">
-        <h3 style="font-size:22px;font-weight:600;margin-bottom:12px;color:#111827;">Réinitialiser mon mot de passe</h3>
+        <h3 style="font-size:22px;font-weight:600;margin-bottom:12px;color:#111827;">{{ t.reservation.reset_password_title|default('Réinitialiser mon mot de passe') }}</h3>
         
         <div style="margin-bottom:16px;">
-          <label style="font-size:14px;font-weight:500;display:block;margin-bottom:6px;" for="resetEmail">Email *</label>
-          <input id="resetEmail" type="email" required placeholder="Email" 
+          <label style="font-size:14px;font-weight:500;display:block;margin-bottom:6px;" for="resetEmail">{{ t.reservation.email_label|default('Email') }} *</label>
+          <input id="resetEmail" type="email" required placeholder="{{ t.reservation.email_placeholder|default('Email') }}" 
                  style="width:100%;padding:12px;border-radius:10px;border:1px solid #d1d5db;font-size:15px;outline:none;background:#f9fafb;">
         </div>
 
         <button type="button" id="btnResetPassword" 
                 style="width:100%;border:none;padding:14px;border-radius:12px;background:#111827;color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:8px;">
-          Réinitialiser mon mot de passe
+          {{ t.reservation.reset_password_button|default('Réinitialiser mon mot de passe') }}
         </button>
 
         <div style="margin-top:16px;font-size:15px;text-decoration:underline;color:#111827;cursor:pointer;" id="backToLogin">
-          Retour à la connexion
+          {{ t.reservation.back_to_login|default('Retour à la connexion') }}
         </div>
 
-        <div style="margin:24px 0;color:#6b7280;text-align:center;font-size:14px;text-transform:uppercase;">ou</div>
+        <div style="margin:24px 0;color:#6b7280;text-align:center;font-size:14px;text-transform:uppercase;">{{ t.reservation.or|default('ou') }}</div>
 
         <button type="button" id="btnResetToSignup" 
                 style="width:100%;border-radius:999px;border:1px solid #111;background:#fff;color:#111;padding:12px 16px;font-size:15px;font-weight:500;cursor:pointer;">
-          Créer mon compte
+          {{ t.reservation.create_account|default('Créer mon compte') }}
         </button>
       </div>
 
@@ -224,31 +224,31 @@
       <form id="signupForm" class="id-form card hidden">
         <div class="grid">
           <div class="field">
-            <label for="fullName">Nom complet *</label>
-            <input id="fullName" name="fullName" type="text" required placeholder="Votre nom et prénom" autocomplete="name">
+            <label for="fullName">{{ t.reservation.full_name|default('Nom complet') }} *</label>
+            <input id="fullName" name="fullName" type="text" required placeholder="{{ t.reservation.full_name_placeholder|default('Votre nom et prénom') }}" autocomplete="name">
           </div>
 
           <div class="field">
-            <label for="email">Email *</label>
-            <input id="email" name="email" type="email" required placeholder="vous@email.com" autocomplete="email">
+            <label for="email">{{ t.reservation.email_label|default('Email') }} *</label>
+            <input id="email" name="email" type="email" required placeholder="{{ t.reservation.email_placeholder_example|default('vous@email.com') }}" autocomplete="email">
           </div>
 
           <div class="field">
-            <label for="password">Mot de passe *</label>
-            <input id="password" name="password" type="password" required placeholder="Au moins 8 caractères" minlength="8" autocomplete="new-password">
+            <label for="password">{{ t.reservation.password_label|default('Mot de passe') }} *</label>
+            <input id="password" name="password" type="password" required placeholder="{{ t.reservation.password_min_hint|default('Au moins 8 caractères') }}" minlength="8" autocomplete="new-password">
           </div>
         </div>
 
         <label class="cgu">
           <input type="checkbox" id="acceptCgu" required>
-          J'accepte les <a href="#" target="_blank" rel="noopener">CGU</a> de FitMatch.
+          {{ t.reservation.accept_terms|default("J'accepte les") }} <a href="#" target="_blank" rel="noopener">{{ t.reservation.terms|default('CGU') }}</a> {{ t.reservation.of_fitmatch|default('de FitMatch.') }}
         </label>
 
-        <button type="submit" class="btn-create" id="btnCreate">Créer mon compte</button>
+        <button type="submit" class="btn-create" id="btnCreate">{{ t.reservation.create_account|default('Créer mon compte') }}</button>
 
         <p class="small-note">
-          Vos informations sont traitées par FitMatch. Voir notre
-          <a href="#" target="_blank" rel="noopener">politique de confidentialité</a>.
+          {{ t.reservation.privacy_note|default('Vos informations sont traitées par FitMatch. Voir notre') }}
+          <a href="#" target="_blank" rel="noopener">{{ t.reservation.privacy_policy|default('politique de confidentialité') }}</a>.
         </p>
       </form>
     </section>
@@ -257,21 +257,21 @@
   <!-- Overlay Vérification Email -->
   <div id="email-verify-overlay" class="ev-overlay hidden">
     <div class="ev-card">
-      <h3>Confirmation par e-mail</h3>
+      <h3>{{ t.reservation.email_confirmation|default('Confirmation par e-mail') }}</h3>
       <p id="evMessage">
-        Merci de saisir le code de confirmation envoyé à <b id="evEmailHint">—</b>.<br>
-        <button class="ev-link" id="evEditEmail">Modifier l'e-mail</button>
+        {{ t.reservation.enter_code|default('Merci de saisir le code de confirmation envoyé à') }} <b id="evEmailHint">—</b>.<br>
+        <button class="ev-link" id="evEditEmail">{{ t.reservation.edit_email|default("Modifier l'e-mail") }}</button>
       </p>
 
       <input id="evCode" class="ev-input" inputmode="numeric" maxlength="6"
-             placeholder="Code de vérification — Exemple : 123456" />
+             placeholder="{{ t.reservation.code_placeholder|default('Code de vérification — Exemple : 123456') }}" />
 
       <div class="ev-actions">
-        <button id="evResend" class="ev-link">Recevoir le code à nouveau</button>
+        <button id="evResend" class="ev-link">{{ t.reservation.resend_code|default('Recevoir le code à nouveau') }}</button>
       </div>
 
-      <button id="evSubmit" class="ev-primary">Enregistrer</button>
-      <button id="evLogout" class="ev-secondary">Se déconnecter</button>
+      <button id="evSubmit" class="ev-primary">{{ t.reservation.save|default('Enregistrer') }}</button>
+      <button id="evLogout" class="ev-secondary">{{ t.reservation.logout|default('Se déconnecter') }}</button>
 
       <div id="evToast" class="ev-toast hidden"></div>
     </div>
@@ -279,17 +279,17 @@
 
   <!-- Dialog Modifier -->
   <dialog id="dlg">
-    <div class="dlg-head">Modifier la date & l'heure</div>
+    <div class="dlg-head">{{ t.reservation.modify_datetime|default("Modifier la date & l'heure") }}</div>
     <div class="dlg-body">
-      <label class="small muted">Date</label>
+      <label class="small muted">{{ t.reservation.date|default('Date') }}</label>
       <input id="inpDate" type="date" style="display:block;margin:6px 0 14px;padding:12px;border:1px solid var(--border);border-radius:10px;width:100%">
 
-      <label class="small muted">Créneau</label>
+      <label class="small muted">{{ t.reservation.time_slot|default('Créneau') }}</label>
       <div id="slots" class="grid"></div>
     </div>
     <div class="dlg-actions">
-      <button class="btn btn-outline" id="cancelDlg">Annuler</button>
-      <button class="btn btn-primary" id="saveDlg">Valider</button>
+      <button class="btn btn-outline" id="cancelDlg">{{ t.reservation.cancel|default('Annuler') }}</button>
+      <button class="btn btn-primary" id="saveDlg">{{ t.reservation.validate|default('Valider') }}</button>
     </div>
   </dialog>
 
