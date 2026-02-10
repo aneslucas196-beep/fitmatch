@@ -519,6 +519,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        booking_id: bookingToCancel.id || bookingToCancel.booking_id || '',
                         client_name: user.fullName || 'Client',
                         client_email: user.email || '',
                         coach_name: bookingToCancel.coach || 'Coach',

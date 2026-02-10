@@ -176,6 +176,8 @@ const SERVER_USER = {
     fullName: "{{ user.full_name | default(user.name) | default('') }}"
 };
 
+const cancelledBookingIds = new Set();
+
 const motivationQuotes = [
     "Votre corps peut le faire. C'est votre esprit qu'il faut convaincre !",
     "Chaque séance vous rapproche de votre objectif !",
@@ -269,6 +271,9 @@ async function syncBookingStatuses() {
                 
                 // ÉTAPE 2: Mettre à jour ou ajouter les réservations du serveur
                 for (const serverBooking of serverBookings) {
+                    if (cancelledBookingIds.has(serverBooking.id)) {
+                        continue;
+                    }
                     let localIndex = bookings.findIndex(b => 
                         (b.id && b.id === serverBooking.id) || 
                         (b.booking_id && b.booking_id === serverBooking.id) ||
@@ -317,7 +322,7 @@ async function syncBookingStatuses() {
     return bookings;
 }
 
-async function loadBookings() {
+async function loadBookings(skipSync = false) {
     const data = getStoredData();
     const user = data.user;
     
@@ -326,8 +331,9 @@ async function loadBookings() {
         document.getElementById('welcome-title').textContent = `Bienvenue ${firstName} !`;
     }
     
-    // Synchroniser les statuts depuis le serveur
-    await syncBookingStatuses();
+    if (!skipSync) {
+        await syncBookingStatuses();
+    }
     
     // Recharger les données après synchro
     const freshData = getStoredData();
@@ -462,6 +468,9 @@ async function confirmCancel() {
     } catch (e) { console.error('Erreur annulation:', e); }
     
     const bookingId = booking.id || booking.booking_id;
+    if (bookingId) {
+        cancelledBookingIds.add(bookingId);
+    }
     const originalIndex = allBookings.findIndex(b => {
         if (bookingId && (b.id === bookingId || b.booking_id === bookingId)) return true;
         return b.date === booking.date && b.time === booking.time && b.coach === booking.coach;
@@ -479,7 +488,7 @@ async function confirmCancel() {
         cancelBtn.disabled = false;
         cancelBtn.textContent = '{{ t.client.cancel|default("Annuler") }}';
     }
-    loadBookings();
+    loadBookings(true);
 }
 
 function displayRandomMotivation() {
