@@ -2908,6 +2908,14 @@ async def reserver_by_slug(request: Request, slug: str):
             "request": request,
             "message": f"Le coach '{slug}' n'a pas été trouvé. Il a peut-être changé de nom ou n'existe plus."
         }, status_code=404)
+
+    # Bloquer l'accès au profil public si l'abonnement n'est pas actif
+    subscription_status = coach.get("subscription_status", "")
+    if subscription_status in ["blocked", "cancelled", "past_due"]:
+        return templates.TemplateResponse("404.html", {
+            "request": request,
+            "message": f"Le profil de ce coach n'est plus accessible."
+        }, status_code=404)
     
     # Assurer qu'il y a une photo
     if not coach.get("photo"):
@@ -2956,6 +2964,14 @@ async def booking_by_slug(request: Request, slug: str):
         return templates.TemplateResponse("404.html", {
             "request": request,
             "message": f"Le coach '{slug}' n'a pas été trouvé."
+        }, status_code=404)
+
+    # Bloquer l'accès au profil public si l'abonnement n'est pas actif
+    subscription_status = coach.get("subscription_status", "")
+    if subscription_status in ["blocked", "cancelled", "past_due"]:
+        return templates.TemplateResponse("404.html", {
+            "request": request,
+            "message": f"Le profil de ce coach n'est plus accessible."
         }, status_code=404)
     
     # Assurer qu'il y a une photo
