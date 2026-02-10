@@ -433,28 +433,39 @@ async function confirmCancel() {
     
     if (!booking) return;
     
+    const cancelBtn = document.getElementById('btn-confirm');
+    if (cancelBtn) {
+        cancelBtn.disabled = true;
+        cancelBtn.textContent = 'Annulation...';
+    }
+    
     try {
-        await fetch('/api/cancel-booking', {
+        const res = await fetch('/api/cancel-booking', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                booking_id: booking.id || booking.booking_id || '',
                 client_name: user.fullName || 'Client',
                 client_email: user.email || '',
                 coach_name: booking.coach || 'Coach',
                 coach_email: booking.coach_email || '',
                 gym_name: booking.gym || 'Salle',
-                date: formatDate(booking.date),
+                date: booking.date || '',
                 time: booking.time || '10:00',
                 service: booking.service || 'Séance de coaching',
                 duration: (booking.duration || 60) + ' min',
                 price: (booking.price || 40) + '€'
             })
         });
+        const result = await res.json();
+        console.log('✅ Annulation résultat:', result);
     } catch (e) { console.error('Erreur annulation:', e); }
     
-    const originalIndex = allBookings.findIndex(b => 
-        b.date === booking.date && b.time === booking.time && b.coach === booking.coach
-    );
+    const bookingId = booking.id || booking.booking_id;
+    const originalIndex = allBookings.findIndex(b => {
+        if (bookingId && (b.id === bookingId || b.booking_id === bookingId)) return true;
+        return b.date === booking.date && b.time === booking.time && b.coach === booking.coach;
+    });
     
     if (originalIndex !== -1) {
         allBookings.splice(originalIndex, 1);
@@ -464,6 +475,10 @@ async function confirmCancel() {
     
     document.getElementById('cancel-modal').close();
     currentCancelIndex = null;
+    if (cancelBtn) {
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = '{{ t.client.cancel|default("Annuler") }}';
+    }
     loadBookings();
 }
 

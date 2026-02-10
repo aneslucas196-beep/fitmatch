@@ -2390,10 +2390,12 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     demo_users = load_demo_users()
     coach_data_fresh = demo_users.get(coach_email, {})
     
-    # Récupérer les infos pour affichage (plus de blocage sur l'abonnement)
     subscription_status = coach_data_fresh.get("subscription_status", "")
     email_verified = coach_data_fresh.get("email_verified", False)
     print(f"🔍 Portal check: email={coach_email}, subscription_status='{subscription_status}', email_verified={email_verified}")
+    
+    if subscription_status in ["blocked", "cancelled", "past_due"]:
+        return RedirectResponse(url="/coach/subscription", status_code=302)
     
     # Vérifier si le profil est complété
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
@@ -5218,16 +5220,17 @@ class CancelBookingRequest(BaseModel):
     client_name: str
     client_email: str
     coach_name: str
-    coach_email: Optional[str] = None  # Email du coach pour identification
+    coach_email: Optional[str] = None
     gym_name: str
     gym_address: Optional[str] = "Adresse non renseignée"
-    date: str  # format en français: "vendredi 28 novembre 2025"
-    time: str  # format: "14:00"
+    date: str
+    time: str
     service: str
     duration: str
     price: str
     coach_photo: Optional[str] = None
     booking_url: Optional[str] = None
+    booking_id: Optional[str] = None
 
 
 class CoachBookingRequest(BaseModel):
@@ -5516,48 +5519,56 @@ async def cancel_booking(request: CancelBookingRequest):
         found_coach_email = None
         found_coach_name = None
         
-        # Chercher le coach par email ou nom
-        for coach_email, coach_data in demo_users.items():
-            if coach_data.get("role") != "coach":
-                continue
-            
-            # Vérifier si c'est le bon coach
-            coach_name = coach_data.get("full_name", "").lower().strip()
-            if request.coach_email and coach_email.lower() == request.coach_email.lower():
-                pass  # Match par email
-            elif request.coach_name and coach_name == request.coach_name.lower().strip():
-                pass  # Match par nom
-            else:
-                continue
-            
-            # Sauvegarder l'email du coach pour la notification
-            found_coach_email = coach_email
-            found_coach_name = coach_data.get("full_name", request.coach_name)
-            
-            # Supprimer des pending_bookings
-            pending = coach_data.get("pending_bookings", [])
-            new_pending = [b for b in pending if not (
-                b.get("client_email", "").lower() == request.client_email.lower() and
-                b.get("time") == request.time
-            )]
-            if len(new_pending) < len(pending):
-                coach_data["pending_bookings"] = new_pending
-                booking_removed = True
-                print(f"✅ Réservation supprimée des pending_bookings du coach {coach_email}")
-            
-            # Supprimer des confirmed_bookings
-            confirmed = coach_data.get("confirmed_bookings", [])
-            new_confirmed = [b for b in confirmed if not (
-                b.get("client_email", "").lower() == request.client_email.lower() and
-                b.get("time") == request.time
-            )]
-            if len(new_confirmed) < len(confirmed):
-                coach_data["confirmed_bookings"] = new_confirmed
-                booking_removed = True
-                print(f"✅ Réservation supprimée des confirmed_bookings du coach {coach_email}")
-            
-            if booking_removed:
-                break
+        # STRATÉGIE 1: Recherche par booking_id (méthode fiable)
+        if request.booking_id:
+            for coach_email, coach_data in demo_users.items():
+                if coach_data.get("role") != "coach":
+                    continue
+                
+                for list_name in ["pending_bookings", "confirmed_bookings"]:
+                    bookings = coach_data.get(list_name, [])
+                    new_bookings = [b for b in bookings if b.get("id") != request.booking_id]
+                    if len(new_bookings) < len(bookings):
+                        coach_data[list_name] = new_bookings
+                        booking_removed = True
+                        found_coach_email = coach_email
+                        found_coach_name = coach_data.get("full_name", request.coach_name)
+                        print(f"✅ Réservation {request.booking_id} supprimée de {list_name} du coach {coach_email}")
+                        break
+                
+                if booking_removed:
+                    break
+        
+        # STRATÉGIE 2: Fallback par coach email/nom + client email + time
+        if not booking_removed:
+            for coach_email, coach_data in demo_users.items():
+                if coach_data.get("role") != "coach":
+                    continue
+                
+                coach_name = coach_data.get("full_name", "").lower().strip()
+                if request.coach_email and coach_email.lower() == request.coach_email.lower():
+                    pass
+                elif request.coach_name and coach_name == request.coach_name.lower().strip():
+                    pass
+                else:
+                    continue
+                
+                found_coach_email = coach_email
+                found_coach_name = coach_data.get("full_name", request.coach_name)
+                
+                for list_name in ["pending_bookings", "confirmed_bookings"]:
+                    bookings = coach_data.get(list_name, [])
+                    new_bookings = [b for b in bookings if not (
+                        b.get("client_email", "").lower() == request.client_email.lower() and
+                        b.get("time") == request.time
+                    )]
+                    if len(new_bookings) < len(bookings):
+                        coach_data[list_name] = new_bookings
+                        booking_removed = True
+                        print(f"✅ Réservation supprimée de {list_name} du coach {coach_email} (fallback)")
+                
+                if booking_removed:
+                    break
         
         # Sauvegarder les modifications
         if booking_removed:
