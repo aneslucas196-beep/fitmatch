@@ -1437,7 +1437,11 @@ async def signup_submit(
         print(f"🔐 Mode démo - Code OTP généré pour {email}: {otp_code}")
         
         # Tester l'envoi d'email avec Resend même en mode démo
-        email_result = send_otp_email_resend(email, otp_code, full_name)
+        # Get language for email
+        from i18n_utils import get_i18n_context
+        i18n = get_i18n_context(request)
+        lang = i18n['locale']
+        email_result = send_otp_email_resend(email, otp_code, full_name, lang=lang)
         
         success_message = "Code de vérification envoyé à votre adresse email"
         if email_result.get("success"):

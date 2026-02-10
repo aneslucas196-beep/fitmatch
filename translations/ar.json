@@ -362,6 +362,11 @@
     "faq3_answer": "نقبل بطاقات فيزا وماستركارد وأمريكان إكسبريس. الدفع مؤمن عبر Stripe."
   },
   "emails": {
+    "confirmation_subject": "تم تأكيد الحجز - FitMatch",
+    "confirmation_title": "تم تأكيد الحجز",
+    "confirmation_view_booking": "عرض حجزي",
+    "confirmation_location": "المكان",
+    "confirmation_service": "الخدمة",
     "booking_confirmation_subject": "تم تأكيد الحجز - FitMatch",
     "booking_reminder_subject": "تذكير: جلستك غداً",
     "tomorrow": "غداً!",

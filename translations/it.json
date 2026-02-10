@@ -362,6 +362,11 @@
     "faq3_answer": "Accettiamo carte Visa, Mastercard e American Express. Il pagamento è protetto da Stripe."
   },
   "emails": {
+    "confirmation_subject": "Prenotazione Confermata - FitMatch",
+    "confirmation_title": "Prenotazione Confermata",
+    "confirmation_view_booking": "Vedi la mia prenotazione",
+    "confirmation_location": "Luogo",
+    "confirmation_service": "Servizio",
     "booking_confirmation_subject": "Prenotazione Confermata - FitMatch",
     "booking_reminder_subject": "Promemoria: La Tua Sessione Domani",
     "tomorrow": "È Domani!",
