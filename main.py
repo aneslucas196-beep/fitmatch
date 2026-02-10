@@ -6293,15 +6293,30 @@ reminder_thread.start()
 async def api_create_checkout_session(request: Request, user = Depends(require_coach_or_pending)):
     """Crée une session Checkout Stripe pour l'abonnement (accessible même sans abonnement actif)."""
     try:
-        body = await request.json()
+        # Essayer de lire le body JSON, sinon utiliser les valeurs par défaut
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+            
         billing_period = body.get("billing_period", "monthly")
         
         coach_email = user.get("email")
+        if not coach_email:
+            return JSONResponse({"error": "Email du coach introuvable"}, status_code=400)
+            
         coach_name = user.get("full_name", user.get("name", "Coach"))
         coach_id = user.get("id", coach_email)
         
+        print(f"💳 Création session Stripe pour {coach_email} (period: {billing_period})")
+        
         # Créer ou récupérer le customer Stripe
-        customer = create_or_get_customer(coach_email, coach_name, coach_id)
+        try:
+            customer = create_or_get_customer(coach_email, coach_name, coach_id)
+            print(f"✅ Customer Stripe récupéré: {customer.id}")
+        except Exception as customer_error:
+            print(f"❌ Erreur create_or_get_customer: {customer_error}")
+            return JSONResponse({"error": f"Erreur client Stripe: {str(customer_error)}"}, status_code=500)
         
         # Sauvegarder le customer_id
         update_coach_subscription(coach_email, stripe_customer_id=customer.id)
@@ -6320,13 +6335,16 @@ async def api_create_checkout_session(request: Request, user = Depends(require_c
                 coach_email=coach_email,
                 billing_period=billing_period
             )
+            print(f"✅ Session Checkout créée: {session.id}")
         except Exception as stripe_error:
-            print(f"❌ Erreur Stripe directe: {stripe_error}")
+            print(f"❌ Erreur Stripe create_checkout_session: {stripe_error}")
             return JSONResponse({"error": f"Erreur Stripe: {str(stripe_error)}"}, status_code=500)
         
         return JSONResponse({"url": session.url})
     except Exception as e:
-        print(f"❌ Erreur création checkout session: {e}")
+        print(f"❌ Erreur globale création checkout session: {e}")
+        import traceback
+        traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/api/stripe/create-portal-session")
