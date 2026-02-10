@@ -6510,7 +6510,7 @@ async def stripe_webhook(request: Request):
                         amount_paid = latest_invoice.amount_paid / 100  # Convertir centimes en euros
                     except:
                         # Fallback: utiliser le prix défini
-                        amount_paid = 560.0 if subscription_type == "annual" else 29.0
+                        amount_paid = 10.0 if subscription_type == "annual" else 1.0
                     
                     period_start = datetime.fromtimestamp(subscription.current_period_start)
                     period_end_date = datetime.fromtimestamp(subscription.current_period_end)
@@ -6552,7 +6552,7 @@ async def stripe_webhook(request: Request):
                 subscription_type = data.get("metadata", {}).get("subscription_type", "monthly")
                 
                 # Utiliser les prix définis
-                amount_paid = 560.0 if subscription_type == "annual" else 29.0
+                amount_paid = 10.0 if subscription_type == "annual" else 1.0
                 
                 # Calcul des dates de manière sûre avec timedelta
                 from datetime import timedelta

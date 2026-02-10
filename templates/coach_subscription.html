@@ -144,10 +144,7 @@ if (urlParams.get('cancelled')) {
             <div class="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
                 <div class="text-center mb-8">
                     <h3 class="text-xl font-bold text-slate-900 mb-2">{{ t.subscription.annual_plan|default('Plan Annuel') }}</h3>
-                    <div class="text-4xl font-bold text-slate-900">560€<span class="text-lg text-slate-500">{{ t.subscription.per_year|default('/an') }}</span></div>
-                    <div class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold mt-2">
-                        {{ t.subscription.discount|default('-20% de réduction') }}
-                    </div>
+                    <div class="text-4xl font-bold text-slate-900">10€<span class="text-lg text-slate-500">{{ t.subscription.per_year|default('/an') }}</span></div>
                     <p class="text-slate-500 text-sm mt-2">{{ t.subscription.instead_of|default('Au lieu de 720€/an') }}</p>
                 </div>
                 
@@ -218,7 +215,7 @@ if (urlParams.get('cancelled')) {
                 </button>
                 
                 <p class="text-center text-slate-500 text-sm mt-4">
-                    {{ t.subscription.billed_annually|default('Facturé 560€ pour 1 an') }}
+                    {{ t.subscription.billed_annually|default('Billed €10 for 1 year') }}
                 </p>
             </div>
 
