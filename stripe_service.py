@@ -122,39 +122,42 @@ def create_checkout_session(
         interval = "month"
         subscription_type = "coach_monthly"
     
-    session = stripe.checkout.Session.create(
-        customer=customer_id,
-        payment_method_types=["card"],
-        mode="subscription",
-        line_items=[{
-            "price_data": {
-                "currency": "eur",
-                "product_data": {
-                    "name": "FitMatch Pro - Abonnement Coach",
-                    "description": "Accès complet à la plateforme FitMatch pour les coachs",
-                    "images": ["https://fitmatch.fr/logo.png"]
+    try:
+        session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=["card"],
+            mode="subscription",
+            line_items=[{
+                "price_data": {
+                    "currency": "eur",
+                    "product_data": {
+                        "name": "FitMatch Pro - Abonnement Coach",
+                        "description": "Accès complet à la plateforme FitMatch pour les coachs",
+                    },
+                    "unit_amount": unit_amount,
+                    "recurring": {
+                        "interval": interval
+                    }
                 },
-                "unit_amount": unit_amount,
-                "recurring": {
-                    "interval": interval
-                }
-            },
-            "quantity": 1
-        }],
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={
-            "coach_email": coach_email,
-            "subscription_type": subscription_type
-        },
-        subscription_data={
-            "metadata": {
+                "quantity": 1
+            }],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata={
                 "coach_email": coach_email,
                 "subscription_type": subscription_type
+            },
+            subscription_data={
+                "metadata": {
+                    "coach_email": coach_email,
+                    "subscription_type": subscription_type
+                }
             }
-        }
-    )
-    return session
+        )
+        return session
+    except Exception as e:
+        print(f"❌ Erreur stripe.checkout.Session.create: {e}")
+        raise e
 
 
 def create_portal_session(customer_id: str, return_url: str) -> stripe.billing_portal.Session:

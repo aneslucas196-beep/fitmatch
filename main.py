@@ -6312,13 +6312,17 @@ async def api_create_checkout_session(request: Request, user = Depends(require_c
         cancel_url = f"{base_url}/coach/subscription?cancelled=true"
         
         # Créer la session checkout
-        session = create_checkout_session(
-            customer_id=customer.id,
-            success_url=success_url,
-            cancel_url=cancel_url,
-            coach_email=coach_email,
-            billing_period=billing_period
-        )
+        try:
+            session = create_checkout_session(
+                customer_id=customer.id,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                coach_email=coach_email,
+                billing_period=billing_period
+            )
+        except Exception as stripe_error:
+            print(f"❌ Erreur Stripe directe: {stripe_error}")
+            return JSONResponse({"error": f"Erreur Stripe: {str(stripe_error)}"}, status_code=500)
         
         return JSONResponse({"url": session.url})
     except Exception as e:
