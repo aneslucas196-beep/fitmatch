@@ -2263,18 +2263,21 @@ async def coach_login_submit(
     
     if action == "signup":
         # Inscription coach
+        i18n = await get_i18n(request)
         if not name or len(name.strip()) < 2:
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Le nom est requis (minimum 2 caractères).",
-                "tab": "signup"
+                "tab": "signup",
+                **i18n
             }, status_code=400)
         
         if len(password) < 8:
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Le mot de passe doit contenir au moins 8 caractères.",
-                "tab": "signup"
+                "tab": "signup",
+                **i18n
             }, status_code=400)
         
         # Vérifier si l'email existe déjà
@@ -2283,7 +2286,8 @@ async def coach_login_submit(
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Un compte existe déjà avec cet email.",
-                "tab": "signup"
+                "tab": "signup",
+                **i18n
             }, status_code=400)
         
         # Créer le compte coach avec statut "en attente de paiement"
@@ -2325,10 +2329,12 @@ async def coach_login_submit(
                 if cached_user.get("role") == "coach":
                     user_found = cached_user
                 else:
+                    i18n = await get_i18n(request)
                     return templates.TemplateResponse("coach_login.html", {
                         "request": request,
                         "error": "Ce compte n'est pas un compte coach. Utilisez la connexion client.",
-                        "tab": "login"
+                        "tab": "login",
+                        **i18n
                     }, status_code=401)
         
         if user_found:
@@ -2374,10 +2380,12 @@ async def coach_login_submit(
             )
             return response
         else:
+            i18n = await get_i18n(request)
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
-                "tab": "login"
+                "tab": "login",
+                **i18n
             }, status_code=401)
 
 # Routes protégées - Espace Coach
@@ -2457,10 +2465,12 @@ async def coach_portal_update(
         user_id = user.get("id", user.get("email", "demo_user"))
         success = update_coach_profile(user_supabase, user_id, profile_data)
         if not success:
+            i18n = get_i18n_context(request)
             return templates.TemplateResponse("coach_portal.html", {
                 "request": request,
                 "coach": user,
-                "error": "Erreur lors de la mise à jour du profil."
+                "error": "Erreur lors de la mise à jour du profil.",
+                **i18n
             })
     
     return RedirectResponse(url="/coach/portal", status_code=303)
