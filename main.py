@@ -5965,9 +5965,8 @@ async def delete_booking(request: DeleteBookingRequest):
         if not booking_found:
             return JSONResponse({"success": False, "error": "Réservation non trouvée"}, status_code=404)
         
-        # Sauvegarder
-        with open("demo_users.json", "w", encoding="utf-8") as f:
-            json.dump(demo_users, f, ensure_ascii=False, indent=2)
+        # Sauvegarder via la fonction centralisée (DB ou JSON)
+        save_demo_user(request.coach_email, coach_data)
         
         print(f"🗑️ Réservation {request.booking_id} supprimée par {request.coach_email}")
         
