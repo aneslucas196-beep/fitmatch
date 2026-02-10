@@ -2263,7 +2263,7 @@ async def coach_login_submit(
     
     if action == "signup":
         # Inscription coach
-        i18n = await get_i18n(request)
+        i18n = get_i18n_context(request)
         if not name or len(name.strip()) < 2:
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
@@ -2329,7 +2329,7 @@ async def coach_login_submit(
                 if cached_user.get("role") == "coach":
                     user_found = cached_user
                 else:
-                    i18n = await get_i18n(request)
+                    i18n = get_i18n_context(request)
                     return templates.TemplateResponse("coach_login.html", {
                         "request": request,
                         "error": "Ce compte n'est pas un compte coach. Utilisez la connexion client.",
@@ -2380,7 +2380,7 @@ async def coach_login_submit(
             )
             return response
         else:
-            i18n = await get_i18n(request)
+            i18n = get_i18n_context(request)
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
                 "error": "Email ou mot de passe incorrect.",
