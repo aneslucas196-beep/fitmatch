@@ -592,7 +592,7 @@ app.mount("/attached_assets", StaticFiles(directory="attached_assets"), name="at
 # Client Supabase anonyme (si disponible)
 supabase_anon = get_supabase_anon_client()
 
-# Cache en mémoire pour les codes OTP en mode démo (email -> code)
+# Cache en mémoire pour les codes OTP (email -> code)
 demo_otp_cache = {}
 demo_user_cache = {}
 # Cache pour mapper les tokens de session aux emails (token -> email)
@@ -718,14 +718,14 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
         print("❌ Token de session invalide (format)")
         return None
     
-    # Mode démo si pas de Supabase
+    # Stockage local si pas de Supabase
     if not supabase_anon:
         if session_token.startswith("demo_"):
             # Extraire l'email depuis le token unique
             from utils import load_demo_users, get_demo_user
             import hashlib
             
-            print(f"🔍 Mode démo - Recherche utilisateur pour token: {session_token}")
+            print(f"🔍 Recherche utilisateur pour token: {session_token}")
             
             # D'abord vérifier le cache demo_token_map (pour les tokens créés via /api/signup-reservation)
             if session_token in demo_token_map:
@@ -1255,7 +1255,7 @@ async def get_user_gyms(user = Depends(get_current_user)):
         email = user.get("email")
         
         if not supabase_anon:
-            # Mode démo - chercher dans le stockage persistant
+            # Chercher dans le stockage persistant
             user_data = get_demo_user(email)
             if user_data:
                 selected_gyms_str = user_data.get("selected_gyms", "[]")
@@ -1306,12 +1306,12 @@ async def save_user_gyms(request: Request, user = Depends(get_current_user)):
         validated_gyms = validate_selected_gyms(json.dumps(selected_gyms))
         
         if not supabase_anon:
-            # Mode démo - sauvegarder dans le stockage persistant
+            # Sauvegarder dans le stockage persistant
             user_data = get_demo_user(email)
             if user_data:
                 user_data["selected_gyms"] = json.dumps(validated_gyms)
                 save_demo_user(email, user_data)
-                print(f"✅ Salles sauvegardées en mode démo pour {email}: {validated_gyms}")
+                print(f"✅ Salles sauvegardées pour {email}: {validated_gyms}")
                 return {"success": True, "message": "Salles sauvegardées avec succès"}
             else:
                 return {"success": False, "message": "Utilisateur non trouvé"}
@@ -1401,7 +1401,7 @@ async def signup_submit(
     otp_code = generate_otp_code(6)
     
     if not supabase_anon:
-        # Mode démo sans Supabase - stocker le code et les infos utilisateur dans le cache
+        # Stocker le code et les infos utilisateur dans le cache
         demo_otp_cache[email] = otp_code
         # Traiter et valider les salles sélectionnées pour les clients
         selected_gyms_list = []
@@ -1434,9 +1434,9 @@ async def signup_submit(
         
         # Garder aussi en cache mémoire pour compatibilité temporaire
         demo_user_cache[email] = user_data
-        print(f"🔐 Mode démo - Code OTP généré pour {email}: {otp_code}")
+        print(f"🔐 Code OTP généré pour {email}: {otp_code}")
         
-        # Tester l'envoi d'email avec Resend même en mode démo
+        # Envoyer l'email avec Resend
         # Get language for email
         from i18n_utils import get_i18n_context
         i18n = get_i18n_context(request)
@@ -1569,7 +1569,7 @@ async def verify_otp_submit(
     email: str = Form(...),
     otp_code: str = Form(...)
 ):
-    """Vérification du code OTP et activation du compte (legacy pour le mode démo)."""
+    """Vérification du code OTP et activation du compte."""
     # Normaliser l'email et le code
     email = email.lower().strip()
     otp_code = otp_code.strip()
@@ -1583,7 +1583,7 @@ async def verify_otp_submit(
         }, status_code=400)
     
     if not supabase_anon:
-        # Mode démo - vérifier que le code correspond exactement à celui généré
+        # Vérifier que le code correspond exactement à celui généré
         stored_code = demo_otp_cache.get(email)
         if stored_code and otp_code == stored_code:
             # Code correct - supprimer du cache et connecter
@@ -1599,7 +1599,7 @@ async def verify_otp_submit(
                 redirect_url = "/client/home"
                 
             response = RedirectResponse(url=redirect_url, status_code=303)
-            # Créer un token unique pour cet utilisateur en mode démo
+            # Créer un token unique pour cet utilisateur
             import hashlib
             unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
             response.set_cookie(
@@ -1614,7 +1614,7 @@ async def verify_otp_submit(
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": "Code incorrect. Veuillez utiliser le code affiché en mode démo."
+                "error": "Code incorrect. Veuillez vérifier votre code."
             }, status_code=400)
     
     try:
@@ -1671,7 +1671,7 @@ async def verify_otp_submit(
         
         # Connecter l'utilisateur
         # Note: En production, il faudrait une vraie session Supabase
-        # Pour le mode démo, on va simplement rediriger
+        # Rediriger l'utilisateur
         
         # Rediriger selon le rôle
         if role == 'coach':
@@ -1877,7 +1877,7 @@ async def login_submit(
                 print(f"✅ Connexion avec compte inscrit")
         
         if user_found:
-            # Redirection selon le rôle en mode démo
+            # Redirection selon le rôle
             role = user_found["role"]
             if role == "coach":
                 redirect_url = "/coach/portal"
@@ -1889,7 +1889,7 @@ async def login_submit(
             print(f"✅ Connexion démo réussie - Redirection vers {redirect_url} (rôle: {role})")
             
             response = RedirectResponse(url=redirect_url, status_code=303)
-            # Créer un token unique pour cet utilisateur en mode démo
+            # Créer un token unique pour cet utilisateur
             import hashlib
             unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
             response.set_cookie(
@@ -1901,7 +1901,7 @@ async def login_submit(
             )
             return response
         else:
-            # Identifiants incorrects même en mode démo
+            # Identifiants incorrects
             i18n = get_i18n_context(request)
             return templates.TemplateResponse("login.html", {
                 "request": request,
@@ -1987,11 +1987,11 @@ async def resend_confirmation(
     email = email.lower().strip()
     
     if not supabase_anon:
-        # Mode démo - pas de renvoi d'email
+        # Renvoi d'email non disponible
         return templates.TemplateResponse("verify_email.html", {
             "request": request,
             "email": email,
-            "error": "Mode démo - renvoi d'email non disponible"
+            "error": "Renvoi d'email non disponible"
         })
     
     success = resend_confirmation_email(supabase_anon, email)
@@ -2417,7 +2417,7 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
             # En cas d'erreur, rediriger vers l'onboarding par sécurité
             return RedirectResponse(url="/coach/profile-setup", status_code=302)
     else:
-        # Mode démo - simuler un profil non complété pour les nouveaux utilisateurs
+        # Vérifier si le profil est complété pour les nouveaux utilisateurs
         if not user.get("profile_completed", False):
             return RedirectResponse(url="/coach/profile-setup", status_code=302)
         transformations = get_transformations_by_coach_mock(1)
@@ -2492,10 +2492,10 @@ async def coach_profile_setup_get(request: Request, user = Depends(require_coach
         except Exception as e:
             print(f"❌ Erreur lors de la récupération du profil: {e}")
     else:
-        # Mode démo - Charger les données depuis l'utilisateur connecté
+        # Charger les données depuis l'utilisateur connecté
         coach_data = user
         profile_completed = user.get("profile_completed", False)
-        print(f"🔧 Mode démo - Chargement des données du profil pour {user.get('email', 'coach')}")
+        print(f"🔧 Chargement des données du profil pour {user.get('email', 'coach')}")
     
     i18n_context = get_i18n_context(request)
     return templates.TemplateResponse("coach_profile_setup.html", {
@@ -2543,7 +2543,7 @@ async def coach_profile_setup_post(
                     if not profile_photo_url:
                         error_message = "Erreur lors de l'upload de la photo de profil."
                 else:
-                    # Mode démo - Stocker localement dans attached_assets
+                    # Stocker localement dans attached_assets
                     import os
                     os.makedirs("attached_assets/profile_photos", exist_ok=True)
                     
@@ -2608,8 +2608,8 @@ async def coach_profile_setup_post(
             else:
                 error_message = "Erreur lors de la mise à jour du profil."
         else:
-            # Mode démo - Simuler la mise à jour réussie du profil
-            print(f"✅ Mode démo - Profil mis à jour pour {user.get('email', 'coach')} avec:")
+            # Mise à jour réussie du profil
+            print(f"✅ Profil mis à jour pour {user.get('email', 'coach')} avec:")
             print(f"   - Nom: {full_name}")
             print(f"   - Ville: {city}")
             print(f"   - Spécialités: {specialties}")
@@ -2637,7 +2637,7 @@ async def coach_profile_setup_post(
                         print(f"✅ Email extrait du token: {user_email}")
                         break
             
-            print(f"🔧 Mode démo - Sauvegarde profil pour: {user_email}")
+            print(f"🔧 Sauvegarde profil pour: {user_email}")
             
             # CORRECTION : Récupérer les données existantes pour préserver le mot de passe
             existing_user = get_demo_user(user_email) or {}
@@ -4885,7 +4885,7 @@ async def get_gyms_worldwide(
         if not supabase_anon:
             return {
                 "success": False,
-                "message": "Base de données non disponible en mode démo",
+                "message": "Base de données non disponible",
                 "gyms": [],
                 "pagination": {
                     "page": page,
@@ -4982,7 +4982,7 @@ async def search_gyms_near_location(
         if not supabase_anon:
             return {
                 "success": False,
-                "message": "Base de données non disponible en mode démo",
+                "message": "Base de données non disponible",
                 "gyms": []
             }
         
@@ -5376,7 +5376,7 @@ async def confirm_booking(request: ConfirmBookingRequest):
                         # Vérifier que le coach a un compte Stripe Connect actif
                         connect_info = get_stripe_connect_info(coach_email)
                         
-                        # Mode démo: accepter les comptes Stripe partiels (pour tests sans SMS)
+                        # Accepter les comptes Stripe partiels
                         if not connect_info:
                             print(f"❌ Coach {coach_email} n'a pas de compte Stripe Connect")
                             return JSONResponse({

@@ -1,6 +1,5 @@
 """
 Service de base de données PostgreSQL pour FitMatch
-Remplace le mode démo (demo_users.json) par une vraie base de données
 """
 
 import os

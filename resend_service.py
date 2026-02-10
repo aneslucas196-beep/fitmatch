@@ -59,8 +59,8 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] OTP Email to {to_email}: {otp_code} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - email OTP non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         first_name = full_name.split()[0] if full_name else ("user" if lang == 'en' else "utilisateur")
@@ -122,8 +122,8 @@ def send_booking_confirmation_email(to_email: str, client_name: str, coach_name:
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Booking Confirmation to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - email confirmation non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('confirmation_subject', 'Réservation confirmée - FitMatch')
@@ -175,8 +175,8 @@ def send_subscription_success_email(to_email: str, coach_name: str, subscription
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Subscription Success to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - email abonnement non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('sub_success_subject', 'Bienvenue sur FitMatch Pro !')
@@ -223,8 +223,8 @@ def send_payment_failed_email(to_email: str, coach_name: str, retry_url: str, la
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Payment Failed to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - email échec paiement non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('pay_failed_subject', 'Attention : Échec du paiement FitMatch')
@@ -271,8 +271,8 @@ def send_session_payment_receipt(to_email: str, client_name: str, coach_name: st
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Session Receipt to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - reçu de paiement non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('receipt_subject', 'Reçu de paiement - FitMatch')
@@ -323,8 +323,8 @@ def send_account_blocked_email(to_email: str, coach_name: str, retry_url: str, l
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Account Blocked to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - email compte bloqué non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('blocked_subject', 'Compte FitMatch suspendu')
@@ -371,8 +371,8 @@ def send_reminder_email(to_email: str, client_name: str, coach_name: str, gym_na
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Reminder {reminder_type} to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - rappel non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get(f'reminder_subject_{reminder_type}', f'Rappel : Votre séance {reminder_type}')
@@ -421,8 +421,8 @@ def send_cancellation_email(to_email: str, client_name: str, coach_name: str, gy
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Cancellation Client to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - email annulation non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('cancel_subject', 'Réservation annulée - FitMatch')
@@ -470,8 +470,8 @@ def send_cancellation_to_coach_email(to_email: str, coach_name: str, client_name
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Cancellation Coach to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - email annulation coach non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('cancel_coach_subject', 'Une séance a été annulée')
@@ -521,8 +521,8 @@ def send_coach_notification_email(to_email: str, coach_name: str, client_name: s
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Coach Notification to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - notification coach non envoyée à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('notification_subject', 'Nouvelle demande de réservation !')
@@ -575,8 +575,8 @@ def send_rejection_email_to_client(to_email: str, client_name: str, coach_name: 
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Rejection to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - email refus non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('reject_subject', 'Demande non acceptée - FitMatch')
@@ -624,8 +624,8 @@ def send_coach_cancelled_email(client_email: str, client_name: str, coach_name: 
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Coach Cancelled to {client_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - email annulation coach non envoyé à {client_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('coach_cancel_subject', 'Annulation de votre séance FitMatch')
@@ -669,8 +669,8 @@ def send_account_restored_email(to_email: str, coach_name: str, lang: str = 'fr'
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"📧 [DEMO] Account Restored to {to_email} (lang: {lang})")
-        return {"success": True, "mode": "demo"}
+        print(f"⚠️ RESEND_API_KEY manquante - email restauration non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
         subject = t.get('restored_subject', 'Compte FitMatch restauré !')

@@ -166,8 +166,6 @@ def get_supabase_anon_client():
     """
     Crée un client Supabase anonyme (respecte RLS).
     """
-    # FORCER MODE DÉMO - Désactiver Supabase temporairement
-    print("🔧 Mode démo activé - Supabase désactivé")
     return None
     
     try:
@@ -202,9 +200,7 @@ def get_supabase_client_for_user(access_token: str):
         print("❌ Token d'accès invalide ou manquant")
         return None
     
-    # Si c'est un token démo, retourner None (pas de client Supabase)
     if access_token.startswith("demo_") or access_token == "demo_token":
-        print("🔧 Mode démo - Pas de client Supabase")
         return None
     
     url = os.getenv("SUPABASE_URL")

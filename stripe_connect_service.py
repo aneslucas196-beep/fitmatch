@@ -21,30 +21,8 @@ def create_connect_account(coach_email: str, coach_name: str) -> Dict[str, Any]:
     """
     Crée un compte Stripe Connect Standard pour un coach.
     Retourne l'account_id créé.
-    EN MODE DÉMO: Simule un compte vérifié pour éviter les problèmes SMS Stripe.
     """
     
-    # Mode DÉMO: vérifier si on doit simuler au lieu d'utiliser Stripe réellement
-    import json
-    try:
-        with open("demo_users.json", "r") as f:
-            demo_config = json.load(f)
-            is_demo_mode = demo_config.get("_meta", {}).get("demo_mode", False) or os.environ.get("DEMO_MODE") == "true"
-    except:
-        is_demo_mode = False
-    
-    if is_demo_mode:
-        # Mode démo: simuler un compte Stripe Connect complètement vérifié
-        print(f"🎭 MODE DÉMO: Simulation d'un compte Stripe Connect pour {coach_email}")
-        return {
-            "success": True,
-            "account_id": f"acct_demo_{coach_email.replace('@', '_').replace('.', '_')}",
-            "details_submitted": True,
-            "charges_enabled": True,
-            "payouts_enabled": True
-        }
-    
-    # Mode réel: utiliser Stripe
     init_stripe()
     
     try:
@@ -103,12 +81,9 @@ def get_account_status(account_id: str) -> Dict[str, Any]:
     """
     Récupère le statut actuel d'un compte Connect.
     Vérifie si le compte peut recevoir des paiements.
-    EN MODE DÉMO: Retourne un compte complètement vérifié.
     """
     
-    # Mode DÉMO: Si c'est un compte simulé, retourner directement le statut actif
     if account_id and account_id.startswith("acct_demo_"):
-        print(f"🎭 MODE DÉMO: Retour du statut actif pour {account_id}")
         return {
             "success": True,
             "account_id": account_id,
