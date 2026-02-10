@@ -113,6 +113,11 @@ def create_checkout_session(
     """
     init_stripe()
     
+    # Valider que customer_id est présent
+    if not customer_id:
+        print("❌ Erreur: customer_id manquant pour create_checkout_session")
+        raise Exception("customer_id manquant")
+
     if billing_period == "annual":
         unit_amount = COACH_ANNUAL_PRICE
         interval = "year"
