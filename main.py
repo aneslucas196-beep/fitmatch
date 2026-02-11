@@ -1109,7 +1109,9 @@ async def gym_detail_page(request: Request, gym_id: str, name: Optional[str] = N
     search_name = gym_name.lower().strip() if gym_name else None
     
     for email, user_data in demo_users.items():
-        if user_data.get("role") == "coach" and user_data.get("profile_completed"):
+        subscription_status = user_data.get("subscription_status", "")
+        is_blocked = subscription_status in ["blocked", "cancelled", "past_due"]
+        if user_data.get("role") == "coach" and user_data.get("profile_completed") and not is_blocked:
             selected_gyms_data = user_data.get("selected_gyms_data", "[]")
             
             try:
@@ -1124,12 +1126,10 @@ async def gym_detail_page(request: Request, gym_id: str, name: Optional[str] = N
             
             for gym in selected_gyms:
                 if isinstance(gym, dict):
-                    # Match par place_id Google Places ou ID local
                     if gym.get("place_id") == gym_id or gym.get("id") == gym_id:
                         gym_match = True
                         break
                     
-                    # Match par nom de salle
                     if search_name:
                         gym_name_lower = gym.get("name", "").lower().strip()
                         if search_name in gym_name_lower or gym_name_lower in search_name:
@@ -3379,6 +3379,11 @@ async def booking_page(request: Request, coach_id: str):
     if not coach:
         raise HTTPException(status_code=404, detail="Coach non trouvé")
     
+    subscription_status = coach.get("subscription_status", "")
+    is_blocked = subscription_status in ["blocked", "cancelled", "past_due"]
+    if is_blocked:
+        raise HTTPException(status_code=404, detail="Profil temporairement indisponible")
+    
     if not coach.get("photo"):
         coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
     
@@ -4106,6 +4111,11 @@ async def create_booking(request: Request):
         if not coach_email:
             raise HTTPException(status_code=404, detail="Coach non trouvé")
         
+        coach_data_check = demo_users[coach_email]
+        sub_status = coach_data_check.get("subscription_status", "")
+        if sub_status in ["blocked", "cancelled", "past_due"]:
+            raise HTTPException(status_code=403, detail="Ce coach n'accepte pas de réservations actuellement")
+        
         # Créer la réservation
         booking = {
             "id": str(uuid.uuid4()),
@@ -4296,8 +4306,10 @@ async def get_all_coaches_api(
             demo_users = load_demo_users()
             
             for email, user_data in demo_users.items():
-                # Ne prendre que les coaches avec profil complété
-                if user_data.get("role") == "coach" and user_data.get("profile_completed"):
+                # Ne prendre que les coaches avec profil complété et abonnement actif
+                subscription_status = user_data.get("subscription_status", "")
+                is_blocked = subscription_status in ["blocked", "cancelled", "past_due"]
+                if user_data.get("role") == "coach" and user_data.get("profile_completed") and not is_blocked:
                     coaches.append({
                         "id": email.replace("@", "_").replace(".", "_"),
                         "email": email,
@@ -4306,8 +4318,8 @@ async def get_all_coaches_api(
                         "city": user_data.get("city", ""),
                         "specialties": user_data.get("specialties", []),
                         "price_from": user_data.get("price_from", 50),
-                        "rating": 4.5,  # Valeur par défaut
-                        "reviews_count": 10,  # Valeur par défaut
+                        "rating": 4.5,
+                        "reviews_count": 10,
                         "verified": True,
                         "photo": user_data.get("photo", "/static/default-avatar.jpg"),
                         "instagram_url": user_data.get("instagram_url", ""),
