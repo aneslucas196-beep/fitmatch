@@ -419,36 +419,6 @@ async function subscribeAnnual() {
         btnSpinner.classList.add('hidden');
     }
 }
-    const btn = document.getElementById('subscribeAnnualBtn');
-    const btnText = document.getElementById('btnAnnualText');
-    const btnSpinner = document.getElementById('btnAnnualSpinner');
-    
-    btn.disabled = true;
-    btnText.textContent = i18n.redirecting;
-    btnSpinner.classList.remove('hidden');
-    
-    try {
-        const response = await fetch('/api/stripe/create-checkout-session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ billing_period: 'annual' })
-        });
-        
-        const data = await response.json();
-        
-        if (data.url) {
-            window.location.href = data.url;
-        } else {
-            throw new Error(data.error || 'Erreur lors de la création de la session');
-        }
-    } catch (error) {
-        console.error('Erreur:', error);
-        alert(i18n.error);
-        btn.disabled = false;
-        btnText.textContent = i18n.subscribeAnnual;
-        btnSpinner.classList.add('hidden');
-    }
-}
 
 async function openPortal() {
     try {
