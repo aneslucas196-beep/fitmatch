@@ -188,6 +188,7 @@ def schedule_booking_reminders(booking: dict, coach_name: str):
                 "service": booking.get("service", "Séance de coaching"),
                 "duration": booking.get("duration", "60"),
                 "price": booking.get("price", "40"),
+                "lang": booking.get("lang", "fr"),
                 "sent": False,
                 "created_at": now.isoformat()
             })
@@ -212,6 +213,7 @@ def schedule_booking_reminders(booking: dict, coach_name: str):
                 "service": booking.get("service", "Séance de coaching"),
                 "duration": booking.get("duration", "60"),
                 "price": booking.get("price", "40"),
+                "lang": booking.get("lang", "fr"),
                 "sent": False,
                 "created_at": now.isoformat()
             })
@@ -289,7 +291,8 @@ def process_due_reminders():
                     duration=f"{reminder.get('duration', '60')} min",
                     price=f"{reminder.get('price', '40')}€",
                     reminder_type=reminder.get("type"),
-                    booking_id=reminder.get("booking_id")
+                    booking_id=reminder.get("booking_id"),
+                    lang=reminder.get("lang", "fr")
                 )
                 
                 if result.get("success"):
@@ -2291,6 +2294,7 @@ async def coach_login_submit(
             }, status_code=400)
         
         # Créer le compte coach avec statut "en attente de paiement"
+        locale = get_locale_from_request(request)
         new_coach = {
             "email": email,
             "password": password,
@@ -2298,7 +2302,8 @@ async def coach_login_submit(
             "role": "coach",
             "verified": True,
             "profile_completed": False,
-            "subscription_status": "pending_payment"
+            "subscription_status": "pending_payment",
+            "lang": locale
         }
         save_demo_user(email, new_coach)
         print(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
@@ -5497,7 +5502,8 @@ async def confirm_booking(request: ConfirmBookingRequest):
                     service_name=request.service,
                     duration=f"{request.duration} min",
                     price=f"{request.price}€",
-                    booking_id=booking_id
+                    booking_id=booking_id,
+                    lang=coach_data.get("lang", "fr")
                 )
                 print(f"📧 Notification coach: {coach_notification}")
                 
@@ -5617,7 +5623,8 @@ async def cancel_booking(request: CancelBookingRequest):
                 time_str=request.time,
                 service_name=request.service,
                 duration=request.duration,
-                price=request.price
+                price=request.price,
+                lang="fr"
             )
             coach_notified = coach_result.get("success", False)
             if coach_notified:
@@ -5638,7 +5645,8 @@ async def cancel_booking(request: CancelBookingRequest):
             duration=request.duration,
             price=request.price,
             coach_photo=request.coach_photo,
-            booking_url=request.booking_url
+            booking_url=request.booking_url,
+            lang="fr"
         )
         
         if result.get("success"):
@@ -5879,7 +5887,8 @@ async def respond_to_booking(request: CoachBookingRequest):
                         duration=f"{booking_to_update.get('duration', '60')} min",
                         price=f"{booking_to_update.get('price', '40')}€",
                         coach_photo=coach_data.get("profile_photo_url"),
-                        reservation_id=request.booking_id
+                        reservation_id=request.booking_id,
+                        lang=booking_to_update.get("lang", "fr")
                     )
                     email_sent = email_result.get("success", False)
                     if not email_sent:
@@ -5908,7 +5917,8 @@ async def respond_to_booking(request: CoachBookingRequest):
                         time_str=booking_to_update.get("time", ""),
                         service_name=booking_to_update.get("service", "Séance de coaching"),
                         duration=f"{booking_to_update.get('duration', '60')} min",
-                        price=f"{booking_to_update.get('price', '40')}€"
+                        price=f"{booking_to_update.get('price', '40')}€",
+                        lang=booking_to_update.get("lang", "fr")
                     )
                     email_sent = email_result.get("success", False)
                     if not email_sent:
@@ -6019,7 +6029,8 @@ async def delete_booking(request: DeleteBookingRequest):
                         client_name=client_name,
                         coach_name=coach_name,
                         gym_name=gym_name,
-                        date=f"{formatted_date} à {time_str}"
+                        date=f"{formatted_date} à {time_str}",
+                        lang=deleted_booking.get("lang", "fr")
                     )
                     email_sent = email_result.get("success", False)
                     print(f"📧 Email annulation client: {email_result}")
@@ -6251,7 +6262,8 @@ def check_and_block_unpaid_coaches():
                     send_account_blocked_email(
                         to_email=email,
                         coach_name=user_data.get("full_name", "Coach"),
-                        retry_url=f"{base_url}/coach/subscription"
+                        retry_url=f"{base_url}/coach/subscription",
+                        lang=user_data.get("lang", "fr")
                     )
                     print(f"🚫 Compte bloqué pour non-paiement: {email}")
         
@@ -6474,7 +6486,8 @@ async def stripe_webhook(request: Request):
                                         service_name=booking_to_confirm.get("service"),
                                         duration=f"{booking_to_confirm.get('duration')} min",
                                         price=f"{booking_to_confirm.get('price')}€",
-                                        booking_id=booking_id
+                                        booking_id=booking_id,
+                                        lang=booking_to_confirm.get("lang", "fr")
                                     )
                                     print(f"📧 Email confirmation envoyé au client")
                                     
@@ -6490,7 +6503,8 @@ async def stripe_webhook(request: Request):
                                         session_time=booking_to_confirm.get("time"),
                                         service_name=booking_to_confirm.get("service"),
                                         duration=f"{booking_to_confirm.get('duration')} min",
-                                        amount=f"{booking_to_confirm.get('price')}€"
+                                        amount=f"{booking_to_confirm.get('price')}€",
+                                        lang=booking_to_confirm.get("lang", "fr")
                                     )
                                     print(f"📧 Certificat paiement séance envoyé au client")
                                 except Exception as email_error:
@@ -6531,7 +6545,8 @@ async def stripe_webhook(request: Request):
                     send_subscription_success_email(
                         to_email=coach_email,
                         coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                        subscription_url=f"{base_url}/coach/portal"
+                        subscription_url=f"{base_url}/coach/portal",
+                        lang=coach_data.get("lang", "fr") if coach_data else "fr"
                     )
                     print(f"📧 Email de bienvenue envoyé à {coach_email}")
                     
@@ -6555,7 +6570,8 @@ async def stripe_webhook(request: Request):
                         amount=f"{amount_paid:.2f}€",
                         billing_period=subscription_type,
                         subscription_start=period_start.strftime("%d/%m/%Y"),
-                        subscription_end=period_end_date.strftime("%d/%m/%Y")
+                        subscription_end=period_end_date.strftime("%d/%m/%Y"),
+                        lang=coach_data.get("lang", "fr") if coach_data else "fr"
                     )
                     print(f"📧 Certificat paiement abonnement envoyé à {coach_email}")
                     
@@ -6579,7 +6595,8 @@ async def stripe_webhook(request: Request):
                 send_subscription_success_email(
                     to_email=coach_email,
                     coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                    subscription_url=f"{base_url}/coach/portal"
+                    subscription_url=f"{base_url}/coach/portal",
+                    lang=coach_data.get("lang", "fr") if coach_data else "fr"
                 )
                 
                 # Certificat de paiement
@@ -6602,7 +6619,8 @@ async def stripe_webhook(request: Request):
                     amount=f"{amount_paid:.2f}€",
                     billing_period=subscription_type,
                     subscription_start=today.strftime("%d/%m/%Y"),
-                    subscription_end=end_date.strftime("%d/%m/%Y")
+                    subscription_end=end_date.strftime("%d/%m/%Y"),
+                    lang=coach_data.get("lang", "fr") if coach_data else "fr"
                 )
                 print(f"📧 Certificat paiement abonnement envoyé à {coach_email}")
         
@@ -6639,7 +6657,7 @@ async def stripe_webhook(request: Request):
                         send_account_restored_email(
                             to_email=coach_email,
                             coach_name=coach_data.get("full_name", "Coach"),
-                            dashboard_url=f"{base_url}/coach/portal"
+                            lang=coach_data.get("lang", "fr")
                         )
         
         elif event_type == "customer.subscription.deleted":
@@ -6668,7 +6686,8 @@ async def stripe_webhook(request: Request):
                     send_account_blocked_email(
                         to_email=coach_email,
                         coach_name=coach_data.get("full_name", "Coach"),
-                        retry_url=f"{base_url}/coach/subscription"
+                        retry_url=f"{base_url}/coach/subscription",
+                        lang=coach_data.get("lang", "fr")
                     )
         
         elif event_type == "invoice.payment_failed":
@@ -6699,7 +6718,8 @@ async def stripe_webhook(request: Request):
                     send_payment_failed_email(
                         to_email=coach_email,
                         coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                        retry_url=f"{base_url}/coach/subscription"
+                        retry_url=f"{base_url}/coach/subscription",
+                        lang=coach_data.get("lang", "fr") if coach_data else "fr"
                     )
                     print(f"⚠️ Paiement échoué pour {coach_email} - email envoyé")
         
@@ -6736,7 +6756,7 @@ async def stripe_webhook(request: Request):
                             send_account_restored_email(
                                 to_email=coach_email,
                                 coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                                dashboard_url=f"{base_url}/coach/portal"
+                                lang=coach_data.get("lang", "fr") if coach_data else "fr"
                             )
                             print(f"✅ Compte restauré pour {coach_email}")
                         else:
@@ -6815,7 +6835,8 @@ async def stripe_webhook(request: Request):
                         coach_name=coach_name,
                         session_date=session_date,
                         session_time=session_time,
-                        retry_url=retry_url
+                        retry_url=retry_url,
+                        lang=metadata.get("lang", "fr")
                     )
                     print(f"📧 Email échec paiement séance envoyé à {client_email}")
                 except Exception as email_error:
@@ -6833,7 +6854,8 @@ async def stripe_webhook(request: Request):
                     send_coach_signup_payment_failed_email(
                         to_email=coach_email,
                         coach_name=coach_name,
-                        retry_url=f"{base_url}/coach-signup"
+                        retry_url=f"{base_url}/coach-signup",
+                        lang=coach_data.get("lang", "fr") if coach_data else "fr"
                     )
                     print(f"📧 Email échec paiement inscription envoyé à {coach_email}")
                 except Exception as email_error:
@@ -6912,7 +6934,8 @@ async def booking_success_page(request: Request, booking_id: str = None, session
                                 date_str=booking.get("date"),
                                 time_str=booking.get("time"),
                                 service_name=booking.get("service"),
-                                booking_id=booking_id
+                                booking_id=booking_id,
+                                lang=booking.get("lang", "fr")
                             )
                             print(f"📧 Email de confirmation envoyé à {booking.get('client_email')}")
                         except Exception as email_err:

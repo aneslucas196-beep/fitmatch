@@ -662,6 +662,168 @@ def send_coach_cancelled_email(client_email: str, client_name: str, coach_name: 
         print(f"Error sending coach cancellation email: {e}")
         return {"success": False}
 
+def send_subscription_payment_receipt(to_email: str, coach_name: str, amount: str, billing_period: str, subscription_start: str, subscription_end: str, lang: str = 'fr') -> dict:
+    """Envoie un reçu de paiement d'abonnement au coach"""
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    t = get_email_translations(lang)
+    
+    if not resend_key:
+        print(f"⚠️ RESEND_API_KEY manquante - reçu abonnement non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
+    
+    try:
+        subject = t.get('sub_receipt_subject', 'Payment receipt - FitMatch')
+        title = t.get('sub_receipt_title', 'Payment receipt')
+        body = t.get('sub_receipt_body', 'Here is a summary of your FitMatch subscription payment.')
+        hello = t.get('otp_title', 'Hello')
+        type_label = t.get('sub_receipt_type', 'Type')
+        period_label_annual = t.get('sub_receipt_annual', 'Annual')
+        period_label_monthly = t.get('sub_receipt_monthly', 'Monthly')
+        period_text = t.get('sub_receipt_period', 'Period')
+        amount_label = t.get('sub_receipt_amount', 'Amount paid')
+        
+        period_label = period_label_annual if billing_period == "annual" else period_label_monthly
+        
+        html_content = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
+            <div style="background: #008f57; padding: 40px; text-align: center; color: white;">
+                <h1>{title}</h1>
+            </div>
+            <div style="padding: 40px;">
+                <p>{hello} {coach_name},</p>
+                <p>{body}</p>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                    <p><strong>{type_label} :</strong> {period_label}</p>
+                    <p><strong>{period_text} :</strong> {subscription_start} → {subscription_end}</p>
+                    <hr style="border: none; border-top: 1px solid #cbd5e1; margin: 15px 0;">
+                    <p style="font-size: 20px; font-weight: bold; color: #008f57;">{amount_label} : {amount}</p>
+                </div>
+            </div>
+            {get_social_footer(lang)}
+        </div>
+        """
+        
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+            json={
+                "from": mail_from,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content
+            },
+            timeout=10
+        )
+        return {"success": response.status_code == 200}
+    except Exception as e:
+        print(f"Error sending subscription receipt: {e}")
+        return {"success": False}
+
+def send_session_payment_failed_email(to_email: str, client_name: str, coach_name: str, session_date: str, session_time: str, retry_url: str, lang: str = 'fr') -> dict:
+    """Envoie un email d'échec de paiement de séance au client"""
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    t = get_email_translations(lang)
+    
+    if not resend_key:
+        print(f"⚠️ RESEND_API_KEY manquante - email échec paiement séance non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
+    
+    try:
+        subject = t.get('session_pay_failed_subject', 'Session payment failed - FitMatch')
+        title = t.get('session_pay_failed_title', 'Payment failed')
+        body = t.get('session_pay_failed_body', 'Your payment for the session could not be processed.')
+        cta = t.get('session_pay_failed_cta', 'Try again')
+        hello = t.get('otp_title', 'Hello')
+        date_label = t.get('session_pay_failed_date', 'Date')
+        
+        html_content = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
+            <div style="background: #ef4444; padding: 40px; text-align: center; color: white;">
+                <h1>{title}</h1>
+            </div>
+            <div style="padding: 40px;">
+                <p>{hello} {client_name},</p>
+                <p>{body}</p>
+                <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                    <p><strong>Coach :</strong> {coach_name}</p>
+                    <p><strong>{date_label} :</strong> {session_date} - {session_time}</p>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="{retry_url}" style="background: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">{cta}</a>
+                </div>
+            </div>
+            {get_social_footer(lang)}
+        </div>
+        """
+        
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+            json={
+                "from": mail_from,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content
+            },
+            timeout=10
+        )
+        return {"success": response.status_code == 200}
+    except Exception as e:
+        print(f"Error sending session payment failed email: {e}")
+        return {"success": False}
+
+def send_coach_signup_payment_failed_email(to_email: str, coach_name: str, retry_url: str, lang: str = 'fr') -> dict:
+    """Envoie un email d'échec de paiement d'inscription coach"""
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    t = get_email_translations(lang)
+    
+    if not resend_key:
+        print(f"⚠️ RESEND_API_KEY manquante - email échec inscription non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
+    
+    try:
+        subject = t.get('signup_pay_failed_subject', 'Signup payment failed - FitMatch')
+        title = t.get('signup_pay_failed_title', 'Registration pending')
+        body = t.get('signup_pay_failed_body', 'Your registration payment could not be processed. Please try again to activate your coach account.')
+        cta = t.get('signup_pay_failed_cta', 'Retry registration')
+        hello = t.get('otp_title', 'Hello')
+        
+        html_content = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
+            <div style="background: #ef4444; padding: 40px; text-align: center; color: white;">
+                <h1>{title}</h1>
+            </div>
+            <div style="padding: 40px;">
+                <p>{hello} {coach_name},</p>
+                <p>{body}</p>
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="{retry_url}" style="background: #008f57; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">{cta}</a>
+                </div>
+            </div>
+            {get_social_footer(lang)}
+        </div>
+        """
+        
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+            json={
+                "from": mail_from,
+                "to": [to_email],
+                "subject": subject,
+                "html": html_content
+            },
+            timeout=10
+        )
+        return {"success": response.status_code == 200}
+    except Exception as e:
+        print(f"Error sending coach signup payment failed email: {e}")
+        return {"success": False}
+
 def send_account_restored_email(to_email: str, coach_name: str, lang: str = 'fr') -> dict:
     """Envoie un email quand le compte bloqué est restauré après paiement"""
     resend_key = os.environ.get('RESEND_API_KEY')
@@ -673,9 +835,10 @@ def send_account_restored_email(to_email: str, coach_name: str, lang: str = 'fr'
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
-        subject = t.get('restored_subject', 'Compte FitMatch restauré !')
-        title = t.get('restored_title', 'Accès rétabli')
-        body = t.get('restored_body', 'Merci pour votre paiement. Votre compte a été restauré et votre profil est de nouveau visible.')
+        subject = t.get('restored_subject', 'FitMatch account restored!')
+        title = t.get('restored_title', 'Access restored')
+        body = t.get('restored_body', 'Thank you for your payment. Your account has been restored and your profile is visible again.')
+        hello = t.get('otp_title', 'Hello')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -683,7 +846,7 @@ def send_account_restored_email(to_email: str, coach_name: str, lang: str = 'fr'
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {coach_name},</p>
+                <p>{hello} {coach_name},</p>
                 <p>{body}</p>
             </div>
             {get_social_footer(lang)}
