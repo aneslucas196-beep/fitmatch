@@ -13,7 +13,8 @@ Preferred communication style: Simple, everyday language.
 - **Template Engine**: Jinja2 for server-side HTML rendering.
 - **Geographic Services**: Geopy with Nominatim geocoder for location-based searches and custom Haversine formula for distance calculations.
 - **Data Layer**: In-memory mock data with architecture prepared for Supabase integration.
-- **Authentication & Authorization**: Infrastructure for login/signup, role-based access (client, coach), and session management.
+- **Authentication & Authorization**: Infrastructure for login/signup, role-based access (client, coach), session management, bcrypt password hashing, and server-side auth on all protected routes.
+- **Security**: bcrypt password hashing (with backward compatibility for existing plain-text passwords), secure cookies in production (REPLIT_DEPLOYMENT flag), rate limiting via slowapi on login/OTP/password-reset endpoints, proper 401 JSON responses for API endpoints.
 
 ### Frontend Architecture
 - **Styling**: Tailwind CSS for responsive, utility-first design.

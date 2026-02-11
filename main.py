@@ -20,6 +20,21 @@ from pathlib import Path
 from typing import Tuple
 import resend
 import random
+import bcrypt
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address)
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(password: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+    except Exception:
+        return password == hashed
 
 from utils import (
     geocode_city, 
@@ -340,6 +355,15 @@ def cleanup_old_reminders():
 
 app = FastAPI()
 
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many requests. Please try again later."}
+    )
+
 # Précharger les traductions au démarrage
 preload_all_translations()
 
@@ -582,8 +606,13 @@ async def upload_to_supabase_storage(supabase_client, content: bytes, filename: 
 # Exception handler pour rediriger automatiquement les utilisateurs non connectés
 @app.exception_handler(401)
 async def auth_exception_handler(request: Request, exc: HTTPException):
-    """Redirige automatiquement vers /login si utilisateur non connecté."""
+    """Redirige vers /login pour les pages web, retourne JSON pour les API."""
     if exc.status_code == 401:
+        if request.url.path.startswith("/api/"):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": exc.detail or "Authentification requise"}
+            )
         return RedirectResponse(url="/login", status_code=303)
     return exc
 
@@ -1429,7 +1458,7 @@ async def signup_submit(
             "gender": gender,
             "role": role,
             "country_code": country,
-            "password": password.strip(),  # Normaliser le mot de passe stocké
+            "password": hash_password(password.strip()),
             "coach_gender_preference": coach_gender_preference if role == "client" else None,
             "selected_gyms": selected_gyms_list if role == "client" else None
         }
@@ -1609,7 +1638,7 @@ async def verify_otp_submit(
                 key="session_token",
                 value=unique_token,
                 httponly=True,
-                secure=False,  # True en production
+                secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
                 samesite="lax"
             )
             return response
@@ -1689,7 +1718,7 @@ async def verify_otp_submit(
             key="session_token",
             value=f"verified_{user_id}",
             httponly=True,
-            secure=False,  # True en production avec HTTPS
+            secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
             samesite="lax",
             max_age=3600 * 24 * 7  # 7 jours
         )
@@ -1809,6 +1838,7 @@ async def resend_otp_submit(
 
 # API Login pour le JavaScript (accepte JSON)
 @app.post("/api/login")
+@limiter.limit("10/minute")
 async def api_login(request: Request):
     """API de connexion pour JavaScript (JSON)."""
     try:
@@ -1825,7 +1855,7 @@ async def api_login(request: Request):
         cached_user = get_demo_user(email)
         if cached_user:
             stored_password = cached_user.get("password", "").strip()
-            if stored_password and stored_password == password.strip():
+            if stored_password and verify_password(password.strip(), stored_password):
                 user_found = cached_user
                 print(f"✅ API Login: compte trouvé")
         
@@ -1875,7 +1905,7 @@ async def login_submit(
             # Normaliser les mots de passe pour la comparaison
             stored_password = cached_user.get("password", "").strip()
             submitted_password = password.strip()
-            if stored_password and stored_password == submitted_password:
+            if stored_password and verify_password(submitted_password, stored_password):
                 user_found = cached_user
                 print(f"✅ Connexion avec compte inscrit")
         
@@ -1899,7 +1929,7 @@ async def login_submit(
                 key="session_token",
                 value=unique_token,
                 httponly=True,
-                secure=False,  # True en production
+                secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
                 samesite="lax"
             )
             return response
@@ -1943,7 +1973,7 @@ async def login_submit(
             key="session_token",
             value=result["session"].access_token,
             httponly=True,
-            secure=False,  # True en production avec HTTPS
+            secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
             samesite="lax",
             max_age=3600 * 24 * 7  # 7 jours
         )
@@ -2025,6 +2055,7 @@ from datetime import datetime, timedelta
 password_reset_tokens = {}
 
 @app.post("/api/forgot-password")
+@limiter.limit("5/minute")
 async def api_forgot_password(request: Request):
     """Envoie un email de réinitialisation de mot de passe."""
     try:
@@ -2212,7 +2243,7 @@ async def api_reset_password(request: Request):
             del password_reset_tokens[token]
             return JSONResponse({"success": False, "error": "Utilisateur non trouvé."})
         
-        user["password"] = new_password
+        user["password"] = hash_password(new_password)
         save_demo_user(email, user)
         
         del password_reset_tokens[token]
@@ -2232,7 +2263,7 @@ async def api_reset_password(request: Request):
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=False,
+            secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
             samesite="lax"
         )
         
@@ -2297,7 +2328,7 @@ async def coach_login_submit(
         locale = get_locale_from_request(request)
         new_coach = {
             "email": email,
-            "password": password,
+            "password": hash_password(password),
             "full_name": name.strip(),
             "role": "coach",
             "verified": True,
@@ -2316,7 +2347,7 @@ async def coach_login_submit(
             key="session_token",
             value=unique_token,
             httponly=True,
-            secure=False,
+            secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
             samesite="lax"
         )
         return response
@@ -2329,7 +2360,7 @@ async def coach_login_submit(
         cached_user = get_demo_user(email)
         if cached_user:
             stored_password = cached_user.get("password", "").strip()
-            if stored_password and stored_password == password.strip():
+            if stored_password and verify_password(password.strip(), stored_password):
                 # Vérifier que c'est bien un coach
                 if cached_user.get("role") == "coach":
                     user_found = cached_user
@@ -2380,7 +2411,7 @@ async def coach_login_submit(
                 key="session_token",
                 value=unique_token,
                 httponly=True,
-                secure=False,
+                secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
                 samesite="lax"
             )
             return response
@@ -3167,6 +3198,7 @@ async def coach_verify_email_page(request: Request, user = Depends(require_coach
     })
 
 @app.post("/api/coach/verify-email")
+@limiter.limit("10/minute")
 async def verify_coach_email(request: Request, user = Depends(require_coach_or_pending)):
     """Vérifie le code OTP envoyé par email."""
     try:
@@ -3213,6 +3245,7 @@ async def verify_coach_email(request: Request, user = Depends(require_coach_or_p
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/coach/resend-otp")
+@limiter.limit("3/minute")
 async def resend_coach_otp(request: Request, user = Depends(require_coach_or_pending)):
     """Renvoie un nouveau code OTP par email."""
     try:
@@ -5140,7 +5173,7 @@ async def signup_reservation(request: SignupReservationRequest):
                 "full_name": full_name,
                 "gender": "homme",
                 "role": "client",
-                "password": password,
+                "password": hash_password(password),
                 "coach_gender_preference": "aucune",
                 "selected_gyms": []
             }
@@ -5170,7 +5203,8 @@ async def signup_reservation(request: SignupReservationRequest):
             httponly=True,
             max_age=60*60*24*30,  # 30 jours
             samesite="lax",
-            path="/"
+            path="/",
+            secure=os.environ.get("REPLIT_DEPLOYMENT") == "1"
         )
         
         print(f"🍪 Cookie session_token défini avec token {token}")
@@ -6191,7 +6225,7 @@ async def mark_messages_read(booking_id: str, reader_role: str):
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.get("/conversation/{booking_id}", response_class=HTMLResponse)
-async def conversation_page(request: Request, booking_id: str):
+async def conversation_page(request: Request, booking_id: str, user = Depends(require_auth)):
     """Page de conversation pour client ou coach."""
     i18n_context = get_i18n_context(request)
     return templates.TemplateResponse("conversation.html", {

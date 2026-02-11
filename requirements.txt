@@ -13,3 +13,7 @@ sendgrid==6.12.4
 stripe==14.0.1
 supabase==2.18.1
 uvicorn==0.35.0
+bcrypt
+slowapi
+bcrypt
+slowapi
