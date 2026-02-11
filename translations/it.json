@@ -759,7 +759,22 @@
     "cancel": "Annulla",
     "cancel_confirm": "Sei sicuro di voler annullare questa prenotazione?",
     "cancel_success": "Prenotazione annullata con successo",
-    "contact_coach": "Contatta"
+    "contact_coach": "Contatta",
+    "cancelling": "Annullamento...",
+    "today": "Oggi",
+    "tomorrow": "Domani",
+    "motivation_quotes": [
+      "Il tuo corpo ce la può fare. È la tua mente che devi convincere!",
+      "Ogni sessione ti avvicina al tuo obiettivo!",
+      "L'unico allenamento sbagliato è quello che non fai!",
+      "Trasforma i tuoi sogni in sudore, poi in realtà!",
+      "Sei più forte delle tue scuse!",
+      "Progredire significa muoversi, anche di un piccolo passo!",
+      "Il tuo io futuro ti ringrazierà per lo sforzo di oggi!",
+      "I campioni non nascono, si formano!",
+      "Ogni goccia di sudore è un investimento nella tua salute!",
+      "Supera i tuoi limiti, sono solo nella tua testa!"
+    ]
   },
   "booking_pages": {
     "success_title": "Pagamento riuscito!",

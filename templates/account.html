@@ -532,7 +532,8 @@
                         duration: (bookingToCancel.duration || 60) + ' min',
                         price: (bookingToCancel.price || 40) + '€',
                         coach_photo: bookingToCancel.coach_photo || null,
-                        booking_url: window.location.origin + '/'
+                        booking_url: window.location.origin + '/',
+                        lang: document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('fitmatch_locale='))?.split('=')[1] || 'fr'
                     })
                 });
             } catch (e) {

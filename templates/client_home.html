@@ -178,18 +178,10 @@ const SERVER_USER = {
 
 const cancelledBookingIds = new Set();
 
-const motivationQuotes = [
-    "Votre corps peut le faire. C'est votre esprit qu'il faut convaincre !",
-    "Chaque séance vous rapproche de votre objectif !",
-    "La seule mauvaise séance est celle que vous ne faites pas !",
-    "Transformez vos rêves en sueur, puis en réalité !",
-    "Vous êtes plus fort que vos excuses !",
-    "Progresser c'est bouger, même d'un petit pas !",
-    "Votre futur moi vous remerciera pour l'effort d'aujourd'hui !",
-    "Champions, on ne naît pas, on le devient !",
-    "Chaque goutte de sueur est un investissement sur votre santé !",
-    "Dépassez vos limites, elles ne sont que dans votre tête !"
-];
+const motivationQuotes = {{ t.client.motivation_quotes | tojson }};
+
+const LOCALE_MAP = {'fr': 'fr-FR', 'en': 'en-US', 'es': 'es-ES', 'ar': 'ar-SA', 'de': 'de-DE', 'it': 'it-IT', 'pt': 'pt-PT'};
+const currentLocale = LOCALE_MAP['{{ locale }}'] || 'fr-FR';
 
 function getStoredData() {
     try {
@@ -211,7 +203,7 @@ function getStoredData() {
 function formatDate(dateStr) {
     const date = new Date(dateStr);
     const options = { weekday: 'long', day: 'numeric', month: 'long' };
-    return date.toLocaleDateString('fr-FR', options);
+    return date.toLocaleDateString(currentLocale, options);
 }
 
 function getRelativeDay(dateStr) {
@@ -221,10 +213,10 @@ function getRelativeDay(dateStr) {
     date.setHours(0,0,0,0);
     const diff = Math.floor((date - today) / (1000*60*60*24));
     
-    if (diff === 0) return "Aujourd'hui";
-    if (diff === 1) return "Demain";
-    if (diff < 7) return date.toLocaleDateString('fr-FR', { weekday: 'long' });
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    if (diff === 0) return "{{ t.client.today }}";
+    if (diff === 1) return "{{ t.client.tomorrow }}";
+    if (diff < 7) return date.toLocaleDateString(currentLocale, { weekday: 'long' });
+    return date.toLocaleDateString(currentLocale, { day: 'numeric', month: 'short' });
 }
 
 function isUpcoming(dateStr, time) {
@@ -328,7 +320,7 @@ async function loadBookings(skipSync = false) {
     
     if (user && user.fullName) {
         const firstName = user.fullName.split(' ')[0];
-        document.getElementById('welcome-title').textContent = `Bienvenue ${firstName} !`;
+        document.getElementById('welcome-title').textContent = `{{ t.client.welcome }} ${firstName} !`;
     }
     
     if (!skipSync) {
@@ -442,7 +434,7 @@ async function confirmCancel() {
     const cancelBtn = document.getElementById('btn-confirm');
     if (cancelBtn) {
         cancelBtn.disabled = true;
-        cancelBtn.textContent = 'Annulation...';
+        cancelBtn.textContent = '{{ t.client.cancelling }}';
     }
     
     try {
@@ -460,7 +452,8 @@ async function confirmCancel() {
                 time: booking.time || '10:00',
                 service: booking.service || 'Séance de coaching',
                 duration: (booking.duration || 60) + ' min',
-                price: (booking.price || 40) + '€'
+                price: (booking.price || 40) + '€',
+                lang: '{{ locale }}'
             })
         });
         const result = await res.json();

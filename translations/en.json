@@ -740,7 +740,22 @@
     "cancel": "Cancel",
     "cancel_confirm": "Are you sure you want to cancel this booking?",
     "cancel_success": "Booking cancelled successfully",
-    "contact_coach": "Contact"
+    "contact_coach": "Contact",
+    "cancelling": "Cancelling...",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "motivation_quotes": [
+      "Your body can do it. It's your mind you need to convince!",
+      "Every session brings you closer to your goal!",
+      "The only bad workout is the one you didn't do!",
+      "Turn your dreams into sweat, then into reality!",
+      "You are stronger than your excuses!",
+      "Progress means moving, even one small step!",
+      "Your future self will thank you for today's effort!",
+      "Champions aren't born, they're made!",
+      "Every drop of sweat is an investment in your health!",
+      "Push past your limits, they're only in your head!"
+    ]
   },
   "booking_pages": {
     "success_title": "Payment successful!",

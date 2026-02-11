@@ -5284,15 +5284,16 @@ class ConfirmBookingRequest(BaseModel):
     client_name: str
     client_email: str
     coach_name: str
-    coach_email: Optional[str] = None  # Email du coach pour identification fiable
+    coach_email: Optional[str] = None
     gym_name: str
     gym_address: Optional[str] = "Adresse non renseignée"
-    date: str  # format: "2025-11-28"
-    time: str  # format: "14:00"
+    date: str
+    time: str
     service: str
     duration: str
     price: str
     coach_photo: Optional[str] = None
+    lang: Optional[str] = "fr"
 
 
 class CancelBookingRequest(BaseModel):
@@ -5310,6 +5311,7 @@ class CancelBookingRequest(BaseModel):
     coach_photo: Optional[str] = None
     booking_url: Optional[str] = None
     booking_id: Optional[str] = None
+    lang: Optional[str] = "fr"
 
 
 class CoachBookingRequest(BaseModel):
@@ -5328,23 +5330,7 @@ async def confirm_booking(request: ConfirmBookingRequest):
         from resend_service import send_coach_notification_email, send_booking_confirmation_email
         import uuid
         
-        # Formater la date en français
-        from datetime import datetime as dt
-        try:
-            date_obj = dt.strptime(request.date, "%Y-%m-%d")
-            date_fr = date_obj.strftime("%A %d %B %Y").capitalize()
-            # Traduire en français
-            jours = {"Monday": "Lundi", "Tuesday": "Mardi", "Wednesday": "Mercredi", 
-                     "Thursday": "Jeudi", "Friday": "Vendredi", "Saturday": "Samedi", "Sunday": "Dimanche"}
-            mois = {"January": "janvier", "February": "février", "March": "mars", "April": "avril",
-                    "May": "mai", "June": "juin", "July": "juillet", "August": "août",
-                    "September": "septembre", "October": "octobre", "November": "novembre", "December": "décembre"}
-            for en, fr in jours.items():
-                date_fr = date_fr.replace(en, fr)
-            for en, fr in mois.items():
-                date_fr = date_fr.replace(en, fr)
-        except:
-            date_fr = request.date
+        date_fr = request.date
         
         print(f"📧 Confirmation réservation pour {request.client_name} ({request.client_email})")
         print(f"   Coach: {request.coach_name}, Salle: {request.gym_name}")
@@ -5413,6 +5399,7 @@ async def confirm_booking(request: ConfirmBookingRequest):
                 "service": request.service,
                 "duration": request.duration,
                 "price": request.price,
+                "lang": request.lang,
                 "created_at": datetime.now().isoformat()
             }
             
@@ -5598,6 +5585,7 @@ async def cancel_booking(request: CancelBookingRequest):
         booking_removed = False
         found_coach_email = None
         found_coach_name = None
+        found_coach_data = None
         
         # STRATÉGIE 1: Recherche par booking_id (méthode fiable)
         if request.booking_id:
@@ -5613,6 +5601,7 @@ async def cancel_booking(request: CancelBookingRequest):
                         booking_removed = True
                         found_coach_email = coach_email
                         found_coach_name = coach_data.get("full_name", request.coach_name)
+                        found_coach_data = coach_data
                         print(f"✅ Réservation {request.booking_id} supprimée de {list_name} du coach {coach_email}")
                         break
                 
@@ -5635,6 +5624,7 @@ async def cancel_booking(request: CancelBookingRequest):
                 
                 found_coach_email = coach_email
                 found_coach_name = coach_data.get("full_name", request.coach_name)
+                found_coach_data = coach_data
                 
                 for list_name in ["pending_bookings", "confirmed_bookings"]:
                     bookings = coach_data.get(list_name, [])
@@ -5670,7 +5660,7 @@ async def cancel_booking(request: CancelBookingRequest):
                 service_name=request.service,
                 duration=request.duration,
                 price=request.price,
-                lang="fr"
+                lang=(found_coach_data or demo_users.get(found_coach_email, {})).get("lang", "fr")
             )
             coach_notified = coach_result.get("success", False)
             if coach_notified:
@@ -5692,7 +5682,7 @@ async def cancel_booking(request: CancelBookingRequest):
             price=request.price,
             coach_photo=request.coach_photo,
             booking_url=request.booking_url,
-            lang="fr"
+            lang=request.lang
         )
         
         if result.get("success"):

@@ -292,5 +292,28 @@
         "read": false
       }
     ]
+  },
+  "bawstar79@gmail.com_anaslimeme830@gmail.com_d7469719": {
+    "booking_id": "d7469719",
+    "client_email": "bawstar79@gmail.com",
+    "coach_email": "anaslimeme830@gmail.com",
+    "messages": [
+      {
+        "id": "6450f324",
+        "sender_role": "coach",
+        "sender_name": "anasilef",
+        "message": "salut oublie pas de ramener une serviette avec toi",
+        "timestamp": "2026-02-11T19:05:58.915733",
+        "read": false
+      },
+      {
+        "id": "fa3e72fb",
+        "sender_role": "client",
+        "sender_name": "aimad",
+        "message": "oke coach",
+        "timestamp": "2026-02-11T19:06:58.277370",
+        "read": false
+      }
+    ]
   }
 }

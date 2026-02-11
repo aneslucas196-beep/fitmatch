@@ -759,7 +759,22 @@
     "cancel": "Stornieren",
     "cancel_confirm": "Bist du sicher, dass du diese Buchung stornieren möchtest?",
     "cancel_success": "Buchung erfolgreich storniert",
-    "contact_coach": "Kontakt"
+    "contact_coach": "Kontakt",
+    "cancelling": "Stornierung...",
+    "today": "Heute",
+    "tomorrow": "Morgen",
+    "motivation_quotes": [
+      "Dein Körper schafft das. Du musst nur deinen Geist überzeugen!",
+      "Jede Sitzung bringt dich deinem Ziel näher!",
+      "Das einzige schlechte Training ist das, das du nicht machst!",
+      "Verwandle deine Träume in Schweiß und dann in Realität!",
+      "Du bist stärker als deine Ausreden!",
+      "Fortschritt bedeutet Bewegung, auch wenn es nur ein kleiner Schritt ist!",
+      "Dein zukünftiges Ich wird dir für die heutige Anstrengung danken!",
+      "Champions werden nicht geboren, sie werden gemacht!",
+      "Jeder Tropfen Schweiß ist eine Investition in deine Gesundheit!",
+      "Überwinde deine Grenzen, sie sind nur in deinem Kopf!"
+    ]
   },
   "booking_pages": {
     "success_title": "Zahlung erfolgreich!",

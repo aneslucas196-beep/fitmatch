@@ -509,7 +509,8 @@ evSubmit.addEventListener('click', async ()=>{
         service: service,
         duration: String(duration),
         price: actualPrice,
-        coach_photo: coachPhoto || null
+        coach_photo: coachPhoto || null,
+        lang: document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('fitmatch_locale='))?.split('=')[1] || 'fr'
       })
     });
     const confirmData = await confirmRes.json();
@@ -641,7 +642,8 @@ document.getElementById('btnConfirmBooking').addEventListener('click', async ()=
         service: service,
         duration: String(duration),
         price: actualPrice,
-        coach_photo: coachPhoto || null
+        coach_photo: coachPhoto || null,
+        lang: document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('fitmatch_locale='))?.split('=')[1] || 'fr'
       })
     });
     

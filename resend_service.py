@@ -441,6 +441,7 @@ def send_cancellation_email(to_email: str, client_name: str, coach_name: str, gy
                     <p><strong>Coach :</strong> {coach_name}</p>
                     <p><strong>Date :</strong> {date_str} à {time_str}</p>
                     <p><strong>Lieu :</strong> {gym_name}</p>
+                    <p><strong>Adresse :</strong> {gym_address}</p>
                 </div>
             </div>
             {get_social_footer(lang)}
@@ -490,6 +491,7 @@ def send_cancellation_to_coach_email(to_email: str, coach_name: str, client_name
                     <p><strong>Client :</strong> {client_name}</p>
                     <p><strong>Date :</strong> {date_str} à {time_str}</p>
                     <p><strong>Lieu :</strong> {gym_name}</p>
+                    <p><strong>Adresse :</strong> {gym_address}</p>
                 </div>
             </div>
             {get_social_footer(lang)}
@@ -543,6 +545,7 @@ def send_coach_notification_email(to_email: str, coach_name: str, client_name: s
                     <p><strong>Séance :</strong> {service_name}</p>
                     <p><strong>Date :</strong> {date_str} à {time_str}</p>
                     <p><strong>Lieu :</strong> {gym_name}</p>
+                    <p><strong>Adresse :</strong> {gym_address}</p>
                 </div>
                 <div style="text-align: center; margin-top: 30px;">
                     <a href="{site_url}/coach/portal" style="background: #111; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">{cta}</a>

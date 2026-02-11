@@ -740,7 +740,22 @@
     "cancel": "Annuler",
     "cancel_confirm": "Êtes-vous sûr de vouloir annuler cette réservation ?",
     "cancel_success": "Réservation annulée avec succès",
-    "contact_coach": "Contacter"
+    "contact_coach": "Contacter",
+    "cancelling": "Annulation...",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "motivation_quotes": [
+      "Votre corps peut le faire. C'est votre esprit qu'il faut convaincre !",
+      "Chaque séance vous rapproche de votre objectif !",
+      "La seule mauvaise séance est celle que vous ne faites pas !",
+      "Transformez vos rêves en sueur, puis en réalité !",
+      "Vous êtes plus fort que vos excuses !",
+      "Progresser c'est bouger, même d'un petit pas !",
+      "Votre futur moi vous remerciera pour l'effort d'aujourd'hui !",
+      "Champions, on ne naît pas, on le devient !",
+      "Chaque goutte de sueur est un investissement sur votre santé !",
+      "Dépassez vos limites, elles ne sont que dans votre tête !"
+    ]
   },
   "booking_pages": {
     "success_title": "Paiement réussi !",
