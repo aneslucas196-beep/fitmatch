@@ -1728,8 +1728,8 @@ async def resend_otp_submit(
         user_data = get_demo_user(email)
         full_name = user_data.get("full_name") if user_data else None
         
-        # Envoyer le code par email
-        email_result = send_otp_email_resend(email, new_otp_code, full_name)
+        locale = get_locale_from_request(request)
+        email_result = send_otp_email_resend(email, new_otp_code, full_name, lang=locale)
         
         if email_result.get("success"):
             return templates.TemplateResponse("verify_otp.html", {
@@ -1771,8 +1771,8 @@ async def resend_otp_submit(
                 "error": "Erreur lors de la génération du nouveau code."
             }, status_code=500)
         
-        # Envoyer le nouveau code par email avec Resend
-        email_result = send_otp_email_resend(email, new_otp_code, full_name)
+        locale = get_locale_from_request(request)
+        email_result = send_otp_email_resend(email, new_otp_code, full_name, lang=locale)
         
         if email_result.get("success"):
             return templates.TemplateResponse("verify_otp.html", {
@@ -3102,8 +3102,9 @@ async def coach_subscription_page(
             
             # Envoyer l'email avec le code
             full_name = user.get("full_name", "Coach")
+            locale = get_locale_from_request(request)
             try:
-                send_otp_email_resend(coach_email, otp_code, full_name)
+                send_otp_email_resend(coach_email, otp_code, full_name, lang=locale)
                 print(f"📧 Code OTP envoyé à {coach_email}: {otp_code}")
             except Exception as email_err:
                 print(f"⚠️ Erreur envoi email OTP: {email_err}")
@@ -3155,7 +3156,9 @@ async def coach_verify_email_page(request: Request, user = Depends(require_coach
     return templates.TemplateResponse("coach_verify_email.html", {
         "request": request,
         "coach": user,
-        "email": coach_email
+        "email": coach_email,
+        "t": translations,
+        "locale": locale
     })
 
 @app.post("/api/coach/verify-email")
@@ -3225,8 +3228,8 @@ async def resend_coach_otp(request: Request, user = Depends(require_coach_or_pen
             demo_users[coach_email]["otp_expiry"] = otp_expiry
             save_demo_users(demo_users)
         
-        # Envoyer l'email
-        result = send_otp_email_resend(coach_email, otp_code, full_name)
+        locale = get_locale_from_request(request)
+        result = send_otp_email_resend(coach_email, otp_code, full_name, lang=locale)
         print(f"📧 Nouveau code OTP envoyé à {coach_email}: {otp_code}")
         
         return JSONResponse({"success": True, "message": "Code envoyé"})
@@ -5162,14 +5165,13 @@ async def signup_reservation(request: SignupReservationRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/send-otp-email")
-async def send_otp_email(request: SendOTPRequest):
+async def send_otp_email(request: SendOTPRequest, raw_request: Request = None):
     """Envoie un code OTP à 6 chiffres par email via Resend (utilise le même service que /signup)."""
     try:
-        # Générer un code à 6 chiffres
         code = str(random.randint(100000, 999999))
         
-        # Utiliser le même service que /signup (resend_service.py)
-        email_result = send_otp_email_resend(request.email, code, None)
+        locale = get_locale_from_request(raw_request) if raw_request else 'en'
+        email_result = send_otp_email_resend(request.email, code, None, lang=locale)
         
         if not email_result.get("success"):
             raise Exception(email_result.get("error", "Erreur envoi email"))

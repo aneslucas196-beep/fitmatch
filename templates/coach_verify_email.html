@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" dir="{{ t.dir|default('ltr') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vérification email - FitMatch</title>
+    <title>{{ t.verify_email.page_title|default('Vérification email - FitMatch') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -57,15 +57,15 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                     </svg>
                 </div>
-                <h1 class="text-2xl font-bold text-white mb-2">Vérifie ton email</h1>
-                <p class="text-emerald-100 text-sm">Un code de vérification a été envoyé à</p>
+                <h1 class="text-2xl font-bold text-white mb-2">{{ t.verify_email.title|default('Verify your email') }}</h1>
+                <p class="text-emerald-100 text-sm">{{ t.verify_email.code_sent_to|default('A verification code has been sent to') }}</p>
                 <p class="text-white font-medium mt-1">{{ email }}</p>
             </div>
 
             <div class="p-6 sm:p-8">
                 
                 <p class="text-slate-600 text-center mb-6">
-                    Entre le code à 6 chiffres reçu par email pour continuer ton inscription.
+                    {{ t.verify_email.enter_code|default('Enter the 6-digit code received by email to continue your registration.') }}
                 </p>
 
                 <form id="otpForm" class="space-y-6">
@@ -81,7 +81,7 @@
                     <div id="errorMessage" class="hidden text-center text-red-600 text-sm bg-red-50 rounded-lg p-3"></div>
 
                     <button type="submit" id="verifyBtn" class="w-full py-3 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                        <span>Vérifier</span>
+                        <span>{{ t.verify_email.verify_btn|default('Verify') }}</span>
                         <svg class="w-5 h-5 hidden animate-spin" id="loadingIcon" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -90,18 +90,18 @@
                 </form>
 
                 <div class="mt-6 text-center">
-                    <p class="text-slate-500 text-sm mb-2">Tu n'as pas reçu le code ?</p>
+                    <p class="text-slate-500 text-sm mb-2">{{ t.verify_email.not_received|default("Didn't receive the code?") }}</p>
                     <button type="button" id="resendBtn" class="text-emerald-600 font-medium hover:text-emerald-700 transition text-sm">
-                        Renvoyer le code
+                        {{ t.verify_email.resend_code|default('Resend code') }}
                     </button>
                     <p id="resendSuccess" class="hidden text-emerald-600 text-sm mt-2">
-                        Nouveau code envoyé !
+                        {{ t.verify_email.code_resent|default('New code sent!') }}
                     </p>
                 </div>
 
                 <div class="mt-6 pt-6 border-t border-slate-100 text-center">
                     <p class="text-slate-400 text-xs">
-                        Le code expire dans 10 minutes
+                        {{ t.verify_email.code_expires|default('The code expires in 10 minutes') }}
                     </p>
                 </div>
             </div>
@@ -109,6 +109,15 @@
     </main>
 
     <script>
+        const i18n = {
+            enterDigits: '{{ t.verify_email.enter_digits|default("Enter the 6 digits of the code") }}',
+            incorrectCode: '{{ t.verify_email.incorrect_code|default("Incorrect code") }}',
+            connectionError: '{{ t.verify_email.connection_error|default("Connection error. Please try again.") }}',
+            sending: '{{ t.verify_email.sending|default("Sending...") }}',
+            sendError: '{{ t.verify_email.send_error|default("Error sending code") }}',
+            resendCode: '{{ t.verify_email.resend_code|default("Resend code") }}'
+        };
+
         const inputs = document.querySelectorAll('.otp-input');
         const form = document.getElementById('otpForm');
         const errorMessage = document.getElementById('errorMessage');
@@ -158,7 +167,7 @@
             const otp = Array.from(inputs).map(i => i.value).join('');
             
             if (otp.length !== 6) {
-                errorMessage.textContent = 'Entre les 6 chiffres du code';
+                errorMessage.textContent = i18n.enterDigits;
                 errorMessage.classList.remove('hidden');
                 inputs.forEach(i => i.classList.add('error'));
                 return;
@@ -179,7 +188,7 @@
                 if (data.success) {
                     window.location.href = data.redirect || '/coach/profile-setup';
                 } else {
-                    errorMessage.textContent = data.error || 'Code incorrect';
+                    errorMessage.textContent = data.error || i18n.incorrectCode;
                     errorMessage.classList.remove('hidden');
                     inputs.forEach(i => {
                         i.classList.add('error');
@@ -188,7 +197,7 @@
                     inputs[0].focus();
                 }
             } catch (error) {
-                errorMessage.textContent = 'Erreur de connexion. Réessaie.';
+                errorMessage.textContent = i18n.connectionError;
                 errorMessage.classList.remove('hidden');
             } finally {
                 verifyBtn.disabled = false;
@@ -198,7 +207,7 @@
 
         resendBtn.addEventListener('click', async () => {
             resendBtn.disabled = true;
-            resendBtn.textContent = 'Envoi en cours...';
+            resendBtn.textContent = i18n.sending;
 
             try {
                 const response = await fetch('/api/coach/resend-otp', {
@@ -212,15 +221,15 @@
                     resendSuccess.classList.remove('hidden');
                     setTimeout(() => resendSuccess.classList.add('hidden'), 3000);
                 } else {
-                    errorMessage.textContent = data.error || 'Erreur lors de l\'envoi';
+                    errorMessage.textContent = data.error || i18n.sendError;
                     errorMessage.classList.remove('hidden');
                 }
             } catch (error) {
-                errorMessage.textContent = 'Erreur de connexion';
+                errorMessage.textContent = i18n.connectionError;
                 errorMessage.classList.remove('hidden');
             } finally {
                 resendBtn.disabled = false;
-                resendBtn.textContent = 'Renvoyer le code';
+                resendBtn.textContent = i18n.resendCode;
             }
         });
     </script>
