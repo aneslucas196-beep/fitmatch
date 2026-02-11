@@ -248,19 +248,19 @@
         const USER_KEY = 'fitmatch.user';
         
         const TRANSLATIONS = {
-            today: "{{ t.conversation.today|default('Aujourd\\'hui') }}",
-            yesterday: "{{ t.conversation.yesterday|default('Hier') }}",
-            conversation_not_found: "{{ t.conversation.conversation_not_found|default('Conversation introuvable') }}",
-            no_access: "{{ t.conversation.no_access|default('Cette réservation n\\'existe pas ou vous n\\'y avez pas accès.') }}",
-            start_conversation: "{{ t.conversation.start_conversation|default('Démarrez la conversation') }}",
-            send_message_to_coach: "{{ t.conversation.send_message_to_coach|default('Envoyez un message à votre coach') }}",
-            send_message_to_client: "{{ t.conversation.send_message_to_client|default('Envoyez un message à votre client') }}",
-            confirmed: "{{ t.conversation.confirmed|default('Confirmée') }}",
-            pending: "{{ t.conversation.pending|default('En attente') }}",
-            coach: "{{ t.conversation.coach|default('Coach') }}",
-            client: "{{ t.conversation.client|default('Client') }}",
-            error: "{{ t.conversation.error|default('Erreur') }}",
-            send_error: "{{ t.conversation.send_error|default('Erreur lors de l\\'envoi du message') }}"
+            today: "{{ t.get('conversation', {}).get('today', 'Aujourd hui') }}",
+            yesterday: "{{ t.get('conversation', {}).get('yesterday', 'Hier') }}",
+            conversation_not_found: "{{ t.get('conversation', {}).get('conversation_not_found', 'Conversation introuvable') }}",
+            no_access: "{{ t.get('conversation', {}).get('no_access', 'Reservation introuvable') }}",
+            start_conversation: "{{ t.get('conversation', {}).get('start_conversation', 'Demarrez la conversation') }}",
+            send_message_to_coach: "{{ t.get('conversation', {}).get('send_message_to_coach', 'Envoyez un message a votre coach') }}",
+            send_message_to_client: "{{ t.get('conversation', {}).get('send_message_to_client', 'Envoyez un message a votre client') }}",
+            confirmed: "{{ t.get('conversation', {}).get('confirmed', 'Confirmee') }}",
+            pending: "{{ t.get('conversation', {}).get('pending', 'En attente') }}",
+            coach: "{{ t.get('conversation', {}).get('coach', 'Coach') }}",
+            client: "{{ t.get('conversation', {}).get('client', 'Client') }}",
+            error: "{{ t.get('conversation', {}).get('error', 'Erreur') }}",
+            send_error: "{{ t.get('conversation', {}).get('send_error', 'Erreur envoi du message') }}"
         };
         
         let currentUser = null;
