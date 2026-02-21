@@ -5,7 +5,7 @@ import requests
 from typing import Optional
 
 # Liens réseaux sociaux FitMatch
-INSTAGRAM_URL = "https://www.instagram.com/fitmatch__?igsh=MXkwcTE5dmFhaDQ3OQ%3D%3D&utm_source=qr"
+INSTAGRAM_URL = "https://www.instagram.com/fitmatch.fr/?utm_source=ig_web_button_share_sheet"
 FACEBOOK_URL = "https://www.facebook.com/share/17f5yGSk86/?mibextid=wwXIfr"
 
 # Cache pour les traductions des emails
@@ -131,6 +131,8 @@ def send_booking_confirmation_email(to_email: str, client_name: str, coach_name:
         view_booking = t.get('confirmation_view_booking', 'Voir ma réservation')
         addr_label = t.get('confirmation_location', 'Adresse')
         service_label = t.get('confirmation_service', 'Prestation')
+        with_text = t.get('with', 'Avec')
+        at_text = t.get('at', 'at')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -139,8 +141,8 @@ def send_booking_confirmation_email(to_email: str, client_name: str, coach_name:
             </div>
             <div style="padding: 30px;">
                 <h2>{gym_name}</h2>
-                <p><strong>{date_str}</strong> à <strong>{time_str}</strong></p>
-                <p>Avec {coach_name}</p>
+                <p><strong>{date_str}</strong> {at_text} <strong>{time_str}</strong></p>
+                <p>{with_text} {coach_name}</p>
                 <hr>
                 <p><strong>{addr_label}:</strong> {gym_address}</p>
                 <p><strong>{service_label}:</strong> {service_name} ({duration}, {price})</p>
@@ -183,6 +185,7 @@ def send_subscription_success_email(to_email: str, coach_name: str, subscription
         title = t.get('sub_success_title', 'Félicitations !')
         body = t.get('sub_success_body', 'Votre abonnement est désormais actif. Vous avez accès à toutes les fonctionnalités.')
         cta = t.get('sub_success_cta', 'Accéder à mon portail')
+        hello = t.get('hello', 'Bonjour')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -190,7 +193,7 @@ def send_subscription_success_email(to_email: str, coach_name: str, subscription
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {coach_name},</p>
+                <p>{hello} {coach_name},</p>
                 <p>{body}</p>
                 <div style="text-align: center; margin-top: 30px;">
                     <a href="{subscription_url}" style="background: #008f57; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">{cta}</a>
@@ -231,6 +234,7 @@ def send_payment_failed_email(to_email: str, coach_name: str, retry_url: str, la
         title = t.get('pay_failed_title', 'Problème de paiement')
         body = t.get('pay_failed_body', 'Nous n\'avons pas pu prélever votre abonnement mensuel. Vous avez 24h pour régulariser avant le blocage de votre compte.')
         cta = t.get('pay_failed_cta', 'Mettre à jour mon paiement')
+        hello = t.get('hello', 'Bonjour')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -238,7 +242,7 @@ def send_payment_failed_email(to_email: str, coach_name: str, retry_url: str, la
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {coach_name},</p>
+                <p>{hello} {coach_name},</p>
                 <p>{body}</p>
                 <div style="text-align: center; margin-top: 30px;">
                     <a href="{retry_url}" style="background: #ef4444; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">{cta}</a>
@@ -278,6 +282,13 @@ def send_session_payment_receipt(to_email: str, client_name: str, coach_name: st
         subject = t.get('receipt_subject', 'Reçu de paiement - FitMatch')
         title = t.get('receipt_title', 'Merci pour votre paiement !')
         body = t.get('receipt_body', 'Voici le récapitulatif de votre paiement pour votre séance de coaching.')
+        hello = t.get('hello', 'Bonjour')
+        coach_label = t.get('coach_label', 'Coach')
+        session_label = t.get('session_label', 'Séance')
+        location_label = t.get('location_label', 'Lieu')
+        date_label = t.get('date_label', 'Date')
+        amount_paid_label = t.get('amount_paid_label', 'Montant payé')
+        at_text = t.get('at', 'at')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -285,15 +296,15 @@ def send_session_payment_receipt(to_email: str, client_name: str, coach_name: st
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {client_name},</p>
+                <p>{hello} {client_name},</p>
                 <p>{body}</p>
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
-                    <p><strong>Coach :</strong> {coach_name}</p>
-                    <p><strong>Séance :</strong> {service_name} ({duration})</p>
-                    <p><strong>Lieu :</strong> {gym_name}</p>
-                    <p><strong>Date :</strong> {session_date} à {session_time}</p>
+                    <p><strong>{coach_label}:</strong> {coach_name}</p>
+                    <p><strong>{session_label}:</strong> {service_name} ({duration})</p>
+                    <p><strong>{location_label}:</strong> {gym_name}</p>
+                    <p><strong>{date_label}:</strong> {session_date} {at_text} {session_time}</p>
                     <hr style="border: none; border-top: 1px solid #cbd5e1; margin: 15px 0;">
-                    <p style="font-size: 20px; font-weight: bold; color: #008f57;">Montant payé : {amount}</p>
+                    <p style="font-size: 20px; font-weight: bold; color: #008f57;">{amount_paid_label}: {amount}</p>
                 </div>
             </div>
             {get_social_footer(lang)}
@@ -331,6 +342,7 @@ def send_account_blocked_email(to_email: str, coach_name: str, retry_url: str, l
         title = t.get('blocked_title', 'Accès suspendu')
         body = t.get('blocked_body', 'Votre compte a été suspendu suite à l\'échec répété du paiement de votre abonnement. Votre profil n\'est plus visible par les clients.')
         cta = t.get('blocked_cta', 'Réactiver mon compte')
+        hello = t.get('hello', 'Bonjour')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -338,7 +350,7 @@ def send_account_blocked_email(to_email: str, coach_name: str, retry_url: str, l
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {coach_name},</p>
+                <p>{hello} {coach_name},</p>
                 <p>{body}</p>
                 <div style="text-align: center; margin-top: 30px;">
                     <a href="{retry_url}" style="background: #111; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">{cta}</a>
@@ -378,6 +390,12 @@ def send_reminder_email(to_email: str, client_name: str, coach_name: str, gym_na
         subject = t.get(f'reminder_subject_{reminder_type}', f'Rappel : Votre séance {reminder_type}')
         title = t.get('reminder_title', 'N\'oubliez pas votre séance !')
         body = t.get(f'reminder_body_{reminder_type}', f'Votre séance approche à grands pas.')
+        hello = t.get('hello', 'Bonjour')
+        coach_label = t.get('coach_label', 'Coach')
+        date_label = t.get('date_label', 'Date')
+        location_label = t.get('location_label', 'Lieu')
+        address_label = t.get('address_label', 'Adresse')
+        at_text = t.get('at', 'at')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -385,13 +403,13 @@ def send_reminder_email(to_email: str, client_name: str, coach_name: str, gym_na
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {client_name},</p>
+                <p>{hello} {client_name},</p>
                 <p>{body}</p>
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
-                    <p><strong>Coach :</strong> {coach_name}</p>
-                    <p><strong>Date :</strong> {date_str} à {time_str}</p>
-                    <p><strong>Lieu :</strong> {gym_name}</p>
-                    <p><strong>Adresse :</strong> {gym_address}</p>
+                    <p><strong>{coach_label}:</strong> {coach_name}</p>
+                    <p><strong>{date_label}:</strong> {date_str} {at_text} {time_str}</p>
+                    <p><strong>{location_label}:</strong> {gym_name}</p>
+                    <p><strong>{address_label}:</strong> {gym_address}</p>
                 </div>
             </div>
             {get_social_footer(lang)}
@@ -428,6 +446,12 @@ def send_cancellation_email(to_email: str, client_name: str, coach_name: str, gy
         subject = t.get('cancel_subject', 'Réservation annulée - FitMatch')
         title = t.get('cancel_title', 'Réservation annulée')
         body = t.get('cancel_body', 'Votre réservation a été annulée.')
+        hello = t.get('hello', 'Bonjour')
+        coach_label = t.get('coach_label', 'Coach')
+        date_label = t.get('date_label', 'Date')
+        location_label = t.get('location_label', 'Lieu')
+        address_label = t.get('address_label', 'Adresse')
+        at_text = t.get('at', 'at')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -435,13 +459,13 @@ def send_cancellation_email(to_email: str, client_name: str, coach_name: str, gy
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {client_name},</p>
+                <p>{hello} {client_name},</p>
                 <p>{body}</p>
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
-                    <p><strong>Coach :</strong> {coach_name}</p>
-                    <p><strong>Date :</strong> {date_str} à {time_str}</p>
-                    <p><strong>Lieu :</strong> {gym_name}</p>
-                    <p><strong>Adresse :</strong> {gym_address}</p>
+                    <p><strong>{coach_label}:</strong> {coach_name}</p>
+                    <p><strong>{date_label}:</strong> {date_str} {at_text} {time_str}</p>
+                    <p><strong>{location_label}:</strong> {gym_name}</p>
+                    <p><strong>{address_label}:</strong> {gym_address}</p>
                 </div>
             </div>
             {get_social_footer(lang)}
@@ -478,6 +502,12 @@ def send_cancellation_to_coach_email(to_email: str, coach_name: str, client_name
         subject = t.get('cancel_coach_subject', 'Une séance a été annulée')
         title = t.get('cancel_coach_title', 'Séance annulée')
         body = t.get('cancel_coach_body', f'Le client {client_name} a annulé sa séance.')
+        hello = t.get('hello', 'Bonjour')
+        client_label = t.get('client_label', 'Client')
+        date_label = t.get('date_label', 'Date')
+        location_label = t.get('location_label', 'Lieu')
+        address_label = t.get('address_label', 'Adresse')
+        at_text = t.get('at', 'at')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -485,13 +515,13 @@ def send_cancellation_to_coach_email(to_email: str, coach_name: str, client_name
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {coach_name},</p>
+                <p>{hello} {coach_name},</p>
                 <p>{body}</p>
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
-                    <p><strong>Client :</strong> {client_name}</p>
-                    <p><strong>Date :</strong> {date_str} à {time_str}</p>
-                    <p><strong>Lieu :</strong> {gym_name}</p>
-                    <p><strong>Adresse :</strong> {gym_address}</p>
+                    <p><strong>{client_label}:</strong> {client_name}</p>
+                    <p><strong>{date_label}:</strong> {date_str} {at_text} {time_str}</p>
+                    <p><strong>{location_label}:</strong> {gym_name}</p>
+                    <p><strong>{address_label}:</strong> {gym_address}</p>
                 </div>
             </div>
             {get_social_footer(lang)}
@@ -531,6 +561,13 @@ def send_coach_notification_email(to_email: str, coach_name: str, client_name: s
         title = t.get('notification_title', 'Nouvelle demande')
         body = t.get('notification_body', f'Vous avez reçu une nouvelle demande de {client_name}.')
         cta = t.get('notification_cta', 'Voir mes réservations')
+        hello = t.get('hello', 'Bonjour')
+        client_label = t.get('client_label', 'Client')
+        session_label = t.get('session_label', 'Séance')
+        date_label = t.get('date_label', 'Date')
+        location_label = t.get('location_label', 'Lieu')
+        address_label = t.get('address_label', 'Adresse')
+        at_text = t.get('at', 'at')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -538,14 +575,14 @@ def send_coach_notification_email(to_email: str, coach_name: str, client_name: s
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {coach_name},</p>
+                <p>{hello} {coach_name},</p>
                 <p>{body}</p>
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
-                    <p><strong>Client :</strong> {client_name}</p>
-                    <p><strong>Séance :</strong> {service_name}</p>
-                    <p><strong>Date :</strong> {date_str} à {time_str}</p>
-                    <p><strong>Lieu :</strong> {gym_name}</p>
-                    <p><strong>Adresse :</strong> {gym_address}</p>
+                    <p><strong>{client_label}:</strong> {client_name}</p>
+                    <p><strong>{session_label}:</strong> {service_name}</p>
+                    <p><strong>{date_label}:</strong> {date_str} {at_text} {time_str}</p>
+                    <p><strong>{location_label}:</strong> {gym_name}</p>
+                    <p><strong>{address_label}:</strong> {gym_address}</p>
                 </div>
                 <div style="text-align: center; margin-top: 30px;">
                     <a href="{site_url}/coach/portal" style="background: #111; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">{cta}</a>
@@ -585,6 +622,11 @@ def send_rejection_email_to_client(to_email: str, client_name: str, coach_name: 
         subject = t.get('reject_subject', 'Demande non acceptée - FitMatch')
         title = t.get('reject_title', 'Demande non acceptée')
         body = t.get('reject_body', f'Désolé, {coach_name} n\'est pas disponible pour ce créneau.')
+        hello = t.get('hello', 'Bonjour')
+        coach_label = t.get('coach_label', 'Coach')
+        session_label = t.get('session_label', 'Séance')
+        date_label = t.get('date_label', 'Date')
+        at_text = t.get('at', 'at')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -592,12 +634,12 @@ def send_rejection_email_to_client(to_email: str, client_name: str, coach_name: 
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {client_name},</p>
+                <p>{hello} {client_name},</p>
                 <p>{body}</p>
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
-                    <p><strong>Coach :</strong> {coach_name}</p>
-                    <p><strong>Séance :</strong> {service_name}</p>
-                    <p><strong>Date :</strong> {date_str} à {time_str}</p>
+                    <p><strong>{coach_label}:</strong> {coach_name}</p>
+                    <p><strong>{session_label}:</strong> {service_name}</p>
+                    <p><strong>{date_label}:</strong> {date_str} {at_text} {time_str}</p>
                 </div>
             </div>
             {get_social_footer(lang)}
@@ -634,6 +676,8 @@ def send_coach_cancelled_email(client_email: str, client_name: str, coach_name: 
         subject = t.get('coach_cancel_subject', 'Annulation de votre séance FitMatch')
         title = t.get('coach_cancel_title', 'Séance annulée')
         body = t.get('coach_cancel_body', f'{coach_name} a dû annuler votre séance du {date}.')
+        hello = t.get('hello', 'Bonjour')
+        invitation = t.get('coach_cancel_invitation', 'Nous vous invitons à choisir un autre créneau ou un autre coach sur la plateforme.')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -641,9 +685,9 @@ def send_coach_cancelled_email(client_email: str, client_name: str, coach_name: 
                 <h1>{title}</h1>
             </div>
             <div style="padding: 40px;">
-                <p>Bonjour {client_name},</p>
+                <p>{hello} {client_name},</p>
                 <p>{body}</p>
-                <p>Nous vous invitons à choisir un autre créneau ou un autre coach sur la plateforme.</p>
+                <p>{invitation}</p>
             </div>
             {get_social_footer(lang)}
         </div>
@@ -738,8 +782,9 @@ def send_session_payment_failed_email(to_email: str, client_name: str, coach_nam
         title = t.get('session_pay_failed_title', 'Payment failed')
         body = t.get('session_pay_failed_body', 'Your payment for the session could not be processed.')
         cta = t.get('session_pay_failed_cta', 'Try again')
-        hello = t.get('otp_title', 'Hello')
+        hello = t.get('hello', 'Hello')
         date_label = t.get('session_pay_failed_date', 'Date')
+        coach_label = t.get('coach_label', 'Coach')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -750,8 +795,8 @@ def send_session_payment_failed_email(to_email: str, client_name: str, coach_nam
                 <p>{hello} {client_name},</p>
                 <p>{body}</p>
                 <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
-                    <p><strong>Coach :</strong> {coach_name}</p>
-                    <p><strong>{date_label} :</strong> {session_date} - {session_time}</p>
+                    <p><strong>{coach_label}:</strong> {coach_name}</p>
+                    <p><strong>{date_label}:</strong> {session_date} - {session_time}</p>
                 </div>
 
                 <div style="text-align: center; margin-top: 30px;">
@@ -793,7 +838,7 @@ def send_coach_signup_payment_failed_email(to_email: str, coach_name: str, retry
         title = t.get('signup_pay_failed_title', 'Registration pending')
         body = t.get('signup_pay_failed_body', 'Your registration payment could not be processed. Please try again to activate your coach account.')
         cta = t.get('signup_pay_failed_cta', 'Retry registration')
-        hello = t.get('otp_title', 'Hello')
+        hello = t.get('hello', 'Hello')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">
@@ -841,7 +886,7 @@ def send_account_restored_email(to_email: str, coach_name: str, lang: str = 'fr'
         subject = t.get('restored_subject', 'FitMatch account restored!')
         title = t.get('restored_title', 'Access restored')
         body = t.get('restored_body', 'Thank you for your payment. Your account has been restored and your profile is visible again.')
-        hello = t.get('otp_title', 'Hello')
+        hello = t.get('hello', 'Hello')
         
         html_content = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: white; border: 1px solid #eee;">

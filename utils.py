@@ -166,8 +166,6 @@ def get_supabase_anon_client():
     """
     Crée un client Supabase anonyme (respecte RLS).
     """
-    return None
-    
     try:
         from supabase import create_client, Client
         

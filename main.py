@@ -357,6 +357,15 @@ app = FastAPI()
 
 app.state.limiter = limiter
 
+# Configuration CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # En production, spécifier les domaines autorisés: ["https://fitmatch.fr", "https://www.fitmatch.fr"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
