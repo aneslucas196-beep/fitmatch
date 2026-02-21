@@ -240,7 +240,7 @@ async function syncBookingStatuses() {
     // Si l'utilisateur est connecté, chercher ses réservations côté serveur
     if (user && user.email) {
         try {
-            const res = await fetch(`/api/client/bookings?client_email=${encodeURIComponent(user.email)}`);
+            const res = await fetch('/api/client/bookings', { credentials: 'include' });
             const result = await res.json();
             
             if (result.success && result.bookings) {

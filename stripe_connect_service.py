@@ -202,7 +202,7 @@ def create_session_payment_checkout(
                     "coach_email": coach_email,
                     "client_email": client_email,
                     "client_name": client_name,
-                    "type": "session_payment"
+                    "booking_type": "session_payment"
                 }
             },
             customer_email=client_email,
@@ -213,7 +213,7 @@ def create_session_payment_checkout(
                 "coach_email": coach_email,
                 "client_email": client_email,
                 "client_name": client_name,
-                "type": "session_payment"
+                "booking_type": "session_payment"
             }
         )
         

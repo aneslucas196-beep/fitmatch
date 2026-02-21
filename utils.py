@@ -1610,118 +1610,80 @@ def get_coaches_by_gym(gym_id: str) -> List[Dict]:
 
 
 # ================================
-# STOCKAGE PERSISTANT UTILISATEURS - MODE POSTGRESQL
+# STOCKAGE PERSISTANT UTILISATEURS - POSTGRESQL UNIQUEMENT (pas de mode démo)
 # ================================
 
 def use_database() -> bool:
-    """Vérifie dynamiquement si PostgreSQL est disponible."""
+    """Vérifie si PostgreSQL est configuré. En production, DATABASE_URL est requis."""
     return os.environ.get("DATABASE_URL") is not None
 
 def load_demo_users() -> Dict:
-    """Charge les utilisateurs depuis PostgreSQL (ou JSON en fallback).
-    Convertit automatiquement les datetime en strings ISO."""
-    if use_database():
-        try:
-            from db_service import load_users_from_db
-            users = load_users_from_db()
-            if users:
-                # Sérialiser les datetime venant de la DB
-                return serialize_for_json(users)
-        except Exception as e:
-            print(f"⚠️ Erreur DB, fallback JSON: {e}")
-    
+    """Charge les utilisateurs depuis PostgreSQL uniquement.
+    Sans DATABASE_URL, retourne un dict vide (aucun fallback JSON)."""
+    if not use_database():
+        print("⚠️ DATABASE_URL non défini : aucun utilisateur chargé. Configurez PostgreSQL en production.")
+        return {}
     try:
-        demo_file = "demo_users.json"
-        if Path(demo_file).exists():
-            with open(demo_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+        from db_service import load_users_from_db
+        users = load_users_from_db()
+        if users:
+            return serialize_for_json(users)
         return {}
     except Exception as e:
-        print(f"⚠️ Erreur chargement utilisateurs: {e}")
+        print(f"❌ Erreur chargement utilisateurs depuis DB: {e}")
         return {}
 
 def save_demo_user(email: str, user_data: Dict) -> bool:
-    """Sauvegarde un utilisateur dans PostgreSQL (ou JSON en fallback).
-    Convertit automatiquement les datetime en strings ISO."""
-    # Sérialiser les données avant sauvegarde
+    """Sauvegarde un utilisateur dans PostgreSQL uniquement.
+    Sans DATABASE_URL, la sauvegarde échoue (pas de fichier JSON)."""
     serialized_data = serialize_for_json(user_data)
-    
-    if use_database():
-        try:
-            from db_service import save_user_to_db
-            return save_user_to_db(email, serialized_data)
-        except Exception as e:
-            print(f"⚠️ Erreur DB, fallback JSON: {e}")
-    
+    if not use_database():
+        print("⚠️ DATABASE_URL non défini : impossible de sauvegarder. Configurez PostgreSQL.")
+        return False
     try:
-        users = load_demo_users()
-        users[email] = serialized_data
-        with open("demo_users.json", 'w', encoding='utf-8') as f:
-            json.dump(users, f, ensure_ascii=False, indent=2, default=json_serial_default)
-        print(f"✅ Utilisateur {email} sauvegardé")
-        return True
+        from db_service import save_user_to_db
+        ok = save_user_to_db(email, serialized_data)
+        if ok:
+            print(f"✅ Utilisateur {email} sauvegardé (DB)")
+        return ok
     except Exception as e:
         print(f"❌ Erreur sauvegarde {email}: {e}")
         return False
 
 def save_demo_users(users: Dict) -> bool:
-    """Sauvegarde tous les utilisateurs.
-    Convertit automatiquement les datetime en strings ISO."""
-    # Sérialiser les données avant sauvegarde
+    """Sauvegarde tous les utilisateurs dans PostgreSQL uniquement."""
+    if not use_database():
+        print("⚠️ DATABASE_URL non défini : impossible de sauvegarder.")
+        return False
     serialized_users = serialize_for_json(users)
-    
-    if use_database():
-        try:
-            from db_service import save_user_to_db
-            for email, user_data in serialized_users.items():
-                save_user_to_db(email, user_data)
-            return True
-        except Exception as e:
-            print(f"⚠️ Erreur DB: {e}")
-    
     try:
-        with open("demo_users.json", 'w', encoding='utf-8') as f:
-            json.dump(serialized_users, f, ensure_ascii=False, indent=2, default=json_serial_default)
+        from db_service import save_user_to_db
+        for email, user_data in serialized_users.items():
+            save_user_to_db(email, user_data)
         return True
     except Exception as e:
-        print(f"❌ Erreur sauvegarde: {e}")
+        print(f"❌ Erreur sauvegarde utilisateurs: {e}")
         return False
 
 def get_demo_user(email: str) -> Optional[Dict]:
-    """Récupère un utilisateur par email."""
-    if use_database():
-        try:
-            from db_service import get_user_from_db
-            user = get_user_from_db(email)
-            if user:
-                return user
-        except Exception as e:
-            print(f"⚠️ Erreur DB, fallback JSON: {e}")
-    
+    """Récupère un utilisateur par email depuis PostgreSQL uniquement."""
+    if not use_database():
+        return None
     try:
-        users = load_demo_users()
-        return users.get(email)
+        from db_service import get_user_from_db
+        return get_user_from_db(email)
     except Exception as e:
-        print(f"⚠️ Erreur récupération {email}: {e}")
+        print(f"❌ Erreur récupération {email}: {e}")
         return None
 
 def remove_demo_user(email: str) -> bool:
-    """Supprime un utilisateur."""
-    if use_database():
-        try:
-            from db_service import remove_user_from_db
-            return remove_user_from_db(email)
-        except Exception as e:
-            print(f"⚠️ Erreur DB: {e}")
-    
-    try:
-        users = load_demo_users()
-        if email in users:
-            del users[email]
-            with open("demo_users.json", 'w', encoding='utf-8') as f:
-                json.dump(users, f, ensure_ascii=False, indent=2)
-            return True
+    """Supprime un utilisateur de la base PostgreSQL."""
+    if not use_database():
+        print("⚠️ DATABASE_URL non défini : impossible de supprimer.")
         return False
+    try:
+        from db_service import remove_user_from_db
+        return remove_user_from_db(email)
     except Exception as e:
         print(f"❌ Erreur suppression {email}: {e}")
         return False

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 import uvicorn
 import jwt
 import os
+import sys
 import uuid
 import json
 import hashlib
@@ -90,6 +91,7 @@ from utils import (
 
 from resend_service import send_otp_email_resend
 from supabase_auth_service import signup_with_supabase_email_confirmation, resend_email_confirmation, sign_in_with_email_password, get_user_role
+from config import settings
 
 # Import du service d'internationalisation (i18n)
 from i18n_service import (
@@ -353,14 +355,25 @@ def cleanup_old_reminders():
 
 # ============================================
 
-app = FastAPI()
+app = FastAPI(
+    title="FitMatch API",
+    description="API de la plateforme FitMatch : recherche de coachs, réservations, abonnements et paiements (Stripe).",
+    version="1.0.0",
+    openapi_tags=[
+        {"name": "auth", "description": "Connexion, inscription, OTP"},
+        {"name": "coach", "description": "Espace coach, profil, abonnement, Stripe Connect"},
+        {"name": "booking", "description": "Réservations, disponibilités, annulations"},
+        {"name": "stripe", "description": "Paiements et webhooks Stripe"},
+        {"name": "client", "description": "Compte client, mes réservations"},
+    ],
+)
 
 app.state.limiter = limiter
 
-# Configuration CORS
+# Configuration CORS (en production : CORS_ORIGINS=https://fitmatch.fr,https://www.fitmatch.fr)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En production, spécifier les domaines autorisés: ["https://fitmatch.fr", "https://www.fitmatch.fr"]
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -373,8 +386,53 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         content={"detail": "Too many requests. Please try again later."}
     )
 
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Renvoie une page HTML pour 404/500 sur les pages web, sinon laisse FastAPI gérer (ex: 401)."""
+    if exc.status_code == 401:
+        raise exc
+    if exc.status_code == 500 and not request.url.path.startswith("/api/"):
+        i18n = get_i18n_context(request)
+        return templates.TemplateResponse(
+            "error.html",
+            {"request": request, "error": str(exc.detail) if exc.detail else None, **i18n},
+            status_code=500,
+        )
+    if exc.status_code == 404 and not request.url.path.startswith("/api/"):
+        i18n = get_i18n_context(request)
+        return templates.TemplateResponse(
+            "404.html",
+            {"request": request, "message": str(exc.detail) if exc.detail else None, **i18n},
+            status_code=404,
+        )
+    raise exc
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Erreurs non gérées : page HTML 500 pour les pages, JSON pour les API."""
+    print(f"❌ Erreur non gérée: {exc}")
+    import traceback
+    traceback.print_exc()
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
+    i18n = get_i18n_context(request)
+    return templates.TemplateResponse(
+        "error.html",
+        {"request": request, "error": None, **i18n},
+        status_code=500,
+    )
+
 # Précharger les traductions au démarrage
 preload_all_translations()
+
+# Vérification production : PostgreSQL requis (pas de mode démo)
+if not os.environ.get("DATABASE_URL"):
+    print("⚠️ DATABASE_URL non défini : la base de données est requise. Utilisateurs et réservations ne seront pas persistés.")
 
 # Helper function pour charger les coaches depuis JSON
 def load_coaches_from_json() -> List[Dict]:
@@ -633,9 +691,17 @@ app.mount("/attached_assets", StaticFiles(directory="attached_assets"), name="at
 # Client Supabase anonyme (si disponible)
 supabase_anon = get_supabase_anon_client()
 
+
+@app.on_event("startup")
+def startup_check_database():
+    """En production, PostgreSQL est requis (plus de mode démo)."""
+    if not os.environ.get("DATABASE_URL"):
+        print("❌ DATABASE_URL est requis. Configurez PostgreSQL (pas de mode démo).")
+        sys.exit(1)
+
+
 # Cache en mémoire pour les codes OTP (email -> code)
 demo_otp_cache = {}
-demo_user_cache = {}
 # Cache pour mapper les tokens de session aux emails (token -> email)
 demo_token_map = {}
 
@@ -779,8 +845,7 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
                     print(f"✅ Données récupérées: {email}, full_name: {fresh_user_data.get('full_name', 'N/A')}")
                     return fresh_user_data
             
-            # D'abord essayer de récupérer depuis le stockage persistant
-            # Charger tous les utilisateurs démo des DEUX sources (fichier + persistant)
+            # Charger les utilisateurs depuis la base PostgreSQL
             all_demo_users = load_demo_users()
             
             # Trouver l'utilisateur correspondant à ce token
@@ -792,47 +857,32 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
                     # Récupérer les données les plus récentes depuis le stockage persistant
                     fresh_user_data = get_demo_user(email)
                     if fresh_user_data:
-                        print(f"✅ Données fraîches récupérées: profile_completed={fresh_user_data.get('profile_completed', False)}")
                         fresh_user_data["_access_token"] = session_token
-                        # IMPORTANT: Toujours inclure l'email dans les données retournées
                         fresh_user_data["email"] = email
-                        print(f"✅ Email ajouté aux données: {email}, full_name: {fresh_user_data.get('full_name', 'N/A')}")
                         return fresh_user_data
-                    else:
-                        print(f"⚠️  Pas de données persistantes pour {email}, utilisation données fichier")
-                        # Fallback sur les données du fichier
-                        user_data["_access_token"] = session_token
-                        user_data["email"] = email  # IMPORTANT: Inclure l'email
-                        return user_data
+                    # Utilisateur supprimé ou erreur DB
+                    print(f"⚠️ Pas de données pour {email}")
+                    return None
             
-            # Token démo non reconnu
-            print(f"❌ Token démo non reconnu: {session_token}")
+            # Token non reconnu (utilisateurs chargés depuis PostgreSQL uniquement)
+            print(f"❌ Token non reconnu: {session_token}")
             return None
-        elif session_token == "demo_token":
-            # Support pour l'ancien token (rétrocompatibilité)
-            from utils import get_demo_user
-            demo_user = get_demo_user("demo@example.com")
-            
-            if demo_user:
-                demo_user["_access_token"] = session_token
-                return demo_user
-            else:
-                return {
-                    "id": "demo_user", 
-                    "email": "demo@example.com", 
-                    "role": "coach",
-                    "full_name": "Utilisateur Démo",
-                    "profile_completed": False,
-                    "_access_token": session_token
-                }
         return None
     
     try:
-        import os
-        
-        # Décoder le JWT pour récupérer l'ID utilisateur (plus robuste que auth.get_user)
-        # On ne vérifie pas la signature car Supabase l'a déjà fait
-        decoded_token = jwt.decode(session_token, options={"verify_signature": False})
+        jwt_secret = settings.get_jwt_secret()
+        if jwt_secret:
+            decoded_token = jwt.decode(
+                session_token,
+                jwt_secret,
+                algorithms=["HS256"],
+                audience="authenticated",
+                options={"verify_exp": True},
+            )
+        else:
+            if settings.IS_PRODUCTION:
+                print("⚠️ SUPABASE_JWT_SECRET ou JWT_SECRET_KEY non défini : vérification JWT désactivée (risque sécurité).")
+            decoded_token = jwt.decode(session_token, options={"verify_signature": False})
         user_id = decoded_token.get("sub")
         
         if not user_id:
@@ -1084,16 +1134,18 @@ async def client_home(request: Request, user = Depends(get_current_user)):
     return response
 
 @app.get("/mon-compte", response_class=HTMLResponse)
-async def mon_compte(request: Request, user = Depends(get_current_user)):
-    """Page compte client accessible via session ou localStorage."""
-    lang = get_locale_from_request(request)
-    t = get_translations(lang)
-    
+async def mon_compte(request: Request, user=Depends(get_current_user)):
+    """Page compte client (réservations depuis la base)."""
+    i18n = get_i18n_context(request)
+    lang = i18n.get("locale", "fr")
+    t = i18n.get("t", get_translations(lang))
     response = templates.TemplateResponse("client_home.html", {
-        "request": request, 
+        "request": request,
         "user": user,
         "lang": lang,
-        "t": t
+        "t": t,
+        "locale": lang,
+        **i18n
     })
     # Désactiver le cache pour éviter les problèmes de session
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -1112,13 +1164,13 @@ async def gym_search_page(request: Request):
 async def gyms_map_page(request: Request, address: str = "", radius_km: int = 25):
     """Page de recherche de salles avec Google Maps."""
     google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n = get_i18n_context(request)
     return templates.TemplateResponse("gyms_map.html", {
         "request": request,
         "address": address,
         "radius_km": radius_km,
-        "google_maps_api_key": google_maps_api_key
+        "google_maps_api_key": google_maps_api_key,
+        **i18n
     })
 
 @app.get("/gym/{gym_id}", response_class=HTMLResponse)
@@ -1220,6 +1272,24 @@ async def partner_page(request: Request):
     """Page Devenir partenaire FitMatch Pro."""
     i18n = get_i18n_context(request)
     return templates.TemplateResponse("partner.html", {"request": request, **i18n})
+
+@app.get("/mentions-legales", response_class=HTMLResponse)
+async def mentions_legales_page(request: Request):
+    """Mentions légales / CGU."""
+    i18n = get_i18n_context(request)
+    return templates.TemplateResponse("mentions_legales.html", {"request": request, **i18n})
+
+@app.get("/confidentialite", response_class=HTMLResponse)
+async def confidentialite_page(request: Request):
+    """Politique de confidentialité."""
+    i18n = get_i18n_context(request)
+    return templates.TemplateResponse("confidentialite.html", {"request": request, **i18n})
+
+@app.get("/contact", response_class=HTMLResponse)
+async def contact_page(request: Request):
+    """Page contact."""
+    i18n = get_i18n_context(request)
+    return templates.TemplateResponse("contact.html", {"request": request, **i18n})
 
 @app.get("/coach-signup", response_class=HTMLResponse)
 async def coach_signup_page(request: Request):
@@ -1385,53 +1455,54 @@ async def signup_submit(
     selected_gyms: str = Form("")
 ):
     """Inscription utilisateur avec système OTP par email."""
-    # Normaliser l'email en lowercase
     email = email.lower().strip()
-    
-    # Récupérer la liste des pays une seule fois pour tous les cas d'erreur
     countries = get_countries_list()
+    i18n = get_i18n_context(request)
+    t = i18n["t"]
+    pr_signup = t.get("signup", {})
     
     # Validation du mot de passe
     if not is_valid_password(password):
         return templates.TemplateResponse("signup.html", {
             "request": request,
-            "error": "Mot de passe trop faible (minimum 8 caractères, 1 lettre et 1 chiffre)",
+            "error": pr_signup.get("error_password_weak", "Password too weak"),
             "full_name": full_name,
             "email": email,
             "gender": gender,
             "role": role,
             "country_code": country,
             "countries": countries,
-            "coach_gender_preference": coach_gender_preference
+            "coach_gender_preference": coach_gender_preference,
+            **i18n
         }, status_code=400)
     
-    # Validation du genre
     if gender not in ["homme", "femme"]:
         return templates.TemplateResponse("signup.html", {
             "request": request,
-            "error": "Veuillez sélectionner votre genre",
+            "error": pr_signup.get("error_gender_required", "Please select your gender"),
             "full_name": full_name,
             "email": email,
             "gender": gender,
             "role": role,
             "country_code": country,
             "countries": countries,
-            "coach_gender_preference": coach_gender_preference
+            "coach_gender_preference": coach_gender_preference,
+            **i18n
         }, status_code=400)
     
-    # Validation du pays
     valid_countries = [c["code"] for c in countries]
     if not country or country not in valid_countries:
         return templates.TemplateResponse("signup.html", {
             "request": request,
-            "error": "Veuillez sélectionner votre pays",
+            "error": pr_signup.get("error_country_required", "Please select your country"),
             "full_name": full_name,
             "email": email,
             "gender": gender,
             "role": role,
             "country_code": country,
             "countries": countries,
-            "coach_gender_preference": coach_gender_preference
+            "coach_gender_preference": coach_gender_preference,
+            **i18n
         }, status_code=400)
     
     # Validation du rôle
@@ -1449,19 +1520,20 @@ async def signup_submit(
         if role == "client":
             selected_gyms_list = validate_selected_gyms(selected_gyms)
             if selected_gyms and not selected_gyms_list:
-                # L'utilisateur a fourni des données invalides
                 print(f"⚠️ Salles invalides reçues pour {email}: {selected_gyms}")
                 return templates.TemplateResponse("signup.html", {
                     "request": request,
-                    "error": "Salles sélectionnées invalides. Veuillez réessayer.",
+                    "error": pr_signup.get("error_gyms_invalid", "Invalid gyms selected."),
                     "full_name": full_name,
                     "email": email,
                     "gender": gender,
                     "role": role,
-                    "coach_gender_preference": coach_gender_preference
+                    "coach_gender_preference": coach_gender_preference,
+                    "country_code": country,
+                    "countries": countries,
+                    **i18n
                 }, status_code=400)
         
-        # Sauvegarder l'utilisateur dans le stockage persistant
         user_data = {
             "full_name": full_name,
             "gender": gender,
@@ -1469,30 +1541,28 @@ async def signup_submit(
             "country_code": country,
             "password": hash_password(password.strip()),
             "coach_gender_preference": coach_gender_preference if role == "client" else None,
-            "selected_gyms": selected_gyms_list if role == "client" else None
+            "selected_gyms": selected_gyms_list if role == "client" else None,
+            "lang": i18n["locale"]
         }
         save_demo_user(email, user_data)
         
-        # Garder aussi en cache mémoire pour compatibilité temporaire
-        demo_user_cache[email] = user_data
         print(f"🔐 Code OTP généré pour {email}: {otp_code}")
         
         # Envoyer l'email avec Resend
         # Get language for email
-        from i18n_utils import get_i18n_context
         i18n = get_i18n_context(request)
         lang = i18n['locale']
         email_result = send_otp_email_resend(email, otp_code, full_name, lang=lang)
         
-        success_message = "Code de vérification envoyé à votre adresse email"
-        if email_result.get("success"):
-            if email_result.get("mode") == "resend":
-                success_message += f" (Email ID: {email_result.get('email_id', 'N/A')})"
-        
+        pr_otp = t.get("verify_otp", {})
+        success_message = pr_otp.get("success_otp_sent", "Verification code sent to your email")
+        if email_result.get("success") and email_result.get("mode") == "resend":
+            success_message += f" (Email ID: {email_result.get('email_id', 'N/A')})"
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
-            "success": success_message
+            "success": success_message,
+            **i18n
         })
     
     try:
@@ -1506,12 +1576,15 @@ async def signup_submit(
                 print(f"⚠️ Salles invalides reçues pour {email}: {selected_gyms}")
                 return templates.TemplateResponse("signup.html", {
                     "request": request,
-                    "error": "Salles sélectionnées invalides. Veuillez réessayer.",
+                    "error": pr_signup.get("error_gyms_invalid", "Invalid gyms selected."),
                     "full_name": full_name,
                     "email": email,
                     "gender": gender,
                     "role": role,
-                    "coach_gender_preference": coach_gender_preference
+                    "coach_gender_preference": coach_gender_preference,
+                    "country_code": country,
+                    "countries": countries,
+                    **i18n
                 }, status_code=400)
             # Convertir en JSON pour stockage
             validated_gyms = json.dumps(validated_gyms_list) if validated_gyms_list else None
@@ -1537,20 +1610,18 @@ async def signup_submit(
         )
         
         if signup_result.get("success"):
-            # Succès - rediriger vers la page d'attente de confirmation email
+            pr_sent = t.get("email_confirmation_sent", {})
             return templates.TemplateResponse("email_confirmation_sent.html", {
                 "request": request,
                 "email": email,
-                "success": signup_result.get("message", "Email de confirmation envoyé")
+                "success": signup_result.get("message", pr_sent.get("message", "Confirmation email sent")),
+                **i18n
             })
         else:
-            # Échec inscription - afficher erreur détaillée
-            error_message = signup_result.get("error", "Erreur lors de l'inscription")
+            error_message = signup_result.get("error", pr_signup.get("error_signup_failed", "Registration error"))
             if "already registered" in error_message.lower() or "already exists" in error_message.lower():
-                error_message = "Cette adresse email est déjà utilisée. Essayez de vous connecter ou utilisez une autre adresse."
-            
+                error_message = pr_signup.get("error_email_exists", "This email is already in use.")
             print(f"💥 Détails erreur inscription Supabase: {error_message}")
-            
             return templates.TemplateResponse("signup.html", {
                 "request": request,
                 "error": error_message,
@@ -1560,21 +1631,22 @@ async def signup_submit(
                 "role": role,
                 "country_code": country,
                 "countries": countries,
-                "coach_gender_preference": coach_gender_preference
+                "coach_gender_preference": coach_gender_preference,
+                **i18n
             }, status_code=400)
-            
     except Exception as e:
         print(f"❌ Erreur inscription OTP: {e}")
         return templates.TemplateResponse("signup.html", {
             "request": request,
-            "error": "Erreur lors de l'inscription. Veuillez réessayer.",
+            "error": pr_signup.get("error_signup_failed", "Registration error. Please try again."),
             "full_name": full_name,
             "email": email,
             "gender": gender,
             "role": role,
             "country_code": country,
             "countries": countries,
-            "coach_gender_preference": coach_gender_preference
+            "coach_gender_preference": coach_gender_preference,
+            **i18n
         }, status_code=500)
 
 @app.post("/resend-confirmation")
@@ -1597,11 +1669,13 @@ async def resend_confirmation_email(request: Request):
 @app.get("/auth/email-confirmed")
 async def email_confirmed_callback(request: Request):
     """Page affichée après confirmation d'email via Supabase."""
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n = get_i18n_context(request)
+    t = i18n["t"]
+    pr = t.get("email_confirmed", {})
     return templates.TemplateResponse("email_confirmed.html", {
         "request": request,
-        "success": "Email confirmé avec succès ! Vous pouvez maintenant vous connecter."
+        "success": pr.get("success_message", "Email confirmed! You can now log in."),
+        **i18n
     })
 
 @app.post("/verify-otp")
@@ -1611,16 +1685,18 @@ async def verify_otp_submit(
     otp_code: str = Form(...)
 ):
     """Vérification du code OTP et activation du compte."""
-    # Normaliser l'email et le code
     email = email.lower().strip()
     otp_code = otp_code.strip()
+    i18n = get_i18n_context(request)
+    t = i18n["t"]
+    pr_otp = t.get("verify_otp", {})
     
-    # Validation du format du code
     if not otp_code.isdigit() or len(otp_code) < 4 or len(otp_code) > 6:
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
-            "error": "Code invalide. Veuillez saisir un code à 4-6 chiffres."
+            "error": pr_otp.get("code_invalid", "Invalid code."),
+            **i18n
         }, status_code=400)
     
     if not supabase_anon:
@@ -1629,7 +1705,7 @@ async def verify_otp_submit(
         if stored_code and otp_code == stored_code:
             # Code correct - supprimer du cache et connecter
             # Récupérer les informations utilisateur depuis le stockage persistant
-            user_info = get_demo_user(email) or demo_user_cache.get(email, {})
+            user_info = get_demo_user(email) or {}
             role = user_info.get('role', 'client')
             del demo_otp_cache[email]
             
@@ -1655,38 +1731,36 @@ async def verify_otp_submit(
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": "Code incorrect. Veuillez vérifier votre code."
+                "error": pr_otp.get("code_incorrect", "Incorrect code."),
+                **i18n
             }, status_code=400)
     
     try:
-        # Vérifier le code OTP
         otp_valid = verify_otp_code(supabase_anon, email, otp_code)
-        
         if not otp_valid:
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": "Code incorrect ou expiré. Veuillez réessayer."
+                "error": pr_otp.get("code_expired", "Incorrect or expired code."),
+                **i18n
             }, status_code=400)
         
-        # Code valide - récupérer les données complètes d'inscription
         pending_data = get_pending_otp_data(supabase_anon, email)
-        
         if not pending_data:
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": "Données d'inscription introuvables. Veuillez recommencer l'inscription."
+                "error": pr_otp.get("data_not_found", "Registration data not found."),
+                **i18n
             }, status_code=400)
         
-        # Récupérer l'user_id depuis otp_codes
         response = supabase_anon.table("otp_codes").select("user_id").eq("email", email).eq("consumed", True).order("created_at", desc=True).limit(1).execute()
-        
         if not response.data:
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": "Utilisateur introuvable. Veuillez recommencer l'inscription."
+                "error": pr_otp.get("user_not_found", "User not found."),
+                **i18n
             }, status_code=400)
         
         user_id = response.data[0]['user_id']
@@ -1735,19 +1809,12 @@ async def verify_otp_submit(
         return response
         
     except Exception as e:
-            print(f"❌ Erreur récupération utilisateur: {e}")
-            return templates.TemplateResponse("verify_otp.html", {
-                "request": request,
-                "email": email,
-                "error": "Erreur lors de la vérification du compte."
-            }, status_code=500)
-            
-    except Exception as e:
         print(f"❌ Erreur vérification OTP: {e}")
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
-            "error": "Erreur lors de la vérification. Veuillez réessayer."
+            "error": pr_otp.get("error_verify", "Verification error."),
+            **i18n
         }, status_code=500)
 
 @app.post("/resend-otp")
@@ -1756,97 +1823,82 @@ async def resend_otp_submit(
     email: str = Form(...)
 ):
     """Renvoie un nouveau code OTP."""
-    # Normaliser l'email
     email = email.lower().strip()
+    i18n = get_i18n_context(request)
+    t = i18n["t"]
+    pr_otp = t.get("verify_otp", {})
     
     if not supabase_anon:
-        # Mode sans Supabase - générer un nouveau code, le stocker et l'envoyer par email
         new_otp_code = generate_otp_code(6)
         demo_otp_cache[email] = new_otp_code
         print(f"🔐 Nouveau code OTP pour {email}: {new_otp_code}")
-        
-        # Récupérer le nom de l'utilisateur si disponible
         user_data = get_demo_user(email)
         full_name = user_data.get("full_name") if user_data else None
-        
-        locale = get_locale_from_request(request)
+        locale = i18n["locale"]
         email_result = send_otp_email_resend(email, new_otp_code, full_name, lang=locale)
-        
         if email_result.get("success"):
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "success": "Nouveau code envoyé à votre adresse email"
+                "success": pr_otp.get("resend_success", "New code sent to your email"),
+                **i18n
             })
-        else:
-            return templates.TemplateResponse("verify_otp.html", {
-                "request": request,
-                "email": email,
-                "error": "Erreur lors de l'envoi du code. Réessayez."
-            })
+        return templates.TemplateResponse("verify_otp.html", {
+            "request": request,
+            "email": email,
+            "error": pr_otp.get("resend_error", "Error sending code."),
+            **i18n
+        })
     
     try:
-        # Récupérer les données d'inscription en attente
         pending_data = get_pending_otp_data(supabase_anon, email)
-        
         if not pending_data:
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": "Aucune demande d'inscription trouvée pour cet email."
+                "error": pr_otp.get("no_request_found", "No registration request found."),
+                **i18n
             }, status_code=400)
-        
         full_name = pending_data['full_name']
         role = pending_data['role']
-        
-        # Générer un nouveau code OTP
         new_otp_code = generate_otp_code(6)
-        
-        # Sauvegarder le nouveau code (l'ancien sera automatiquement supprimé)
         otp_stored = store_otp_code(supabase_anon, email, full_name, role, new_otp_code)
-        
         if not otp_stored:
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "error": "Erreur lors de la génération du nouveau code."
+                "error": pr_otp.get("resend_code_error", "Error generating new code."),
+                **i18n
             }, status_code=500)
-        
-        locale = get_locale_from_request(request)
+        locale = i18n["locale"]
         email_result = send_otp_email_resend(email, new_otp_code, full_name, lang=locale)
-        
         if email_result.get("success"):
             return templates.TemplateResponse("verify_otp.html", {
                 "request": request,
                 "email": email,
-                "success": "Nouveau code envoyé par email"
+                "success": pr_otp.get("resend_success", "New code sent by email"),
+                **i18n
             })
-        else:
-            # Message d'erreur détaillé basé sur le type d'erreur
-            error_details = email_result.get("error", "Erreur inconnue")
-            if email_result.get("mode") == "resend":
-                error_message = f"Erreur d'envoi d'email (Status {email_result.get('status_code', 'N/A')}). Vérifiez votre adresse email et réessayez."
-            else:
-                error_message = "Erreur de service d'email. Veuillez réessayer dans quelques minutes."
-            
-            print(f"💥 Détails erreur renvoi email: {error_details}")
-            
-            return templates.TemplateResponse("verify_otp.html", {
-                "request": request,
-                "email": email,
-                "error": error_message
-            }, status_code=500)
-            
+        error_details = email_result.get("error", "")
+        error_message = pr_otp.get("resend_error", "Error sending code. Please try again.")
+        print(f"💥 Détails erreur renvoi email: {error_details}")
+        return templates.TemplateResponse("verify_otp.html", {
+            "request": request,
+            "email": email,
+            "error": error_message,
+            **i18n
+        }, status_code=500)
     except Exception as e:
         print(f"❌ Erreur renvoi OTP: {e}")
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
-            "error": "Erreur lors du renvoi du code."
+            "error": pr_otp.get("resend_error", "Error resending code."),
+            **i18n
         }, status_code=500)
 
 # API Login pour le JavaScript (accepte JSON)
-@app.post("/api/login")
+@app.post("/api/login", tags=["auth"])
 @limiter.limit("10/minute")
 async def api_login(request: Request):
     """API de connexion pour JavaScript (JSON)."""
@@ -2028,27 +2080,30 @@ async def resend_confirmation(
     # Normaliser l'email en lowercase
     email = email.lower().strip()
     
+    i18n = get_i18n_context(request)
+    t = i18n["t"]
+    pr_ve = t.get("verify_email", {})
     if not supabase_anon:
-        # Renvoi d'email non disponible
         return templates.TemplateResponse("verify_email.html", {
             "request": request,
             "email": email,
-            "error": "Renvoi d'email non disponible"
+            "error": pr_ve.get("resend_unavailable", "Email resend not available"),
+            **i18n
         })
-    
     success = resend_confirmation_email(supabase_anon, email)
     if success:
         return templates.TemplateResponse("verify_email.html", {
             "request": request,
             "email": email,
-            "success": "Email de confirmation renvoyé ! Vérifiez votre boîte mail."
+            "success": pr_ve.get("resend_success", "Confirmation email resent!"),
+            **i18n
         })
-    else:
-        return templates.TemplateResponse("verify_email.html", {
-            "request": request,
-            "email": email,
-            "error": "Erreur lors du renvoi de l'email. Veuillez réessayer."
-        })
+    return templates.TemplateResponse("verify_email.html", {
+        "request": request,
+        "email": email,
+        "error": pr_ve.get("resend_error", "Error resending email."),
+        **i18n
+    })
 
 @app.get("/logout")
 async def logout():
@@ -2958,21 +3013,12 @@ async def reserver_by_slug(request: Request, slug: str):
     
     coach = find_coach_by_slug(slug)
     
+    i18n_404 = get_i18n_context(request)
     if not coach:
-        return templates.TemplateResponse("404.html", {
-            "request": request,
-            "message": f"Le coach '{slug}' n'a pas été trouvé. Il a peut-être changé de nom ou n'existe plus."
-        }, status_code=404)
-
-    # Bloquer l'accès au profil public si l'abonnement n'est pas actif
+        return templates.TemplateResponse("404.html", {"request": request, "message": f"Le coach '{slug}' n'a pas été trouvé.", **i18n_404}, status_code=404)
     subscription_status = coach.get("subscription_status", "")
     if subscription_status in ["blocked", "cancelled", "past_due"]:
-        return templates.TemplateResponse("404.html", {
-            "request": request,
-            "message": f"Le profil de ce coach n'est plus accessible."
-        }, status_code=404)
-    
-    # Assurer qu'il y a une photo
+        return templates.TemplateResponse("404.html", {"request": request, "message": f"Le profil de ce coach n'est plus accessible.", **i18n_404}, status_code=404)
     if not coach.get("photo"):
         coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
     
@@ -2999,41 +3045,21 @@ async def reserver_by_slug(request: Request, slug: str):
             pass
     
     print(f"📋 Profil coach {slug}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
-    
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
-    return templates.TemplateResponse("coach_profile.html", {
-        "request": request,
-        "coach": coach,
-        "gyms": gyms,
-        "slug": slug
-    })
+    i18n_profile = get_i18n_context(request)
+    return templates.TemplateResponse("coach_profile.html", {"request": request, "coach": coach, "gyms": gyms, "slug": slug, **i18n_profile})
 
 @app.get("/reserver/{slug}/book", response_class=HTMLResponse)
 async def booking_by_slug(request: Request, slug: str):
     """Page de réservation avec URL propre (prénom)."""
-    
     coach = find_coach_by_slug(slug)
-    
+    i18n_book = get_i18n_context(request)
     if not coach:
-        return templates.TemplateResponse("404.html", {
-            "request": request,
-            "message": f"Le coach '{slug}' n'a pas été trouvé."
-        }, status_code=404)
-
-    # Bloquer l'accès au profil public si l'abonnement n'est pas actif
+        return templates.TemplateResponse("404.html", {"request": request, "message": f"Le coach '{slug}' n'a pas été trouvé.", **i18n_book}, status_code=404)
     subscription_status = coach.get("subscription_status", "")
     if subscription_status in ["blocked", "cancelled", "past_due"]:
-        return templates.TemplateResponse("404.html", {
-            "request": request,
-            "message": f"Le profil de ce coach n'est plus accessible."
-        }, status_code=404)
-    
-    # Assurer qu'il y a une photo
+        return templates.TemplateResponse("404.html", {"request": request, "message": f"Le profil de ce coach n'est plus accessible.", **i18n_book}, status_code=404)
     if not coach.get("photo"):
         coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
-    
-    # Récupérer les salles associées
     gyms = []
     if coach.get("selected_gyms_data"):
         try:
@@ -3041,15 +3067,7 @@ async def booking_by_slug(request: Request, slug: str):
             gyms = json.loads(coach.get("selected_gyms_data"))
         except:
             pass
-    
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
-    return templates.TemplateResponse("booking.html", {
-        "request": request,
-        "coach": coach,
-        "gyms": gyms,
-        "slug": slug
-    })
+    return templates.TemplateResponse("booking.html", {"request": request, "coach": coach, "gyms": gyms, "slug": slug, **i18n_book})
 
 # ======================================
 # ROUTE ABONNEMENT COACH (doit être AVANT /coach/{coach_id})
@@ -3304,7 +3322,7 @@ async def view_coach_profile(request: Request, coach_id: str):
         # Si l'ID n'est pas un nombre, chercher par chaîne
         coach = next((c for c in coaches if str(c.get("id")) == coach_id), None)
     
-    # Si coach non trouvé dans JSON, essayer de charger depuis demo_users
+    # Si coach non trouvé par ID, essayer Supabase puis la base de données
     if not coach:
         user_supabase = None
         if supabase_anon:
@@ -3315,7 +3333,6 @@ async def view_coach_profile(request: Request, coach_id: str):
             except Exception as e:
                 print(f"Coach non trouvé dans Supabase: {e}")
         
-        # Sinon, charger depuis demo_users
         if not coach:
             from utils import load_demo_users
             demo_users = load_demo_users()
@@ -3458,12 +3475,14 @@ async def reservation_page(request: Request):
     })
 
 @app.get("/account", response_class=HTMLResponse)
-async def account_page(request: Request):
-    """Page Mon compte avec les séances."""
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+async def account_page(request: Request, user=Depends(get_current_user)):
+    """Page Mon compte : redirection vers /mon-compte si connecté, sinon page compte avec i18n."""
+    i18n = get_i18n_context(request)
+    if user and user.get("email") and (user.get("role") or "client") == "client":
+        return RedirectResponse(url="/mon-compte", status_code=303)
     return templates.TemplateResponse("account.html", {
-        "request": request
+        "request": request,
+        **i18n
     })
 
 @app.get("/api/bookings/availability")
@@ -3996,7 +4015,7 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
         include_pending: Si True, inclut les réservations en attente (pour le calendrier du coach).
                         Si False, n'inclut que les confirmées (pour le calendrier de réservation client).
     """
-    # Charger depuis demo_users.json
+    # Charger depuis la base de données
     try:
         demo_users = load_demo_users()
         
@@ -4329,7 +4348,7 @@ async def get_all_coaches_api(
     postal_code: Optional[str] = None
 ):
     """
-    🔥 NOUVEAU: Retourne les VRAIS coaches depuis la base de données (demo_users.json).
+    Retourne les coaches depuis la base de données.
     
     Paramètres:
     - gym_id: Filtrer par salle (ex: "fitness-park-maurepas")
@@ -5117,19 +5136,21 @@ async def gym_finder_page(request: Request, user = Depends(get_current_user)):
     
     google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     if not google_maps_api_key:
-        # En mode de développement, rediriger vers une page d'erreur
+        # Configuration manquante : page d'erreur avec i18n
+        i18n_err = get_i18n_context(request)
         return templates.TemplateResponse("error.html", {
             "request": request,
-            "error": "Configuration Google Maps manquante. Contactez l'administrateur.",
-            "user": user
+            "error": (i18n_err.get("t") or {}).get("errors", {}).get("config_error") or "Configuration Google Maps manquante. Contactez l'administrateur.",
+            "user": user,
+            **i18n_err
         }, status_code=500)
     
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n = get_i18n_context(request)
     return templates.TemplateResponse("gym_finder.html", {
         "request": request,
         "user": user,
-        "google_maps_api_key": google_maps_api_key
+        "google_maps_api_key": google_maps_api_key,
+        **i18n
     })
 
 # Route pour les images uploadées (si pas d'utilisation directe de Supabase Storage)
@@ -5348,7 +5369,7 @@ async def confirm_booking(request: ConfirmBookingRequest):
         # Générer un ID unique pour la réservation
         booking_id = str(uuid.uuid4())[:8]
         
-        # Sauvegarder la réservation dans demo_users.json (sous le coach correspondant)
+        # Sauvegarder la réservation en base (sous le coach correspondant)
         try:
             demo_users = load_demo_users()
             
@@ -5466,9 +5487,9 @@ async def confirm_booking(request: ConfirmBookingRequest):
                         # Prix en centimes
                         price_cents = int(float(request.price)) * 100
                         
-                        # Construire les URLs de retour
-                        base_url = os.environ.get('REPLIT_DEV_DOMAIN', 'https://fitmatch.replit.app')
-                        if not base_url.startswith('http'):
+                        # Construire les URLs de retour (prod: SITE_URL, sinon host de la requête)
+                        base_url = os.environ.get('SITE_URL') or os.environ.get('REPLIT_DEV_DOMAIN') or str(request.base_url).rstrip("/")
+                        if base_url and not base_url.startswith('http'):
                             base_url = f"https://{base_url}"
                         
                         # Créer le checkout avec transfer_data vers le coach
@@ -5589,7 +5610,7 @@ async def cancel_booking(request: CancelBookingRequest):
         print(f"   Coach: {request.coach_name}, Salle: {request.gym_name}")
         print(f"   Date: {request.date} à {request.time}")
         
-        # Supprimer la réservation du serveur (demo_users.json)
+        # Supprimer la réservation en base
         demo_users = load_demo_users()
         booking_removed = False
         found_coach_email = None
@@ -5652,7 +5673,7 @@ async def cancel_booking(request: CancelBookingRequest):
         # Sauvegarder les modifications
         if booking_removed:
             save_demo_users(demo_users)
-            print(f"✅ Fichier demo_users.json mis à jour")
+            print(f"✅ Base de données mise à jour")
         
         # Envoyer l'email d'annulation AU COACH
         coach_notified = False
@@ -5796,35 +5817,30 @@ async def get_booking_by_id(booking_id: str):
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
-@app.get("/api/client/bookings")
-async def get_client_bookings(client_email: str):
-    """Récupère toutes les réservations d'un client depuis tous les coachs."""
+@app.get("/api/client/bookings", tags=["client"])
+async def get_client_bookings(user=Depends(get_current_user)):
+    """Récupère les réservations du client connecté (session). Nécessite une session valide."""
+    if not user or not user.get("email"):
+        return JSONResponse({"success": False, "error": "Non autorisé"}, status_code=401)
+    client_email = user.get("email")
     try:
         demo_users = load_demo_users()
         client_bookings = []
-        
-        # Parcourir tous les coachs pour trouver les réservations du client
+
         for coach_email, coach_data in demo_users.items():
             if coach_data.get("role") != "coach":
                 continue
-            
             coach_name = coach_data.get("full_name", "Coach")
-            
-            # Chercher dans pending et confirmed (pas rejected car annulées)
             for booking_list in ["pending_bookings", "confirmed_bookings"]:
                 bookings = coach_data.get(booking_list, [])
                 for booking in bookings:
-                    if booking.get("client_email", "").lower() == client_email.lower():
-                        booking_with_coach = booking.copy()
-                        booking_with_coach["coach_email"] = coach_email
-                        booking_with_coach["coach_name"] = coach_name
-                        client_bookings.append(booking_with_coach)
-        
-        return JSONResponse({
-            "success": True,
-            "bookings": client_bookings
-        })
-        
+                    if (booking.get("client_email") or "").strip().lower() == client_email.strip().lower():
+                        b = booking.copy()
+                        b["coach_email"] = coach_email
+                        b["coach_name"] = coach_name
+                        client_bookings.append(b)
+
+        return JSONResponse({"success": True, "bookings": client_bookings})
     except Exception as e:
         print(f"❌ Erreur récupération bookings client: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
@@ -6239,11 +6255,16 @@ async def conversation_page(request: Request, booking_id: str, user = Depends(re
 # ============================================
 
 @app.get("/api/reminders/process")
-async def api_process_reminders():
+async def api_process_reminders(request: Request, secret: Optional[str] = Query(None)):
     """
-    Endpoint pour déclencher manuellement le traitement des rappels.
-    Peut être appelé par un cron job externe ou manuellement.
+    Traitement des rappels (24h/2h). À appeler par un cron toutes les 5-15 min.
+    Si CRON_SECRET est défini en env, passer le secret en query ?secret=... ou en header X-Cron-Secret.
     """
+    cron_secret = os.environ.get("CRON_SECRET")
+    if cron_secret:
+        provided = secret or request.headers.get("X-Cron-Secret")
+        if provided != cron_secret:
+            return JSONResponse({"success": False, "error": "Unauthorized"}, status_code=401)
     try:
         sent_count = process_due_reminders()
         return JSONResponse({
@@ -6301,13 +6322,13 @@ def check_and_block_unpaid_coaches():
                     
                     # Envoyer email de blocage
                     from resend_service import send_account_blocked_email
-                    base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                    base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
                     if base_url and not base_url.startswith("http"):
                         base_url = f"https://{base_url}"
                     send_account_blocked_email(
                         to_email=email,
                         coach_name=user_data.get("full_name", "Coach"),
-                        retry_url=f"{base_url}/coach/subscription",
+                        retry_url=f"{base_url}/coach/subscription" if base_url else "/coach/subscription",
                         lang=user_data.get("lang", "fr")
                     )
                     print(f"🚫 Compte bloqué pour non-paiement: {email}")
@@ -6429,7 +6450,7 @@ async def api_create_portal_session(request: Request, user = Depends(require_coa
         print(f"❌ Erreur création portal session: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
-@app.post("/api/stripe/webhook")
+@app.post("/api/stripe/webhook", tags=["stripe"])
 async def stripe_webhook(request: Request):
     """
     Webhook Stripe pour gérer les événements d'abonnement.
@@ -6584,13 +6605,13 @@ async def stripe_webhook(request: Request):
                     # Envoyer email de bienvenue
                     from resend_service import send_subscription_success_email, send_subscription_payment_receipt
                     coach_data = get_demo_user(coach_email)
-                    base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                    base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
                     if base_url and not base_url.startswith("http"):
                         base_url = f"https://{base_url}"
                     send_subscription_success_email(
                         to_email=coach_email,
                         coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                        subscription_url=f"{base_url}/coach/portal",
+                        subscription_url=f"{base_url}/coach/portal" if base_url else "/coach/portal",
                         lang=coach_data.get("lang", "fr") if coach_data else "fr"
                     )
                     print(f"📧 Email de bienvenue envoyé à {coach_email}")
@@ -6634,13 +6655,13 @@ async def stripe_webhook(request: Request):
                 # Envoyer email de bienvenue et certificat
                 from resend_service import send_subscription_success_email, send_subscription_payment_receipt
                 coach_data = get_demo_user(coach_email)
-                base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
                 if base_url and not base_url.startswith("http"):
                     base_url = f"https://{base_url}"
                 send_subscription_success_email(
                     to_email=coach_email,
                     coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                    subscription_url=f"{base_url}/coach/portal",
+                    subscription_url=f"{base_url}/coach/portal" if base_url else "/coach/portal",
                     lang=coach_data.get("lang", "fr") if coach_data else "fr"
                 )
                 
@@ -6696,7 +6717,7 @@ async def stripe_webhook(request: Request):
                         
                         # Email de compte restauré
                         from resend_service import send_account_restored_email
-                        base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                        base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
                         if base_url and not base_url.startswith("http"):
                             base_url = f"https://{base_url}"
                         send_account_restored_email(
@@ -6725,13 +6746,13 @@ async def stripe_webhook(request: Request):
                     
                     # Email de compte bloqué
                     from resend_service import send_account_blocked_email
-                    base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                    base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
                     if base_url and not base_url.startswith("http"):
                         base_url = f"https://{base_url}"
                     send_account_blocked_email(
                         to_email=coach_email,
                         coach_name=coach_data.get("full_name", "Coach"),
-                        retry_url=f"{base_url}/coach/subscription",
+                        retry_url=f"{base_url}/coach/subscription" if base_url else "/coach/subscription",
                         lang=coach_data.get("lang", "fr")
                     )
         
@@ -6757,7 +6778,7 @@ async def stripe_webhook(request: Request):
                     
                     # Envoyer email d'avertissement
                     from resend_service import send_payment_failed_email
-                    base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                    base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
                     if base_url and not base_url.startswith("http"):
                         base_url = f"https://{base_url}"
                     send_payment_failed_email(
@@ -6795,7 +6816,7 @@ async def stripe_webhook(request: Request):
                         # Si le compte était bloqué, envoyer email de restauration
                         if was_blocked:
                             from resend_service import send_account_restored_email
-                            base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+                            base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
                             if base_url and not base_url.startswith("http"):
                                 base_url = f"https://{base_url}"
                             send_account_restored_email(
@@ -6804,7 +6825,29 @@ async def stripe_webhook(request: Request):
                                 lang=coach_data.get("lang", "fr") if coach_data else "fr"
                             )
                             print(f"✅ Compte restauré pour {coach_email}")
-                        else:
+                        # Renouvellement : envoyer le certificat de paiement par email (comme au premier paiement)
+                        from resend_service import send_subscription_payment_receipt
+                        amount_paid = (data.get("amount_paid") or 0) / 100.0
+                        period_start_ts = data.get("period_start") or subscription.get("current_period_start")
+                        period_end_ts = data.get("period_end") or subscription.get("current_period_end")
+                        period_start = datetime.fromtimestamp(period_start_ts).strftime("%d/%m/%Y")
+                        period_end = datetime.fromtimestamp(period_end_ts).strftime("%d/%m/%Y")
+                        items_data = (subscription.get("items") or {}).get("data") or []
+                        first_item = items_data[0] if items_data else {}
+                        plan = first_item.get("plan") or first_item.get("price") or {}
+                        interval = plan.get("interval", "month") if isinstance(plan, dict) else "month"
+                        billing_period = "annual" if interval == "year" else "monthly"
+                        send_subscription_payment_receipt(
+                            to_email=coach_email,
+                            coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
+                            amount=f"{amount_paid:.2f}€",
+                            billing_period=billing_period,
+                            subscription_start=period_start,
+                            subscription_end=period_end,
+                            lang=coach_data.get("lang", "fr") if coach_data else "fr"
+                        )
+                        print(f"📧 Certificat de paiement (renouvellement) envoyé à {coach_email}")
+                        if not was_blocked:
                             print(f"✅ Renouvellement réussi pour {coach_email}")
                 except Exception as renewal_error:
                     print(f"⚠️ Erreur traitement renouvellement: {renewal_error}")
@@ -6857,7 +6900,7 @@ async def stripe_webhook(request: Request):
             coach_email = metadata.get("coach_email")
             client_email = metadata.get("client_email")
             
-            base_url = os.environ.get("REPLIT_DEV_DOMAIN", "")
+            base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
             if base_url and not base_url.startswith("http"):
                 base_url = f"https://{base_url}"
             
@@ -6968,21 +7011,45 @@ async def booking_success_page(request: Request, booking_id: str = None, session
                         save_demo_user(coach_email, coach_data)
                         print(f"✅ Réservation {booking_id} confirmée après paiement Stripe")
                         
-                        # Envoyer email de confirmation au client
+                        # Envoyer email de confirmation + reçu de paiement au client
                         try:
+                            from datetime import datetime as dt
+                            date_obj = dt.strptime(booking.get("date", ""), "%Y-%m-%d") if booking.get("date") else dt.now()
+                            jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
+                            mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+                            date_fr = f"{jours[date_obj.weekday()]} {date_obj.day} {mois[date_obj.month - 1]} {date_obj.year}"
+                            dur = f"{booking.get('duration', 60)} min"
+                            pr = f"{booking.get('price', '')}€"
                             send_booking_confirmation_email(
                                 to_email=booking.get("client_email"),
                                 client_name=booking.get("client_name"),
-                                coach_name=coach_data.get("full_name"),
+                                coach_name=coach_data.get("full_name", "Coach"),
                                 gym_name=booking.get("gym_name"),
                                 gym_address=booking.get("gym_address", ""),
-                                date_str=booking.get("date"),
-                                time_str=booking.get("time"),
-                                service_name=booking.get("service"),
+                                date_str=date_fr,
+                                time_str=booking.get("time", ""),
+                                service_name=booking.get("service", "Séance"),
+                                duration=dur,
+                                price=pr,
                                 booking_id=booking_id,
                                 lang=booking.get("lang", "fr")
                             )
                             print(f"📧 Email de confirmation envoyé à {booking.get('client_email')}")
+                            from resend_service import send_session_payment_receipt
+                            send_session_payment_receipt(
+                                to_email=booking.get("client_email"),
+                                client_name=booking.get("client_name"),
+                                coach_name=coach_data.get("full_name", "Coach"),
+                                gym_name=booking.get("gym_name"),
+                                gym_address=booking.get("gym_address", ""),
+                                session_date=date_fr,
+                                session_time=booking.get("time", ""),
+                                service_name=booking.get("service", "Séance"),
+                                duration=dur,
+                                amount=pr,
+                                lang=booking.get("lang", "fr")
+                            )
+                            print(f"📧 Reçu de paiement envoyé à {booking.get('client_email')}")
                         except Exception as email_err:
                             print(f"⚠️ Erreur email: {email_err}")
                         break
@@ -7010,6 +7077,21 @@ async def booking_cancelled_page(request: Request, booking_id: str = None):
     })
 
 # ============================================
+# 404 globale : toute URL non gérée (GET) renvoie la page 404.html avec i18n
+# Doit être en dernier pour ne pas capturer les routes existantes
+# ============================================
+
+@app.get("/{full_path:path}", response_class=HTMLResponse, include_in_schema=False)
+async def catch_all_404(request: Request, full_path: str):
+    """Route catch-all : page 404 HTML pour les URLs inconnues (hors API)."""
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(status_code=404, content={"detail": "Not Found"})
+    i18n = get_i18n_context(request)
+    return templates.TemplateResponse(
+        "404.html",
+        {"request": request, "message": None, **i18n},
+        status_code=404,
+    )
 
 
 if __name__ == "__main__":

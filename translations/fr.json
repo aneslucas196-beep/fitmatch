@@ -509,6 +509,22 @@
     "legal": "Mentions légales",
     "all_rights": "Tous droits réservés"
   },
+  "legal": {
+    "terms_title": "Mentions légales",
+    "terms_intro": "Ce site est édité par FitMatch. En utilisant FitMatch, vous acceptez les présentes conditions d'utilisation.",
+    "legal_notice": "Éditeur",
+    "editor_text": "FitMatch – Plateforme de mise en relation coachs sportifs et clients.",
+    "contact_title": "Contact",
+    "contact_page": "Page contact",
+    "privacy_title": "Politique de confidentialité",
+    "privacy_intro": "FitMatch traite vos données (email, nom, réservations) uniquement pour la gestion de votre compte et des réservations. Nous ne vendons pas vos données à des tiers.",
+    "data_use": "Utilisation des données",
+    "data_use_text": "Vos informations sont utilisées pour : création de compte, réservations, envoi d'emails de confirmation et rappels, et gestion des paiements (Stripe).",
+    "rights": "Vos droits",
+    "rights_text": "Vous pouvez demander l'accès, la rectification ou la suppression de vos données en nous contactant.",
+    "contact_intro": "Pour toute question sur FitMatch, les réservations ou votre compte :",
+    "email_label": "Email"
+  },
   "partner": {
     "title": "Devenir partenaire",
     "brand": "FitMatch Pro",
@@ -747,7 +763,51 @@
     "already_registered": "Déjà inscrit ?",
     "login_link": "Se connecter",
     "error_title": "Erreur",
+    "error_password_weak": "Mot de passe trop faible (minimum 8 caractères, 1 lettre et 1 chiffre)",
+    "error_gender_required": "Veuillez sélectionner votre genre",
+    "error_country_required": "Veuillez sélectionner votre pays",
+    "error_gyms_invalid": "Salles sélectionnées invalides. Veuillez réessayer.",
+    "error_signup_failed": "Erreur lors de l'inscription. Veuillez réessayer.",
+    "error_email_exists": "Cette adresse email est déjà utilisée. Essayez de vous connecter ou utilisez une autre adresse.",
     "footer_rights": "Tous droits réservés"
+  },
+  "verify_otp": {
+    "page_title": "Vérification du code – FitMatch",
+    "heading": "Vérifie ton email",
+    "sent_prefix": "Nous avons envoyé un code de vérification à",
+    "expires_hint": "Le code expire dans 10 minutes",
+    "submit_button": "Vérifier le code",
+    "resend_button": "Renvoyer le code",
+    "start_over": "Recommencer l'inscription",
+    "code_invalid": "Code invalide. Veuillez saisir un code à 4-6 chiffres.",
+    "code_incorrect": "Code incorrect. Veuillez vérifier votre code.",
+    "code_expired": "Code incorrect ou expiré. Veuillez réessayer.",
+    "data_not_found": "Données d'inscription introuvables. Veuillez recommencer l'inscription.",
+    "user_not_found": "Utilisateur introuvable. Veuillez recommencer l'inscription.",
+    "error_verify": "Erreur lors de la vérification du compte.",
+    "resend_success": "Nouveau code envoyé à votre adresse email",
+    "resend_error": "Erreur lors de l'envoi du code. Réessayez.",
+    "no_request_found": "Aucune demande d'inscription trouvée pour cet email.",
+    "resend_code_error": "Erreur lors de la génération du nouveau code.",
+    "success_otp_sent": "Code de vérification envoyé à votre adresse email"
+  },
+  "email_confirmed": {
+    "title": "Email confirmé !",
+    "subtitle": "Votre adresse email a été confirmée avec succès.",
+    "success_message": "Email confirmé avec succès ! Vous pouvez maintenant vous connecter.",
+    "congrats": "Félicitations !",
+    "account_activated": "Votre compte est maintenant activé. Vous pouvez vous connecter avec votre email et mot de passe.",
+    "login_now": "Se connecter maintenant",
+    "back_home": "Retour à l'accueil"
+  },
+  "email_confirmation_sent": {
+    "title": "Vérifiez votre boîte mail",
+    "message": "Email de confirmation envoyé"
+  },
+  "verify_email": {
+    "resend_unavailable": "Renvoi d'email non disponible",
+    "resend_success": "Email de confirmation renvoyé ! Vérifiez votre boîte mail.",
+    "resend_error": "Erreur lors du renvoi de l'email. Veuillez réessayer."
   },
   "client": {
     "page_title": "Espace Client - FitMatch",
@@ -958,6 +1018,22 @@
     "booking_failed": "La réservation a échoué",
     "login_failed": "Email ou mot de passe incorrect",
     "network_error": "Erreur de connexion"
+  },
+  "gym_finder": {
+    "title": "Trouver une salle de sport près de chez moi",
+    "subtitle": "Découvrez les meilleures salles de sport dans votre région",
+    "page_title": "Trouver une salle près de chez moi - Fitmatch",
+    "worldwide": "Base mondiale",
+    "login": "Connexion",
+    "logout": "Déconnexion"
+  },
+  "errors": {
+    "404_title": "Page non trouvée",
+    "404_message": "La page que vous recherchez n'existe pas ou a été déplacée.",
+    "back_home": "Retour à l'accueil",
+    "500_title": "Erreur serveur",
+    "500_message": "Une erreur inattendue s'est produite. Veuillez réessayer plus tard.",
+    "config_error": "Configuration manquante. Contactez l'administrateur."
   },
   "verify_email": {
     "page_title": "Vérification email - FitMatch",

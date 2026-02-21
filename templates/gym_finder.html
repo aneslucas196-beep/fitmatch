@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" {% if text_direction == 'rtl' %}dir="rtl"{% endif %}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Trouver une salle près de chez moi - Fitmatch</title>
+  <title>{{ t.gym_finder.page_title if t and t.get('gym_finder') else 'Trouver une salle près de chez moi - Fitmatch' }}</title>
   <link href="https://cdn.tailwindcss.com/3.3.0" rel="stylesheet">
   <style>
     #map { height: 55vh; width: 100%; }
@@ -55,9 +55,9 @@
   <header class="bg-white shadow-sm border-b">
     <div class="max-w-6xl mx-auto px-4 py-6">
       <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3">
-        🔍 <span>Trouver une salle de sport près de chez moi</span>
+        🔍 <span>{{ t.gym_finder.title if t and t.get('gym_finder') else 'Trouver une salle de sport près de chez moi' }}</span>
       </h1>
-      <p class="text-gray-600 mt-2">Découvrez les meilleures salles de sport dans votre région</p>
+      <p class="text-gray-600 mt-2">{{ t.gym_finder.subtitle if t and t.get('gym_finder') else 'Découvrez les meilleures salles de sport dans votre région' }}</p>
     </div>
   </header>
 

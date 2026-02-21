@@ -37,10 +37,12 @@ def signup_with_supabase_email_confirmation(
                 "mode": "config_error"
             }
         
-        # URL de redirection après confirmation email
+        # URL de redirection après confirmation email (prod: SITE_URL)
         if not redirect_url:
-            site_url = os.environ.get('REPLIT_DEV_DOMAIN', 'localhost:5000')
-            redirect_url = f"https://{site_url}/auth/email-confirmed"
+            site_url = os.environ.get('SITE_URL') or os.environ.get('REPLIT_DEV_DOMAIN', 'http://localhost:5000')
+            if site_url and not site_url.startswith('http'):
+                site_url = f"https://{site_url}"
+            redirect_url = f"{site_url.rstrip('/')}/auth/email-confirmed"
         
         print(f"🔧 Inscription Supabase avec confirmation email:")
         print(f"  - Email: {email}")

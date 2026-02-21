@@ -227,28 +227,8 @@ def verify_webhook_signature(payload: bytes, sig_header: str, webhook_secret: st
 
 
 # ============================================
-# GESTION DES ABONNEMENTS DANS demo_users.json
+# GESTION DES ABONNEMENTS (base de données)
 # ============================================
-
-def load_demo_users() -> dict:
-    """Charge les utilisateurs depuis demo_users.json."""
-    try:
-        if os.path.exists("demo_users.json"):
-            with open("demo_users.json", "r", encoding="utf-8") as f:
-                return json.load(f)
-    except Exception as e:
-        print(f"Erreur chargement demo_users: {e}")
-    return {"users": []}
-
-
-def save_demo_users(data: dict):
-    """Sauvegarde les utilisateurs dans demo_users.json."""
-    try:
-        with open("demo_users.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Erreur sauvegarde demo_users: {e}")
-
 
 def update_coach_subscription(
     coach_email: str,
@@ -258,47 +238,48 @@ def update_coach_subscription(
     current_period_end: str = None
 ):
     """
-    Met à jour les informations d'abonnement d'un coach.
+    Met à jour les informations d'abonnement d'un coach (PostgreSQL).
     """
-    data = load_demo_users()
-    
-    # Structure: {"email": {user_data}, ...} pas {"users": [...]}
-    if coach_email in data:
-        user = data[coach_email]
-        if stripe_customer_id:
-            user["stripe_customer_id"] = stripe_customer_id
-        if stripe_subscription_id:
-            user["stripe_subscription_id"] = stripe_subscription_id
-        if subscription_status:
-            user["subscription_status"] = subscription_status
-        if current_period_end:
-            user["subscription_period_end"] = current_period_end
-        
-        save_demo_users(data)
+    try:
+        from utils import get_demo_user, save_demo_user
+    except ImportError:
+        print("⚠️ utils non disponible pour update_coach_subscription")
+        return False
+    user = get_demo_user(coach_email)
+    if not user:
+        print(f"⚠️ Coach {coach_email} non trouvé en base")
+        return False
+    if stripe_customer_id is not None:
+        user["stripe_customer_id"] = stripe_customer_id
+    if stripe_subscription_id is not None:
+        user["stripe_subscription_id"] = stripe_subscription_id
+    if subscription_status is not None:
+        user["subscription_status"] = subscription_status
+    if current_period_end is not None:
+        user["subscription_period_end"] = current_period_end
+    ok = save_demo_user(coach_email, user)
+    if ok:
         print(f"✅ Abonnement mis à jour pour {coach_email}: status={subscription_status}")
-        return True
-    
-    print(f"⚠️ Coach {coach_email} non trouvé dans demo_users")
-    return False
+    return ok
 
 
 def get_coach_subscription_info(coach_email: str) -> Optional[Dict[str, Any]]:
     """
-    Récupère les informations d'abonnement d'un coach.
+    Récupère les informations d'abonnement d'un coach (PostgreSQL).
     """
-    data = load_demo_users()
-    
-    # Structure: {"email": {user_data}, ...}
-    if coach_email in data:
-        user = data[coach_email]
-        return {
-            "stripe_customer_id": user.get("stripe_customer_id"),
-            "stripe_subscription_id": user.get("stripe_subscription_id"),
-            "subscription_status": user.get("subscription_status", "inactive"),
-            "subscription_period_end": user.get("subscription_period_end")
-        }
-    
-    return None
+    try:
+        from utils import get_demo_user
+    except ImportError:
+        return None
+    user = get_demo_user(coach_email)
+    if not user:
+        return None
+    return {
+        "stripe_customer_id": user.get("stripe_customer_id"),
+        "stripe_subscription_id": user.get("stripe_subscription_id"),
+        "subscription_status": user.get("subscription_status", "inactive"),
+        "subscription_period_end": user.get("subscription_period_end")
+    }
 
 
 def is_coach_subscribed(coach_email: str) -> bool:

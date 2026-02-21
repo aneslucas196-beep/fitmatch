@@ -11,6 +11,11 @@ FACEBOOK_URL = "https://www.facebook.com/share/17f5yGSk86/?mibextid=wwXIfr"
 # Cache pour les traductions des emails
 _email_translations_cache = {}
 
+def _mail_from() -> str:
+    """Expéditeur des emails (SENDER_EMAIL ou contact@fitmatch.fr)."""
+    s = os.environ.get("SENDER_EMAIL") or "contact@fitmatch.fr"
+    return s if "<" in s else f"Fitmatch <{s}>"
+
 def get_email_translations(lang: str = 'fr') -> dict:
     """Charge les traductions pour les emails"""
     global _email_translations_cache
@@ -54,7 +59,7 @@ def get_social_footer(lang: str = 'fr') -> str:
 def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str] = None, lang: str = 'fr') -> dict:
     """Envoie un code OTP par email via Resend API"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     site_url = os.environ.get('SITE_URL', 'http://localhost:5000')
     t = get_email_translations(lang)
     
@@ -116,7 +121,7 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
 def send_booking_confirmation_email(to_email: str, client_name: str, coach_name: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, coach_photo: Optional[str] = None, reservation_id: Optional[str] = None, lang: str = 'fr') -> dict:
     """Envoie un email de confirmation de réservation"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     site_url = os.environ.get('REPLIT_DEV_DOMAIN', os.environ.get('SITE_URL', 'http://localhost:5000'))
     if site_url and not site_url.startswith('http'): site_url = f"https://{site_url}"
     t = get_email_translations(lang)
@@ -173,7 +178,7 @@ def send_booking_confirmation_email(to_email: str, client_name: str, coach_name:
 def send_subscription_success_email(to_email: str, coach_name: str, subscription_url: str, lang: str = 'fr') -> dict:
     """Envoie un email de succès d'abonnement au coach"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -222,7 +227,7 @@ def send_subscription_success_email(to_email: str, coach_name: str, subscription
 def send_payment_failed_email(to_email: str, coach_name: str, retry_url: str, lang: str = 'fr') -> dict:
     """Envoie un email d'échec de paiement de l'abonnement"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -271,7 +276,7 @@ def send_payment_failed_email(to_email: str, coach_name: str, retry_url: str, la
 def send_session_payment_receipt(to_email: str, client_name: str, coach_name: str, gym_name: str, gym_address: str, session_date: str, session_time: str, service_name: str, duration: str, amount: str, lang: str = 'fr') -> dict:
     """Envoie un reçu de paiement pour une séance au client"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -330,7 +335,7 @@ def send_session_payment_receipt(to_email: str, client_name: str, coach_name: st
 def send_account_blocked_email(to_email: str, coach_name: str, retry_url: str, lang: str = 'fr') -> dict:
     """Envoie un email de compte bloqué pour non-paiement"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -379,7 +384,7 @@ def send_account_blocked_email(to_email: str, coach_name: str, retry_url: str, l
 def send_reminder_email(to_email: str, client_name: str, coach_name: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, reminder_type: str = "24h", booking_id: str = None, lang: str = 'fr') -> dict:
     """Envoie un email de rappel de séance"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -435,7 +440,7 @@ def send_reminder_email(to_email: str, client_name: str, coach_name: str, gym_na
 def send_cancellation_email(to_email: str, client_name: str, coach_name: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, coach_photo: Optional[str] = None, booking_url: Optional[str] = None, lang: str = 'fr') -> dict:
     """Envoie un email d'annulation de réservation au client"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -491,7 +496,7 @@ def send_cancellation_email(to_email: str, client_name: str, coach_name: str, gy
 def send_cancellation_to_coach_email(to_email: str, coach_name: str, client_name: str, client_email: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, lang: str = 'fr') -> dict:
     """Envoie un email d'annulation de réservation au coach"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -547,7 +552,7 @@ def send_cancellation_to_coach_email(to_email: str, coach_name: str, client_name
 def send_coach_notification_email(to_email: str, coach_name: str, client_name: str, client_email: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, booking_id: str = None, lang: str = 'fr') -> dict:
     """Notifie le coach d'une nouvelle demande de réservation"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     site_url = os.environ.get('REPLIT_DEV_DOMAIN', os.environ.get('SITE_URL', 'http://localhost:5000'))
     if site_url and not site_url.startswith('http'): site_url = f"https://{site_url}"
     t = get_email_translations(lang)
@@ -611,7 +616,7 @@ def send_coach_notification_email(to_email: str, coach_name: str, client_name: s
 def send_rejection_email_to_client(to_email: str, client_name: str, coach_name: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, lang: str = 'fr') -> dict:
     """Envoie un email au client si le coach refuse la demande"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -665,7 +670,7 @@ def send_rejection_email_to_client(to_email: str, client_name: str, coach_name: 
 def send_coach_cancelled_email(client_email: str, client_name: str, coach_name: str, gym_name: str, date: str, lang: str = 'fr') -> dict:
     """Envoie un email d'annulation au client quand le coach annule la séance"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -712,7 +717,7 @@ def send_coach_cancelled_email(client_email: str, client_name: str, coach_name: 
 def send_subscription_payment_receipt(to_email: str, coach_name: str, amount: str, billing_period: str, subscription_start: str, subscription_end: str, lang: str = 'fr') -> dict:
     """Envoie un reçu de paiement d'abonnement au coach"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -770,7 +775,7 @@ def send_subscription_payment_receipt(to_email: str, coach_name: str, amount: st
 def send_session_payment_failed_email(to_email: str, client_name: str, coach_name: str, session_date: str, session_time: str, retry_url: str, lang: str = 'fr') -> dict:
     """Envoie un email d'échec de paiement de séance au client"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -826,7 +831,7 @@ def send_session_payment_failed_email(to_email: str, client_name: str, coach_nam
 def send_coach_signup_payment_failed_email(to_email: str, coach_name: str, retry_url: str, lang: str = 'fr') -> dict:
     """Envoie un email d'échec de paiement d'inscription coach"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:
@@ -875,7 +880,7 @@ def send_coach_signup_payment_failed_email(to_email: str, coach_name: str, retry
 def send_account_restored_email(to_email: str, coach_name: str, lang: str = 'fr') -> dict:
     """Envoie un email quand le compte bloqué est restauré après paiement"""
     resend_key = os.environ.get('RESEND_API_KEY')
-    mail_from = 'Fitmatch <contact@fitmatch.fr>'
+    mail_from = _mail_from()
     t = get_email_translations(lang)
     
     if not resend_key:

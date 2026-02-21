@@ -2,6 +2,14 @@
   "lang_code": "de",
   "lang_name": "Deutsch",
   "dir": "ltr",
+  "errors": {
+    "404_title": "Seite nicht gefunden",
+    "404_message": "Die gesuchte Seite existiert nicht oder wurde verschoben.",
+    "back_home": "Zurück zur Startseite",
+    "500_title": "Serverfehler",
+    "500_message": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut.",
+    "config_error": "Konfiguration fehlt. Bitte kontaktiere den Administrator."
+  },
   "nav": {
     "home": "Startseite",
     "find_coach": "Coach finden",
@@ -723,12 +731,56 @@
     "already_registered": "Bereits registriert?",
     "login_link": "Anmelden",
     "error_title": "Fehler",
+    "error_password_weak": "Passwort zu schwach (mind. 8 Zeichen, 1 Buchstabe und 1 Zahl)",
+    "error_gender_required": "Bitte wähle dein Geschlecht",
+    "error_country_required": "Bitte wähle dein Land",
+    "error_gyms_invalid": "Ungültige Studios ausgewählt. Bitte versuche es erneut.",
+    "error_signup_failed": "Registrierung fehlgeschlagen. Bitte versuche es erneut.",
+    "error_email_exists": "Diese E-Mail-Adresse wird bereits verwendet. Melde dich an oder nutze eine andere.",
     "footer_rights": "Alle Rechte vorbehalten",
     "already_have_account": "Hast du schon ein Konto?",
     "terms_agree": "Mit der Registrierung akzeptierst du unsere",
     "terms_link": "Nutzungsbedingungen",
     "and": "und",
     "privacy_link": "Datenschutzrichtlinie"
+  },
+  "verify_otp": {
+    "page_title": "Code bestätigen – FitMatch",
+    "heading": "Bestätige deine E-Mail",
+    "sent_prefix": "Wir haben einen Bestätigungscode gesendet an",
+    "expires_hint": "Der Code läuft in 10 Minuten ab",
+    "submit_button": "Code bestätigen",
+    "resend_button": "Code erneut senden",
+    "start_over": "Von vorne anfangen",
+    "code_invalid": "Ungültiger Code. Bitte gib einen 4-6-stelligen Code ein.",
+    "code_incorrect": "Falscher Code. Bitte überprüfe deinen Code.",
+    "code_expired": "Code falsch oder abgelaufen. Bitte versuche es erneut.",
+    "data_not_found": "Registrierungsdaten nicht gefunden. Bitte starte von vorne.",
+    "user_not_found": "Benutzer nicht gefunden. Bitte starte von vorne.",
+    "error_verify": "Fehler bei der Kontoüberprüfung.",
+    "resend_success": "Neuer Code an deine E-Mail gesendet",
+    "resend_error": "Fehler beim Senden des Codes. Bitte versuche es erneut.",
+    "no_request_found": "Keine Registrierungsanfrage für diese E-Mail gefunden.",
+    "resend_code_error": "Fehler bei der Generierung des neuen Codes.",
+    "success_otp_sent": "Bestätigungscode an deine E-Mail gesendet"
+  },
+  "email_confirmed": {
+    "title": "E-Mail bestätigt!",
+    "subtitle": "Deine E-Mail-Adresse wurde erfolgreich bestätigt.",
+    "success_message": "E-Mail bestätigt! Du kannst dich jetzt anmelden.",
+    "congrats": "Herzlichen Glückwunsch!",
+    "account_activated": "Dein Konto ist aktiv. Du kannst dich mit E-Mail und Passwort anmelden.",
+    "login_now": "Jetzt anmelden",
+    "back_home": "Zurück zur Startseite"
+  },
+  "email_confirmation_sent": {
+    "title": "Überprüfe deinen Posteingang",
+    "message": "Bestätigungs-E-Mail gesendet"
+  },
+  "verify_email": {
+    "resend_unavailable": "E-Mail erneut senden nicht verfügbar",
+    "resend_success": "Bestätigungs-E-Mail erneut gesendet! Überprüfe deinen Posteingang.",
+    "resend_error": "Fehler beim erneuten Senden der E-Mail. Bitte versuche es erneut."
   },
   "client": {
     "page_title": "Kundenkonto - FitMatch",

@@ -2,6 +2,14 @@
   "lang_code": "es",
   "lang_name": "Español",
   "dir": "ltr",
+  "errors": {
+    "404_title": "Página no encontrada",
+    "404_message": "La página que buscas no existe o ha sido movida.",
+    "back_home": "Volver al inicio",
+    "500_title": "Error del servidor",
+    "500_message": "Ha ocurrido un error inesperado. Por favor, inténtalo más tarde.",
+    "config_error": "Configuración faltante. Contacta al administrador."
+  },
   "nav": {
     "home": "Inicio",
     "find_coach": "Encontrar un Coach",
@@ -723,7 +731,51 @@
     "already_registered": "¿Ya registrado?",
     "login_link": "Iniciar sesión",
     "error_title": "Error",
+    "error_password_weak": "Contraseña demasiado débil (mínimo 8 caracteres, 1 letra y 1 número)",
+    "error_gender_required": "Por favor selecciona tu género",
+    "error_country_required": "Por favor selecciona tu país",
+    "error_gyms_invalid": "Salas seleccionadas no válidas. Inténtalo de nuevo.",
+    "error_signup_failed": "Error en el registro. Inténtalo de nuevo.",
+    "error_email_exists": "Esta dirección de correo ya está en uso. Intenta iniciar sesión o usa otra.",
     "footer_rights": "Todos los derechos reservados"
+  },
+  "verify_otp": {
+    "page_title": "Verifica tu código – FitMatch",
+    "heading": "Verifica tu email",
+    "sent_prefix": "Hemos enviado un código de verificación a",
+    "expires_hint": "El código caduca en 10 minutos",
+    "submit_button": "Verificar código",
+    "resend_button": "Reenviar código",
+    "start_over": "Empezar de nuevo",
+    "code_invalid": "Código no válido. Introduce un código de 4-6 dígitos.",
+    "code_incorrect": "Código incorrecto. Comprueba tu código.",
+    "code_expired": "Código incorrecto o expirado. Inténtalo de nuevo.",
+    "data_not_found": "Datos de registro no encontrados. Por favor, empieza de nuevo.",
+    "user_not_found": "Usuario no encontrado. Por favor, empieza de nuevo.",
+    "error_verify": "Error al verificar la cuenta.",
+    "resend_success": "Nuevo código enviado a tu correo",
+    "resend_error": "Error al enviar el código. Inténtalo de nuevo.",
+    "no_request_found": "No hay solicitud de registro para este correo.",
+    "resend_code_error": "Error al generar el nuevo código.",
+    "success_otp_sent": "Código de verificación enviado a tu correo"
+  },
+  "email_confirmed": {
+    "title": "¡Email confirmado!",
+    "subtitle": "Tu dirección de correo ha sido confirmada correctamente.",
+    "success_message": "¡Email confirmado! Ya puedes iniciar sesión.",
+    "congrats": "¡Enhorabuena!",
+    "account_activated": "Tu cuenta está activada. Puedes iniciar sesión con tu email y contraseña.",
+    "login_now": "Iniciar sesión ahora",
+    "back_home": "Volver al inicio"
+  },
+  "email_confirmation_sent": {
+    "title": "Revisa tu bandeja de entrada",
+    "message": "Email de confirmación enviado"
+  },
+  "verify_email": {
+    "resend_unavailable": "Reenvío de email no disponible",
+    "resend_success": "¡Email de confirmación reenviado! Revisa tu bandeja.",
+    "resend_error": "Error al reenviar el email. Inténtalo de nuevo."
   },
   "client": {
     "page_title": "Panel del Cliente - FitMatch",

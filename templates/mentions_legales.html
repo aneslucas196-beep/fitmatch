@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="{{ locale|default('fr') }}" {% if text_direction == 'rtl' %}dir="rtl"{% endif %}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ t.legal.terms_title if t and t.get('legal') else 'Mentions légales' }} - FitMatch</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <header class="bg-white border-b shadow-sm">
+    <div class="max-w-3xl mx-auto px-4 py-4">
+      <a href="/" class="text-emerald-600 font-semibold">← FitMatch</a>
+    </div>
+  </header>
+  <main class="max-w-3xl mx-auto px-4 py-10">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ t.legal.terms_title if t and t.get('legal') else 'Mentions légales' }}</h1>
+    <div class="prose prose-gray max-w-none space-y-4 text-gray-700">
+      <p>{{ t.legal.terms_intro if t and t.get('legal') else "Ce site est édité par FitMatch. En utilisant FitMatch, vous acceptez les présentes conditions d'utilisation." }}</p>
+      <h2 class="text-lg font-semibold mt-6">{{ t.legal.legal_notice if t and t.get('legal') else 'Éditeur' }}</h2>
+      <p>{{ t.legal.editor_text if t and t.get('legal') else 'FitMatch – Plateforme de mise en relation coachs sportifs et clients.' }}</p>
+      <h2 class="text-lg font-semibold mt-6">{{ t.legal.contact_title if t and t.get('legal') else 'Contact' }}</h2>
+      <p><a href="/contact" class="text-emerald-600 underline">{{ t.legal.contact_page if t and t.get('legal') else 'Page contact' }}</a>.</p>
+    </div>
+  </main>
+</body>
+</html>

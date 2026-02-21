@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vérification du code – FitMatch</title>
+<title>{{ t.verify_otp.page_title|default('Verify your code – FitMatch') }}</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *,*::before,*::after{box-sizing:border-box}
@@ -247,10 +247,10 @@
       </div>
       
       <div class="fm-head">
-        <h1>Vérifie ton email</h1>
-        <p>Nous avons envoyé un code de vérification à</p>
+        <h1>{{ t.verify_otp.heading|default('Verify your email') }}</h1>
+        <p>{{ t.verify_otp.sent_prefix|default('We sent a verification code to') }}</p>
         <p class="fm-email">{{ email }}</p>
-        <p class="fm-hint">Le code expire dans 10 minutes</p>
+        <p class="fm-hint">{{ t.verify_otp.expires_hint|default('The code expires in 10 minutes') }}</p>
       </div>
 
       {% if error %}
@@ -277,21 +277,21 @@
           inputmode="numeric"
         >
 
-        <button type="submit" class="fm-btn">Vérifier le code</button>
+        <button type="submit" class="fm-btn">{{ t.verify_otp.submit_button|default('Verify code') }}</button>
       </form>
 
       <form action="/resend-otp" method="POST" style="margin-top: 12px;">
         <input type="hidden" name="email" value="{{ email }}">
-        <button type="submit" class="fm-btn fm-btn-secondary">Renvoyer le code</button>
+        <button type="submit" class="fm-btn fm-btn-secondary">{{ t.verify_otp.resend_button|default('Resend code') }}</button>
       </form>
 
       <div class="fm-links">
-        <a href="/signup">Recommencer l'inscription</a>
+        <a href="/signup">{{ t.verify_otp.start_over|default('Start over') }}</a>
       </div>
     </div>
     
     <div class="fm-footer">
-      © 2024 FitMatch. Tous droits réservés.
+      © 2024 FitMatch. {{ t.footer.all_rights|default('All rights reserved') }}
     </div>
   </div>
 </section>

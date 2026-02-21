@@ -2,6 +2,22 @@
   "lang_code": "en",
   "lang_name": "English",
   "dir": "ltr",
+  "gym_finder": {
+    "title": "Find a gym near me",
+    "subtitle": "Discover the best gyms in your area",
+    "page_title": "Find a gym near me - Fitmatch",
+    "worldwide": "Worldwide database",
+    "login": "Log in",
+    "logout": "Log out"
+  },
+  "errors": {
+    "404_title": "Page not found",
+    "404_message": "The page you are looking for does not exist or has been moved.",
+    "back_home": "Back to home",
+    "500_title": "Server error",
+    "500_message": "An unexpected error occurred. Please try again later.",
+    "config_error": "Missing configuration. Please contact the administrator."
+  },
   "nav": {
     "home": "Home",
     "find_coach": "Find a Coach",
@@ -747,7 +763,51 @@
     "already_registered": "Already registered?",
     "login_link": "Log in",
     "error_title": "Error",
+    "error_password_weak": "Password too weak (minimum 8 characters, 1 letter and 1 number)",
+    "error_gender_required": "Please select your gender",
+    "error_country_required": "Please select your country",
+    "error_gyms_invalid": "Invalid gyms selected. Please try again.",
+    "error_signup_failed": "Registration error. Please try again.",
+    "error_email_exists": "This email address is already in use. Try logging in or use another address.",
     "footer_rights": "All rights reserved"
+  },
+  "verify_otp": {
+    "page_title": "Verify your code – FitMatch",
+    "heading": "Verify your email",
+    "sent_prefix": "We sent a verification code to",
+    "expires_hint": "The code expires in 10 minutes",
+    "submit_button": "Verify code",
+    "resend_button": "Resend code",
+    "start_over": "Start over",
+    "code_invalid": "Invalid code. Please enter a 4-6 digit code.",
+    "code_incorrect": "Incorrect code. Please check your code.",
+    "code_expired": "Incorrect or expired code. Please try again.",
+    "data_not_found": "Registration data not found. Please start over.",
+    "user_not_found": "User not found. Please start over.",
+    "error_verify": "Account verification error.",
+    "resend_success": "New code sent to your email",
+    "resend_error": "Error sending code. Please try again.",
+    "no_request_found": "No registration request found for this email.",
+    "resend_code_error": "Error generating new code.",
+    "success_otp_sent": "Verification code sent to your email"
+  },
+  "email_confirmed": {
+    "title": "Email confirmed!",
+    "subtitle": "Your email address has been successfully confirmed.",
+    "success_message": "Email confirmed successfully! You can now log in.",
+    "congrats": "Congratulations!",
+    "account_activated": "Your account is now active. You can log in with your email and password.",
+    "login_now": "Log in now",
+    "back_home": "Back to home"
+  },
+  "email_confirmation_sent": {
+    "title": "Check your inbox",
+    "message": "Confirmation email sent"
+  },
+  "verify_email": {
+    "resend_unavailable": "Email resend not available",
+    "resend_success": "Confirmation email resent! Check your inbox.",
+    "resend_error": "Error resending email. Please try again."
   },
   "client": {
     "page_title": "Client Dashboard - FitMatch",

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="{{ locale|default('fr') }}" {% if text_direction == 'rtl' %}dir="rtl"{% endif %}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ t.legal.privacy_title if t and t.get('legal') else 'Politique de confidentialité' }} - FitMatch</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <header class="bg-white border-b shadow-sm">
+    <div class="max-w-3xl mx-auto px-4 py-4">
+      <a href="/" class="text-emerald-600 font-semibold">← FitMatch</a>
+    </div>
+  </header>
+  <main class="max-w-3xl mx-auto px-4 py-10">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ t.legal.privacy_title if t and t.get('legal') else 'Politique de confidentialité' }}</h1>
+    <div class="prose prose-gray max-w-none space-y-4 text-gray-700">
+      <p>{{ t.legal.privacy_intro if t and t.get('legal') else "FitMatch traite vos données (email, nom, réservations) uniquement pour la gestion de votre compte et des réservations. Nous ne vendons pas vos données à des tiers." }}</p>
+      <h2 class="text-lg font-semibold mt-6">{{ t.legal.data_use if t and t.get('legal') else 'Utilisation des données' }}</h2>
+      <p>{{ t.legal.data_use_text if t and t.get('legal') else "Vos informations sont utilisées pour : création de compte, réservations, envoi d'emails de confirmation et rappels, et gestion des paiements (Stripe)." }}</p>
+      <h2 class="text-lg font-semibold mt-6">{{ t.legal.rights if t and t.get('legal') else 'Vos droits' }}</h2>
+      <p>{{ t.legal.rights_text if t and t.get('legal') else "Vous pouvez demander l'accès, la rectification ou la suppression de vos données en nous contactant." }}</p>
+      <p><a href="/contact" class="text-emerald-600 underline">{{ t.legal.contact_page if t and t.get('legal') else 'Page contact' }}</a>.</p>
+    </div>
+  </main>
+</body>
+</html>
