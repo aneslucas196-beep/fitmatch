@@ -482,6 +482,22 @@
     "legal": "Legal",
     "all_rights": "Todos los derechos reservados"
   },
+  "legal": {
+    "terms_title": "Aviso legal",
+    "terms_intro": "Este sitio es editado por FitMatch. Al usar FitMatch, aceptas estas condiciones de uso.",
+    "legal_notice": "Editor",
+    "editor_text": "FitMatch – Plataforma de conexión entre entrenadores y clientes.",
+    "contact_title": "Contacto",
+    "contact_page": "Página de contacto",
+    "privacy_title": "Política de privacidad",
+    "privacy_intro": "FitMatch trata tus datos (email, nombre, reservas) solo para la gestión de tu cuenta y reservas. No vendemos tus datos a terceros.",
+    "data_use": "Uso de los datos",
+    "data_use_text": "Tus datos se usan para: creación de cuenta, reservas, envío de emails de confirmación y recordatorios, y gestión de pagos (Stripe).",
+    "rights": "Tus derechos",
+    "rights_text": "Puedes solicitar acceso, rectificación o supresión de tus datos contactándonos.",
+    "contact_intro": "Para cualquier pregunta sobre FitMatch, reservas o tu cuenta:",
+    "email_label": "Email"
+  },
   "partner": {
     "title": "Convertirse en socio",
     "brand": "FitMatch Pro",

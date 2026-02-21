@@ -525,6 +525,22 @@
     "legal": "Legal",
     "all_rights": "All rights reserved"
   },
+  "legal": {
+    "terms_title": "Legal notice",
+    "terms_intro": "This site is published by FitMatch. By using FitMatch, you accept these terms of use.",
+    "legal_notice": "Publisher",
+    "editor_text": "FitMatch - Platform connecting fitness coaches and clients.",
+    "contact_title": "Contact",
+    "contact_page": "Contact page",
+    "privacy_title": "Privacy policy",
+    "privacy_intro": "FitMatch processes your data only for account and booking management. We do not sell your data to third parties.",
+    "data_use": "Use of data",
+    "data_use_text": "Your information is used for account creation, bookings, confirmation and reminder emails, and payment processing (Stripe).",
+    "rights": "Your rights",
+    "rights_text": "You can request access, rectification or deletion of your data by contacting us.",
+    "contact_intro": "For any questions about FitMatch, bookings or your account:",
+    "email_label": "Email"
+  },
   "partner": {
     "title": "Become a Partner",
     "brand": "FitMatch Pro",

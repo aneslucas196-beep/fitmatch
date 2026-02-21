@@ -482,6 +482,22 @@
     "legal": "Impressum",
     "all_rights": "Alle Rechte vorbehalten"
   },
+  "legal": {
+    "terms_title": "Impressum",
+    "terms_intro": "Diese Seite wird von FitMatch betrieben. Durch die Nutzung von FitMatch akzeptierst du diese Nutzungsbedingungen.",
+    "legal_notice": "Herausgeber",
+    "editor_text": "FitMatch – Plattform zur Vermittlung von Fitness-Coaches und Kunden.",
+    "contact_title": "Kontakt",
+    "contact_page": "Kontaktseite",
+    "privacy_title": "Datenschutzerklärung",
+    "privacy_intro": "FitMatch verarbeitet deine Daten nur für die Kontoverwaltung und Buchungen. Wir verkaufen deine Daten nicht an Dritte.",
+    "data_use": "Nutzung der Daten",
+    "data_use_text": "Deine Daten werden verwendet für Kontoerstellung, Buchungen, Bestätigungs- und Erinnerungs-E-Mails sowie Zahlungsabwicklung (Stripe).",
+    "rights": "Deine Rechte",
+    "rights_text": "Du kannst Zugang, Berichtigung oder Löschung deiner Daten bei uns anfragen.",
+    "contact_intro": "Bei Fragen zu FitMatch, Buchungen oder deinem Konto:",
+    "email_label": "E-Mail"
+  },
   "partner": {
     "title": "Partner werden",
     "brand": "FitMatch Pro",

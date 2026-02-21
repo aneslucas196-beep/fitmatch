@@ -92,6 +92,7 @@ from utils import (
 from resend_service import send_otp_email_resend
 from supabase_auth_service import signup_with_supabase_email_confirmation, resend_email_confirmation, sign_in_with_email_password, get_user_role
 from config import settings
+from api.cron import router as cron_router
 
 # Import du service d'internationalisation (i18n)
 from i18n_service import (
@@ -369,6 +370,7 @@ app = FastAPI(
 )
 
 app.state.limiter = limiter
+app.include_router(cron_router)
 
 # Configuration CORS (en production : CORS_ORIGINS=https://fitmatch.fr,https://www.fitmatch.fr)
 app.add_middleware(

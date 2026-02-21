@@ -241,14 +241,14 @@
 
         <label class="cgu">
           <input type="checkbox" id="acceptCgu" required>
-          {{ t.reservation.accept_terms|default("J'accepte les") }} <a href="/mentions-legales" target="_blank" rel="noopener">{{ t.reservation.terms|default('CGU') }}</a> {{ t.reservation.of_fitmatch|default('de FitMatch.') }}
+          {{ t.reservation.accept_terms|default("J'accepte les") }} <a href="/mentions-legales?lang={{ locale|default('fr') }}" target="_blank" rel="noopener">{{ t.reservation.terms|default('CGU') }}</a> {{ t.reservation.of_fitmatch|default('de FitMatch.') }}
         </label>
 
         <button type="submit" class="btn-create" id="btnCreate">{{ t.reservation.create_account|default('Créer mon compte') }}</button>
 
         <p class="small-note">
           {{ t.reservation.privacy_note|default('Vos informations sont traitées par FitMatch. Voir notre') }}
-          <a href="/confidentialite" target="_blank" rel="noopener">{{ t.reservation.privacy_policy|default('politique de confidentialité') }}</a>.
+          <a href="/confidentialite?lang={{ locale|default('fr') }}" target="_blank" rel="noopener">{{ t.reservation.privacy_policy|default('politique de confidentialité') }}</a>.
         </p>
       </form>
     </section>

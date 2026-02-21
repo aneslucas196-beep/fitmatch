@@ -66,20 +66,25 @@ def get_preferred_locale(accept_language: Optional[str]) -> str:
 def get_locale_from_request(request) -> str:
     """
     Détermine la langue pour une requête.
-    Priorité: Cookie > URL > Accept-Language > Défaut
+    Priorité: Query lang= > Cookie > Path > Accept-Language > Défaut
     """
-    # 1. Vérifier le cookie
+    # 1. Paramètre de requête ?lang= (permet de forcer la langue sur les pages légales/contact)
+    query_locale = request.query_params.get("lang") if hasattr(request, "query_params") else None
+    if query_locale and query_locale in SUPPORTED_LOCALES:
+        return query_locale
+    
+    # 2. Cookie
     cookie_locale = request.cookies.get(COOKIE_NAME)
     if cookie_locale and cookie_locale in SUPPORTED_LOCALES:
         return cookie_locale
     
-    # 2. Vérifier l'URL (ex: /fr/coach/...)
+    # 3. Préfixe dans l'URL (ex: /fr/coach/...)
     path = request.url.path
     path_parts = path.strip('/').split('/')
     if path_parts and path_parts[0] in SUPPORTED_LOCALES:
         return path_parts[0]
     
-    # 3. Vérifier le header Accept-Language
+    # 4. Header Accept-Language
     accept_language = request.headers.get('accept-language')
     return get_preferred_locale(accept_language)
 

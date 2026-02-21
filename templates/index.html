@@ -816,9 +816,9 @@
       <div class="footer-column">
         <h3>{{ t.footer.about_us|default('À propos de FitMatch') }}</h3>
         <a href="/partner">{{ t.nav.become_coach|default('Devenir coach partenaire') }}</a>
-        <a href="/mentions-legales">{{ t.footer.terms|default('CGU') }}</a>
-        <a href="/confidentialite">{{ t.footer.privacy|default('Confidentialité') }}</a>
-        <a href="/contact">{{ t.footer.contact|default('Contact support') }}</a>
+        <a href="/mentions-legales?lang={{ locale|default('fr') }}">{{ t.footer.terms|default('CGU') }}</a>
+        <a href="/confidentialite?lang={{ locale|default('fr') }}">{{ t.footer.privacy|default('Confidentialité') }}</a>
+        <a href="/contact?lang={{ locale|default('fr') }}">{{ t.footer.contact|default('Contact support') }}</a>
       </div>
 
       <div class="footer-column">
