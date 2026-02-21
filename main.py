@@ -6256,15 +6256,11 @@ async def conversation_page(request: Request, booking_id: str, user = Depends(re
 # SYSTÈME DE RAPPELS - ENDPOINTS & BACKGROUND TASK
 # ============================================
 
-@app.get("/api/reminders/process")
-async def api_process_reminders(request: Request, secret: Optional[str] = Query(None)):
-    """
-    Traitement des rappels (24h/2h). À appeler par un cron toutes les 5-15 min.
-    Si CRON_SECRET est défini en env, passer le secret en query ?secret=... ou en header X-Cron-Secret.
-    """
+def _run_reminders_process(request: Request, secret: Optional[str] = None):
+    """Logique commune pour traiter les rappels (utilisée par /api/reminders/process et /api/reminders_process)."""
     cron_secret = os.environ.get("CRON_SECRET")
     if cron_secret:
-        provided = secret or request.headers.get("X-Cron-Secret")
+        provided = secret or request.headers.get("X-Cron-Secret") if request else None
         if provided != cron_secret:
             return JSONResponse({"success": False, "error": "Unauthorized"}, status_code=401)
     try:
@@ -6277,6 +6273,23 @@ async def api_process_reminders(request: Request, secret: Optional[str] = Query(
     except Exception as e:
         print(f"❌ Erreur API process reminders: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+
+@app.get("/api/reminders/process")
+async def api_process_reminders(request: Request, secret: Optional[str] = Query(None)):
+    """
+    Traitement des rappels (24h/2h). À appeler par un cron toutes les 5-15 min.
+    Si CRON_SECRET est défini en env, passer le secret en query ?secret=... ou en header X-Cron-Secret.
+    """
+    return _run_reminders_process(request, secret)
+
+
+@app.get("/api/reminders_process")
+async def api_reminders_process_vercel(request: Request, secret: Optional[str] = Query(None)):
+    """
+    Alias pour le cron Vercel (sans slash). Même logique que /api/reminders/process.
+    """
+    return _run_reminders_process(request, secret)
 
 @app.get("/api/reminders/pending")
 async def api_get_pending_reminders():
