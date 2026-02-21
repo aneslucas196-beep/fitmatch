@@ -1,7 +1,8 @@
-from main import app
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
-def handler(request):
-    from fastapi.testclient import TestClient
-    client = TestClient(app)
-    response = client.get("/api/reminders/process")
-    return response.json()
+app = FastAPI()
+
+@app.get("/api/reminders_process")
+async def reminders_process():
+    return JSONResponse({"status": "ok"})
