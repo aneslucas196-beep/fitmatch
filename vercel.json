@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/main.py": {
+      "runtime": "python3.11"
+    }
+  },
   "crons": [
     {
       "path": "/api/reminders_process",
