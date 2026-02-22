@@ -80,49 +80,49 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
         if isinstance(specialties, str):
             try:
                 specialties = json.loads(specialties)
-            except:
+            except Exception:
                 specialties = []
         
         selected_gyms_data = user_data.get('selected_gyms_data', [])
         if isinstance(selected_gyms_data, str):
             try:
                 selected_gyms_data = json.loads(selected_gyms_data)
-            except:
+            except Exception:
                 selected_gyms_data = []
         
         pending_bookings = user_data.get('pending_bookings', [])
         if isinstance(pending_bookings, str):
             try:
                 pending_bookings = json.loads(pending_bookings)
-            except:
+            except Exception:
                 pending_bookings = []
         
         confirmed_bookings = user_data.get('confirmed_bookings', [])
         if isinstance(confirmed_bookings, str):
             try:
                 confirmed_bookings = json.loads(confirmed_bookings)
-            except:
+            except Exception:
                 confirmed_bookings = []
         
         rejected_bookings = user_data.get('rejected_bookings', [])
         if isinstance(rejected_bookings, str):
             try:
                 rejected_bookings = json.loads(rejected_bookings)
-            except:
+            except Exception:
                 rejected_bookings = []
         
         unavailable_days = user_data.get('unavailable_days', [])
         if isinstance(unavailable_days, str):
             try:
                 unavailable_days = json.loads(unavailable_days)
-            except:
+            except Exception:
                 unavailable_days = []
         
         unavailable_slots = user_data.get('unavailable_slots', [])
         if isinstance(unavailable_slots, str):
             try:
                 unavailable_slots = json.loads(unavailable_slots)
-            except:
+            except Exception:
                 unavailable_slots = []
         
         cur.execute("""

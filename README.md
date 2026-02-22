@@ -62,13 +62,33 @@ python main.py
 - [ ] **JWT** : `SUPABASE_JWT_SECRET` (ou `JWT_SECRET_KEY`) pour vérifier les tokens en production
 - [ ] **Google Maps** : `GOOGLE_MAPS_API_KEY` si vous utilisez la carte / recherche de salles
 
-## Vercel – Cron rappels
+## Worker H24 – Rappels (Render)
 
-L’endpoint **GET** `/api/reminders_process` exécute le traitement des rappels (voir `api/reminders_process.py`). Il est configuré dans `vercel.json` avec un cron `*/5 * * * *` (toutes les 5 minutes). **Sur le plan Hobby, les cron Vercel sont limités à une fréquence daily ; pour un cron toutes les 5 minutes, il faut un plan Pro ou un cron externe** (ex. cron-job.org) qui appelle `https://votre-domaine.com/api/reminders_process`.
+Les rappels (24h et 2h avant le RDV) sont traités par un **Background Worker** qui tourne en continu, sans dépendre de Vercel ni de cron.
+
+- **Fichier** : `worker.py` à la racine. Boucle infinie : `process_due_reminders()` puis `time.sleep(60)` (ou `REMINDERS_INTERVAL_SEC` en secondes).
+- **Déploiement recommandé** : [Render](https://render.com) en **Background Worker** via le fichier `render.yaml`.
+
+### Déployer le worker sur Render
+
+1. **Connexion** : [dashboard.render.com](https://dashboard.render.com) → connecte ton repo GitHub (FitMatch).
+2. **Blueprint** : dans le repo, le fichier `render.yaml` définit un service de type `worker`. Render le détecte si tu crées un **Blueprint** (New → Blueprint) et tu pointes vers ce repo.
+3. **Ou service manuel** : New → Background Worker → connecte le repo, puis :
+   - **Build Command** : `pip install -r requirements.txt`
+   - **Start Command** : `python worker.py`
+4. **Variables d’environnement** (obligatoires pour le worker) :  
+   Dans le dashboard Render → ton service **fitmatch-reminders-worker** → onglet **Environment** → ajoute les mêmes variables que pour l’app (elles sont lues par `main.py` / `resend_service`) :
+   - `DATABASE_URL` (PostgreSQL)
+   - `RESEND_API_KEY`
+   - `SENDER_EMAIL`
+   - Optionnel : `REMINDERS_INTERVAL_SEC` (défaut 60), `SCHEDULED_REMINDERS_FILE` (défaut `scheduled_reminders.json`)
+
+Une fois déployé, le worker tourne H24 et envoie les rappels automatiquement (24h et 2h avant chaque réservation).
 
 ## Structure
 
 - **`main.py`** : routes FastAPI, auth, réservations, Stripe, pages
+- **`worker.py`** : worker H24 pour les rappels (process_due_reminders en boucle ; déploiement Render)
 - **`config.py`** : configuration centralisée (env)
 - **`utils.py`** : helpers, géoloc, stockage utilisateurs (PostgreSQL via `db_service`)
 - **`db_service.py`** : accès PostgreSQL (utilisateurs, Stripe Connect)

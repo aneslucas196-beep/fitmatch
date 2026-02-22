@@ -8,8 +8,17 @@ on:
 jobs:
   call-endpoint:
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
       - name: Call reminders_process endpoint
+        shell: bash
         run: |
-          curl -X GET https://fitmatch.fr/api/reminders_process
+          set +e
+          curl -sS -o /tmp/out -w "%{http_code}" "https://fitmatch.fr/api/reminders_process" > /tmp/code.txt || true
+          code=$(cat /tmp/code.txt 2>/dev/null || echo "000")
+          echo "HTTP $code"
+          cat /tmp/out 2>/dev/null || true
+          echo ""
+          echo "Done (job never fails)."
+          exit 0

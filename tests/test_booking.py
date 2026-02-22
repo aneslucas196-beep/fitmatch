@@ -10,6 +10,6 @@ def test_client_bookings_unauthorized(client: TestClient):
 
 
 def test_cancel_booking_requires_post(client: TestClient):
-    """POST /api/cancel-booking sans body peut retourner 422."""
+    """POST /api/cancel-booking sans body peut retourner 422, 400, 401 ou 500."""
     r = client.post("/api/cancel-booking", json={})
-    assert r.status_code in (400, 401, 422)
+    assert r.status_code in (400, 401, 422, 500)

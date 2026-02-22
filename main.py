@@ -146,11 +146,16 @@ except Exception as stripe_import_error:
 # SYSTÈME DE RAPPELS PROGRAMMÉS
 # ============================================
 
+def _reminders_file_path() -> str:
+    """Chemin du fichier des rappels (configurable en test via SCHEDULED_REMINDERS_FILE)."""
+    return os.environ.get("SCHEDULED_REMINDERS_FILE", "scheduled_reminders.json")
+
 def load_scheduled_reminders() -> dict:
     """Charge les rappels programmés depuis le fichier JSON."""
     try:
-        if os.path.exists("scheduled_reminders.json"):
-            with open("scheduled_reminders.json", "r", encoding="utf-8") as f:
+        path = _reminders_file_path()
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
     except Exception as e:
         print(f"⚠️ Erreur chargement rappels: {e}")
@@ -159,7 +164,7 @@ def load_scheduled_reminders() -> dict:
 def save_scheduled_reminders(data: dict):
     """Sauvegarde les rappels programmés dans le fichier JSON."""
     try:
-        with open("scheduled_reminders.json", "w", encoding="utf-8") as f:
+        with open(_reminders_file_path(), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
         print(f"❌ Erreur sauvegarde rappels: {e}")
@@ -294,7 +299,7 @@ def process_due_reminders():
                     jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
                     mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
                     date_fr = f"{jours[date_obj.weekday()].capitalize()} {date_obj.day} {mois[date_obj.month - 1]} {date_obj.year}"
-                except:
+                except Exception:
                     date_fr = reminder.get("date")
                 
                 result = send_reminder_email(
@@ -490,7 +495,7 @@ def get_gym_by_id(gym_id: str) -> Optional[Dict]:
                                 "hours": gym.get("hours", "Horaires non disponibles"),
                                 "photo": "/static/gym-default.jpg"
                             }
-                except:
+                except Exception:
                     continue
     
     return None
@@ -531,7 +536,7 @@ def get_coaches_by_gym_id(gym_id: str) -> List[Dict]:
                     selected_gyms = json.loads(selected_gyms_data)
                 else:
                     selected_gyms = selected_gyms_data if isinstance(selected_gyms_data, list) else []
-            except:
+            except Exception:
                 selected_gyms = []
             
             # Vérifier si ce coach entraîne dans cette salle (match par ID ou par NOM)
@@ -1211,7 +1216,7 @@ async def gym_detail_page(request: Request, gym_id: str, name: Optional[str] = N
                     selected_gyms = json.loads(selected_gyms_data)
                 else:
                     selected_gyms = selected_gyms_data if isinstance(selected_gyms_data, list) else []
-            except:
+            except Exception:
                 selected_gyms = []
             
             gym_match = False
@@ -1375,7 +1380,7 @@ async def get_user_gyms(user = Depends(get_current_user)):
                 try:
                     selected_gyms = json.loads(selected_gyms_str) if selected_gyms_str else []
                     return {"success": True, "selected_gyms": selected_gyms}
-                except:
+                except Exception:
                     return {"success": True, "selected_gyms": []}
             else:
                 return {"success": True, "selected_gyms": []}
@@ -1389,7 +1394,7 @@ async def get_user_gyms(user = Depends(get_current_user)):
                     try:
                         selected_gyms = json.loads(selected_gyms_str)
                         return {"success": True, "selected_gyms": selected_gyms}
-                    except:
+                    except Exception:
                         return {"success": True, "selected_gyms": []}
                 else:
                     return {"success": True, "selected_gyms": []}
@@ -3030,7 +3035,7 @@ async def reserver_by_slug(request: Request, slug: str):
         try:
             import json
             coach["specialties"] = json.loads(specialties)
-        except:
+        except Exception:
             coach["specialties"] = [s.strip() for s in specialties.split(",") if s.strip()]
     
     # Récupérer les salles associées au coach
@@ -3043,7 +3048,7 @@ async def reserver_by_slug(request: Request, slug: str):
                 gyms = json.loads(gyms_data)
             elif isinstance(gyms_data, list):
                 gyms = gyms_data
-        except:
+        except Exception:
             pass
     
     print(f"📋 Profil coach {slug}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
@@ -3067,7 +3072,7 @@ async def booking_by_slug(request: Request, slug: str):
         try:
             import json
             gyms = json.loads(coach.get("selected_gyms_data"))
-        except:
+        except Exception:
             pass
     return templates.TemplateResponse("booking.html", {"request": request, "coach": coach, "gyms": gyms, "slug": slug, **i18n_book})
 
@@ -3368,7 +3373,7 @@ async def view_coach_profile(request: Request, coach_id: str):
         try:
             import json
             coach["specialties"] = json.loads(specialties)
-        except:
+        except Exception:
             coach["specialties"] = [s.strip() for s in specialties.split(",") if s.strip()]
     
     # Récupérer les salles associées au coach
@@ -3388,7 +3393,7 @@ async def view_coach_profile(request: Request, coach_id: str):
                 gyms = json.loads(gyms_data)
             elif isinstance(gyms_data, list):
                 gyms = gyms_data
-        except:
+        except Exception:
             pass
     
     print(f"📋 Profil coach {coach_id}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
@@ -3453,7 +3458,7 @@ async def booking_page(request: Request, coach_id: str):
         try:
             import json
             coach["gyms"] = json.loads(coach["selected_gyms_data"])
-        except:
+        except Exception:
             coach["gyms"] = []
     elif not coach.get("gyms"):
         coach["gyms"] = []
@@ -4081,7 +4086,7 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
                             "title": f"{booking.get('client_name', 'Client')} - En attente",
                             "status": "pending"
                         })
-                except:
+                except Exception:
                     pass
         
         # Ajouter les réservations confirmées
@@ -4099,7 +4104,7 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
                             "title": f"{booking.get('client_name', 'Client')} - Confirmé",
                             "status": "confirmed"
                         })
-                except:
+                except Exception:
                     pass
         
         # Ajouter les jours complets indisponibles (bloquer tous les créneaux de la journée)
@@ -4137,7 +4142,7 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
                             "title": "Indisponible",
                             "status": "unavailable"
                         })
-                except:
+                except Exception:
                     pass
         
         return {
@@ -4507,7 +4512,7 @@ async def search_gyms_by_location_api(
                                         "coach_count": len(coaches_in_gym)
                                     }
                                     results.append(gym_result)
-                    except:
+                    except Exception:
                         continue
             
             print(f"✅ {len(results)} salles trouvées pour le code postal {postal_code}")
@@ -4877,7 +4882,7 @@ async def get_coaches_for_gym(gym_id: str, gym_name: Optional[str] = None):
                         selected_gyms = json.loads(selected_gyms_data)
                     else:
                         selected_gyms = selected_gyms_data if isinstance(selected_gyms_data, list) else []
-                except:
+                except Exception:
                     selected_gyms = []
                 
                 gym_match = False
@@ -5928,7 +5933,7 @@ async def respond_to_booking(request: CoachBookingRequest):
                     date_fr = date_fr.replace(en, fr)
                 for en, fr in mois.items():
                     date_fr = date_fr.replace(en, fr)
-            except:
+            except Exception:
                 date_fr = booking_to_update.get("date", "Date non spécifiée")
             
             coach_name = coach_data.get("full_name", "Coach")
@@ -6081,7 +6086,7 @@ async def delete_booking(request: DeleteBookingRequest):
                             jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
                             mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
                             formatted_date = f"{jours[date_obj.weekday()]} {date_obj.day} {mois[date_obj.month - 1]}"
-                        except:
+                        except Exception:
                             pass
                     
                     print(f"📧 Envoi email annulation au client {client_name} ({client_email})")
@@ -6638,7 +6643,7 @@ async def stripe_webhook(request: Request):
                     try:
                         latest_invoice = stripe.Invoice.retrieve(subscription.latest_invoice)
                         amount_paid = latest_invoice.amount_paid / 100  # Convertir centimes en euros
-                    except:
+                    except Exception:
                         # Fallback: utiliser le prix défini
                         amount_paid = 10.0 if subscription_type == "annual" else 1.0
                     
