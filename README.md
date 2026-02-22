@@ -62,6 +62,10 @@ python main.py
 - [ ] **JWT** : `SUPABASE_JWT_SECRET` (ou `JWT_SECRET_KEY`) pour vérifier les tokens en production
 - [ ] **Google Maps** : `GOOGLE_MAPS_API_KEY` si vous utilisez la carte / recherche de salles
 
+## Vercel – Cron rappels
+
+L’endpoint **GET** `/api/reminders_process` exécute le traitement des rappels (voir `api/reminders_process.py`). Il est configuré dans `vercel.json` avec un cron `*/5 * * * *` (toutes les 5 minutes). **Sur le plan Hobby, les cron Vercel sont limités à une fréquence daily ; pour un cron toutes les 5 minutes, il faut un plan Pro ou un cron externe** (ex. cron-job.org) qui appelle `https://votre-domaine.com/api/reminders_process`.
+
 ## Structure
 
 - **`main.py`** : routes FastAPI, auth, réservations, Stripe, pages
