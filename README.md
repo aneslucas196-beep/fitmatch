@@ -83,6 +83,8 @@ Les rappels (24h et 2h avant le RDV) sont traités par un **Background Worker** 
    - `SENDER_EMAIL`
    - Optionnel : `REMINDERS_INTERVAL_SEC` (défaut 60), `SCHEDULED_REMINDERS_FILE` (défaut `scheduled_reminders.json`)
 
+   **Python** : le fichier `.python-version` (3.12.8) force Render à utiliser Python 3.12. Ne pas utiliser 3.14 (build pydantic-core échoue).
+
 Une fois déployé, le worker tourne H24 et envoie les rappels automatiquement (24h et 2h avant chaque réservation).
 
 ## Structure

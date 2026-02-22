@@ -1,10 +1,13 @@
 # Render Blueprint – Worker H24 pour les rappels FitMatch
 # Voir README section "Déploiement sur Render (Worker rappels)"
+# Python 3.12 requis (évite build pydantic-core sur 3.14)
 services:
   - type: worker
     name: fitmatch-reminders-worker
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: python worker.py
-    # Variables d'environnement : à configurer dans le dashboard Render (Environment)
-    # Voir README pour la liste (DATABASE_URL, RESEND_API_KEY, SENDER_EMAIL, etc.)
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+    # Autres variables : DATABASE_URL, RESEND_API_KEY, SENDER_EMAIL dans le dashboard (Environment)
