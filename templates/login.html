@@ -640,17 +640,23 @@
         <button type="submit" class="fm-btn">{{ t.login.login_button|default("Se connecter") }}</button>
       </form>
 
-      <div class="fm-divider">
+      <!-- Bloc visible : vous êtes coach = page inscription + paiement -->
+      <div class="fm-coach-block" style="margin-top: 24px; padding: 20px; background: #f0fdf4; border: 2px solid #008f57; border-radius: 12px;">
+        <p style="margin: 0 0 12px; font-weight: 600; color: #0b0f14;">{{ t.login.you_are_coach|default("Vous êtes coach ?") }}</p>
+        <p style="margin: 0 0 16px; font-size: 14px; color: #374151;">{{ t.login.coach_signup_payment|default("Inscrivez-vous ou connectez-vous ici pour accéder à l'abonnement et au paiement (30€/mois).") }}</p>
+        <a href="/coach-login?tab=signup" class="fm-btn" style="display: inline-block; text-align: center; text-decoration: none;">{{ t.login.go_coach_portal|default("Espace Coach – Inscription & Paiement") }}</a>
+      </div>
+
+      <div class="fm-divider" style="margin-top: 24px;">
         <div class="fm-divider-line"></div>
         <span class="fm-divider-text">{{ t.login.new_to_fitmatch|default("Nouveau sur FitMatch ?") }}</span>
         <div class="fm-divider-line"></div>
       </div>
 
       <div class="fm-signup-link">
-        <a href="/signup">
-          {{ t.login.create_account|default("Créer un compte gratuitement") }}
-          <span>→</span>
-        </a>
+        <span style="display: block; margin-bottom: 8px; font-size: 14px; color: var(--muted);">{{ t.login.create_account|default("Créer un compte gratuitement") }}</span>
+        <a href="/signup" style="margin-right: 16px;">{{ t.login.as_client|default("Je suis client") }} →</a>
+        <a href="/coach-login?tab=signup"><strong>{{ t.login.as_coach|default("Je suis coach (inscription + paiement)") }} →</strong></a>
       </div>
     </div>
     
