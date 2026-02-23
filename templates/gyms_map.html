@@ -352,6 +352,15 @@
       }
     });
   </script>
+  {% if google_maps_api_key %}
   <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap" async defer></script>
+  {% else %}
+  <script>
+    (function(){
+      var el = document.getElementById('map');
+      if (el) el.innerHTML = '<div style="padding:40px;text-align:center;color:#856404;background:#fff3cd;border-radius:12px;">La carte n\'est pas disponible (clé Google Maps non configurée). Configurez GOOGLE_MAPS_API_KEY sur le serveur. Vous pouvez toujours rechercher des salles via le formulaire ci-dessus.</div>';
+    })();
+  </script>
+  {% endif %}
 </body>
 </html>

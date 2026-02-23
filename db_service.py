@@ -10,12 +10,20 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
+# Timeout en secondes (évite de bloquer si Render ne peut pas joindre la DB, ex. port 5432 bloqué)
+_CONNECT_TIMEOUT = int(os.environ.get("DATABASE_CONNECT_TIMEOUT", "10"))
 
 def get_db_connection():
-    """Obtient une connexion à la base de données."""
+    """Obtient une connexion à la base de données.
+    Sur Render, utiliser l'URL du pooler Supabase (port 6543) pour éviter 'Network is unreachable'.
+    """
     if not DATABASE_URL:
         raise Exception("DATABASE_URL non configuré")
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    return psycopg2.connect(
+        DATABASE_URL,
+        cursor_factory=RealDictCursor,
+        connect_timeout=_CONNECT_TIMEOUT,
+    )
 
 def load_users_from_db() -> Dict[str, Dict]:
     """Charge tous les utilisateurs depuis la base de données."""

@@ -1511,51 +1511,95 @@ def get_coaches_by_gym(gym_id: str) -> List[Dict]:
 
 
 # ================================
-# STOCKAGE PERSISTANT UTILISATEURS - POSTGRESQL UNIQUEMENT (pas de mode démo)
+# STOCKAGE PERSISTANT UTILISATEURS - PostgreSQL + fallback fichier si DB inaccessible
 # ================================
+
+# Cache mémoire et fichier utilisés quand la DB (ex: Supabase sur Render) est inaccessible
+_demo_users_fallback: Dict = {}
+_demo_users_file_loaded = False
+
+def _get_demo_users_fallback_path() -> str:
+    base = os.environ.get("DATA_DIR", os.getcwd())
+    path = os.path.join(base, "data")
+    try:
+        os.makedirs(path, exist_ok=True)
+    except OSError:
+        path = os.getcwd()
+    return os.path.join(path, "demo_users_fallback.json")
+
+def _load_demo_users_from_file() -> Dict:
+    try:
+        p = _get_demo_users_fallback_path()
+        if os.path.exists(p):
+            with open(p, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"⚠️ Fallback file read: {e}")
+    return {}
+
+def _save_demo_users_to_file(users: Dict) -> None:
+    try:
+        p = _get_demo_users_fallback_path()
+        ser = serialize_for_json(users)
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(ser, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"⚠️ Fallback file write: {e}")
+
+def _ensure_fallback_loaded() -> None:
+    global _demo_users_fallback, _demo_users_file_loaded
+    if not _demo_users_file_loaded:
+        _demo_users_fallback = _load_demo_users_from_file()
+        _demo_users_file_loaded = True
 
 def use_database() -> bool:
     """Vérifie si PostgreSQL est configuré. En production, DATABASE_URL est requis."""
     return os.environ.get("DATABASE_URL") is not None
 
 def load_demo_users() -> Dict:
-    """Charge les utilisateurs depuis PostgreSQL uniquement.
-    Sans DATABASE_URL, retourne un dict vide (aucun fallback JSON)."""
+    """Charge les utilisateurs depuis PostgreSQL. Si DB inaccessible, utilise le fichier de fallback."""
     if not use_database():
-        print("⚠️ DATABASE_URL non défini : aucun utilisateur chargé. Configurez PostgreSQL en production.")
-        return {}
+        _ensure_fallback_loaded()
+        return _demo_users_fallback
     try:
         from db_service import load_users_from_db
         users = load_users_from_db()
         if users:
             return serialize_for_json(users)
-        return {}
+        _ensure_fallback_loaded()
+        return dict(_demo_users_fallback)
     except Exception as e:
         print(f"❌ Erreur chargement utilisateurs depuis DB: {e}")
-        return {}
+        _ensure_fallback_loaded()
+        return dict(_demo_users_fallback)
 
 def save_demo_user(email: str, user_data: Dict) -> bool:
-    """Sauvegarde un utilisateur dans PostgreSQL uniquement.
-    Sans DATABASE_URL, la sauvegarde échoue (pas de fichier JSON)."""
+    """Sauvegarde un utilisateur (PostgreSQL ou, si DB inaccessible, fichier fallback)."""
     serialized_data = serialize_for_json(user_data)
-    if not use_database():
-        print("⚠️ DATABASE_URL non défini : impossible de sauvegarder. Configurez PostgreSQL.")
-        return False
-    try:
-        from db_service import save_user_to_db
-        ok = save_user_to_db(email, serialized_data)
-        if ok:
-            print(f"✅ Utilisateur {email} sauvegardé (DB)")
-        return ok
-    except Exception as e:
-        print(f"❌ Erreur sauvegarde {email}: {e}")
-        return False
+    if use_database():
+        try:
+            from db_service import save_user_to_db
+            ok = save_user_to_db(email, serialized_data)
+            if ok:
+                print(f"✅ Utilisateur {email} sauvegardé (DB)")
+            return ok
+        except Exception as e:
+            print(f"❌ Erreur sauvegarde {email}: {e}")
+    global _demo_users_fallback, _demo_users_file_loaded
+    _ensure_fallback_loaded()
+    _demo_users_fallback[email] = serialized_data
+    _save_demo_users_to_file(_demo_users_fallback)
+    print(f"✅ Utilisateur {email} sauvegardé (fallback fichier)")
+    return True
 
 def save_demo_users(users: Dict) -> bool:
-    """Sauvegarde tous les utilisateurs dans PostgreSQL uniquement."""
+    """Sauvegarde tous les utilisateurs (DB ou fallback)."""
     if not use_database():
-        print("⚠️ DATABASE_URL non défini : impossible de sauvegarder.")
-        return False
+        global _demo_users_fallback, _demo_users_file_loaded
+        _demo_users_fallback = serialize_for_json(users)
+        _demo_users_file_loaded = True
+        _save_demo_users_to_file(_demo_users_fallback)
+        return True
     serialized_users = serialize_for_json(users)
     try:
         from db_service import save_user_to_db
@@ -1564,18 +1608,22 @@ def save_demo_users(users: Dict) -> bool:
         return True
     except Exception as e:
         print(f"❌ Erreur sauvegarde utilisateurs: {e}")
-        return False
+        _demo_users_fallback.update(serialized_users)
+        _save_demo_users_to_file(_demo_users_fallback)
+        return True
 
 def get_demo_user(email: str) -> Optional[Dict]:
-    """Récupère un utilisateur par email depuis PostgreSQL uniquement."""
-    if not use_database():
-        return None
-    try:
-        from db_service import get_user_from_db
-        return get_user_from_db(email)
-    except Exception as e:
-        print(f"❌ Erreur récupération {email}: {e}")
-        return None
+    """Récupère un utilisateur par email (DB ou fallback)."""
+    if use_database():
+        try:
+            from db_service import get_user_from_db
+            u = get_user_from_db(email)
+            if u is not None:
+                return u
+        except Exception as e:
+            print(f"❌ Erreur récupération {email}: {e}")
+    _ensure_fallback_loaded()
+    return _demo_users_fallback.get(email)
 
 def remove_demo_user(email: str) -> bool:
     """Supprime un utilisateur de la base PostgreSQL."""

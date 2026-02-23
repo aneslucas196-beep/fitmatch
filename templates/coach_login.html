@@ -599,9 +599,9 @@ function togglePassword(inputId, iconId) {
   }
 }
 
-// Check URL for tab parameter
+// Afficher l'onglet signup si demandé par l'URL ou par le serveur (après erreur de validation)
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('tab') === 'signup') {
+if (urlParams.get('tab') === 'signup' || {% if tab == 'signup' %}true{% else %}false{% endif %}) {
   showTab('signup');
 }
 </script>

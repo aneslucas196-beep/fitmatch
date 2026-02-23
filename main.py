@@ -466,6 +466,64 @@ def _is_stripe_configured() -> bool:
     sk = (os.environ.get("STRIPE_SECRET_KEY") or "").strip().lower()
     return bool(STRIPE_AVAILABLE and sk and "xxx" not in sk)
 
+
+def _signup_token_secret() -> str:
+    """Secret pour signer les tokens signup (évite de rediriger vers /login quand le cookie ne suit pas)."""
+    return (os.environ.get("SUPABASE_JWT_SECRET") or os.environ.get("JWT_SECRET_KEY") or os.environ.get("SITE_URL") or "fitmatch-signup")[:64]
+
+
+def _create_signup_token(email: str) -> str:
+    """Crée un token court (5 min) pour finaliser la session après inscription coach."""
+    expiry = (datetime.now() + timedelta(minutes=5)).timestamp()
+    payload = f"{email}|{int(expiry)}"
+    secret = _signup_token_secret()
+    sig = hashlib.sha256((payload + secret).encode()).hexdigest()[:32]
+    import base64
+    b64 = base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
+    return f"{b64}.{sig}"
+
+
+def _validate_signup_token(token: str) -> Optional[str]:
+    """Valide le token et retourne l'email si OK, sinon None."""
+    if not token or "." not in token:
+        return None
+    try:
+        import base64
+        b64, sig = token.split(".", 1)
+        b64 += "=="  # padding si besoin
+        payload = base64.urlsafe_b64decode(b64).decode()
+        email, expiry_str = payload.rsplit("|", 1)
+        if float(expiry_str) < datetime.now().timestamp():
+            return None
+        secret = _signup_token_secret()
+        expected = hashlib.sha256((payload + secret).encode()).hexdigest()[:32]
+        if sig != expected:
+            return None
+        return email.strip()
+    except Exception:
+        return None
+
+
+def _set_session_cookie(response: Response, email: str, request: Request) -> None:
+    """Met le cookie session_token sur la réponse (domaine explicite pour fitmatch.fr)."""
+    unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+    site_url = (os.environ.get("SITE_URL") or "").strip().lower()
+    if not site_url and request.url:
+        site_url = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
+    use_secure = os.environ.get("REPLIT_DEPLOYMENT") == "1" or (site_url or "").startswith("https")
+    cookie_kw = dict(
+        key="session_token",
+        value=unique_token,
+        path="/",
+        httponly=True,
+        secure=use_secure,
+        samesite="lax",
+        max_age=86400 * 30,
+    )
+    if site_url and "fitmatch.fr" in site_url:
+        cookie_kw["domain"] = "fitmatch.fr"
+    response.set_cookie(**cookie_kw)
+
 # Vérification production : PostgreSQL requis
 if not os.environ.get("DATABASE_URL"):
     print("⚠️ DATABASE_URL non défini : la base de données est requise. Utilisateurs et réservations ne seront pas persistés.")
@@ -2422,7 +2480,7 @@ async def coach_login_submit(
                 **i18n
             }, status_code=400)
         
-        # Vérifier si l'email existe déjà
+        # Vérifier si l'email existe déjà (utilise fallback si DB inaccessible)
         existing_user = get_demo_user(email)
         if existing_user:
             return templates.TemplateResponse("coach_login.html", {
@@ -2442,25 +2500,47 @@ async def coach_login_submit(
             "verified": True,
             "profile_completed": False,
             "subscription_status": "pending_payment",
-            "lang": locale
+            "lang": locale or "fr",
         }
-        save_demo_user(email, new_coach)
+        try:
+            save_demo_user(email, new_coach)
+        except Exception as e:
+            print(f"❌ Erreur inscription coach {email}: {e}")
+            import traceback
+            traceback.print_exc()
+            return templates.TemplateResponse("coach_login.html", {
+                "request": request,
+                "error": "Une erreur s'est produite lors de l'inscription. Réessayez ou contactez le support.",
+                "tab": "signup",
+                **i18n
+            }, status_code=500)
         print(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
         
-        # Connexion automatique après inscription → page abonnement Stripe
-        import hashlib
-        unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
-        response = RedirectResponse(url="/coach/subscription", status_code=303)
-        site_url = (os.environ.get("SITE_URL") or "").lower()
-        use_secure_cookie = os.environ.get("REPLIT_DEPLOYMENT") == "1" or site_url.startswith("https")
-        response.set_cookie(
-            key="session_token",
-            value=unique_token,
-            httponly=True,
-            secure=use_secure_cookie,
-            samesite="lax",
-            max_age=86400 * 30,
-        )
+        # Envoyer directement sur la page Stripe pour payer 30€/mois (carte bancaire)
+        if _is_stripe_configured():
+            try:
+                base_url = str(request.base_url).rstrip("/")
+                success_url = f"{base_url}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
+                cancel_url = f"{base_url}/coach/subscription?cancelled=true"
+                customer = create_or_get_customer(email, new_coach.get("full_name", "Coach"), email)
+                update_coach_subscription(email, stripe_customer_id=customer.id)
+                session = create_checkout_session(
+                    customer_id=customer.id,
+                    success_url=success_url,
+                    cancel_url=cancel_url,
+                    coach_email=email,
+                    billing_period="monthly",
+                )
+                response = RedirectResponse(url=session.url, status_code=302)
+                _set_session_cookie(response, email, request)
+                return response
+            except Exception as stripe_err:
+                print(f"⚠️ Stripe redirect après signup: {stripe_err}")
+        # Fallback: page qui pose le cookie puis /coach/subscription (boutons Stripe)
+        signup_token = _create_signup_token(email)
+        set_session_url = f"/coach/subscription/set-session?signup_token={signup_token}"
+        response = RedirectResponse(url=set_session_url, status_code=303)
+        _set_session_cookie(response, email, request)
         return response
     
     else:
@@ -3136,6 +3216,25 @@ async def booking_by_slug(request: Request, slug: str):
 # ======================================
 # ROUTE ABONNEMENT COACH (doit être AVANT /coach/{coach_id})
 # ======================================
+
+@app.get("/coach/subscription/set-session", response_class=HTMLResponse)
+async def coach_subscription_set_session(
+    request: Request,
+    signup_token: Optional[str] = Query(None),
+):
+    """
+    Après inscription coach : valide le token, pose le cookie de session, redirige vers /coach/subscription.
+    Évite que le cookie ne soit pas enregistré sur la 303 (certains navigateurs) et que l'utilisateur atterrisse sur /login.
+    """
+    if not signup_token:
+        return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
+    email = _validate_signup_token(signup_token)
+    if not email:
+        return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
+    response = RedirectResponse(url="/coach/subscription", status_code=302)
+    _set_session_cookie(response, email, request)
+    return response
+
 
 @app.get("/coach/subscription", response_class=HTMLResponse)
 async def coach_subscription_page(
@@ -4697,7 +4796,7 @@ async def search_gyms_worldwide(q: str):
             return {
                 "success": False,
                 "gyms": [],
-                "message": "Recherche mondiale indisponible. Configurez GOOGLE_PLACES_API_KEY.",
+                "message": "Recherche de salles temporairement indisponible.",
                 "count": 0
             }
         
