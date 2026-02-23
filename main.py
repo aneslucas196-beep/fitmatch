@@ -467,33 +467,34 @@ def _is_stripe_configured() -> bool:
     return bool(STRIPE_AVAILABLE and sk and "xxx" not in sk)
 
 
+# Token signup coach : signé pour être validable sur n'importe quelle instance (Render)
 def _signup_token_secret() -> str:
-    """Secret pour signer les tokens signup (évite de rediriger vers /login quand le cookie ne suit pas)."""
     return (os.environ.get("SUPABASE_JWT_SECRET") or os.environ.get("JWT_SECRET_KEY") or os.environ.get("SITE_URL") or "fitmatch-signup")[:64]
 
 
 def _create_signup_token(email: str) -> str:
-    """Crée un token court (5 min) pour finaliser la session après inscription coach."""
-    expiry = (datetime.now() + timedelta(minutes=5)).timestamp()
-    payload = f"{email}|{int(expiry)}"
+    """Token signé (5 min) : encodage URL-safe pour passer dans l'URL."""
+    expiry = int((datetime.now() + timedelta(minutes=5)).timestamp())
+    payload = f"{email}|{expiry}"
     secret = _signup_token_secret()
     sig = hashlib.sha256((payload + secret).encode()).hexdigest()[:32]
     import base64
-    b64 = base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
+    b64 = base64.urlsafe_b64encode(payload.encode()).decode().replace("=", "")
     return f"{b64}.{sig}"
 
 
 def _validate_signup_token(token: str) -> Optional[str]:
-    """Valide le token et retourne l'email si OK, sinon None."""
+    """Valide le token et retourne l'email (fonctionne sur toute instance)."""
     if not token or "." not in token:
         return None
     try:
         import base64
         b64, sig = token.split(".", 1)
-        b64 += "=="  # padding si besoin
-        payload = base64.urlsafe_b64decode(b64).decode()
+        pad = (4 - len(b64) % 4) % 4
+        b64 += "=" * pad
+        payload = base64.urlsafe_b64decode(b64).decode("utf-8")
         email, expiry_str = payload.rsplit("|", 1)
-        if float(expiry_str) < datetime.now().timestamp():
+        if int(expiry_str) < int(datetime.now().timestamp()):
             return None
         secret = _signup_token_secret()
         expected = hashlib.sha256((payload + secret).encode()).hexdigest()[:32]
@@ -505,13 +506,13 @@ def _validate_signup_token(token: str) -> Optional[str]:
 
 
 def _set_session_cookie(response: Response, email: str, request: Request) -> None:
-    """Met le cookie session_token sur la réponse (domaine explicite pour fitmatch.fr)."""
+    """Met le cookie session_token (sans domain pour éviter rejet navigateur/proxy)."""
     unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
     site_url = (os.environ.get("SITE_URL") or "").strip().lower()
     if not site_url and request.url:
         site_url = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
     use_secure = os.environ.get("REPLIT_DEPLOYMENT") == "1" or (site_url or "").startswith("https")
-    cookie_kw = dict(
+    response.set_cookie(
         key="session_token",
         value=unique_token,
         path="/",
@@ -520,9 +521,6 @@ def _set_session_cookie(response: Response, email: str, request: Request) -> Non
         samesite="lax",
         max_age=86400 * 30,
     )
-    if site_url and "fitmatch.fr" in site_url:
-        cookie_kw["domain"] = "fitmatch.fr"
-    response.set_cookie(**cookie_kw)
 
 # Vérification production : PostgreSQL requis
 if not os.environ.get("DATABASE_URL"):
@@ -2441,12 +2439,23 @@ async def api_reset_password(request: Request):
 
 # Espace Coach - Page de connexion/inscription dédiée aux coaches
 @app.get("/coach-login", response_class=HTMLResponse)
-async def coach_login_page(request: Request, tab: Optional[str] = None):
+async def coach_login_page(
+    request: Request,
+    tab: Optional[str] = None,
+    error: Optional[str] = None,
+):
     """Page de connexion/inscription pour les coaches."""
     i18n = get_i18n_context(request)
+    if error == "session_expired":
+        error_msg = "Lien expiré. Réessayez de créer votre compte (bouton ci-dessous)."
+    elif error == "missing_token":
+        error_msg = "Lien invalide. Remplissez le formulaire et cliquez sur « Créer mon compte coach »."
+    else:
+        error_msg = None
     return templates.TemplateResponse("coach_login.html", {
         "request": request,
         "tab": tab,
+        "error": error_msg,
         **i18n
     })
 
@@ -2516,11 +2525,13 @@ async def coach_login_submit(
             }, status_code=500)
         print(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
         
-        # Toujours passer par set-session : pose le cookie sur notre domaine puis envoie sur Stripe (30€/mois)
-        # Évite que le cookie ne soit pas enregistré quand on redirige directement vers checkout.stripe.com
+        # URL absolue pour que le query string ne soit jamais perdu (proxy / redirect)
+        base = (os.environ.get("SITE_URL") or "").strip().rstrip("/")
+        if not base and request.url:
+            base = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
         signup_token = _create_signup_token(email)
-        set_session_url = f"/coach/subscription/set-session?signup_token={signup_token}"
-        response = RedirectResponse(url=set_session_url, status_code=303)
+        set_session_url = f"{base}/coach/subscription/set-session?signup_token={signup_token}"
+        response = RedirectResponse(url=set_session_url, status_code=302)
         _set_session_cookie(response, email, request)
         return response
     
@@ -3208,10 +3219,10 @@ async def coach_subscription_set_session(
     Le cookie est posé sur notre domaine avant d'envoyer vers Stripe pour que le retour après paiement fonctionne.
     """
     if not signup_token:
-        return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
+        return RedirectResponse(url="/coach-login?tab=signup&error=missing_token", status_code=302)
     email = _validate_signup_token(signup_token)
     if not email:
-        return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
+        return RedirectResponse(url="/coach-login?tab=signup&error=session_expired", status_code=302)
 
     # Base URL pour Stripe : SITE_URL en prod (https://fitmatch.fr), sinon request
     base_url = (os.environ.get("SITE_URL") or "").strip().rstrip("/")
@@ -3235,7 +3246,11 @@ async def coach_subscription_set_session(
                 billing_period="monthly",
             )
             if session and getattr(session, "url", None):
-                response = RedirectResponse(url=session.url, status_code=302)
+                stripe_url = session.url
+                # Réponse HTML 200 : le cookie est bien enregistré, puis meta refresh vers Stripe
+                # (plus fiable que 302 vers domaine externe pour certains navigateurs/proxies)
+                html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url={stripe_url}"><title>Redirection paiement</title></head><body style="font-family:sans-serif;text-align:center;padding:2rem;"><p>Redirection vers le paiement sécurisé (30€/mois)...</p><p><a href="{stripe_url}">Cliquez ici si vous n'êtes pas redirigé</a></p></body></html>"""
+                response = HTMLResponse(content=html)
                 _set_session_cookie(response, email, request)
                 return response
         except Exception as e:
