@@ -6763,7 +6763,6 @@ async def get_coach_for_checkout(request: Request):
     user = get_current_user(request.cookies.get("session_token"))
     if user and user.get("role") == "coach":
         return user
-    # Fallback : token signup dans le header (page /coach/pay envoie X-Signup-Token)
     token = (request.headers.get("X-Signup-Token") or "").strip()
     if token:
         email = _validate_signup_token(token)
@@ -6773,53 +6772,59 @@ async def get_coach_for_checkout(request: Request):
             if u and u.get("role") == "coach":
                 u["email"] = email
                 return u
+            if u is None:
+                u = {"email": email, "role": "coach", "full_name": "Coach", "id": email}
+                return u
     raise HTTPException(status_code=401, detail="Authentification requise. Rechargez la page /coach/pay et réessayez.")
 
 @app.post("/api/stripe/create-checkout-session")
 async def api_create_checkout_session(request: Request, user = Depends(get_coach_for_checkout)):
     """Crée une session Checkout Stripe pour l'abonnement (accessible même sans abonnement actif)."""
-    if not _is_stripe_configured():
-        return JSONResponse(
-            {"error": "Paiement temporairement indisponible. Les clés Stripe seront configurées prochainement.", "code": "STRIPE_NOT_CONFIGURED"},
-            status_code=503
-        )
+    print("[Stripe] create_checkout_session appele")
     try:
-        # Essayer de lire le body JSON, sinon utiliser les valeurs par défaut
+        if not _is_stripe_configured():
+            print("[Stripe] ERREUR: Stripe non configure")
+            return JSONResponse(
+                {"error": "Paiement temporairement indisponible. Les cles Stripe seront configurees prochainement.", "code": "STRIPE_NOT_CONFIGURED"},
+                status_code=503
+            )
+        base_url = _get_base_url(request)
+        coach_email = user.get("email")
+        print(f"[Stripe] Coach authentifie: {coach_email or 'N/A'}")
+        if not coach_email:
+            print("[Stripe] ERREUR: Email coach introuvable")
+            return JSONResponse({"error": "Email du coach introuvable"}, status_code=400)
         try:
             body = await request.json()
         except Exception:
             body = {}
-            
         billing_period = body.get("billing_period", "monthly")
-        
-        coach_email = user.get("email")
-        if not coach_email:
-            return JSONResponse({"error": "Email du coach introuvable"}, status_code=400)
-            
         coach_name = user.get("full_name", user.get("name", "Coach"))
         coach_id = user.get("id", coach_email)
-        
-        print(f"💳 Création session Stripe pour {coach_email} (period: {billing_period})")
-        print(f"   success_url: {base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}")
-        
-        # Créer ou récupérer le customer Stripe
-        try:
-            customer = create_or_get_customer(coach_email, coach_name, coach_id)
-            print(f"✅ Customer Stripe récupéré: {customer.id}")
-        except Exception as customer_error:
-            print(f"❌ Erreur create_or_get_customer: {customer_error}")
-            return JSONResponse({"error": f"Erreur client Stripe: {str(customer_error)}"}, status_code=500)
-        
-        # Sauvegarder le customer_id
-        update_coach_subscription(coach_email, stripe_customer_id=customer.id)
-        
-        # URLs de retour Stripe : base correcte (SITE_URL ou proxy) pour fitmatch.fr
-        base_url = _get_base_url(request)
         success_url = f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{base_url.rstrip('/')}/coach/subscription?cancelled=true"
-        
-        # Créer la session checkout
-        try:
+        stripe_price_id = (os.environ.get("STRIPE_PRICE_ID") or os.environ.get("STRIPE_MONTHLY_PRICE_ID") or "").strip()
+        if stripe_price_id and stripe_price_id.startswith("price_"):
+            import stripe
+            from stripe_service import init_stripe
+            init_stripe()
+            print(f"[Stripe] Creation session avec STRIPE_PRICE_ID: {stripe_price_id[:25]}...")
+            session = stripe.checkout.Session.create(
+                mode="subscription",
+                customer_email=coach_email,
+                line_items=[{"price": stripe_price_id, "quantity": 1}],
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata={"coach_email": coach_email, "platform": "fitmatch"},
+            )
+        else:
+            try:
+                customer = create_or_get_customer(coach_email, coach_name, coach_id)
+                print(f"[Stripe] Customer Stripe: {customer.id}")
+            except Exception as customer_error:
+                print(f"[Stripe] ERREUR create_or_get_customer: {customer_error}")
+                return JSONResponse({"error": f"Erreur client Stripe: {str(customer_error)}"}, status_code=500)
+            update_coach_subscription(coach_email, stripe_customer_id=customer.id)
             session = create_checkout_session(
                 customer_id=customer.id,
                 success_url=success_url,
@@ -6827,14 +6832,17 @@ async def api_create_checkout_session(request: Request, user = Depends(get_coach
                 coach_email=coach_email,
                 billing_period=billing_period
             )
-            print(f"✅ Session Checkout créée: {session.id}")
-        except Exception as stripe_error:
-            print(f"❌ Erreur Stripe create_checkout_session: {stripe_error}")
-            return JSONResponse({"error": f"Erreur Stripe: {str(stripe_error)}"}, status_code=500)
-        
-        return JSONResponse({"url": session.url})
+        checkout_url = getattr(session, "url", None) if session else None
+        if not checkout_url:
+            print("[Stripe] ERREUR: session.url vide")
+            return JSONResponse({"error": "Stripe n'a pas retourne d'URL"}, status_code=500)
+        print(f"[Stripe] Session creee: {session.id}")
+        print(f"[Stripe] URL Stripe: {checkout_url[:80]}...")
+        return JSONResponse({"url": checkout_url})
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"❌ Erreur globale création checkout session: {e}")
+        print(f"[Stripe] ERREUR globale: {e}")
         import traceback
         traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -6842,33 +6850,28 @@ async def api_create_checkout_session(request: Request, user = Depends(get_coach
 @app.post("/api/create_checkout_session")
 async def create_checkout_session_simple(request: Request):
     """
-    Variante simplifiée : utilise STRIPE_PRICE_ID si défini.
+    Variante simplifiee : utilise STRIPE_PRICE_ID si defini.
     Auth : cookie ou header X-Signup-Token.
     """
     try:
-        print("=== create_checkout_session appelé ===")
-        print("Headers:", dict(request.headers))
-
+        print("[Stripe] /api/create_checkout_session appele")
         coach = None
         try:
             coach = await get_coach_for_checkout(request)
         except HTTPException:
-            return JSONResponse({"error": "Coach non authentifié. Rechargez la page /coach/pay."}, status_code=401)
-
+            return JSONResponse({"error": "Coach non authentifie. Rechargez la page /coach/pay."}, status_code=401)
         if not coach:
-            print("❌ Aucun coach trouvé (auth échouée)")
-            return JSONResponse({"error": "Coach non authentifié"}, status_code=401)
-
+            print("[Stripe] ERREUR: Aucun coach trouve (auth echouee)")
+            return JSONResponse({"error": "Coach non authentifie"}, status_code=401)
         coach_email = coach.get("email")
-        print(f"✅ Coach trouvé: {coach_email}")
-
+        print(f"[Stripe] Coach authentifie: {coach_email}")
         if not _is_stripe_configured():
-            return JSONResponse({"error": "Stripe non configuré"}, status_code=503)
-
-        stripe_price_id = (os.environ.get("STRIPE_PRICE_ID") or "").strip()
+            return JSONResponse({"error": "Stripe non configure"}, status_code=503)
+        stripe_price_id = (os.environ.get("STRIPE_PRICE_ID") or os.environ.get("STRIPE_MONTHLY_PRICE_ID") or "").strip()
         base_url = _get_base_url(request)
-
-        if stripe_price_id:
+        success_url = f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{base_url.rstrip('/')}/coach/subscription?cancelled=true"
+        if stripe_price_id and stripe_price_id.startswith("price_"):
             import stripe
             from stripe_service import init_stripe
             init_stripe()
@@ -6876,8 +6879,8 @@ async def create_checkout_session_simple(request: Request):
                 mode="subscription",
                 customer_email=coach_email,
                 line_items=[{"price": stripe_price_id, "quantity": 1}],
-                success_url=f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}",
-                cancel_url=f"{base_url.rstrip('/')}/coach/subscription?cancelled=true",
+                success_url=success_url,
+                cancel_url=cancel_url,
                 metadata={"coach_email": coach_email, "platform": "fitmatch"},
             )
         else:
@@ -6886,16 +6889,21 @@ async def create_checkout_session_simple(request: Request):
             update_coach_subscription(coach_email, stripe_customer_id=customer.id)
             session = create_checkout_session(
                 customer_id=customer.id,
-                success_url=f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}",
-                cancel_url=f"{base_url.rstrip('/')}/coach/subscription?cancelled=true",
+                success_url=success_url,
+                cancel_url=cancel_url,
                 coach_email=coach_email,
                 billing_period="monthly",
             )
-
-        print("✅ Session Stripe créée:", session.id)
-        return JSONResponse({"url": session.url})
+        checkout_url = getattr(session, "url", None) if session else None
+        if not checkout_url:
+            print("[Stripe] ERREUR: session.url vide")
+            return JSONResponse({"error": "Stripe n'a pas retourne d'URL"}, status_code=500)
+        print(f"[Stripe] Session creee: {session.id}, URL: {checkout_url[:60]}...")
+        return JSONResponse({"url": checkout_url})
+    except HTTPException:
+        raise
     except Exception as e:
-        print("❌ ERREUR create_checkout_session:", str(e))
+        print(f"[Stripe] ERREUR create_checkout_session: {e}")
         import traceback
         traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
