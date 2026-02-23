@@ -2516,27 +2516,8 @@ async def coach_login_submit(
             }, status_code=500)
         print(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
         
-        # Envoyer directement sur la page Stripe pour payer 30€/mois (carte bancaire)
-        if _is_stripe_configured():
-            try:
-                base_url = str(request.base_url).rstrip("/")
-                success_url = f"{base_url}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
-                cancel_url = f"{base_url}/coach/subscription?cancelled=true"
-                customer = create_or_get_customer(email, new_coach.get("full_name", "Coach"), email)
-                update_coach_subscription(email, stripe_customer_id=customer.id)
-                session = create_checkout_session(
-                    customer_id=customer.id,
-                    success_url=success_url,
-                    cancel_url=cancel_url,
-                    coach_email=email,
-                    billing_period="monthly",
-                )
-                response = RedirectResponse(url=session.url, status_code=302)
-                _set_session_cookie(response, email, request)
-                return response
-            except Exception as stripe_err:
-                print(f"⚠️ Stripe redirect après signup: {stripe_err}")
-        # Fallback: page qui pose le cookie puis /coach/subscription (boutons Stripe)
+        # Toujours passer par set-session : pose le cookie sur notre domaine puis envoie sur Stripe (30€/mois)
+        # Évite que le cookie ne soit pas enregistré quand on redirige directement vers checkout.stripe.com
         signup_token = _create_signup_token(email)
         set_session_url = f"/coach/subscription/set-session?signup_token={signup_token}"
         response = RedirectResponse(url=set_session_url, status_code=303)
@@ -3223,14 +3204,46 @@ async def coach_subscription_set_session(
     signup_token: Optional[str] = Query(None),
 ):
     """
-    Après inscription coach : valide le token, pose le cookie de session, redirige vers /coach/subscription.
-    Évite que le cookie ne soit pas enregistré sur la 303 (certains navigateurs) et que l'utilisateur atterrisse sur /login.
+    Après inscription coach : valide le token, pose le cookie, puis redirige vers la page Stripe (30€/mois).
+    Le cookie est posé sur notre domaine avant d'envoyer vers Stripe pour que le retour après paiement fonctionne.
     """
     if not signup_token:
         return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
     email = _validate_signup_token(signup_token)
     if not email:
         return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
+
+    # Base URL pour Stripe : SITE_URL en prod (https://fitmatch.fr), sinon request
+    base_url = (os.environ.get("SITE_URL") or "").strip().rstrip("/")
+    if not base_url and request.url:
+        base_url = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
+
+    # Envoyer sur la page Stripe pour payer 30€/mois (carte bancaire)
+    if _is_stripe_configured() and base_url:
+        try:
+            coach_data = get_demo_user(email) or {}
+            full_name = coach_data.get("full_name", "Coach")
+            customer = create_or_get_customer(email, full_name, email)
+            update_coach_subscription(email, stripe_customer_id=customer.id)
+            success_url = f"{base_url}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
+            cancel_url = f"{base_url}/coach/subscription?cancelled=true"
+            session = create_checkout_session(
+                customer_id=customer.id,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                coach_email=email,
+                billing_period="monthly",
+            )
+            if session and getattr(session, "url", None):
+                response = RedirectResponse(url=session.url, status_code=302)
+                _set_session_cookie(response, email, request)
+                return response
+        except Exception as e:
+            print(f"❌ set-session Stripe: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # Fallback : page abonnement avec boutons (si Stripe indisponible)
     response = RedirectResponse(url="/coach/subscription", status_code=302)
     _set_session_cookie(response, email, request)
     return response
