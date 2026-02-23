@@ -2585,18 +2585,13 @@ async def coach_login_submit(
                     subscription_status = "active"
                     print(f"✅ Grandfathered coach upgraded: {email}")
             
-            redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-            response = RedirectResponse(url=redirect_url, status_code=303)
-            site_url = (os.environ.get("SITE_URL") or "").lower()
-            use_secure = os.environ.get("REPLIT_DEPLOYMENT") == "1" or site_url.startswith("https")
-            response.set_cookie(
-                key="session_token",
-                value=unique_token,
-                httponly=True,
-                secure=use_secure,
-                samesite="lax",
-                max_age=86400 * 30,
-            )
+            # Si le coach n'a pas encore payé → l'envoyer directement sur la page abonnement (Stripe)
+            if subscription_status == "pending_payment":
+                redirect_url = "/coach/subscription"
+            else:
+                redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+            response = RedirectResponse(url=redirect_url, status_code=302)
+            _set_session_cookie(response, email, request)
             return response
         else:
             i18n = get_i18n_context(request)
