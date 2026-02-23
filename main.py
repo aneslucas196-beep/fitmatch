@@ -2525,13 +2525,13 @@ async def coach_login_submit(
             }, status_code=500)
         print(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
         
-        # URL absolue pour que le query string ne soit jamais perdu (proxy / redirect)
+        # Redirection directe vers la page "Payer 30€" (un seul écran, un bouton → Stripe)
         base = (os.environ.get("SITE_URL") or "").strip().rstrip("/")
         if not base and request.url:
             base = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
         signup_token = _create_signup_token(email)
-        set_session_url = f"{base}/coach/subscription/set-session?signup_token={signup_token}"
-        response = RedirectResponse(url=set_session_url, status_code=302)
+        pay_url = f"{base}/coach/pay?token={signup_token}"
+        response = RedirectResponse(url=pay_url, status_code=302)
         _set_session_cookie(response, email, request)
         return response
     
@@ -2585,9 +2585,13 @@ async def coach_login_submit(
                     subscription_status = "active"
                     print(f"✅ Grandfathered coach upgraded: {email}")
             
-            # Si le coach n'a pas encore payé → l'envoyer directement sur la page abonnement (Stripe)
+            # Si le coach n'a pas encore payé → page unique "Payer 30€" (même parcours qu'après inscription)
             if subscription_status == "pending_payment":
-                redirect_url = "/coach/subscription"
+                pay_token = _create_signup_token(email)
+                base = (os.environ.get("SITE_URL") or "").strip().rstrip("/")
+                if not base and request.url:
+                    base = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
+                redirect_url = f"{base}/coach/pay?token={pay_token}"
             else:
                 redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
             response = RedirectResponse(url=redirect_url, status_code=302)
@@ -3209,17 +3213,33 @@ async def coach_subscription_set_session(
     request: Request,
     signup_token: Optional[str] = Query(None),
 ):
-    """
-    Après inscription coach : valide le token, pose le cookie, redirige vers la page abonnement.
-    Comme sur Replit : le coach arrive sur la page avec les boutons (30€/mois, 300€/an) et clique pour aller sur Stripe.
-    """
+    """Après inscription : redirige vers la page de paiement unique /coach/pay."""
     if not signup_token:
         return RedirectResponse(url="/coach-login?tab=signup&error=missing_token", status_code=302)
     email = _validate_signup_token(signup_token)
     if not email:
         return RedirectResponse(url="/coach-login?tab=signup&error=session_expired", status_code=302)
+    base = (os.environ.get("SITE_URL") or "").strip().rstrip("/") or (str(request.url).split("/")[0] + "//" + (request.headers.get("host") or ""))
+    response = RedirectResponse(url=f"{base}/coach/pay?token={signup_token}", status_code=302)
+    _set_session_cookie(response, email, request)
+    return response
 
-    response = RedirectResponse(url="/coach/subscription", status_code=302)
+
+@app.get("/coach/pay", response_class=HTMLResponse)
+async def coach_pay_page(
+    request: Request,
+    token: Optional[str] = Query(None),
+):
+    """
+    Page unique : "Payer 30€ par carte". Pas d'auth requise : on valide le token, on pose le cookie, on affiche le bouton.
+    Un clic → appel API (avec cookie) → redirection Stripe.
+    """
+    if not token:
+        return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
+    email = _validate_signup_token(token)
+    if not email:
+        return RedirectResponse(url="/coach-login?tab=signup&error=session_expired", status_code=302)
+    response = templates.TemplateResponse("coach_pay.html", {"request": request})
     _set_session_cookie(response, email, request)
     return response
 
