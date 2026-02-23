@@ -1,0 +1,73 @@
+# Créer la table `users` dans Supabase
+
+L’erreur **`relation "users" does not exist`** signifie que la table des utilisateurs (coachs, etc.) n’a pas encore été créée dans ta base Supabase. Sans elle, les inscriptions ne sont pas conservées correctement en production.
+
+---
+
+## Étapes (2 minutes)
+
+1. Ouvre **Supabase** → ton projet → **SQL Editor** (menu de gauche).
+2. Clique sur **New query**.
+3. Copie-colle **tout** le script ci-dessous.
+4. Clique sur **Run** (ou Ctrl+Entrée).
+5. Tu dois voir un message du type « Success. No rows returned ».
+
+---
+
+## Script SQL à exécuter
+
+```sql
+-- Table users pour FitMatch (coachs, abonnements, etc.)
+CREATE TABLE IF NOT EXISTS users (
+    email TEXT PRIMARY KEY,
+    password TEXT,
+    full_name TEXT,
+    role TEXT DEFAULT 'client',
+    gender TEXT,
+    country_code TEXT,
+    coach_gender_preference TEXT,
+    profile_completed BOOLEAN DEFAULT false,
+    verified BOOLEAN DEFAULT false,
+    email_verified BOOLEAN DEFAULT false,
+    bio TEXT,
+    city TEXT,
+    instagram_url TEXT,
+    price_from INTEGER DEFAULT 50,
+    radius_km INTEGER DEFAULT 10,
+    profile_photo_url TEXT,
+    profile_slug TEXT,
+    specialties TEXT,
+    selected_gym_ids TEXT,
+    selected_gyms_data TEXT,
+    subscription_status TEXT DEFAULT 'pending_payment',
+    stripe_customer_id TEXT,
+    stripe_subscription_id TEXT,
+    subscription_period_end TIMESTAMP,
+    otp_code TEXT,
+    otp_expiry TIMESTAMP,
+    pending_bookings TEXT,
+    confirmed_bookings TEXT,
+    rejected_bookings TEXT,
+    unavailable_days TEXT,
+    unavailable_slots TEXT,
+    payment_mode TEXT DEFAULT 'disabled',
+    session_duration INTEGER DEFAULT 60,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    stripe_connect_account_id TEXT,
+    stripe_connect_status TEXT,
+    stripe_connect_charges_enabled BOOLEAN DEFAULT false,
+    stripe_connect_payouts_enabled BOOLEAN DEFAULT false,
+    stripe_connect_details_submitted BOOLEAN DEFAULT false,
+    lang TEXT
+);
+```
+
+---
+
+## Après avoir exécuté le script
+
+- L’erreur **`relation "users" does not exist`** ne devrait plus apparaître dans les logs Render.
+- Les **nouveaux coachs** seront enregistrés dans la base.
+- La **page « Payer 30€ »** et Stripe pourront fonctionner correctement (compte créé en base + cookie).
+
+Tu n’as rien à redéployer sur Render : dès que la table existe dans Supabase, l’app qui tourne sur Render l’utilisera automatiquement.

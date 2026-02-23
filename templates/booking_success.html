@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ t.booking_pages.success_title }} - FitMatch</title>
+    <title>{{ t.booking_pages.success_title|default('Paiement réussi') }} - FitMatch</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,26 +19,26 @@
             </svg>
         </div>
         
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ t.booking_pages.success_title }}</h1>
-        <p class="text-gray-600 mb-6">{{ t.booking_pages.success_message }}</p>
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ t.booking_pages.success_title|default('Paiement réussi !') }}</h1>
+        <p class="text-gray-600 mb-6">{{ t.booking_pages.success_message|default('Votre réservation est confirmée.') }}</p>
         
         {% if booking_id %}
         <div class="bg-gray-50 rounded-lg p-4 mb-6">
-            <p class="text-sm text-gray-500">{{ t.booking_pages.booking_number }}</p>
+            <p class="text-sm text-gray-500">{{ t.booking_pages.booking_number|default('N° de réservation') }}</p>
             <p class="text-lg font-semibold text-gray-900">#{{ booking_id }}</p>
         </div>
         {% endif %}
         
         <div class="space-y-3">
             <a href="/?lang={{ lang }}" class="block w-full bg-emerald-500 text-white py-3 px-6 rounded-lg hover:bg-emerald-600 transition font-medium">
-                {{ t.booking_pages.back_home }}
+                {{ t.booking_pages.back_home|default('Retour à l\'accueil') }}
             </a>
             <a href="/client/home?lang={{ lang }}" class="block w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-lg hover:bg-gray-200 transition font-medium">
-                {{ t.booking_pages.view_bookings }}
+                {{ t.booking_pages.view_bookings|default('Voir mes réservations') }}
             </a>
         </div>
         
-        <p class="text-sm text-gray-500 mt-6">{{ t.booking_pages.thank_you }}</p>
+        <p class="text-sm text-gray-500 mt-6">{{ t.booking_pages.thank_you|default('Merci pour votre confiance.') }}</p>
     </div>
 </body>
 </html>

@@ -95,10 +95,11 @@ def create_checkout_session(
     """
     Crée une session Checkout Stripe pour l'abonnement.
     billing_period: "monthly" (30€/mois) ou "annual" (300€/an)
+    Si STRIPE_PRICE_ID (ou STRIPE_MONTHLY_PRICE_ID) est défini, utilise ce Price ID.
+    Sinon utilise price_data (dynamic).
     """
     init_stripe()
     
-    # Valider que customer_id est présent
     if not customer_id:
         print("❌ Erreur: customer_id manquant pour create_checkout_session")
         raise Exception("customer_id manquant")
@@ -107,30 +108,38 @@ def create_checkout_session(
         unit_amount = COACH_ANNUAL_PRICE
         interval = "year"
         subscription_type = "coach_annual"
+        price_id = os.environ.get("STRIPE_ANNUAL_PRICE_ID") or ""
     else:
         unit_amount = COACH_MONTHLY_PRICE
         interval = "month"
         subscription_type = "coach_monthly"
+        price_id = (os.environ.get("STRIPE_PRICE_ID") or os.environ.get("STRIPE_MONTHLY_PRICE_ID") or "").strip()
+
+    if price_id and price_id.startswith("price_"):
+        # Utiliser un Price ID existant (Dashboard Stripe)
+        line_items = [{"price": price_id, "quantity": 1}]
+        print(f"💳 Création session avec Price ID: {price_id[:20]}...")
+    else:
+        # Mode dynamique (price_data)
+        line_items = [{
+            "price_data": {
+                "currency": "eur",
+                "product_data": {
+                    "name": "FitMatch Pro - Abonnement Coach",
+                    "description": "Accès complet à la plateforme FitMatch pour les coachs",
+                },
+                "unit_amount": unit_amount,
+                "recurring": {"interval": interval}
+            },
+            "quantity": 1
+        }]
     
     try:
         session = stripe.checkout.Session.create(
             customer=customer_id,
             payment_method_types=["card"],
             mode="subscription",
-            line_items=[{
-                "price_data": {
-                    "currency": "eur",
-                    "product_data": {
-                        "name": "FitMatch Pro - Abonnement Coach",
-                        "description": "Accès complet à la plateforme FitMatch pour les coachs",
-                    },
-                    "unit_amount": unit_amount,
-                    "recurring": {
-                        "interval": interval
-                    }
-                },
-                "quantity": 1
-            }],
+            line_items=line_items,
             success_url=success_url,
             cancel_url=cancel_url,
             metadata={

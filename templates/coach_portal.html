@@ -1168,6 +1168,7 @@ async function respondToBooking(bookingId, action) {
         const response = await fetch('/api/coach/bookings/respond', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
             body: JSON.stringify({
                 coach_email: COACH_EMAIL,
                 booking_id: bookingId,
@@ -1202,6 +1203,7 @@ async function deleteBooking(bookingId) {
         const response = await fetch('/api/coach/bookings/delete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
             body: JSON.stringify({
                 coach_email: COACH_EMAIL,
                 booking_id: bookingId

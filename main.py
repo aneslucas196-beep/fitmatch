@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from typing import Optional, List, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 import uvicorn
 import jwt
 import os
@@ -29,6 +29,32 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 limiter = Limiter(key_func=get_remote_address)
+
+# CSRF : génération et vérification (cookie + champ formulaire / header)
+CSRF_COOKIE_NAME = "csrf_token"
+CSRF_HEADER_NAME = "X-CSRF-Token"
+
+def _generate_csrf_token() -> str:
+    return secrets.token_hex(32)
+
+def _verify_csrf(request: Request, token_submitted: Optional[str]) -> bool:
+    """Vérifie que le token soumis (formulaire ou header) correspond au cookie."""
+    if not token_submitted or not token_submitted.strip():
+        return False
+    cookie_token = request.cookies.get(CSRF_COOKIE_NAME)
+    if not cookie_token:
+        return False
+    return secrets.compare_digest(cookie_token.strip(), token_submitted.strip())
+
+def _set_csrf_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        CSRF_COOKIE_NAME,
+        token,
+        max_age=86400,
+        samesite="lax",
+        path="/",
+        httponly=True,
+    )
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -399,6 +425,30 @@ app = FastAPI(
 )
 
 app.state.limiter = limiter
+
+# Security headers pour la production (dont CSP)
+def _get_csp_header() -> str:
+    """Content-Security-Policy : autoriser scripts/styles depuis notre domaine et CDN connus."""
+    # default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none';
+    return (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none';"
+    )
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = _get_csp_header()
+    return response
 app.include_router(cron_router)
 
 # Configuration CORS (en production : CORS_ORIGINS=https://fitmatch.fr,https://www.fitmatch.fr)
@@ -418,19 +468,33 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     )
 
 
+def _wants_html(request: Request) -> bool:
+    """True si la requête attend du HTML (navigateur)."""
+    if request.url.path.startswith("/api/"):
+        return False
+    accept = (request.headers.get("accept") or "").lower()
+    return "text/html" in accept or "*/*" in accept or not accept.strip()
+
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """Renvoie une page HTML pour 404/500 sur les pages web, sinon laisse FastAPI gérer (ex: 401)."""
-    if exc.status_code == 401:
-        raise exc
-    if exc.status_code == 500 and not request.url.path.startswith("/api/"):
+    """Renvoie une page HTML pour 404/500, redirige 401/403 vers login pour les pages web. API: JSON avec 'error'."""
+    if request.url.path.startswith("/api/"):
+        # API : toujours retourner JSON avec clé "error" pour le frontend
+        msg = str(exc.detail) if exc.detail else "Erreur"
+        return JSONResponse(status_code=exc.status_code, content={"error": msg, "detail": msg})
+    if exc.status_code == 401 and _wants_html(request):
+        return RedirectResponse(url="/login", status_code=302)
+    if exc.status_code == 403 and _wants_html(request):
+        return RedirectResponse(url="/coach-login", status_code=302)
+    if exc.status_code == 500:
         i18n = get_i18n_context(request)
         return templates.TemplateResponse(
             "error.html",
             {"request": request, "error": str(exc.detail) if exc.detail else None, **i18n},
             status_code=500,
         )
-    if exc.status_code == 404 and not request.url.path.startswith("/api/"):
+    if exc.status_code == 404:
         i18n = get_i18n_context(request)
         return templates.TemplateResponse(
             "404.html",
@@ -465,6 +529,29 @@ def _is_stripe_configured() -> bool:
     """True si les clés Stripe sont définies et ne sont pas des placeholders (xxx)."""
     sk = (os.environ.get("STRIPE_SECRET_KEY") or "").strip().lower()
     return bool(STRIPE_AVAILABLE and sk and "xxx" not in sk)
+
+
+def _get_base_url(request: Request) -> str:
+    """
+    Retourne l'URL de base du site (ex: https://fitmatch.fr) pour redirections et Stripe.
+    Priorité : SITE_URL > X-Forwarded-Proto+Host (proxy) > request.url.
+    En production définir SITE_URL=https://fitmatch.fr
+    """
+    base = (os.environ.get("SITE_URL") or "").strip().rstrip("/")
+    if base:
+        if not base.startswith("http"):
+            base = "https://" + base
+        return base
+    # Proxy (Render, Replit, Nginx)
+    proto = (request.headers.get("x-forwarded-proto") or "").strip().lower() or "https"
+    host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").strip()
+    if host:
+        return f"{proto}://{host}".rstrip("/")
+    if request.url:
+        u = str(request.url)
+        scheme = request.headers.get("x-forwarded-proto") or (u.split("/")[0].replace(":", "") if "://" in u else "https")
+        return f"{scheme}://{request.headers.get('host', 'localhost')}"
+    return "https://localhost:5000"
 
 
 # Token signup coach : signé pour être validable sur n'importe quelle instance (Render)
@@ -508,10 +595,8 @@ def _validate_signup_token(token: str) -> Optional[str]:
 def _set_session_cookie(response: Response, email: str, request: Request) -> None:
     """Met le cookie session_token (sans domain pour éviter rejet navigateur/proxy)."""
     unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
-    site_url = (os.environ.get("SITE_URL") or "").strip().lower()
-    if not site_url and request.url:
-        site_url = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
-    use_secure = os.environ.get("REPLIT_DEPLOYMENT") == "1" or (site_url or "").startswith("https")
+    base = _get_base_url(request)
+    use_secure = os.environ.get("REPLIT_DEPLOYMENT") == "1" or (base or "").lower().startswith("https")
     response.set_cookie(
         key="session_token",
         value=unique_token,
@@ -784,6 +869,8 @@ async def auth_exception_handler(request: Request, exc: HTTPException):
 
 # Configuration des templates et fichiers statiques
 templates = Jinja2Templates(directory="templates")
+# Filtre tojson pour passer des données Python au JavaScript (coach_pay, booking, etc.)
+templates.env.filters["tojson"] = lambda v: __import__("json").dumps(v, ensure_ascii=False) if v is not None else "null"
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/attached_assets", StaticFiles(directory="attached_assets"), name="attached_assets")
 
@@ -1098,6 +1185,26 @@ def require_active_subscription(user = Depends(require_coach_role)):
         headers={"Location": "/coach/subscription"}
     )
 
+# ============ Health check (Replit / monitoring) ============
+@app.get("/health", tags=["system"])
+async def health_check():
+    """Endpoint de santé pour monitoring et déploiement. Retourne 200 si le serveur répond."""
+    try:
+        db_ok = "skip"
+        if os.environ.get("DATABASE_URL"):
+            try:
+                from utils import load_demo_users
+                load_demo_users()
+                db_ok = "ok"
+            except Exception:
+                db_ok = "error"
+        return {"status": "ok", "db": db_ok}
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "detail": str(e)}
+        )
+
 # Route favicon
 @app.get("/favicon.ico")
 async def favicon():
@@ -1390,6 +1497,12 @@ async def contact_page(request: Request):
     i18n = get_i18n_context(request)
     return templates.TemplateResponse("contact.html", {"request": request, **i18n})
 
+@app.get("/faq", response_class=HTMLResponse)
+async def faq_page(request: Request):
+    """Page FAQ dédiée (clients et coachs)."""
+    i18n = get_i18n_context(request)
+    return templates.TemplateResponse("faq.html", {"request": request, **i18n})
+
 @app.get("/coach-signup", response_class=HTMLResponse)
 async def coach_signup_page(request: Request):
     """Page d'inscription coach avec hero section."""
@@ -1401,14 +1514,18 @@ async def signup_form(request: Request, role: str | None = None):
     """Formulaire d'inscription. Les coachs sont redirigés vers la page dédiée."""
     if (role or "").strip().lower() == "coach":
         return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
+    csrf_token = _generate_csrf_token()
     countries = get_countries_list()
     i18n = get_i18n_context(request)
-    return templates.TemplateResponse("signup.html", {
+    resp = templates.TemplateResponse("signup.html", {
         "request": request,
         "role": role,
         "countries": countries,
+        "csrf_token": csrf_token,
         **i18n
     })
+    _set_csrf_cookie(resp, csrf_token)
+    return resp
 
 @app.get("/api/test-gym-data")
 async def test_gym_data_validation():
@@ -1544,6 +1661,7 @@ async def save_user_gyms(request: Request, user = Depends(get_current_user)):
         return {"success": False, "message": "Erreur serveur"}
 
 @app.post("/signup")
+@limiter.limit("8/minute")
 async def signup_submit(
     request: Request,
     full_name: str = Form(...),
@@ -1553,9 +1671,12 @@ async def signup_submit(
     role: str = Form(...),
     country: str = Form(...),
     coach_gender_preference: str = Form("aucune"),
-    selected_gyms: str = Form("")
+    selected_gyms: str = Form(""),
+    csrf_token: Optional[str] = Form(None),
 ):
     """Inscription utilisateur avec système OTP par email."""
+    if not _verify_csrf(request, csrf_token or request.headers.get(CSRF_HEADER_NAME)):
+        return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
     email = email.lower().strip()
     countries = get_countries_list()
     i18n = get_i18n_context(request)
@@ -2039,21 +2160,29 @@ async def api_login(request: Request):
 @app.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request, message: Optional[str] = None, password_changed: Optional[str] = None):
     """Formulaire de connexion."""
+    csrf_token = _generate_csrf_token()
     i18n = get_i18n_context(request)
-    return templates.TemplateResponse("login.html", {
+    resp = templates.TemplateResponse("login.html", {
         "request": request,
         "message": message,
         "password_changed": password_changed,
+        "csrf_token": csrf_token,
         **i18n
     })
+    _set_csrf_cookie(resp, csrf_token)
+    return resp
 
 @app.post("/login")
+@limiter.limit("10/minute")
 async def login_submit(
     request: Request,
     email: str = Form(...),
-    password: str = Form(...)
+    password: str = Form(...),
+    csrf_token: Optional[str] = Form(None),
 ):
     """Traitement de la connexion."""
+    if not _verify_csrf(request, csrf_token or request.headers.get(CSRF_HEADER_NAME)):
+        return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
     # Normaliser l'email en lowercase
     email = email.lower().strip()
     
@@ -2174,9 +2303,12 @@ async def login_submit(
 @app.post("/auth/resend-confirmation")
 async def resend_confirmation(
     request: Request,
-    email: str = Form(...)
+    email: str = Form(...),
+    csrf_token: Optional[str] = Form(None),
 ):
     """Renvoie l'email de confirmation."""
+    if not _verify_csrf(request, csrf_token or request.headers.get(CSRF_HEADER_NAME)):
+        return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
     # Normaliser l'email en lowercase
     email = email.lower().strip()
     
@@ -2452,22 +2584,30 @@ async def coach_login_page(
         error_msg = "Lien invalide. Remplissez le formulaire et cliquez sur « Créer mon compte coach »."
     else:
         error_msg = None
-    return templates.TemplateResponse("coach_login.html", {
+    csrf_token = _generate_csrf_token()
+    resp = templates.TemplateResponse("coach_login.html", {
         "request": request,
         "tab": tab,
         "error": error_msg,
+        "csrf_token": csrf_token,
         **i18n
     })
+    _set_csrf_cookie(resp, csrf_token)
+    return resp
 
 @app.post("/coach-login")
+@limiter.limit("10/minute")
 async def coach_login_submit(
     request: Request,
     action: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
-    name: Optional[str] = Form(None)
+    name: Optional[str] = Form(None),
+    csrf_token: Optional[str] = Form(None),
 ):
     """Traitement de la connexion/inscription coach."""
+    if not _verify_csrf(request, csrf_token or request.headers.get(CSRF_HEADER_NAME)):
+        return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
     email = email.lower().strip()
     
     if action == "signup":
@@ -2526,11 +2666,9 @@ async def coach_login_submit(
         print(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
         
         # Redirection directe vers la page "Payer 30€" (un seul écran, un bouton → Stripe)
-        base = (os.environ.get("SITE_URL") or "").strip().rstrip("/")
-        if not base and request.url:
-            base = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
+        base = _get_base_url(request)
         signup_token = _create_signup_token(email)
-        pay_url = f"{base}/coach/pay?token={signup_token}"
+        pay_url = f"{base.rstrip('/')}/coach/pay?token={signup_token}"
         response = RedirectResponse(url=pay_url, status_code=302)
         _set_session_cookie(response, email, request)
         return response
@@ -2584,14 +2722,22 @@ async def coach_login_submit(
                         user_found["email_verified"] = True
                     subscription_status = "active"
                     print(f"✅ Grandfathered coach upgraded: {email}")
+
+            # Mettre à jour la langue du coach si absente (pour les e-mails dans la bonne langue)
+            if not user_found.get("lang"):
+                coach_locale = get_locale_from_request(request)
+                if coach_locale:
+                    u = get_demo_user(email)
+                    if u:
+                        u["lang"] = coach_locale
+                        save_demo_user(email, u)
+                        user_found["lang"] = coach_locale
             
             # Si le coach n'a pas encore payé → page unique "Payer 30€" (même parcours qu'après inscription)
             if subscription_status == "pending_payment":
                 pay_token = _create_signup_token(email)
-                base = (os.environ.get("SITE_URL") or "").strip().rstrip("/")
-                if not base and request.url:
-                    base = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
-                redirect_url = f"{base}/coach/pay?token={pay_token}"
+                base = _get_base_url(request)
+                redirect_url = f"{base.rstrip('/')}/coach/pay?token={pay_token}"
             else:
                 redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
             response = RedirectResponse(url=redirect_url, status_code=302)
@@ -2623,7 +2769,10 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     if subscription_status in ["blocked", "cancelled", "past_due"]:
         return RedirectResponse(url="/coach/subscription", status_code=302)
     if subscription_status == "pending_payment":
-        return RedirectResponse(url="/coach/subscription", status_code=302)
+        # Même flux que post-signup : page unique "Payer 30€" avec bouton Stripe
+        pay_token = _create_signup_token(coach_email)
+        base = _get_base_url(request)
+        return RedirectResponse(url=f"{base.rstrip('/')}/coach/pay?token={pay_token}", status_code=302)
     
     # Vérifier si le profil est complété
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
@@ -3202,6 +3351,10 @@ async def booking_by_slug(request: Request, slug: str):
             gyms = json.loads(coach.get("selected_gyms_data"))
         except Exception:
             pass
+    # Identifiant stable pour les appels API (availability, bookings)
+    if not coach.get("id"):
+        coach = dict(coach)
+        coach["id"] = (coach.get("email") or "").replace("@", "_").replace(".", "_") or coach.get("profile_slug", slug)
     return templates.TemplateResponse("booking.html", {"request": request, "coach": coach, "gyms": gyms, "slug": slug, **i18n_book})
 
 # ======================================
@@ -3219,8 +3372,8 @@ async def coach_subscription_set_session(
     email = _validate_signup_token(signup_token)
     if not email:
         return RedirectResponse(url="/coach-login?tab=signup&error=session_expired", status_code=302)
-    base = (os.environ.get("SITE_URL") or "").strip().rstrip("/") or (str(request.url).split("/")[0] + "//" + (request.headers.get("host") or ""))
-    response = RedirectResponse(url=f"{base}/coach/pay?token={signup_token}", status_code=302)
+    base = _get_base_url(request)
+    response = RedirectResponse(url=f"{base.rstrip('/')}/coach/pay?token={signup_token}", status_code=302)
     _set_session_cookie(response, email, request)
     return response
 
@@ -3239,7 +3392,8 @@ async def coach_pay_page(
     email = _validate_signup_token(token)
     if not email:
         return RedirectResponse(url="/coach-login?tab=signup&error=session_expired", status_code=302)
-    response = templates.TemplateResponse("coach_pay.html", {"request": request})
+    i18n = get_i18n_context(request)
+    response = templates.TemplateResponse("coach_pay.html", {"request": request, **i18n})
     _set_session_cookie(response, email, request)
     return response
 
@@ -3653,15 +3807,36 @@ async def reservation_page(request: Request):
     })
 
 @app.get("/account", response_class=HTMLResponse)
-async def account_page(request: Request, user=Depends(get_current_user)):
-    """Page Mon compte : redirection vers /mon-compte si connecté, sinon page compte avec i18n."""
+async def account_page(
+    request: Request,
+    user=Depends(get_current_user),
+    tab: Optional[str] = Query(None),
+):
+    """Page Mon compte : redirection vers /mon-compte si client, sinon page compte (coach) avec onglet."""
     i18n = get_i18n_context(request)
     if user and user.get("email") and (user.get("role") or "client") == "client":
         return RedirectResponse(url="/mon-compte", status_code=303)
     return templates.TemplateResponse("account.html", {
         "request": request,
+        "account_tab": tab or "bookings",
         **i18n
     })
+
+
+@app.get("/account/info", response_class=HTMLResponse)
+async def account_info_page(request: Request, user=Depends(get_current_user)):
+    """Redirige vers la page compte, onglet Mes informations."""
+    if user and user.get("email") and (user.get("role") or "client") == "client":
+        return RedirectResponse(url="/mon-compte", status_code=303)
+    return RedirectResponse(url="/account?tab=info", status_code=302)
+
+
+@app.get("/account/payments", response_class=HTMLResponse)
+async def account_payments_page(request: Request, user=Depends(get_current_user)):
+    """Redirige vers la page compte, onglet Mes paiements."""
+    if user and user.get("email") and (user.get("role") or "client") == "client":
+        return RedirectResponse(url="/mon-compte", status_code=303)
+    return RedirectResponse(url="/account?tab=payments", status_code=302)
 
 @app.get("/api/bookings/availability")
 async def get_availability(coach_id: str, from_date: str = Query(..., alias="from"), to_date: str = Query(..., alias="to")):
@@ -4071,10 +4246,7 @@ async def start_stripe_connect_onboarding(request: Request, user = Depends(requi
         coach_email = user.get("email")
         coach_name = user.get("full_name", "Coach")
         
-        host = request.headers.get("host", "localhost:5000")
-        protocol = "https" if "replit" in host else "http"
-        base_url = f"{protocol}://{host}"
-        
+        base_url = _get_base_url(request)
         connect_info = get_stripe_connect_info(coach_email)
         account_id = connect_info.get("account_id") if connect_info else None
         
@@ -4127,10 +4299,7 @@ async def refresh_stripe_connect_onboarding(request: Request, user = Depends(req
         if not connect_info or not connect_info.get("account_id"):
             return RedirectResponse(url="/coach/portal?error=no_account")
         
-        host = request.headers.get("host", "localhost:5000")
-        protocol = "https" if "replit" in host else "http"
-        base_url = f"{protocol}://{host}"
-        
+        base_url = _get_base_url(request)
         link_result = create_account_link(
             account_id=connect_info["account_id"],
             return_url=f"{base_url}/coach/portal?stripe_connected=1",
@@ -5339,38 +5508,38 @@ async def gym_finder_page(request: Request, user = Depends(get_current_user)):
         **i18n
     })
 
-# Route pour les images uploadées (si pas d'utilisation directe de Supabase Storage)
+# Route pour les images uploadées (stub : en prod utiliser Supabase Storage)
 @app.get("/images/{image_path:path}")
 async def serve_image(image_path: str):
-    """Servir les images uploadées."""
-    # Cette route peut être utilisée pour servir des images locales
-    # En production, préférer utiliser directement Supabase Storage
-    pass
+    """Images : en production utiliser Supabase Storage. Retourne 404 ici."""
+    from fastapi.responses import Response
+    return Response(status_code=404)
 
 # ===== API ENDPOINTS POUR VÉRIFICATION EMAIL =====
 
 class SendOTPRequest(BaseModel):
-    email: str
+    email: EmailStr
 
 class VerifyOTPRequest(BaseModel):
-    email: str
+    email: EmailStr
     code: str
 
 class SignupReservationRequest(BaseModel):
     fullName: str
-    email: str
+    email: EmailStr
     password: str
 
 # Stockage temporaire des codes OTP (en production, utiliser Redis ou DB)
 otp_storage = {}
 
 @app.post("/api/signup-reservation")
-async def signup_reservation(request: SignupReservationRequest):
+@limiter.limit("8/minute")
+async def signup_reservation(request: Request, body: SignupReservationRequest):
     """Inscription rapide depuis la page de réservation avec création de session."""
     try:
-        email = request.email.lower().strip()
-        full_name = request.fullName.strip()
-        password = request.password
+        email = body.email.lower().strip()
+        full_name = body.fullName.strip()
+        password = body.password
         
         print(f"🔐 API signup-reservation appelée pour {email} ({full_name})")
         
@@ -5498,9 +5667,9 @@ async def verify_otp(request: VerifyOTPRequest):
 # ===== CONFIRMATION DE RÉSERVATION AVEC EMAIL =====
 class ConfirmBookingRequest(BaseModel):
     client_name: str
-    client_email: str
+    client_email: EmailStr
     coach_name: str
-    coach_email: Optional[str] = None
+    coach_email: Optional[EmailStr] = None
     gym_name: str
     gym_address: Optional[str] = "Adresse non renseignée"
     date: str
@@ -5514,9 +5683,9 @@ class ConfirmBookingRequest(BaseModel):
 
 class CancelBookingRequest(BaseModel):
     client_name: str
-    client_email: str
+    client_email: EmailStr
     coach_name: str
-    coach_email: Optional[str] = None
+    coach_email: Optional[EmailStr] = None
     gym_name: str
     gym_address: Optional[str] = "Adresse non renseignée"
     date: str
@@ -5531,13 +5700,14 @@ class CancelBookingRequest(BaseModel):
 
 
 class CoachBookingRequest(BaseModel):
-    coach_email: str
+    coach_email: EmailStr
     booking_id: str
     action: str  # "confirm" ou "reject"
 
 
 @app.post("/api/confirm-booking")
-async def confirm_booking(request: ConfirmBookingRequest):
+@limiter.limit("30/minute")
+async def confirm_booking(request: Request, body: ConfirmBookingRequest):
     """Enregistre une demande de réservation selon le mode de paiement du coach.
     - Mode 'disabled': réservation en attente, coach notifié pour accepter/refuser
     - Mode 'required': paiement Stripe requis, réservation confirmée automatiquement après paiement
@@ -5546,11 +5716,11 @@ async def confirm_booking(request: ConfirmBookingRequest):
         from resend_service import send_coach_notification_email, send_booking_confirmation_email
         import uuid
         
-        date_fr = request.date
+        date_fr = body.date
         
-        print(f"📧 Confirmation réservation pour {request.client_name} ({request.client_email})")
-        print(f"   Coach: {request.coach_name}, Salle: {request.gym_name}")
-        print(f"   Date: {date_fr} à {request.time}")
+        print(f"📧 Confirmation réservation pour {body.client_name} ({body.client_email})")
+        print(f"   Coach: {body.coach_name}, Salle: {body.gym_name}")
+        print(f"   Date: {date_fr} à {body.time}")
         
         # Générer un ID unique pour la réservation
         booking_id = str(uuid.uuid4())[:8]
@@ -5561,19 +5731,19 @@ async def confirm_booking(request: ConfirmBookingRequest):
             
             # Trouver le coach - priorité à l'email si fourni
             coach_email = None
-            print(f"🔍 Recherche coach - email reçu: '{request.coach_email}', nom: '{request.coach_name}'")
+            print(f"🔍 Recherche coach - email reçu: '{body.coach_email}', nom: '{body.coach_name}'")
             
             # 1. Match direct par email
-            if request.coach_email and request.coach_email in demo_users:
-                coach_email = request.coach_email
+            if body.coach_email and body.coach_email in demo_users:
+                coach_email = body.coach_email
                 print(f"✅ Coach trouvé par email direct: {coach_email}")
             
             # 2. Fallback: décoder le slug (email_avec_underscore → email@réel)
-            if not coach_email and request.coach_email:
+            if not coach_email and body.coach_email:
                 # Essayer de décoder le slug en email
                 for email in demo_users.keys():
                     encoded_email = email.replace("@", "_").replace(".", "_")
-                    if encoded_email == request.coach_email:
+                    if encoded_email == body.coach_email:
                         if demo_users[email].get("role") == "coach":
                             coach_email = email
                             print(f"✅ Coach trouvé par slug décodé: {coach_email}")
@@ -5581,7 +5751,7 @@ async def confirm_booking(request: ConfirmBookingRequest):
             
             # 3. Fallback: recherche par nom normalisé (strip + lower)
             if not coach_email:
-                normalized_coach_name = request.coach_name.strip().lower()
+                normalized_coach_name = body.coach_name.strip().lower()
                 for email, user_data in demo_users.items():
                     if user_data.get("role") == "coach":
                         stored_name = user_data.get("full_name", "").strip().lower()
@@ -5591,7 +5761,7 @@ async def confirm_booking(request: ConfirmBookingRequest):
                             break
             
             if not coach_email:
-                print(f"⚠️ Coach non trouvé - email: {request.coach_email}, nom: {request.coach_name}")
+                print(f"⚠️ Coach non trouvé - email: {body.coach_email}, nom: {body.coach_name}")
                 return JSONResponse({
                     "success": False,
                     "message": "Coach non trouvé",
@@ -5606,16 +5776,16 @@ async def confirm_booking(request: ConfirmBookingRequest):
             # Créer l'objet réservation
             new_booking = {
                 "id": booking_id,
-                "client_name": request.client_name,
-                "client_email": request.client_email,
-                "gym_name": request.gym_name,
-                "gym_address": request.gym_address or "",
-                "date": request.date,
-                "time": request.time,
-                "service": request.service,
-                "duration": request.duration,
-                "price": request.price,
-                "lang": request.lang,
+                "client_name": body.client_name,
+                "client_email": body.client_email,
+                "gym_name": body.gym_name,
+                "gym_address": body.gym_address or "",
+                "date": body.date,
+                "time": body.time,
+                "service": body.service,
+                "duration": body.duration,
+                "price": body.price,
+                "lang": body.lang,
                 "created_at": datetime.now().isoformat()
             }
             
@@ -5671,7 +5841,7 @@ async def confirm_booking(request: ConfirmBookingRequest):
                         coach_connect_account_id = connect_info.get("account_id")
                         
                         # Prix en centimes
-                        price_cents = int(float(request.price)) * 100
+                        price_cents = int(float(body.price)) * 100
                         
                         # Construire les URLs de retour (prod: SITE_URL, sinon host de la requête)
                         base_url = os.environ.get('SITE_URL') or os.environ.get('REPLIT_DEV_DOMAIN') or str(request.base_url).rstrip("/")
@@ -5682,13 +5852,14 @@ async def confirm_booking(request: ConfirmBookingRequest):
                         checkout_result = create_session_payment_checkout(
                             coach_account_id=coach_connect_account_id,
                             coach_email=coach_email,
-                            client_email=request.client_email,
-                            client_name=request.client_name,
+                            client_email=body.client_email,
+                            client_name=body.client_name,
                             amount_cents=price_cents,
-                            service_name=f"Séance avec {request.coach_name} - {request.service} - {request.duration} min @ {request.gym_name}",
+                            service_name=f"Séance avec {body.coach_name} - {body.service} - {body.duration} min @ {body.gym_name}",
                             booking_id=booking_id,
                             success_url=f"{base_url}/booking-success?booking_id={booking_id}&session_id={{CHECKOUT_SESSION_ID}}",
-                            cancel_url=f"{base_url}/booking-cancelled?booking_id={booking_id}"
+                            cancel_url=f"{base_url}/booking-cancelled?booking_id={booking_id}",
+                            lang=body.lang or "fr",
                         )
                         
                         if not checkout_result.get("success"):
@@ -5742,15 +5913,15 @@ async def confirm_booking(request: ConfirmBookingRequest):
                 coach_notification = send_coach_notification_email(
                     to_email=coach_email,
                     coach_name=coach_data.get("full_name", "Coach"),
-                    client_name=request.client_name,
-                    client_email=request.client_email,
-                    gym_name=request.gym_name,
-                    gym_address=request.gym_address or "",
+                    client_name=body.client_name,
+                    client_email=body.client_email,
+                    gym_name=body.gym_name,
+                    gym_address=body.gym_address or "",
                     date_str=date_fr,
-                    time_str=request.time,
-                    service_name=request.service,
-                    duration=f"{request.duration} min",
-                    price=f"{request.price}€",
+                    time_str=body.time,
+                    service_name=body.service,
+                    duration=f"{body.duration} min",
+                    price=f"{body.price}€",
                     booking_id=booking_id,
                     lang=coach_data.get("lang", "fr")
                 )
@@ -5787,14 +5958,15 @@ async def confirm_booking(request: ConfirmBookingRequest):
 
 
 @app.post("/api/cancel-booking")
-async def cancel_booking(request: CancelBookingRequest):
+@limiter.limit("20/minute")
+async def cancel_booking(request: Request, body: CancelBookingRequest):
     """Annule une réservation et envoie l'email d'annulation au client ET au coach."""
     try:
         from resend_service import send_cancellation_email, send_cancellation_to_coach_email
         
-        print(f"📧 Annulation réservation pour {request.client_name} ({request.client_email})")
-        print(f"   Coach: {request.coach_name}, Salle: {request.gym_name}")
-        print(f"   Date: {request.date} à {request.time}")
+        print(f"📧 Annulation réservation pour {body.client_name} ({body.client_email})")
+        print(f"   Coach: {body.coach_name}, Salle: {body.gym_name}")
+        print(f"   Date: {body.date} à {body.time}")
         
         # Supprimer la réservation en base
         demo_users = load_demo_users()
@@ -5804,21 +5976,21 @@ async def cancel_booking(request: CancelBookingRequest):
         found_coach_data = None
         
         # STRATÉGIE 1: Recherche par booking_id (méthode fiable)
-        if request.booking_id:
+        if body.booking_id:
             for coach_email, coach_data in demo_users.items():
                 if coach_data.get("role") != "coach":
                     continue
                 
                 for list_name in ["pending_bookings", "confirmed_bookings"]:
                     bookings = coach_data.get(list_name, [])
-                    new_bookings = [b for b in bookings if b.get("id") != request.booking_id]
+                    new_bookings = [b for b in bookings if b.get("id") != body.booking_id]
                     if len(new_bookings) < len(bookings):
                         coach_data[list_name] = new_bookings
                         booking_removed = True
                         found_coach_email = coach_email
-                        found_coach_name = coach_data.get("full_name", request.coach_name)
+                        found_coach_name = coach_data.get("full_name", body.coach_name)
                         found_coach_data = coach_data
-                        print(f"✅ Réservation {request.booking_id} supprimée de {list_name} du coach {coach_email}")
+                        print(f"✅ Réservation {body.booking_id} supprimée de {list_name} du coach {coach_email}")
                         break
                 
                 if booking_removed:
@@ -5831,22 +6003,22 @@ async def cancel_booking(request: CancelBookingRequest):
                     continue
                 
                 coach_name = coach_data.get("full_name", "").lower().strip()
-                if request.coach_email and coach_email.lower() == request.coach_email.lower():
+                if body.coach_email and coach_email.lower() == body.coach_email.lower():
                     pass
-                elif request.coach_name and coach_name == request.coach_name.lower().strip():
+                elif body.coach_name and coach_name == body.coach_name.lower().strip():
                     pass
                 else:
                     continue
                 
                 found_coach_email = coach_email
-                found_coach_name = coach_data.get("full_name", request.coach_name)
+                found_coach_name = coach_data.get("full_name", body.coach_name)
                 found_coach_data = coach_data
                 
                 for list_name in ["pending_bookings", "confirmed_bookings"]:
                     bookings = coach_data.get(list_name, [])
                     new_bookings = [b for b in bookings if not (
-                        b.get("client_email", "").lower() == request.client_email.lower() and
-                        b.get("time") == request.time
+                        b.get("client_email", "").lower() == body.client_email.lower() and
+                        b.get("time") == body.time
                     )]
                     if len(new_bookings) < len(bookings):
                         coach_data[list_name] = new_bookings
@@ -5866,16 +6038,16 @@ async def cancel_booking(request: CancelBookingRequest):
         if found_coach_email:
             coach_result = send_cancellation_to_coach_email(
                 to_email=found_coach_email,
-                coach_name=found_coach_name or request.coach_name,
-                client_name=request.client_name,
-                client_email=request.client_email,
-                gym_name=request.gym_name,
-                gym_address=request.gym_address or "Adresse non renseignée",
-                date_str=request.date,
-                time_str=request.time,
-                service_name=request.service,
-                duration=request.duration,
-                price=request.price,
+                coach_name=found_coach_name or body.coach_name,
+                client_name=body.client_name,
+                client_email=body.client_email,
+                gym_name=body.gym_name,
+                gym_address=body.gym_address or "Adresse non renseignée",
+                date_str=body.date,
+                time_str=body.time,
+                service_name=body.service,
+                duration=body.duration,
+                price=body.price,
                 lang=(found_coach_data or demo_users.get(found_coach_email, {})).get("lang", "fr")
             )
             coach_notified = coach_result.get("success", False)
@@ -5886,19 +6058,19 @@ async def cancel_booking(request: CancelBookingRequest):
         
         # Envoyer l'email d'annulation AU CLIENT
         result = send_cancellation_email(
-            to_email=request.client_email,
-            client_name=request.client_name,
-            coach_name=request.coach_name,
-            gym_name=request.gym_name,
-            gym_address=request.gym_address or "Adresse non renseignée",
-            date_str=request.date,
-            time_str=request.time,
-            service_name=request.service,
-            duration=request.duration,
-            price=request.price,
-            coach_photo=request.coach_photo,
-            booking_url=request.booking_url,
-            lang=request.lang
+            to_email=body.client_email,
+            client_name=body.client_name,
+            coach_name=body.coach_name,
+            gym_name=body.gym_name,
+            gym_address=body.gym_address or "Adresse non renseignée",
+            date_str=body.date,
+            time_str=body.time,
+            service_name=body.service,
+            duration=body.duration,
+            price=body.price,
+            coach_photo=body.coach_photo,
+            booking_url=body.booking_url,
+            lang=body.lang
         )
         
         if result.get("success"):
@@ -5942,62 +6114,53 @@ async def reservation_cancelled(request: Request):
 # ===== API COACH - GESTION DES RÉSERVATIONS =====
 
 @app.get("/api/coach/bookings")
-async def get_coach_bookings(coach_email: str):
-    """Récupère les réservations en attente et confirmées d'un coach."""
+async def get_coach_bookings(user=Depends(require_coach_role)):
+    """Récupère les réservations en attente et confirmées du coach connecté (session requise)."""
+    coach_email = user.get("email")
+    if not coach_email:
+        return JSONResponse({"success": False, "error": "Non autorisé"}, status_code=401)
     try:
         demo_users = load_demo_users()
-        
         if coach_email not in demo_users:
             return JSONResponse({"success": False, "error": "Coach non trouvé"}, status_code=404)
-        
         coach_data = demo_users[coach_email]
-        
         pending_bookings = coach_data.get("pending_bookings", [])
         confirmed_bookings = coach_data.get("confirmed_bookings", [])
         rejected_bookings = coach_data.get("rejected_bookings", [])
-        
         return JSONResponse({
             "success": True,
             "pending": pending_bookings,
             "confirmed": confirmed_bookings,
             "rejected": rejected_bookings
         })
-        
     except Exception as e:
         print(f"❌ Erreur récupération réservations coach: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 @app.get("/api/booking/{booking_id}")
-async def get_booking_by_id(booking_id: str):
-    """Récupère les détails d'un booking par son ID."""
+async def get_booking_by_id(booking_id: str, user=Depends(get_current_user)):
+    """Récupère les détails d'un booking par son ID. Réservé au client ou au coach de la réservation."""
+    if not user or not user.get("email"):
+        return JSONResponse({"success": False, "error": "Non autorisé"}, status_code=401)
+    user_email = (user.get("email") or "").strip().lower()
     try:
         demo_users = load_demo_users()
-        
-        # Parcourir tous les coachs pour trouver le booking
         for coach_email, coach_data in demo_users.items():
             if coach_data.get("role") != "coach":
                 continue
-            
-            # Chercher dans pending, confirmed et rejected
             for booking_list in ["pending_bookings", "confirmed_bookings", "rejected_bookings"]:
                 bookings = coach_data.get(booking_list, [])
                 for booking in bookings:
                     if booking.get("id") == booking_id:
-                        # Ajouter l'email du coach au booking
+                        booking_client = (booking.get("client_email") or "").strip().lower()
+                        if user_email != coach_email.lower() and user_email != booking_client:
+                            return JSONResponse({"success": False, "error": "Accès refusé à cette réservation"}, status_code=403)
                         booking_with_coach = booking.copy()
                         booking_with_coach["coach_email"] = coach_email
                         booking_with_coach["coach_name"] = coach_data.get("full_name", "Coach")
-                        return JSONResponse({
-                            "success": True,
-                            "booking": booking_with_coach
-                        })
-        
-        return JSONResponse({
-            "success": False,
-            "error": "Booking non trouvé"
-        }, status_code=404)
-        
+                        return JSONResponse({"success": True, "booking": booking_with_coach})
+        return JSONResponse({"success": False, "error": "Booking non trouvé"}, status_code=404)
     except Exception as e:
         print(f"❌ Erreur récupération booking: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
@@ -6033,23 +6196,25 @@ async def get_client_bookings(user=Depends(get_current_user)):
 
 
 @app.post("/api/coach/bookings/respond")
-async def respond_to_booking(request: CoachBookingRequest):
-    """Le coach confirme ou refuse une réservation."""
+async def respond_to_booking(body: CoachBookingRequest, user=Depends(require_coach_role)):
+    """Le coach confirme ou refuse une réservation (coach connecté uniquement)."""
     try:
         import json
+        coach_email = user.get("email")
+        if not coach_email:
+            return JSONResponse({"success": False, "error": "Session coach invalide"}, status_code=401)
         demo_users = load_demo_users()
-        
-        if request.coach_email not in demo_users:
+        if coach_email not in demo_users:
             return JSONResponse({"success": False, "error": "Coach non trouvé"}, status_code=404)
         
-        coach_data = demo_users[request.coach_email]
+        coach_data = demo_users[coach_email]
         pending_bookings = coach_data.get("pending_bookings", [])
         
         # Trouver la réservation
         booking_to_update = None
         booking_index = -1
         for i, booking in enumerate(pending_bookings):
-            if booking.get("id") == request.booking_id:
+            if booking.get("id") == body.booking_id:
                 booking_to_update = booking
                 booking_index = i
                 break
@@ -6061,14 +6226,14 @@ async def respond_to_booking(request: CoachBookingRequest):
         pending_bookings.pop(booking_index)
         
         # Ajouter à la bonne liste selon l'action
-        if request.action == "confirm":
+        if body.action == "confirm":
             booking_to_update["status"] = "confirmed"
             booking_to_update["confirmed_at"] = datetime.now().isoformat()
             if "confirmed_bookings" not in coach_data:
                 coach_data["confirmed_bookings"] = []
             coach_data["confirmed_bookings"].append(booking_to_update)
             action_label = "confirmée"
-        elif request.action == "reject":
+        elif body.action == "reject":
             booking_to_update["status"] = "rejected"
             booking_to_update["rejected_at"] = datetime.now().isoformat()
             if "rejected_bookings" not in coach_data:
@@ -6082,9 +6247,9 @@ async def respond_to_booking(request: CoachBookingRequest):
         coach_data["pending_bookings"] = pending_bookings
         
         # Sauvegarder dans la DB ET le fichier JSON
-        save_demo_user(request.coach_email, coach_data)
+        save_demo_user(coach_email, coach_data)
         
-        print(f"✅ Réservation {request.booking_id} {action_label} par {request.coach_email}")
+        print(f"✅ Réservation {body.booking_id} {action_label} par {coach_email}")
         
         # Envoyer email au client pour l'informer
         email_sent = False
@@ -6095,7 +6260,7 @@ async def respond_to_booking(request: CoachBookingRequest):
         client_name = booking_to_update.get("client_name", "Client")
         
         if not client_email:
-            print(f"⚠️ Email client manquant pour la réservation {request.booking_id}")
+            print(f"⚠️ Email client manquant pour la réservation {body.booking_id}")
             email_error_msg = "Email client non disponible"
         else:
             # Formater la date en français
@@ -6117,7 +6282,7 @@ async def respond_to_booking(request: CoachBookingRequest):
             
             coach_name = coach_data.get("full_name", "Coach")
             
-            if request.action == "confirm":
+            if body.action == "confirm":
                 # Envoyer l'email de CONFIRMATION au client
                 try:
                     from resend_service import send_booking_confirmation_email
@@ -6134,7 +6299,7 @@ async def respond_to_booking(request: CoachBookingRequest):
                         duration=f"{booking_to_update.get('duration', '60')} min",
                         price=f"{booking_to_update.get('price', '40')}€",
                         coach_photo=coach_data.get("profile_photo_url"),
-                        reservation_id=request.booking_id,
+                        reservation_id=body.booking_id,
                         lang=booking_to_update.get("lang", "fr")
                     )
                     email_sent = email_result.get("success", False)
@@ -6149,7 +6314,7 @@ async def respond_to_booking(request: CoachBookingRequest):
                     email_error_msg = str(email_error)
                     print(f"⚠️ Erreur envoi email confirmation: {email_error}")
             
-            elif request.action == "reject":
+            elif body.action == "reject":
                 # Envoyer l'email d'ANNULATION au client
                 try:
                     from resend_service import send_rejection_email_to_client
@@ -6192,20 +6357,22 @@ async def respond_to_booking(request: CoachBookingRequest):
 
 
 class DeleteBookingRequest(BaseModel):
-    coach_email: str
+    coach_email: EmailStr
     booking_id: str
 
 @app.post("/api/coach/bookings/delete")
-async def delete_booking(request: DeleteBookingRequest):
-    """Le coach supprime une réservation (pending ou confirmed)."""
+async def delete_booking(body: DeleteBookingRequest, user=Depends(require_coach_role)):
+    """Le coach supprime une réservation (coach connecté uniquement)."""
     try:
         import json
+        coach_email = user.get("email")
+        if not coach_email:
+            return JSONResponse({"success": False, "error": "Session coach invalide"}, status_code=401)
         demo_users = load_demo_users()
-        
-        if request.coach_email not in demo_users:
+        if coach_email not in demo_users:
             return JSONResponse({"success": False, "error": "Coach non trouvé"}, status_code=404)
         
-        coach_data = demo_users[request.coach_email]
+        coach_data = demo_users[coach_email]
         booking_found = False
         deleted_booking = None
         was_confirmed = False
@@ -6213,7 +6380,7 @@ async def delete_booking(request: DeleteBookingRequest):
         # Chercher dans pending_bookings
         pending_bookings = coach_data.get("pending_bookings", [])
         for i, booking in enumerate(pending_bookings):
-            if booking.get("id") == request.booking_id:
+            if booking.get("id") == body.booking_id:
                 deleted_booking = pending_bookings.pop(i)
                 coach_data["pending_bookings"] = pending_bookings
                 booking_found = True
@@ -6224,7 +6391,7 @@ async def delete_booking(request: DeleteBookingRequest):
         if not booking_found:
             confirmed_bookings = coach_data.get("confirmed_bookings", [])
             for i, booking in enumerate(confirmed_bookings):
-                if booking.get("id") == request.booking_id:
+                if booking.get("id") == body.booking_id:
                     deleted_booking = confirmed_bookings.pop(i)
                     coach_data["confirmed_bookings"] = confirmed_bookings
                     booking_found = True
@@ -6235,12 +6402,12 @@ async def delete_booking(request: DeleteBookingRequest):
             return JSONResponse({"success": False, "error": "Réservation non trouvée"}, status_code=404)
         
         # Sauvegarder via la fonction centralisée (DB ou JSON)
-        save_demo_user(request.coach_email, coach_data)
+        save_demo_user(coach_email, coach_data)
         
-        print(f"🗑️ Réservation {request.booking_id} supprimée par {request.coach_email}")
+        print(f"🗑️ Réservation {body.booking_id} supprimée par {coach_email}")
         
         # Annuler les rappels programmés pour cette réservation
-        cancel_booking_reminders(request.booking_id)
+        cancel_booking_reminders(body.booking_id)
         
         # Envoyer un email au client pour l'informer de l'annulation
         email_sent = False
@@ -6319,108 +6486,115 @@ def get_conversation_id(client_email: str, coach_email: str, booking_id: str) ->
 
 class SendMessageRequest(BaseModel):
     booking_id: str
-    client_email: str
-    coach_email: str
+    client_email: EmailStr
+    coach_email: EmailStr
     sender_role: str  # "client" ou "coach"
     sender_name: str
     message: str
 
 @app.post("/api/messages/send")
-async def send_message(request: SendMessageRequest):
-    """Envoie un message dans une conversation."""
+async def send_message(body: SendMessageRequest, user=Depends(get_current_user)):
+    """Envoie un message dans une conversation. L'expéditeur doit être le client ou le coach de la réservation."""
+    if not user or not user.get("email"):
+        return JSONResponse({"success": False, "error": "Non autorisé"}, status_code=401)
+    user_email = (user.get("email") or "").strip().lower()
+    if body.sender_role == "client":
+        if (body.client_email or "").strip().lower() != user_email:
+            return JSONResponse({"success": False, "error": "Accès refusé"}, status_code=403)
+    elif body.sender_role == "coach":
+        if (body.coach_email or "").strip().lower() != user_email:
+            return JSONResponse({"success": False, "error": "Accès refusé"}, status_code=403)
+    else:
+        return JSONResponse({"success": False, "error": "Rôle invalide"}, status_code=400)
     try:
         messages = load_messages()
-        conv_id = get_conversation_id(request.client_email, request.coach_email, request.booking_id)
-        
+        conv_id = get_conversation_id(body.client_email, body.coach_email, body.booking_id)
         if conv_id not in messages:
             messages[conv_id] = {
-                "booking_id": request.booking_id,
-                "client_email": request.client_email,
-                "coach_email": request.coach_email,
+                "booking_id": body.booking_id,
+                "client_email": body.client_email,
+                "coach_email": body.coach_email,
                 "messages": []
             }
-        
         new_message = {
             "id": str(uuid.uuid4())[:8],
-            "sender_role": request.sender_role,
-            "sender_name": request.sender_name,
-            "message": request.message,
+            "sender_role": body.sender_role,
+            "sender_name": body.sender_name,
+            "message": body.message,
             "timestamp": datetime.now().isoformat(),
             "read": False
         }
-        
         messages[conv_id]["messages"].append(new_message)
         save_messages(messages)
-        
-        return JSONResponse({
-            "success": True,
-            "message": new_message
-        })
+        return JSONResponse({"success": True, "message": new_message})
     except Exception as e:
         print(f"❌ Erreur envoi message: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/messages/{booking_id}")
-async def get_messages(booking_id: str, client_email: str = None, coach_email: str = None):
-    """Récupère les messages d'une conversation."""
+async def get_messages(booking_id: str, user=Depends(get_current_user), client_email: str = None, coach_email: str = None):
+    """Récupère les messages d'une conversation. Réservé au client ou au coach de la réservation."""
+    if not user or not user.get("email"):
+        return JSONResponse({"success": False, "error": "Non autorisé"}, status_code=401)
+    user_email = (user.get("email") or "").strip().lower()
     try:
         messages = load_messages()
-        
-        # Chercher la conversation
         for conv_id, conv in messages.items():
-            if conv.get("booking_id") == booking_id:
-                if client_email and conv.get("client_email") != client_email:
-                    continue
-                if coach_email and conv.get("coach_email") != coach_email:
-                    continue
-                return JSONResponse({
-                    "success": True,
-                    "conversation": conv
-                })
-        
-        return JSONResponse({
-            "success": True,
-            "conversation": {"messages": []}
-        })
+            if conv.get("booking_id") != booking_id:
+                continue
+            c_client = (conv.get("client_email") or "").strip().lower()
+            c_coach = (conv.get("coach_email") or "").strip().lower()
+            if user_email != c_client and user_email != c_coach:
+                return JSONResponse({"success": False, "error": "Accès refusé à cette conversation"}, status_code=403)
+            return JSONResponse({"success": True, "conversation": conv})
+        return JSONResponse({"success": True, "conversation": {"messages": []}})
     except Exception as e:
         print(f"❌ Erreur récupération messages: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/conversations")
-async def get_conversations(email: str, role: str):
-    """Récupère toutes les conversations d'un utilisateur."""
+async def get_conversations(user=Depends(get_current_user), role: str = Query(None)):
+    """Récupère toutes les conversations de l'utilisateur connecté (client ou coach)."""
+    if not user or not user.get("email"):
+        return JSONResponse({"success": False, "error": "Non autorisé"}, status_code=401)
+    email = (user.get("email") or "").strip().lower()
     try:
         messages = load_messages()
         user_conversations = []
-        
         for conv_id, conv in messages.items():
-            if role == "client" and conv.get("client_email") == email:
+            c_client = (conv.get("client_email") or "").strip().lower()
+            c_coach = (conv.get("coach_email") or "").strip().lower()
+            if email == c_client or email == c_coach:
+                if role and role.lower() == "client" and email != c_client:
+                    continue
+                if role and role.lower() == "coach" and email != c_coach:
+                    continue
                 user_conversations.append(conv)
-            elif role == "coach" and conv.get("coach_email") == email:
-                user_conversations.append(conv)
-        
-        return JSONResponse({
-            "success": True,
-            "conversations": user_conversations
-        })
+        return JSONResponse({"success": True, "conversations": user_conversations})
     except Exception as e:
         print(f"❌ Erreur récupération conversations: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/messages/mark-read")
-async def mark_messages_read(booking_id: str, reader_role: str):
-    """Marque les messages d'une conversation comme lus."""
+async def mark_messages_read(booking_id: str, reader_role: str, user=Depends(get_current_user)):
+    """Marque les messages d'une conversation comme lus. Réservé au client ou au coach de la réservation."""
+    if not user or not user.get("email"):
+        return JSONResponse({"success": False, "error": "Non autorisé"}, status_code=401)
+    user_email = (user.get("email") or "").strip().lower()
     try:
         messages = load_messages()
-        
         for conv_id, conv in messages.items():
-            if conv.get("booking_id") == booking_id:
-                for msg in conv.get("messages", []):
-                    if msg.get("sender_role") != reader_role:
-                        msg["read"] = True
-                save_messages(messages)
-                break
-        
+            if conv.get("booking_id") != booking_id:
+                continue
+            c_client = (conv.get("client_email") or "").strip().lower()
+            c_coach = (conv.get("coach_email") or "").strip().lower()
+            if user_email != c_client and user_email != c_coach:
+                return JSONResponse({"success": False, "error": "Accès refusé"}, status_code=403)
+            for msg in conv.get("messages", []):
+                if msg.get("sender_role") != reader_role:
+                    msg["read"] = True
+            save_messages(messages)
+            return JSONResponse({"success": True})
         return JSONResponse({"success": True})
     except Exception as e:
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
@@ -6568,8 +6742,25 @@ reminder_thread.start()
 # STRIPE - ABONNEMENTS COACHS (API Endpoints)
 # ============================================
 
+async def get_coach_for_checkout(request: Request):
+    """Utilisateur coach : session cookie OU token signup en header (fallback si cookie perdu)."""
+    user = get_current_user(request.cookies.get("session_token"))
+    if user and user.get("role") == "coach":
+        return user
+    # Fallback : token signup dans le header (page /coach/pay envoie X-Signup-Token)
+    token = (request.headers.get("X-Signup-Token") or "").strip()
+    if token:
+        email = _validate_signup_token(token)
+        if email:
+            from utils import get_demo_user
+            u = get_demo_user(email)
+            if u and u.get("role") == "coach":
+                u["email"] = email
+                return u
+    raise HTTPException(status_code=401, detail="Authentification requise. Rechargez la page /coach/pay et réessayez.")
+
 @app.post("/api/stripe/create-checkout-session")
-async def api_create_checkout_session(request: Request, user = Depends(require_coach_or_pending)):
+async def api_create_checkout_session(request: Request, user = Depends(get_coach_for_checkout)):
     """Crée une session Checkout Stripe pour l'abonnement (accessible même sans abonnement actif)."""
     if not _is_stripe_configured():
         return JSONResponse(
@@ -6593,6 +6784,7 @@ async def api_create_checkout_session(request: Request, user = Depends(require_c
         coach_id = user.get("id", coach_email)
         
         print(f"💳 Création session Stripe pour {coach_email} (period: {billing_period})")
+        print(f"   success_url: {base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}")
         
         # Créer ou récupérer le customer Stripe
         try:
@@ -6605,14 +6797,10 @@ async def api_create_checkout_session(request: Request, user = Depends(require_c
         # Sauvegarder le customer_id
         update_coach_subscription(coach_email, stripe_customer_id=customer.id)
         
-        # URLs de retour Stripe : utiliser SITE_URL (https://fitmatch.fr) car request.base_url peut être interne sur Render
-        base_url = (os.environ.get("SITE_URL") or "").strip().rstrip("/")
-        if not base_url and request.url:
-            base_url = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
-        if not base_url:
-            base_url = str(request.base_url).rstrip("/")
-        success_url = f"{base_url}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{base_url}/coach/subscription?cancelled=true"
+        # URLs de retour Stripe : base correcte (SITE_URL ou proxy) pour fitmatch.fr
+        base_url = _get_base_url(request)
+        success_url = f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{base_url.rstrip('/')}/coach/subscription?cancelled=true"
         
         # Créer la session checkout
         try:
@@ -6635,6 +6823,68 @@ async def api_create_checkout_session(request: Request, user = Depends(require_c
         traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
 
+@app.post("/api/create_checkout_session")
+async def create_checkout_session_simple(request: Request):
+    """
+    Variante simplifiée : utilise STRIPE_PRICE_ID si défini.
+    Auth : cookie ou header X-Signup-Token.
+    """
+    try:
+        print("=== create_checkout_session appelé ===")
+        print("Headers:", dict(request.headers))
+
+        coach = None
+        try:
+            coach = await get_coach_for_checkout(request)
+        except HTTPException:
+            return JSONResponse({"error": "Coach non authentifié. Rechargez la page /coach/pay."}, status_code=401)
+
+        if not coach:
+            print("❌ Aucun coach trouvé (auth échouée)")
+            return JSONResponse({"error": "Coach non authentifié"}, status_code=401)
+
+        coach_email = coach.get("email")
+        print(f"✅ Coach trouvé: {coach_email}")
+
+        if not _is_stripe_configured():
+            return JSONResponse({"error": "Stripe non configuré"}, status_code=503)
+
+        stripe_price_id = (os.environ.get("STRIPE_PRICE_ID") or "").strip()
+        base_url = _get_base_url(request)
+
+        if stripe_price_id:
+            import stripe
+            from stripe_service import init_stripe
+            init_stripe()
+            session = stripe.checkout.Session.create(
+                mode="subscription",
+                customer_email=coach_email,
+                line_items=[{"price": stripe_price_id, "quantity": 1}],
+                success_url=f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{base_url.rstrip('/')}/coach/subscription?cancelled=true",
+                metadata={"coach_email": coach_email, "platform": "fitmatch"},
+            )
+        else:
+            coach_id = coach.get("id") or coach.get("email", coach_email)
+            customer = create_or_get_customer(coach_email, coach.get("full_name", "Coach"), str(coach_id))
+            update_coach_subscription(coach_email, stripe_customer_id=customer.id)
+            session = create_checkout_session(
+                customer_id=customer.id,
+                success_url=f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{base_url.rstrip('/')}/coach/subscription?cancelled=true",
+                coach_email=coach_email,
+                billing_period="monthly",
+            )
+
+        print("✅ Session Stripe créée:", session.id)
+        return JSONResponse({"url": session.url})
+    except Exception as e:
+        print("❌ ERREUR create_checkout_session:", str(e))
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @app.post("/api/stripe/create-portal-session")
 async def api_create_portal_session(request: Request, user = Depends(require_coach_role)):
     """Crée une session du portail de facturation Stripe."""
@@ -6650,8 +6900,8 @@ async def api_create_portal_session(request: Request, user = Depends(require_coa
         if not subscription_info or not subscription_info.get("stripe_customer_id"):
             return JSONResponse({"error": "Aucun abonnement trouvé"}, status_code=404)
         
-        base_url = str(request.base_url).rstrip("/")
-        return_url = f"{base_url}/coach/subscription"
+        base_url = _get_base_url(request)
+        return_url = f"{base_url.rstrip('/')}/coach/subscription"
         
         session = create_portal_session(
             customer_id=subscription_info["stripe_customer_id"],
@@ -6676,8 +6926,17 @@ async def stripe_webhook(request: Request):
     
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
-    webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
-    
+    webhook_secret = (os.environ.get("STRIPE_WEBHOOK_SECRET") or "").strip()
+    site_url = (os.environ.get("SITE_URL") or "").strip()
+
+    # En production (SITE_URL défini), refuser de traiter sans secret pour éviter les faux webhooks
+    if site_url and not webhook_secret:
+        print("❌ STRIPE_WEBHOOK_SECRET manquant en production - webhook refusé")
+        return JSONResponse(
+            status_code=503,
+            content={"error": "Webhook non configuré"}
+        )
+
     try:
         # Vérifier la signature du webhook si la clé secrète est configurée
         if webhook_secret and sig_header:
@@ -6693,8 +6952,10 @@ async def stripe_webhook(request: Request):
                 print(f"❌ Erreur vérification signature: {e}")
                 return JSONResponse({"error": "Erreur signature"}, status_code=400)
         else:
-            # Mode développement: sans signature
-            print(f"⚠️ STRIPE_WEBHOOK_SECRET non configuré, vérification signature désactivée")
+            # Mode développement uniquement (pas de SITE_URL ou secret vide en local)
+            if site_url:
+                return JSONResponse({"error": "Signature requise"}, status_code=400)
+            print("⚠️ STRIPE_WEBHOOK_SECRET non configuré, vérification signature désactivée (dev)")
             event = json.loads(payload)
         
         event_type = event.get("type")
@@ -6765,7 +7026,8 @@ async def stripe_webhook(request: Request):
                                         service_name=booking_to_confirm.get("service"),
                                         duration=f"{booking_to_confirm.get('duration')} min",
                                         price=f"{booking_to_confirm.get('price')}€",
-                                        booking_id=booking_id,
+                                        coach_photo=coach_data.get("profile_photo_url"),
+                                        reservation_id=booking_id,
                                         lang=booking_to_confirm.get("lang", "fr")
                                     )
                                     print(f"📧 Email confirmation envoyé au client")
@@ -7244,7 +7506,8 @@ async def booking_success_page(request: Request, booking_id: str = None, session
                                 service_name=booking.get("service", "Séance"),
                                 duration=dur,
                                 price=pr,
-                                booking_id=booking_id,
+                                coach_photo=coach_data.get("profile_photo_url"),
+                                reservation_id=booking_id,
                                 lang=booking.get("lang", "fr")
                             )
                             print(f"📧 Email de confirmation envoyé à {booking.get('client_email')}")

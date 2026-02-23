@@ -32,6 +32,9 @@ class Settings:
     STRIPE_PUBLIC_KEY: Optional[str] = os.environ.get("STRIPE_PUBLIC_KEY")
     STRIPE_SECRET_KEY: Optional[str] = os.environ.get("STRIPE_SECRET_KEY")
     STRIPE_WEBHOOK_SECRET: Optional[str] = os.environ.get("STRIPE_WEBHOOK_SECRET")
+    # Optionnel : Price ID mensuel (ex: price_xxx) - sinon price_data dynamique
+    STRIPE_PRICE_ID: Optional[str] = os.environ.get("STRIPE_PRICE_ID") or os.environ.get("STRIPE_MONTHLY_PRICE_ID")
+    STRIPE_ANNUAL_PRICE_ID: Optional[str] = os.environ.get("STRIPE_ANNUAL_PRICE_ID")
 
     # Resend
     RESEND_API_KEY: Optional[str] = os.environ.get("RESEND_API_KEY")

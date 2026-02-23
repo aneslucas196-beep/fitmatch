@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="{{ locale|default('fr') }}" {% if text_direction == 'rtl' %}dir="rtl"{% endif %}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ t.home.faq_title|default('Questions fréquentes') }} - FitMatch</title>
+  <meta name="description" content="{{ t.home.hero_subtitle|default('FitMatch met en relation clients et coachs sportifs. Réservez une séance près de chez vous.') }}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .faq-item { border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+    .faq-item summary { padding: 16px 20px; cursor: pointer; font-weight: 600; list-style: none; }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item[open] summary { border-bottom: 1px solid #e5e7eb; }
+    .faq-content { padding: 16px 20px; background: #f9fafb; color: #374151; line-height: 1.6; }
+    .faq-content a { color: #059669; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <header class="bg-white border-b shadow-sm">
+    <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+      <a href="/" class="text-emerald-600 font-semibold hover:underline">← {{ t.nav.home|default('Accueil') }}</a>
+      <a href="/contact" class="text-gray-600 text-sm hover:text-gray-900">{{ t.legal.contact_title|default('Contact') }}</a>
+    </div>
+  </header>
+  <main class="max-w-3xl mx-auto px-4 py-10">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ t.home.faq_title|default('Questions fréquentes') }}</h1>
+    <p class="text-gray-600 mb-8">{{ t.home.hero_subtitle|default('Réservez des séances avec les meilleurs coachs près de chez vous.') }}</p>
+
+    <details class="faq-item">
+      <summary>{{ t.home.faq1_q|default("Qu'est-ce que FitMatch ?") }}</summary>
+      <div class="faq-content">{{ t.home.faq1_a|default("FitMatch est la plateforme qui met en relation les <b>clients</b> et les <b>coachs sportifs</b> proches de chez eux.")|safe }}</div>
+    </details>
+    <details class="faq-item">
+      <summary>{{ t.home.faq2_q|default('Comment réserver une séance sur FitMatch ?') }}</summary>
+      <div class="faq-content">{{ t.home.faq2_a|default("Via la plateforme : recherche ta salle, choisis un coach, réserve. Ou via le lien privé du coach sur les réseaux.")|safe }}</div>
+    </details>
+    <details class="faq-item">
+      <summary>{{ t.home.faq3_q|default('Comment fonctionne le paiement sur FitMatch ?') }}</summary>
+      <div class="faq-content">{{ t.home.faq3_a|default("Paiement en ligne sécurisé Stripe (carte). Le coach reçoit le paiement automatiquement.")|safe }}</div>
+    </details>
+    <details class="faq-item">
+      <summary>{{ t.home.faq4_q|default('Le paiement en ligne est-il obligatoire ?') }}</summary>
+      <div class="faq-content">{{ t.home.faq4_a|default("Ça dépend du coach : chacun choisit de l'activer ou non.")|safe }}</div>
+    </details>
+    <details class="faq-item">
+      <summary>{{ t.home.faq5_q|default('Comment gérer mes séances sur FitMatch ?') }}</summary>
+      <div class="faq-content">{{ t.home.faq5_a|default("Depuis ton espace : voir, modifier, annuler. Rappels automatiques avant chaque RDV.")|safe }}</div>
+    </details>
+    <details class="faq-item">
+      <summary>{{ t.home.faq6_q|default('Comment faire apparaître mon profil de coach sur FitMatch ?') }}</summary>
+      <div class="faq-content">{{ t.home.faq6_a|default("Inscris-toi en tant que coach, complète ton profil (spécialités, photos, tarifs, salles).")|safe }}</div>
+    </details>
+
+    <div class="mt-10 flex flex-wrap gap-4">
+      <a href="/" class="inline-block bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-emerald-700">{{ t.nav.find_coach|default('Trouver un coach') }}</a>
+      <a href="/coach-signup" class="inline-block border border-gray-300 text-gray-700 px-5 py-2.5 rounded-lg font-medium hover:bg-gray-50">{{ t.nav.become_coach|default('Devenir coach') }}</a>
+      <a href="/contact" class="inline-block text-gray-600 hover:text-gray-900">{{ t.legal.contact_title|default('Contact') }}</a>
+    </div>
+  </main>
+</body>
+</html>

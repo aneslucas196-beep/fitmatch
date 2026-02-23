@@ -593,6 +593,7 @@
           <div class="fm-alert-title">{{ t.login.email_not_confirmed|default("Email non confirmé") }}</div>
           <div>{{ t.login.check_inbox_or_resend|default("Vérifiez votre boîte mail ou renvoyez l'email de confirmation.") }}</div>
           <form action="/auth/resend-confirmation" method="POST" style="display:inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token|default('') }}">
             <input type="hidden" name="email" value="{{ email }}">
             <button type="submit" class="fm-resend-btn">{{ t.login.resend_email|default("Renvoyer le mail") }}</button>
           </form>
@@ -601,6 +602,7 @@
       {% endif %}
 
       <form action="/login" method="POST" class="fm-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token|default('') }}">
         <div class="fm-field">
           <label for="email" class="fm-label">{{ t.login.email_label|default("Adresse email") }}</label>
           <input 

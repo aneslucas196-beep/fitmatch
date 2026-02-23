@@ -523,7 +523,8 @@
     "rights": "Vos droits",
     "rights_text": "Vous pouvez demander l'accès, la rectification ou la suppression de vos données en nous contactant.",
     "contact_intro": "Pour toute question sur FitMatch, les réservations ou votre compte :",
-    "email_label": "Email"
+    "email_label": "Email",
+    "faq_page": "Voir toute la FAQ"
   },
   "partner": {
     "title": "Devenir partenaire",
@@ -1034,6 +1035,68 @@
     "500_title": "Erreur serveur",
     "500_message": "Une erreur inattendue s'est produite. Veuillez réessayer plus tard.",
     "config_error": "Configuration manquante. Contactez l'administrateur."
+  },
+  "account": {
+    "title": "Mon compte",
+    "my_sessions": "Mes séances",
+    "my_info": "Mes informations",
+    "my_payments": "Mes paiements",
+    "logout": "Se déconnecter",
+    "welcome": "Bonjour !",
+    "info_placeholder": "Modifiez vos informations depuis le portail coach (profil, photo, spécialités).",
+    "payments_placeholder": "Historique des paiements et abonnement : consultez le portail coach ou votre email de confirmation Stripe.",
+    "no_sessions": "Aucune séance à venir",
+    "book_session_link": "Réserver une séance",
+    "cancel_modal_title": "Annulation de séance",
+    "cancel_modal_question": "Souhaitez-vous annuler votre séance du",
+    "cancel_modal_at": "à",
+    "cancel_modal_at_place": "chez",
+    "do_not_cancel": "Ne pas annuler",
+    "confirm_cancel": "Confirmer l'annulation",
+    "with_coach": "Avec",
+    "coach_label": "Coach",
+    "gym_default": "Salle de sport",
+    "session_default": "Séance de coaching",
+    "add_to_calendar": "Ajouter à l'agenda",
+    "cancel_booking": "Annuler",
+    "status_confirmed": "Confirmée",
+    "status_pending": "En attente"
+  },
+  "booking_page": {
+    "title": "Réserver une séance",
+    "choose_slot_for": "Choisis un créneau pour",
+    "payment_required_note": "Paiement en ligne requis. Après confirmation, vous serez redirigé vers un paiement sécurisé (carte bancaire).",
+    "back": "Retour",
+    "prev_week": "←",
+    "next_week": "→",
+    "prev_days": "← Préc.",
+    "next_days": "Suiv. →",
+    "days_range": "Jours 1-3",
+    "available": "Dispo",
+    "busy": "Occupé",
+    "past": "Passé",
+    "no_slot_selected": "Aucun créneau sélectionné",
+    "confirm_btn": "Confirmer",
+    "session_coaching": "Séance de coaching",
+    "toast_confirmed": "Réservation confirmée"
+  },
+  "reservation_cancelled": {
+    "page_title": "Rendez-vous annulé - FitMatch",
+    "title": "Rendez-vous annulé",
+    "message": "Votre rendez-vous a été annulé avec succès. Un email de confirmation vous a été envoyé.",
+    "hint": "Vous pouvez reprendre rendez-vous à tout moment avec un coach de votre choix.",
+    "book_again": "Reprendre rendez-vous",
+    "back_sessions": "Retour à mes séances"
+  },
+  "coach_pay": {
+    "page_title": "Paiement 30€ – FitMatch",
+    "title": "Abonnement coach FitMatch",
+    "subtitle": "Un seul clic pour payer et activer ton compte.",
+    "price": "30€ / mois",
+    "button": "Payer par carte bancaire (Stripe)",
+    "redirecting": "Redirection vers Stripe...",
+    "error_retry": "Erreur. Réessayez.",
+    "back": "Retour"
   },
   "verify_email": {
     "page_title": "Vérification email - FitMatch",

@@ -9,7 +9,7 @@ from functools import lru_cache
 
 # Langues supportées
 SUPPORTED_LOCALES = ['fr', 'en', 'es', 'ar', 'de', 'it', 'pt']
-DEFAULT_LOCALE = 'en'
+DEFAULT_LOCALE = 'fr'
 COOKIE_NAME = 'fitmatch_locale'
 
 # Cache des traductions

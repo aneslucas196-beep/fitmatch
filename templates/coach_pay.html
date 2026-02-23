@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" {% if locale == 'ar' %}dir="rtl"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paiement 30€ – FitMatch</title>
+    <title>{{ t.coach_pay.page_title|default('Paiement 30€ – FitMatch') }}</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -62,40 +62,48 @@
 </head>
 <body>
     <div class="card">
-        <h1>Abonnement coach FitMatch</h1>
-        <p>Un seul clic pour payer et activer ton compte.</p>
-        <div class="price">30€ / mois</div>
+        <a href="/coach-login" class="block text-sm text-slate-500 hover:text-slate-700 mb-6 text-left">&larr; {{ t.coach_pay.back|default('Retour') }}</a>
+        <h1>{{ t.coach_pay.title|default('Abonnement coach FitMatch') }}</h1>
+        <p>{{ t.coach_pay.subtitle|default('Un seul clic pour payer et activer ton compte.') }}</p>
+        <div class="price">{{ t.coach_pay.price|default('30€ / mois') }}</div>
         <button type="button" class="btn" id="payBtn">
-            <span id="btnText">Payer par carte bancaire (Stripe)</span>
+            <span id="btnText">{{ t.coach_pay.button|default('Payer par carte bancaire (Stripe)') }}</span>
         </button>
         <p id="errorMsg" class="error" style="display:none;"></p>
     </div>
     <script>
+        window.__COACH_PAY_I18N__ = {{ (t.coach_pay or {}) | tojson }};
+        var _cp = function() { return window.__COACH_PAY_I18N__ || {}; };
         document.getElementById('payBtn').onclick = async function() {
             var btn = this;
             var btnText = document.getElementById('btnText');
             var err = document.getElementById('errorMsg');
             err.style.display = 'none';
             btn.disabled = true;
-            btnText.innerHTML = '<span class="spinner"></span> Redirection vers Stripe...';
+            btnText.innerHTML = '<span class="spinner"></span> ' + (_cp().redirecting || 'Redirection vers Stripe...');
             try {
+                var token = (new URLSearchParams(window.location.search)).get('token') || '';
+                var headers = { 'Content-Type': 'application/json' };
+                if (token) headers['X-Signup-Token'] = token;
                 var r = await fetch('/api/stripe/create-checkout-session', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     credentials: 'include',
                     body: JSON.stringify({ billing_period: 'monthly' })
                 });
-                var data = await r.json();
-                if (data && data.url) {
+                var data = {};
+                try { data = await r.json(); } catch (_) { data = {}; }
+                if (r.ok && data && data.url) {
                     window.location.href = data.url;
                     return;
                 }
-                throw new Error(data && data.error ? data.error : 'Erreur serveur');
+                var errMsg = data.error || data.detail || (r.status === 401 ? 'Session expirée. Rechargez la page et réessayez.' : (r.status === 503 ? (data.error || 'Paiement indisponible') : 'Erreur serveur'));
+                throw new Error(errMsg);
             } catch (e) {
-                err.textContent = e.message || 'Erreur. Réessayez.';
+                err.textContent = e.message || (_cp().error_retry || 'Erreur. Réessayez.');
                 err.style.display = 'block';
                 btn.disabled = false;
-                btnText.textContent = 'Payer par carte bancaire (Stripe)';
+                btnText.textContent = _cp().button || 'Payer par carte bancaire (Stripe)';
             }
         };
     </script>

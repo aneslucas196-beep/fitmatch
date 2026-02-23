@@ -169,7 +169,8 @@ def create_session_payment_checkout(
     service_name: str,
     booking_id: str,
     success_url: str,
-    cancel_url: str
+    cancel_url: str,
+    lang: str = "fr",
 ) -> Dict[str, Any]:
     """
     Crée une session Stripe Checkout pour payer une séance.
@@ -202,7 +203,8 @@ def create_session_payment_checkout(
                     "coach_email": coach_email,
                     "client_email": client_email,
                     "client_name": client_name,
-                    "booking_type": "session_payment"
+                    "booking_type": "session_payment",
+                    "lang": lang,
                 }
             },
             customer_email=client_email,
@@ -213,7 +215,8 @@ def create_session_payment_checkout(
                 "coach_email": coach_email,
                 "client_email": client_email,
                 "client_name": client_name,
-                "booking_type": "session_payment"
+                "booking_type": "session_payment",
+                "lang": lang,
             }
         )
         

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" {% if locale == 'ar' %}dir="rtl"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rendez-vous annulé - FitMatch</title>
+    <title>{{ t.reservation_cancelled.page_title|default('Rendez-vous annulé - FitMatch') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,25 +20,24 @@
             </svg>
         </div>
         
-        <h1 class="text-2xl font-semibold text-gray-900 mb-3">Rendez-vous annulé</h1>
+        <h1 class="text-2xl font-semibold text-gray-900 mb-3">{{ t.reservation_cancelled.title|default('Rendez-vous annulé') }}</h1>
         
         <p class="text-gray-600 mb-6">
-            Votre rendez-vous a été annulé avec succès.<br>
-            Un email de confirmation vous a été envoyé.
+            {{ t.reservation_cancelled.message|default('Votre rendez-vous a été annulé avec succès. Un email de confirmation vous a été envoyé.') }}
         </p>
         
         <div class="bg-gray-50 rounded-xl p-4 mb-6">
             <p class="text-sm text-gray-500">
-                Vous pouvez reprendre rendez-vous à tout moment avec un coach de votre choix.
+                {{ t.reservation_cancelled.hint|default('Vous pouvez reprendre rendez-vous à tout moment avec un coach de votre choix.') }}
             </p>
         </div>
         
         <div class="space-y-3">
-            <a href="/" class="block w-full bg-black text-white py-3 px-6 rounded-xl font-medium hover:bg-gray-800 transition-colors">
-                Reprendre rendez-vous
+            <a href="/?lang={{ locale|default('fr') }}" class="block w-full bg-black text-white py-3 px-6 rounded-xl font-medium hover:bg-gray-800 transition-colors">
+                {{ t.reservation_cancelled.book_again|default('Reprendre rendez-vous') }}
             </a>
             <a href="/account" class="block w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-medium hover:bg-gray-200 transition-colors">
-                Retour à mes séances
+                {{ t.reservation_cancelled.back_sessions|default('Retour à mes séances') }}
             </a>
         </div>
     </div>

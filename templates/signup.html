@@ -478,7 +478,8 @@
       {% endif %}
 
       <form action="/signup" method="POST" class="fm-form">
-        
+        <input type="hidden" name="csrf_token" value="{{ csrf_token|default('') }}">
+
         <!-- Role toggle -->
         <div class="fm-role-toggle">
           <label class="fm-role-option {% if role != 'client' %}active{% endif %}" onclick="setRole('coach')">

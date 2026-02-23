@@ -453,7 +453,8 @@
       <!-- Login Form -->
       <form action="/coach-login" method="POST" class="fm-form" id="form-login">
         <input type="hidden" name="action" value="login">
-        
+        <input type="hidden" name="csrf_token" value="{{ csrf_token|default('') }}">
+
         <div class="fm-field">
           <label for="login-email" class="fm-label">{{ t.coach_portal.email_label|default('Adresse email') }}</label>
           <input 
@@ -494,7 +495,8 @@
       <!-- Signup Form -->
       <form action="/coach-login" method="POST" class="fm-form fm-form-hidden" id="form-signup">
         <input type="hidden" name="action" value="signup">
-        
+        <input type="hidden" name="csrf_token" value="{{ csrf_token|default('') }}">
+
         <div class="fm-field">
           <label for="signup-name" class="fm-label">{{ t.coach_portal.full_name|default('Nom complet') }}</label>
           <input 

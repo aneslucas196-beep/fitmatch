@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" {% if locale == 'ar' %}dir="rtl"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -244,34 +244,46 @@
 <body class="bg-gray-50 min-h-screen">
     <div class="fm-account">
         <aside class="fm-account-sidebar">
-            <h2>Mon compte</h2>
+            <h2>{{ t.account.title|default('Mon compte') }}</h2>
             <nav>
-                <a href="/account" class="active">Mes séances</a>
-                <a href="/account/info">Mes informations</a>
-                <a href="/account/payments">Mes paiements</a>
+                <a href="/account" class="{{ 'active' if account_tab == 'bookings' else '' }}">{{ t.account.my_sessions|default('Mes séances') }}</a>
+                <a href="/account/info" class="{{ 'active' if account_tab == 'info' else '' }}">{{ t.account.my_info|default('Mes informations') }}</a>
+                <a href="/account/payments" class="{{ 'active' if account_tab == 'payments' else '' }}">{{ t.account.my_payments|default('Mes paiements') }}</a>
             </nav>
-            <button class="fm-link-danger" onclick="logout()">Se déconnecter</button>
+            <button class="fm-link-danger" onclick="logout()">{{ t.account.logout|default('Se déconnecter') }}</button>
         </aside>
 
         <main class="fm-account-main">
             <div class="fm-user-welcome" id="user-welcome" style="display: none;">
-                <h3 id="welcome-name">Bonjour !</h3>
+                <h3 id="welcome-name">{{ t.account.welcome|default('Bonjour !') }}</h3>
                 <p id="welcome-email"></p>
             </div>
             
-            <h1 class="fm-page-title">Mes séances</h1>
+            <h1 class="fm-page-title">
+                {% if account_tab == 'info' %}{{ t.account.my_info|default('Mes informations') }}{% elif account_tab == 'payments' %}{{ t.account.my_payments|default('Mes paiements') }}{% else %}{{ t.account.my_sessions|default('Mes séances') }}{% endif %}
+            </h1>
 
+            {% if account_tab == 'info' %}
+            <section class="fm-upcoming">
+                <p class="text-gray-600">{{ t.account.info_placeholder|default('Modifiez vos informations depuis le portail coach (profil, photo, spécialités).') }}</p>
+            </section>
+            {% elif account_tab == 'payments' %}
+            <section class="fm-upcoming">
+                <p class="text-gray-600">{{ t.account.payments_placeholder|default('Historique des paiements et abonnement : consultez le portail coach ou votre email de confirmation Stripe.') }}</p>
+            </section>
+            {% else %}
             <section class="fm-upcoming">
                 <div class="fm-booking-list" id="bookings-list">
                     <div class="fm-empty-state" id="empty-state">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <p>Aucune séance à venir</p>
-                        <a href="/" class="text-blue-600 hover:underline mt-2 inline-block">Réserver une séance</a>
+                        <p>{{ t.account.no_sessions|default('Aucune séance à venir') }}</p>
+                        <a href="/" class="text-blue-600 hover:underline mt-2 inline-block">{{ t.account.book_session_link|default('Réserver une séance') }}</a>
                     </div>
                 </div>
             </section>
+            {% endif %}
         </main>
     </div>
 
@@ -285,11 +297,11 @@
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     ">
         <div style="padding: 25px;">
-            <h1 style="font-size: 24px; margin: 0 0 10px 0; font-weight: 600;">Annulation de séance</h1>
+            <h1 style="font-size: 24px; margin: 0 0 10px 0; font-weight: 600;">{{ t.account.cancel_modal_title|default('Annulation de séance') }}</h1>
             <p style="color: #444; line-height: 22px; margin: 0;">
-                Souhaitez-vous annuler votre séance du 
-                <strong id="cancel-date"></strong> à <strong id="cancel-hour"></strong>  
-                chez <strong id="cancel-salle"></strong> ?
+                {{ t.account.cancel_modal_question|default('Souhaitez-vous annuler votre séance du') }}
+                <strong id="cancel-date"></strong> {{ t.account.cancel_modal_at|default('à') }} <strong id="cancel-hour"></strong>
+                {{ t.account.cancel_modal_at_place|default('chez') }} <strong id="cancel-salle"></strong> ?
             </p>
 
             <div style="background: #fafafa; border: 1px solid #e4e4e4; padding: 15px; border-radius: 10px; margin: 20px 0;">
@@ -311,7 +323,7 @@
                     background: white;
                     font-weight: 500;
                     transition: 0.2s;
-                ">Ne pas annuler</button>
+                ">{{ t.account.do_not_cancel|default('Ne pas annuler') }}</button>
                 <button onclick="confirmCancellation()" style="
                     flex: 1;
                     padding: 12px;
@@ -324,14 +336,17 @@
                     color: white;
                     font-weight: 500;
                     transition: 0.2s;
-                ">Confirmer l'annulation</button>
+                ">{{ t.account.confirm_cancel|default('Confirmer l\'annulation') }}</button>
             </div>
         </div>
     </dialog>
 
     <script>
+        window.__ACCOUNT_I18N__ = {{ (t.account or {}) | tojson }};
+        window.__PAGE_LOCALE__ = "{{ locale|default('fr') }}";
         const STORAGE_KEY = 'fitmatch';
         const USER_KEY = 'fitmatch.user';
+        const _a = () => (window.__ACCOUNT_I18N__ || {});
         
         function getStoredData() {
             try {
@@ -348,16 +363,20 @@
             }
         }
         
+        const LOCALE_MAP = { fr: 'fr-FR', en: 'en-GB', es: 'es-ES', de: 'de-DE', it: 'it-IT', pt: 'pt-PT', ar: 'ar-SA' };
+        const PAGE_LOCALE = (typeof window !== 'undefined' && window.__PAGE_LOCALE__) || 'fr';
+        const DATE_LOCALE = LOCALE_MAP[PAGE_LOCALE] || 'fr-FR';
+        
         function formatDate(dateStr) {
             const date = new Date(dateStr);
             const options = { weekday: 'long', day: 'numeric', month: 'long' };
-            return date.toLocaleDateString('fr-FR', options);
+            return date.toLocaleDateString(DATE_LOCALE, options);
         }
         
         function formatShortDate(dateStr) {
             const date = new Date(dateStr);
             const options = { weekday: 'short', day: 'numeric', month: 'short' };
-            return date.toLocaleDateString('fr-FR', options);
+            return date.toLocaleDateString(DATE_LOCALE, options);
         }
         
         function isUpcoming(dateStr, time) {
@@ -393,7 +412,8 @@
             
             if (user.fullName) {
                 welcomeSection.style.display = 'block';
-                welcomeName.textContent = `Bonjour ${user.fullName.split(' ')[0]} !`;
+                const hello = (_a().welcome || 'Bonjour !').replace('!', '').trim();
+                welcomeName.textContent = `${hello} ${user.fullName.split(' ')[0]} !`;
                 welcomeEmail.textContent = user.email || '';
             }
             
@@ -422,30 +442,37 @@
         }
         
         function createBookingCard(booking, index) {
+            const a = _a();
             const article = document.createElement('article');
             const isConfirmed = booking.status === 'confirmed';
             const statusClass = isConfirmed ? 'fm-booking-card--confirmed' : 'fm-booking-card--pending';
             const statusBadgeClass = isConfirmed ? 'fm-status-badge--confirmed' : 'fm-status-badge--pending';
-            const statusText = isConfirmed ? 'Confirmée' : 'En attente';
+            const statusText = isConfirmed ? (a.status_confirmed || 'Confirmée') : (a.status_pending || 'En attente');
             const statusIcon = isConfirmed ? '✓' : '⏳';
+            const withLabel = a.with_coach || 'Avec';
+            const coachLabel = a.coach_label || 'Coach';
+            const gymDefault = a.gym_default || 'Salle de sport';
+            const sessionDefault = a.session_default || 'Séance de coaching';
+            const addCal = a.add_to_calendar || 'Ajouter à l\'agenda';
+            const cancelBtn = a.cancel_booking || 'Annuler';
             
             article.className = `fm-booking-card ${statusClass}`;
             article.innerHTML = `
                 <header class="fm-booking-header">
                     <div>
                         <p class="fm-booking-date">${formatDate(booking.date)} à ${booking.time || '10:00'}</p>
-                        <p class="fm-booking-coach">Avec <strong>${booking.coach || 'Coach'}</strong></p>
-                        <p class="fm-booking-gym">${booking.gym || 'Salle de sport'}</p>
+                        <p class="fm-booking-coach">${withLabel} <strong>${booking.coach || coachLabel}</strong></p>
+                        <p class="fm-booking-gym">${booking.gym || gymDefault}</p>
                     </div>
                     <span class="fm-status-badge ${statusBadgeClass}">
                         ${statusIcon} ${statusText}
                     </span>
                 </header>
                 <div class="fm-booking-body">
-                    <p class="fm-booking-service">${booking.service || 'Séance de coaching'} – ${booking.duration || 60} min • ${booking.price || 40}€</p>
+                    <p class="fm-booking-service">${booking.service || sessionDefault} – ${booking.duration || 60} min • ${booking.price || 40}€</p>
                     <div class="fm-booking-actions">
-                        <button class="fm-btn-outline" onclick="addToCalendar(${index})">📅 Ajouter à l'agenda</button>
-                        <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking(${index})">Annuler</button>
+                        <button class="fm-btn-outline" onclick="addToCalendar(${index})">📅 ${addCal}</button>
+                        <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking(${index})">${cancelBtn}</button>
                     </div>
                 </div>
             `;

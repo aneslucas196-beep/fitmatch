@@ -539,7 +539,8 @@
     "rights": "Your rights",
     "rights_text": "You can request access, rectification or deletion of your data by contacting us.",
     "contact_intro": "For any questions about FitMatch, bookings or your account:",
-    "email_label": "Email"
+    "email_label": "Email",
+    "faq_page": "View full FAQ"
   },
   "partner": {
     "title": "Become a Partner",
@@ -1034,6 +1035,68 @@
     "booking_failed": "Booking failed",
     "login_failed": "Incorrect email or password",
     "network_error": "Connection error"
+  },
+  "account": {
+    "title": "My account",
+    "my_sessions": "My sessions",
+    "my_info": "My information",
+    "my_payments": "My payments",
+    "logout": "Log out",
+    "welcome": "Hello!",
+    "info_placeholder": "Edit your details from the coach portal (profile, photo, specialties).",
+    "payments_placeholder": "Payment history and subscription: check the coach portal or your Stripe confirmation email.",
+    "no_sessions": "No upcoming sessions",
+    "book_session_link": "Book a session",
+    "cancel_modal_title": "Cancel session",
+    "cancel_modal_question": "Do you want to cancel your session on",
+    "cancel_modal_at": "at",
+    "cancel_modal_at_place": "at",
+    "do_not_cancel": "Don't cancel",
+    "confirm_cancel": "Confirm cancellation",
+    "with_coach": "With",
+    "coach_label": "Coach",
+    "gym_default": "Gym",
+    "session_default": "Coaching session",
+    "add_to_calendar": "Add to calendar",
+    "cancel_booking": "Cancel",
+    "status_confirmed": "Confirmed",
+    "status_pending": "Pending"
+  },
+  "booking_page": {
+    "title": "Book a session",
+    "choose_slot_for": "Choose a time slot for",
+    "payment_required_note": "Online payment required. After confirmation you will be redirected to secure payment (card).",
+    "back": "Back",
+    "prev_week": "←",
+    "next_week": "→",
+    "prev_days": "← Prev",
+    "next_days": "Next →",
+    "days_range": "Days 1-3",
+    "available": "Available",
+    "busy": "Busy",
+    "past": "Past",
+    "no_slot_selected": "No slot selected",
+    "confirm_btn": "Confirm",
+    "session_coaching": "Coaching session",
+    "toast_confirmed": "Booking confirmed"
+  },
+  "reservation_cancelled": {
+    "page_title": "Appointment cancelled - FitMatch",
+    "title": "Appointment cancelled",
+    "message": "Your appointment has been cancelled successfully. A confirmation email has been sent to you.",
+    "hint": "You can book again at any time with a coach of your choice.",
+    "book_again": "Book again",
+    "back_sessions": "Back to my sessions"
+  },
+  "coach_pay": {
+    "page_title": "Payment €30 – FitMatch",
+    "title": "FitMatch coach subscription",
+    "subtitle": "One click to pay and activate your account.",
+    "price": "€30 / month",
+    "button": "Pay by card (Stripe)",
+    "redirecting": "Redirecting to Stripe...",
+    "error_retry": "Error. Please try again.",
+    "back": "Back"
   },
   "verify_email": {
     "page_title": "Email verification - FitMatch",

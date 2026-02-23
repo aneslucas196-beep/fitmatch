@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ locale|default('fr') }}" {% if locale == 'ar' %}dir="rtl"{% endif %}>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -63,7 +63,7 @@
       <span class="text-xl sm:text-2xl font-semibold tracking-tight text-slate-900">Fit<span class="text-emerald-500">Match</span></span>
     </a>
     <a href="javascript:history.back()" class="text-sm text-slate-600 hover:text-slate-900 transition flex items-center gap-1">
-      <span>←</span> Retour
+      <span>←</span> {{ t.booking_page.back|default('Retour') }}
     </a>
   </div>
 </header>
@@ -76,11 +76,11 @@
   <!-- En-tête -->
   <div class="bg-white border-b border-slate-200">
     <div class="max-w-5xl mx-auto px-4 py-6 sm:px-6 sm:py-8">
-      <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">Réserver une séance</h1>
-      <p class="text-sm sm:text-base text-slate-600">Choisis un créneau pour <strong id="coachName" class="text-slate-900">{{ coach.full_name }}</strong></p>
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">{{ t.booking_page.title|default('Réserver une séance') }}</h1>
+      <p class="text-sm sm:text-base text-slate-600">{{ t.booking_page.choose_slot_for|default('Choisis un créneau pour') }} <strong id="coachName" class="text-slate-900">{{ coach.full_name }}</strong></p>
       {% if coach.payment_mode == 'required' %}
       <p class="text-sm text-emerald-700 mt-2 flex items-center gap-2">
-        <span>💳</span> Paiement en ligne requis. Après confirmation, vous serez redirigé vers un paiement sécurisé (carte bancaire).
+        <span>💳</span> {{ t.booking_page.payment_required_note|default('Paiement en ligne requis. Après confirmation, vous serez redirigé vers un paiement sécurisé (carte bancaire).') }}
       </p>
       {% endif %}
     </div>
@@ -95,16 +95,16 @@
       <div class="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 gap-2">
         <div class="font-semibold text-slate-900 text-sm sm:text-base" id="rangeText"></div>
         <div class="flex gap-1 sm:gap-2">
-          <button class="px-2 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition" id="prevWeek">←</button>
-          <button class="px-2 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition" id="nextWeek">→</button>
+          <button class="px-2 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition" id="prevWeek" aria-label="{{ t.booking_page.prev_week|default('Précédent') }}">{{ t.booking_page.prev_week|default('←') }}</button>
+          <button class="px-2 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition" id="nextWeek" aria-label="{{ t.booking_page.next_week|default('Suivant') }}">{{ t.booking_page.next_week|default('→') }}</button>
         </div>
       </div>
 
       <!-- Navigation jours (mobile) -->
       <div class="flex items-center justify-center gap-2 px-4 py-2 border-b border-slate-100 sm:hidden" id="dayNavMobile">
-        <button class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg" id="prevDays">← Préc.</button>
-        <span class="text-xs text-slate-500" id="dayRangeText">Jours 1-3</span>
-        <button class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg" id="nextDays">Suiv. →</button>
+        <button class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg" id="prevDays">{{ t.booking_page.prev_days|default('← Préc.') }}</button>
+        <span class="text-xs text-slate-500" id="dayRangeText">{{ t.booking_page.days_range|default('Jours 1-3') }}</span>
+        <button class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg" id="nextDays">{{ t.booking_page.next_days|default('Suiv. →') }}</button>
       </div>
 
       <!-- Grille horaires -->
@@ -121,19 +121,19 @@
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-t border-slate-100 bg-slate-50 gap-3 sm:gap-4">
         <div class="flex gap-3 sm:gap-4 flex-wrap">
           <span class="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600">
-            <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500"></span> Dispo
+            <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500"></span> {{ t.booking_page.available|default('Dispo') }}
           </span>
           <span class="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600">
-            <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-400"></span> Occupé
+            <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-400"></span> {{ t.booking_page.busy|default('Occupé') }}
           </span>
           <span class="flex items-center gap-1.5 text-xs sm:text-sm text-slate-600">
-            <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-slate-300"></span> Passé
+            <span class="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-slate-300"></span> {{ t.booking_page.past|default('Passé') }}
           </span>
         </div>
         <div class="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-          <div class="text-xs sm:text-sm font-medium text-slate-700 flex-1 sm:flex-none" id="recap">Aucun créneau sélectionné</div>
+          <div class="text-xs sm:text-sm font-medium text-slate-700 flex-1 sm:flex-none" id="recap">{{ t.booking_page.no_slot_selected|default('Aucun créneau sélectionné') }}</div>
           <button class="px-4 py-2 sm:px-5 sm:py-2.5 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm" id="confirmBtn" disabled>
-            Confirmer
+            {{ t.booking_page.confirm_btn|default('Confirmer') }}
           </button>
         </div>
       </div>
@@ -154,10 +154,13 @@
 
 <!-- Toast -->
 <div class="fixed right-4 bottom-4 bg-slate-900 text-white px-4 py-3 rounded-lg opacity-0 transform translate-y-2 transition-all z-50" id="toast">
-  Réservation confirmée
+  {{ t.booking_page.toast_confirmed|default('Réservation confirmée') }}
 </div>
+<span id="serviceLabel" data-service="{{ t.booking_page.session_coaching|default('Séance de coaching') }}" aria-hidden="true"></span>
 
 <script>
+window.__BOOKING_PAGE_I18N__ = {{ (t.booking_page or {}) | tojson }};
+const _bp = () => (window.__BOOKING_PAGE_I18N__ || {});
 const COACH_ID = "{{ coach.id }}";
 const COACH_NAME = "{{ coach.full_name }}";
 const COACH_EMAIL = "{{ coach.email or '' }}";
@@ -165,6 +168,7 @@ const COACH_PHOTO = "{{ coach.profile_photo_url or coach.profile_photo or coach.
 const GYM_NAME = "{{ coach.gyms[0].name if coach.gyms else 'Salle de sport' }}";
 const GYM_ADDRESS = "{{ coach.gyms[0].address if coach.gyms else '' }}";
 const SLOT_MINUTES = {{ coach.session_duration or 60 }};
+const COACH_PRICE = "{{ coach.price_from or 40 }}";
 const DAY_START = "08:00";
 const DAY_END = "23:00";
 
@@ -356,7 +360,7 @@ async function renderWeek() {
   renderCalendar();
   
   selection = null;
-  $("#recap").textContent = "Aucun créneau sélectionné";
+  $("#recap").textContent = _bp().no_slot_selected || "Aucun créneau sélectionné";
   $("#confirmBtn").disabled = true;
   $("#mobileConfirmBar").style.display = "none";
 }
@@ -383,17 +387,19 @@ function confirmBooking() {
   const dateStr = startDate.toISOString().split('T')[0];
   const timeStr = `${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`;
   
+  const locale = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('fitmatch_locale='))?.split('=')[1] || 'fr';
   const params = new URLSearchParams({
     coach: COACH_NAME,
     coach_email: COACH_EMAIL,
-    service: "Séance de coaching",
-    duration: "60",
-    price: "40",
+    service: (document.getElementById('serviceLabel') && document.getElementById('serviceLabel').getAttribute('data-service')) || 'Séance de coaching',
+    duration: String(SLOT_MINUTES),
+    price: COACH_PRICE,
     gym: GYM_NAME,
     gym_address: GYM_ADDRESS,
     coach_photo: COACH_PHOTO,
     date: dateStr,
-    time: timeStr
+    time: timeStr,
+    lang: locale
   });
   
   window.location.href = `/reservation?${params.toString()}`;
@@ -413,11 +419,13 @@ window.addEventListener("resize", () => {
 });
 
 function showToast(msg){
-  const t=$("#toast"); t.textContent=msg; t.classList.add("opacity-100", "translate-y-0");
-  t.classList.remove("opacity-0", "translate-y-2");
-  setTimeout(()=>{
-    t.classList.remove("opacity-100", "translate-y-0");
-    t.classList.add("opacity-0", "translate-y-2");
+  const toaster = $("#toast");
+  toaster.textContent = msg || _bp().toast_confirmed || "Réservation confirmée";
+  toaster.classList.add("opacity-100", "translate-y-0");
+  toaster.classList.remove("opacity-0", "translate-y-2");
+  setTimeout(() => {
+    toaster.classList.remove("opacity-100", "translate-y-0");
+    toaster.classList.add("opacity-0", "translate-y-2");
   }, 2200);
 }
 
