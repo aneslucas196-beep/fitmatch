@@ -5,11 +5,15 @@ services:
     name: fitmatch-web
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: python run_render.py
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.8"
-    # Variables : DATABASE_URL, RESEND_API_KEY, SENDER_EMAIL, CORS_ORIGINS, etc. dans le dashboard (Environment)
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONIOENCODING
+        value: "utf-8"
+    # Variables OBLIGATOIRES : DATABASE_URL (Supabase), SITE_URL, STRIPE_*, RESEND_*, SUPABASE_*, CORS_ORIGINS
 
   - type: worker
     name: fitmatch-reminders-worker

@@ -867,12 +867,16 @@ async def auth_exception_handler(request: Request, exc: HTTPException):
         return RedirectResponse(url="/login", status_code=303)
     return exc
 
-# Configuration des templates et fichiers statiques
-templates = Jinja2Templates(directory="templates")
-# Filtre tojson pour passer des données Python au JavaScript (coach_pay, booking, etc.)
+# Configuration des templates et fichiers statiques (chemins absolus pour Render)
+_BASE_DIR = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(_BASE_DIR / "templates"))
 templates.env.filters["tojson"] = lambda v: __import__("json").dumps(v, ensure_ascii=False) if v is not None else "null"
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/attached_assets", StaticFiles(directory="attached_assets"), name="attached_assets")
+_static_dir = _BASE_DIR / "static"
+_assets_dir = _BASE_DIR / "attached_assets"
+if _static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+if _assets_dir.exists():
+    app.mount("/attached_assets", StaticFiles(directory=str(_assets_dir)), name="attached_assets")
 
 # Client Supabase anonyme (si disponible)
 supabase_anon = get_supabase_anon_client()
@@ -897,13 +901,25 @@ def _reminders_loop():
 @app.on_event("startup")
 def startup_check_database():
     """En production, PostgreSQL (DATABASE_URL) est requis."""
-    if not os.environ.get("DATABASE_URL"):
-        print("❌ DATABASE_URL est requis. Configurez PostgreSQL.")
+    try:
+        print("🔄 Démarrage FitMatch...")
+        db_url = os.environ.get("DATABASE_URL")
+        if not db_url or not db_url.strip():
+            print("❌ DATABASE_URL est requis. Configurez PostgreSQL dans Render > Environment.")
+            sys.stdout.flush()
+            sys.stderr.flush()
+            sys.exit(1)
+        # Démarrer le thread des rappels (24h/2h) pour envoi des emails en continu
+        t = threading.Thread(target=_reminders_loop, daemon=True)
+        t.start()
+        print(f"✅ Rappels démarrés (toutes les {REMINDERS_LOOP_INTERVAL}s)")
+    except Exception as e:
+        print(f"❌ Erreur au démarrage: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.stdout.flush()
+        sys.stderr.flush()
         sys.exit(1)
-    # Démarrer le thread des rappels (24h/2h) pour envoi des emails en continu
-    t = threading.Thread(target=_reminders_loop, daemon=True)
-    t.start()
-    print(f"✅ Rappels démarrés (toutes les {REMINDERS_LOOP_INTERVAL}s)")
 
 
 # Cache en mémoire pour les codes OTP (email -> code)
