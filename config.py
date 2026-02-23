@@ -5,6 +5,13 @@ Charge et valide les variables d'environnement au démarrage.
 import os
 from typing import List, Optional
 
+# Charger .env automatiquement (si présent) pour que les clés soient lues
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
+
 
 def _split_origins(value: Optional[str]) -> List[str]:
     """Parse CORS_ORIGINS (virgules ou espaces). * retourne ['*']."""

@@ -139,13 +139,23 @@ if (urlParams.get('cancelled')) {
         </div>
 
         {% else %}
+        {% if not stripe_available|default(true) %}
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-8 text-center">
+            <p class="text-amber-800 font-medium">{{ t.subscription.payment_coming|default('Paiement bientôt disponible') }}</p>
+            <p class="text-sm text-amber-700 mt-1">{{ t.subscription.payment_coming_desc|default('Les clés Stripe seront configurées prochainement. Vous pourrez alors vous abonner en toute sécurité.') }}</p>
+            <p class="text-sm text-amber-800 mt-3">{{ t.subscription.continue_without_payment|default('En attendant, vous pouvez compléter votre profil et utiliser la plateforme.') }}</p>
+            <a href="/coach/profile-setup" class="inline-block mt-4 bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-emerald-700 transition">
+                {{ t.subscription.continue_to_profile|default('Continuer vers mon profil') }}
+            </a>
+        </div>
+        {% endif %}
         <div class="grid md:grid-cols-2 gap-8">
             
             <div class="bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
                 <div class="text-center mb-8">
                     <h3 class="text-xl font-bold text-slate-900 mb-2">{{ t.subscription.annual_plan|default('Plan Annuel') }}</h3>
-                    <div class="text-4xl font-bold text-slate-900">10€<span class="text-lg text-slate-500">{{ t.subscription.per_year|default('/an') }}</span></div>
-                    <p class="text-slate-500 text-sm mt-2">{{ t.subscription.instead_of|default('Au lieu de 720€/an') }}</p>
+                    <div class="text-4xl font-bold text-slate-900">{{ annual_price|default(300) }}€<span class="text-lg text-slate-500">{{ t.subscription.per_year|default('/an') }}</span></div>
+                    <p class="text-slate-500 text-sm mt-2">{{ t.subscription.instead_of|default('Équivalent 10 mois au prix mensuel') }}</p>
                 </div>
                 
                 <ul class="space-y-4 mb-8">
@@ -205,6 +215,7 @@ if (urlParams.get('cancelled')) {
                     </li>
                 </ul>
                 
+                {% if stripe_available|default(true) %}
                 <button onclick="subscribeAnnual()" id="subscribeAnnualBtn"
                         class="w-full bg-slate-900 text-white py-4 rounded-xl font-semibold hover:bg-slate-800 transition duration-200 flex items-center justify-center">
                     <span id="btnAnnualText">{{ t.subscription.subscribe_annual|default("S'abonner pour 1 an") }}</span>
@@ -213,9 +224,14 @@ if (urlParams.get('cancelled')) {
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                 </button>
+                {% else %}
+                <button disabled class="w-full bg-slate-300 text-slate-500 py-4 rounded-xl font-semibold cursor-not-allowed flex items-center justify-center">
+                    {{ t.subscription.payment_coming|default('Paiement bientôt disponible') }}
+                </button>
+                {% endif %}
                 
                 <p class="text-center text-slate-500 text-sm mt-4">
-                    {{ t.subscription.billed_annually|default('Billed €10 for 1 year') }}
+                    {{ t.subscription.billed_annually|default('Facturé 300€ pour 1 an') }}
                 </p>
             </div>
 
@@ -287,6 +303,7 @@ if (urlParams.get('cancelled')) {
                     </li>
                 </ul>
                 
+                {% if stripe_available|default(true) %}
                 <button onclick="subscribe()" id="subscribeBtn"
                         class="w-full bg-emerald-500 text-white py-4 rounded-xl font-semibold hover:bg-emerald-600 transition duration-200 flex items-center justify-center">
                     <span id="btnText">{{ t.subscription.subscribe_now|default("S'abonner maintenant") }}</span>
@@ -295,6 +312,11 @@ if (urlParams.get('cancelled')) {
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                 </button>
+                {% else %}
+                <button disabled class="w-full bg-slate-300 text-slate-500 py-4 rounded-xl font-semibold cursor-not-allowed flex items-center justify-center">
+                    {{ t.subscription.payment_coming|default('Paiement bientôt disponible') }}
+                </button>
+                {% endif %}
                 
                 <p class="text-center text-slate-500 text-sm mt-4">
                     {{ t.subscription.no_commitment|default('Sans engagement - Annulable à tout moment') }}
@@ -377,14 +399,17 @@ async function subscribe() {
         if (data.url) {
             window.location.href = data.url;
         } else {
-            throw new Error(data.error || 'Erreur lors de la création de la session');
+            const msg = (response.status === 503 && data.code === 'STRIPE_NOT_CONFIGURED')
+                ? (data.error || 'Paiement bientôt disponible.')
+                : (data.error || 'Erreur lors de la création de la session');
+            throw new Error(msg);
         }
     } catch (error) {
         console.error('Erreur:', error);
-        alert(i18n.error + " (" + error.message + ")");
-        btn.disabled = false;
-        btnText.textContent = i18n.subscribeNow;
-        btnSpinner.classList.add('hidden');
+        alert(typeof error.message === 'string' ? error.message : i18n.error);
+        if (btn) { btn.disabled = false; }
+        if (btnText) { btnText.textContent = i18n.subscribeNow; }
+        if (btnSpinner) { btnSpinner.classList.add('hidden'); }
     }
 }
 
@@ -409,14 +434,17 @@ async function subscribeAnnual() {
         if (data.url) {
             window.location.href = data.url;
         } else {
-            throw new Error(data.error || 'Erreur lors de la création de la session');
+            const msg = (response.status === 503 && data.code === 'STRIPE_NOT_CONFIGURED')
+                ? (data.error || 'Paiement bientôt disponible.')
+                : (data.error || 'Erreur lors de la création de la session');
+            throw new Error(msg);
         }
     } catch (error) {
         console.error('Erreur:', error);
-        alert(i18n.error + " (" + error.message + ")");
-        btn.disabled = false;
-        btnText.textContent = i18n.subscribeAnnual;
-        btnSpinner.classList.add('hidden');
+        alert(typeof error.message === 'string' ? error.message : i18n.error);
+        if (btn) { btn.disabled = false; }
+        if (btnText) { btnText.textContent = i18n.subscribeAnnual; }
+        if (btnSpinner) { btnSpinner.classList.add('hidden'); }
     }
 }
 
@@ -432,11 +460,14 @@ async function openPortal() {
         if (data.url) {
             window.location.href = data.url;
         } else {
-            throw new Error(data.error || 'Erreur lors de l\'ouverture du portail');
+            const msg = (response.status === 503 && data.code === 'STRIPE_NOT_CONFIGURED')
+                ? (data.error || 'Paiement bientôt disponible.')
+                : (data.error || 'Erreur lors de l\'ouverture du portail');
+            throw new Error(msg);
         }
     } catch (error) {
         console.error('Erreur:', error);
-        alert(i18n.error);
+        alert(typeof error.message === 'string' ? error.message : i18n.error);
     }
 }
 </script>

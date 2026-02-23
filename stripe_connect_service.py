@@ -85,21 +85,21 @@ def get_account_status(account_id: str) -> Dict[str, Any]:
     
     if account_id and account_id.startswith("acct_demo_"):
         return {
-            "success": True,
+            "success": False,
             "account_id": account_id,
-            "status": "active",
-            "details_submitted": True,
-            "charges_enabled": True,
-            "payouts_enabled": True,
+            "status": "inactive",
+            "details_submitted": False,
+            "charges_enabled": False,
+            "payouts_enabled": False,
             "currently_due": [],
             "eventually_due": [],
             "past_due": [],
-            "email": "demo@fitmatch.local",
-            "country": "FR",
-            "default_currency": "eur"
+            "email": None,
+            "country": None,
+            "default_currency": None
         }
     
-    # Mode réel: utiliser Stripe
+    # Compte Stripe réel
     init_stripe()
     
     try:

@@ -10,6 +10,8 @@ import uvicorn
 import jwt
 import os
 import sys
+import time
+import threading
 import uuid
 import json
 import hashlib
@@ -135,6 +137,7 @@ try:
         update_coach_subscription,
         is_coach_subscribed,
         COACH_MONTHLY_PRICE,
+        COACH_ANNUAL_PRICE,
         init_stripe
     )
     STRIPE_AVAILABLE = True
@@ -154,11 +157,21 @@ def load_scheduled_reminders() -> dict:
     """Charge les rappels programmés depuis le fichier JSON."""
     try:
         path = _reminders_file_path()
-        if os.path.exists(path):
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
+        if not os.path.exists(path):
+            return {"reminders": []}
+        with open(path, "r", encoding="utf-8") as f:
+            raw = f.read().strip()
+        if not raw:
+            return {"reminders": []}
+        data = json.loads(raw)
+        if not isinstance(data, dict) or "reminders" not in data:
+            return {"reminders": []}
+        return data
+    except json.JSONDecodeError:
+        # Fichier vide ou JSON invalide = pas de rappels, pas d'avertissement
+        return {"reminders": []}
     except Exception as e:
-        print(f"⚠️ Erreur chargement rappels: {e}")
+        print(f"Erreur chargement rappels: {e}")
     return {"reminders": []}
 
 def save_scheduled_reminders(data: dict):
@@ -182,8 +195,13 @@ def schedule_booking_reminders(booking: dict, coach_name: str):
             print(f"⚠️ Date/heure manquante pour programmer les rappels")
             return
         
+        # Normaliser l'heure (accepter "14:00" ou "14:00:00")
+        time_str = (booking_time or "").strip()
+        if len(time_str) > 5 and ":" in time_str:
+            time_str = time_str[:5]  # "14:00:00" -> "14:00"
+        
         # Parser la date et l'heure du RDV
-        booking_datetime = datetime.strptime(f"{booking_date} {booking_time}", "%Y-%m-%d %H:%M")
+        booking_datetime = datetime.strptime(f"{booking_date} {time_str}", "%Y-%m-%d %H:%M")
         
         # Calculer les heures d'envoi des rappels
         reminder_24h = booking_datetime - timedelta(hours=24)
@@ -287,7 +305,13 @@ def process_due_reminders():
             if reminder.get("sent"):
                 continue
             
-            send_at = datetime.fromisoformat(reminder.get("send_at"))
+            try:
+                send_at_str = (reminder.get("send_at") or "").strip()
+                if not send_at_str:
+                    continue
+                send_at = datetime.fromisoformat(send_at_str.replace("Z", "").replace("+00:00", ""))
+            except (ValueError, TypeError):
+                continue
             
             if send_at <= now:
                 # C'est l'heure d'envoyer ce rappel
@@ -437,7 +461,12 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Précharger les traductions au démarrage
 preload_all_translations()
 
-# Vérification production : PostgreSQL requis (pas de mode démo)
+def _is_stripe_configured() -> bool:
+    """True si les clés Stripe sont définies et ne sont pas des placeholders (xxx)."""
+    sk = (os.environ.get("STRIPE_SECRET_KEY") or "").strip().lower()
+    return bool(STRIPE_AVAILABLE and sk and "xxx" not in sk)
+
+# Vérification production : PostgreSQL requis
 if not os.environ.get("DATABASE_URL"):
     print("⚠️ DATABASE_URL non défini : la base de données est requise. Utilisateurs et réservations ne seront pas persistés.")
 
@@ -516,7 +545,7 @@ def get_coaches_by_gym_id(gym_id: str) -> List[Dict]:
             if gym_info:
                 gym_name = gym_info.get("name", "").lower().strip()
     
-    # 3. Charger les VRAIS coachs depuis la base de données demo
+    # 3. Charger les coachs depuis la base de données
     real_coaches = []
     demo_users = load_demo_users()
     
@@ -575,9 +604,16 @@ def get_coaches_by_gym_id(gym_id: str) -> List[Dict]:
                 }
                 real_coaches.append(coach_obj)
     
-    # 4. Combiner les deux listes
-    all_coaches = json_coaches + real_coaches
-    return all_coaches
+    # 4. Combiner sans doublon par email (priorité DB)
+    seen_emails = {c.get("email") for c in real_coaches if c.get("email")}
+    for c in json_coaches:
+        ej = c.get("email")
+        if not ej:
+            ej = (c.get("id") or "").replace("_at_", "@").replace("_", ".")
+        if ej and ej not in seen_emails:
+            seen_emails.add(ej)
+            real_coaches.append(c)
+    return real_coaches
 
 # Configuration sécurisée - plus de stockage local, utilisation de Supabase Storage uniquement
 
@@ -699,12 +735,32 @@ app.mount("/attached_assets", StaticFiles(directory="attached_assets"), name="at
 supabase_anon = get_supabase_anon_client()
 
 
+# Intervalle des rappels en secondes (toutes les 60 s par défaut)
+REMINDERS_LOOP_INTERVAL = int(os.environ.get("REMINDERS_INTERVAL_SEC", "60"))
+
+
+def _reminders_loop():
+    """Boucle en arrière-plan : envoie les rappels dus toutes les REMINDERS_LOOP_INTERVAL secondes."""
+    while True:
+        try:
+            n = process_due_reminders()
+            if n > 0:
+                print(f"[Rappels] {datetime.now().isoformat()} – {n} rappel(s) envoyé(s)")
+        except Exception as e:
+            print(f"[Rappels] Erreur: {e}")
+        time.sleep(REMINDERS_LOOP_INTERVAL)
+
+
 @app.on_event("startup")
 def startup_check_database():
-    """En production, PostgreSQL est requis (plus de mode démo)."""
+    """En production, PostgreSQL (DATABASE_URL) est requis."""
     if not os.environ.get("DATABASE_URL"):
-        print("❌ DATABASE_URL est requis. Configurez PostgreSQL (pas de mode démo).")
+        print("❌ DATABASE_URL est requis. Configurez PostgreSQL.")
         sys.exit(1)
+    # Démarrer le thread des rappels (24h/2h) pour envoi des emails en continu
+    t = threading.Thread(target=_reminders_loop, daemon=True)
+    t.start()
+    print(f"✅ Rappels démarrés (toutes les {REMINDERS_LOOP_INTERVAL}s)")
 
 
 # Cache en mémoire pour les codes OTP (email -> code)
@@ -823,59 +879,39 @@ def is_valid_password(password: str) -> bool:
 # Helper functions pour l'authentification
 def get_current_user(session_token: Optional[str] = Cookie(None)):
     """Récupère l'utilisateur connecté via le token de session."""
-    # Validation des prérequis
-    if not session_token:
+    if not session_token or not isinstance(session_token, str):
         return None
-    
-    # Validation du format du token
-    if not isinstance(session_token, str) or len(session_token.strip()) < 10:
-        print("❌ Token de session invalide (format)")
+    session_token = session_token.strip()
+    if len(session_token) < 10:
         return None
-    
-    # Stockage local si pas de Supabase
-    if not supabase_anon:
-        if session_token.startswith("demo_"):
-            # Extraire l'email depuis le token unique
-            from utils import load_demo_users, get_demo_user
-            import hashlib
-            
-            print(f"🔍 Recherche utilisateur pour token: {session_token}")
-            
-            # D'abord vérifier le cache demo_token_map (pour les tokens créés via /api/signup-reservation)
-            if session_token in demo_token_map:
-                email = demo_token_map[session_token]
-                print(f"✅ Token trouvé dans demo_token_map pour {email}")
+
+    # Toujours reconnaître le token demo_ (inscription coach, signup-reservation, etc.)
+    # même si Supabase est configuré, pour que /coach/subscription soit accessible après signup.
+    if session_token.startswith("demo_"):
+        from utils import load_demo_users, get_demo_user
+        import hashlib
+        if session_token in demo_token_map:
+            email = demo_token_map[session_token]
+            fresh_user_data = get_demo_user(email)
+            if fresh_user_data:
+                fresh_user_data["_access_token"] = session_token
+                fresh_user_data["email"] = email
+                return fresh_user_data
+        all_demo_users = load_demo_users()
+        for email, user_data in all_demo_users.items():
+            expected_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+            if session_token == expected_token:
                 fresh_user_data = get_demo_user(email)
                 if fresh_user_data:
                     fresh_user_data["_access_token"] = session_token
                     fresh_user_data["email"] = email
-                    print(f"✅ Données récupérées: {email}, full_name: {fresh_user_data.get('full_name', 'N/A')}")
                     return fresh_user_data
-            
-            # Charger les utilisateurs depuis la base PostgreSQL
-            all_demo_users = load_demo_users()
-            
-            # Trouver l'utilisateur correspondant à ce token
-            for email, user_data in all_demo_users.items():
-                expected_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
-                if session_token == expected_token:
-                    print(f"✅ Token trouvé pour {email} - Récupération données persistantes...")
-                    
-                    # Récupérer les données les plus récentes depuis le stockage persistant
-                    fresh_user_data = get_demo_user(email)
-                    if fresh_user_data:
-                        fresh_user_data["_access_token"] = session_token
-                        fresh_user_data["email"] = email
-                        return fresh_user_data
-                    # Utilisateur supprimé ou erreur DB
-                    print(f"⚠️ Pas de données pour {email}")
-                    return None
-            
-            # Token non reconnu (utilisateurs chargés depuis PostgreSQL uniquement)
-            print(f"❌ Token non reconnu: {session_token}")
-            return None
+                return None
         return None
-    
+
+    # Supabase/JWT : uniquement si pas de token demo_
+    if not supabase_anon:
+        return None
     try:
         jwt_secret = settings.get_jwt_secret()
         if jwt_secret:
@@ -1306,11 +1342,13 @@ async def coach_signup_page(request: Request):
 
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_form(request: Request, role: str | None = None):
-    """Formulaire d'inscription."""
+    """Formulaire d'inscription. Les coachs sont redirigés vers la page dédiée."""
+    if (role or "").strip().lower() == "coach":
+        return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
     countries = get_countries_list()
     i18n = get_i18n_context(request)
     return templates.TemplateResponse("signup.html", {
-        "request": request, 
+        "request": request,
         "role": role,
         "countries": countries,
         **i18n
@@ -1803,7 +1841,6 @@ async def verify_otp_submit(
         
         response = RedirectResponse(url=redirect_url, status_code=303)
         
-        # Cookie de session démo (en production, utiliser un vrai token Supabase)
         response.set_cookie(
             key="session_token",
             value=f"verified_{user_id}",
@@ -1987,7 +2024,7 @@ async def login_submit(
             else:
                 redirect_url = "/coach/portal"
             
-            print(f"✅ Connexion démo réussie - Redirection vers {redirect_url} (rôle: {role})")
+            print(f"✅ Connexion réussie - Redirection vers {redirect_url} (rôle: {role})")
             
             response = RedirectResponse(url=redirect_url, status_code=303)
             # Créer un token unique pour cet utilisateur
@@ -2410,16 +2447,19 @@ async def coach_login_submit(
         save_demo_user(email, new_coach)
         print(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
         
-        # Connexion automatique après inscription - redirection vers page d'abonnement
+        # Connexion automatique après inscription → page abonnement Stripe
         import hashlib
         unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
         response = RedirectResponse(url="/coach/subscription", status_code=303)
+        site_url = (os.environ.get("SITE_URL") or "").lower()
+        use_secure_cookie = os.environ.get("REPLIT_DEPLOYMENT") == "1" or site_url.startswith("https")
         response.set_cookie(
             key="session_token",
             value=unique_token,
             httponly=True,
-            secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
-            samesite="lax"
+            secure=use_secure_cookie,
+            samesite="lax",
+            max_age=86400 * 30,
         )
         return response
     
@@ -2473,17 +2513,17 @@ async def coach_login_submit(
                     subscription_status = "active"
                     print(f"✅ Grandfathered coach upgraded: {email}")
             
-            # Rediriger vers le portail ou la création de profil
-            # L'abonnement n'est plus bloquant à la connexion
             redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-            
             response = RedirectResponse(url=redirect_url, status_code=303)
+            site_url = (os.environ.get("SITE_URL") or "").lower()
+            use_secure = os.environ.get("REPLIT_DEPLOYMENT") == "1" or site_url.startswith("https")
             response.set_cookie(
                 key="session_token",
                 value=unique_token,
                 httponly=True,
-                secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
-                samesite="lax"
+                secure=use_secure,
+                samesite="lax",
+                max_age=86400 * 30,
             )
             return response
         else:
@@ -2511,6 +2551,8 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     
     if subscription_status in ["blocked", "cancelled", "past_due"]:
         return RedirectResponse(url="/coach/subscription", status_code=302)
+    if subscription_status == "pending_payment":
+        return RedirectResponse(url="/coach/subscription", status_code=302)
     
     # Vérifier si le profil est complété
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
@@ -2535,12 +2577,15 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
         # Vérifier si le profil est complété pour les nouveaux utilisateurs
         if not user.get("profile_completed", False):
             return RedirectResponse(url="/coach/profile-setup", status_code=302)
-        transformations = get_transformations_by_coach_mock(1)
+        transformations = []
     
+    # Inclure payment_mode depuis demo_users pour que le bloc "Mode de Paiement" s'affiche correctement
+    coach_for_template = {**user, "payment_mode": coach_data_fresh.get("payment_mode", "disabled")}
+
     i18n = get_i18n_context(request)
     return templates.TemplateResponse("coach_portal.html", {
         "request": request,
-        "coach": user,
+        "coach": coach_for_template,
         "transformations": transformations,
         **i18n
     })
@@ -2572,10 +2617,13 @@ async def coach_portal_update(
         user_id = user.get("id", user.get("email", "demo_user"))
         success = update_coach_profile(user_supabase, user_id, profile_data)
         if not success:
+            demo_users = load_demo_users()
+            coach_data_fresh = demo_users.get(user.get("email"), {})
+            coach_for_template = {**user, "payment_mode": coach_data_fresh.get("payment_mode", "disabled")}
             i18n = get_i18n_context(request)
             return templates.TemplateResponse("coach_portal.html", {
                 "request": request,
-                "coach": user,
+                "coach": coach_for_template,
                 "error": "Erreur lors de la mise à jour du profil.",
                 **i18n
             })
@@ -2736,23 +2784,32 @@ async def coach_profile_setup_post(
             # Mettre à jour l'utilisateur et sauvegarder dans le stockage persistant
             from utils import save_demo_user
             
-            # CORRECTION : Récupérer l'email réel depuis le token
             import hashlib
             session_token = user.get("_access_token", "")
-            user_email = "demo@example.com"  # Fallback par défaut
+            user_email = None
             
-            # Si c'est un token démo, extraire l'email correspondant
             if session_token.startswith("demo_"):
                 from utils import load_demo_users
                 all_demo_users = load_demo_users()
-                
-                # Trouver l'email correspondant à ce token
                 for email, user_data in all_demo_users.items():
                     expected_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
                     if session_token == expected_token:
                         user_email = email
                         print(f"✅ Email extrait du token: {user_email}")
                         break
+            
+            if not user_email:
+                print("❌ Impossible d'identifier l'utilisateur (token invalide ou expiré)")
+                error_message = "Session invalide. Veuillez vous reconnecter."
+                i18n_context = get_i18n_context(request)
+                return templates.TemplateResponse("coach_profile_setup.html", {
+                    "request": request,
+                    "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km},
+                    "profile_completed": False,
+                    "error_message": error_message,
+                    "user": user,
+                    **i18n_context
+                }, status_code=401)
             
             print(f"🔧 Sauvegarde profil pour: {user_email}")
             
@@ -2803,7 +2860,7 @@ async def coach_profile_setup_post(
             
             # Sauvegarder les modifications dans le stockage persistant
             save_demo_user(user_email, updated_user)
-            print(f"✅ Données utilisateur démo sauvegardées avec profile_completed=True")
+            print(f"✅ Profil coach sauvegardé avec profile_completed=True")
             
             # Redirection vers le dashboard après succès
             return RedirectResponse(url="/coach/portal", status_code=303)
@@ -3188,16 +3245,23 @@ async def coach_subscription_page(
     
     subscription_info = get_coach_subscription_info(coach_email)
     
-    # Afficher la page d'abonnement (pas de redirection automatique)
-    # Les coachs peuvent voir leur statut, gérer ou résilier leur abonnement
+    stripe_available = _is_stripe_configured()
+    try:
+        publishable_key = get_publishable_key() if stripe_available else ""
+    except Exception:
+        publishable_key = ""
+        stripe_available = False
+    
     locale = get_locale_from_request(request)
     translations = get_translations(locale)
     return templates.TemplateResponse("coach_subscription.html", {
         "request": request,
         "coach": user,
         "subscription_info": subscription_info,
-        "monthly_price": COACH_MONTHLY_PRICE / 100,
-        "publishable_key": get_publishable_key(),
+        "monthly_price": COACH_MONTHLY_PRICE // 100,
+        "annual_price": (COACH_ANNUAL_PRICE // 100) if STRIPE_AVAILABLE else 300,
+        "publishable_key": publishable_key,
+        "stripe_available": stripe_available,
         "t": translations,
         "locale": locale
     })
@@ -4615,36 +4679,42 @@ async def search_gyms_by_location_api(
 @app.get("/api/gyms/worldwide-search")
 async def search_gyms_worldwide(q: str):
     """
-    🌍 NOUVEAU: Recherche MONDIALE de salles via Google Places API.
-    Permet aux coachs et clients de chercher n'importe quelle salle dans le monde.
-    Paramètres: q = nom de salle, adresse, ville, pays...
+    🌍 Recherche MONDIALE de salles (Google Places API - style Replit).
+    Toutes les salles du monde : gyms, fitness, salles de sport.
+    Paramètres: q = nom, adresse, ville, pays...
     """
     try:
-        print(f"🌍 RECHERCHE MONDIALE: {q}")
-        
-        if len(q.strip()) < 3:
+        q_clean = (q or "").strip()[:200]
+        if len(q_clean) < 2:
             return {
                 "success": True,
                 "gyms": [],
-                "message": "Tapez au moins 3 caractères"
+                "message": "Tapez au moins 2 caractères",
+                "count": 0
+            }
+        has_key = bool(os.environ.get("GOOGLE_PLACES_API_KEY") or os.environ.get("GOOGLE_MAPS_API_KEY"))
+        if not has_key:
+            return {
+                "success": False,
+                "gyms": [],
+                "message": "Recherche mondiale indisponible. Configurez GOOGLE_PLACES_API_KEY.",
+                "count": 0
             }
         
-        # Utiliser la nouvelle fonction de recherche mondiale
-        results = search_gyms_worldwide_autocomplete(q)
-        
+        results = search_gyms_worldwide_autocomplete(q_clean)
         return {
             "success": True,
             "gyms": results,
             "count": len(results),
-            "message": f"{len(results)} salle(s) trouvée(s) dans le monde"
+            "message": f"{len(results)} salle(s) trouvée(s)" if results else "Aucune salle trouvée pour cette recherche"
         }
-        
     except Exception as e:
         print(f"❌ Erreur recherche mondiale: {e}")
         return {
             "success": False,
             "message": "Erreur lors de la recherche mondiale",
-            "gyms": []
+            "gyms": [],
+            "count": 0
         }
 
 @app.get("/api/gyms/suggestions")
@@ -4815,25 +4885,27 @@ async def get_gym_coaches_by_id(gym_id: str):
         # 🆕 Charger depuis le JSON statique
         coaches = get_coaches_by_gym_id(gym_id)
         
-        # 🆕 Trier par : vérifiés → note → nb d'avis
+        # Normaliser le champ nom pour l'affichage (DB = full_name, JSON = name)
+        for c in coaches:
+            if not c.get("name"):
+                c["name"] = c.get("full_name", "Coach")
         coaches_sorted = sorted(
             coaches,
             key=lambda c: (
-                -int(c.get("verified", False)),  # Vérifiés en premier (True=1, False=0, inverse pour desc)
-                -c.get("rating", 0),  # Note décroissante
-                -c.get("reviews_count", 0)  # Nombre d'avis décroissant
+                -int(c.get("verified", False)),
+                -float(c.get("rating", 0)),
+                -int(c.get("reviews_count", 0) or c.get("review_count", 0))
             )
         )
-        
-        # Récupérer les infos de la gym depuis le JSON
-        import json, os
-        gym_info = None
-        gyms_file = os.path.join("static", "data", "gyms.json")
-        if os.path.exists(gyms_file):
-            with open(gyms_file, 'r', encoding='utf-8') as f:
-                all_gyms = json.load(f)
-                gym_info = next((g for g in all_gyms if g["id"] == gym_id), None)
-        
+        gym_info = get_gym_by_id(gym_id) if gym_id else None
+        if not gym_info:
+            import json as _json
+            import os as _os
+            gyms_file = _os.path.join("static", "data", "gyms.json")
+            if _os.path.exists(gyms_file):
+                with open(gyms_file, 'r', encoding='utf-8') as f:
+                    all_gyms = _json.load(f)
+                    gym_info = next((g for g in all_gyms if g.get("id") == gym_id), None)
         print(f"📊 Résultat pour {gym_id}: {len(coaches_sorted)} coaches trouvés")
         
         return {
@@ -6392,6 +6464,11 @@ reminder_thread.start()
 @app.post("/api/stripe/create-checkout-session")
 async def api_create_checkout_session(request: Request, user = Depends(require_coach_or_pending)):
     """Crée une session Checkout Stripe pour l'abonnement (accessible même sans abonnement actif)."""
+    if not _is_stripe_configured():
+        return JSONResponse(
+            {"error": "Paiement temporairement indisponible. Les clés Stripe seront configurées prochainement.", "code": "STRIPE_NOT_CONFIGURED"},
+            status_code=503
+        )
     try:
         # Essayer de lire le body JSON, sinon utiliser les valeurs par défaut
         try:
@@ -6450,6 +6527,11 @@ async def api_create_checkout_session(request: Request, user = Depends(require_c
 @app.post("/api/stripe/create-portal-session")
 async def api_create_portal_session(request: Request, user = Depends(require_coach_role)):
     """Crée une session du portail de facturation Stripe."""
+    if not _is_stripe_configured():
+        return JSONResponse(
+            {"error": "Paiement temporairement indisponible.", "code": "STRIPE_NOT_CONFIGURED"},
+            status_code=503
+        )
     try:
         coach_email = user.get("email")
         subscription_info = get_coach_subscription_info(coach_email)

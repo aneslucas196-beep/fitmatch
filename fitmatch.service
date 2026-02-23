@@ -1,0 +1,27 @@
+# Service systemd pour FitMatch (web + rappels 24/7)
+# Installation (en root ou sudo) :
+#   1. Copier ce fichier : sudo cp fitmatch.service /etc/systemd/system/
+#   2. Éditer le chemin et l'utilisateur : sudo nano /etc/systemd/system/fitmatch.service
+#   3. Charger et démarrer :
+#      sudo systemctl daemon-reload
+#      sudo systemctl enable fitmatch
+#      sudo systemctl start fitmatch
+#   4. Vérifier : sudo systemctl status fitmatch
+# Logs : journalctl -u fitmatch -f
+
+[Unit]
+Description=FitMatch (FastAPI + rappels 24/7)
+After=network.target
+
+[Service]
+Type=simple
+User=fitmatch
+Group=fitmatch
+WorkingDirectory=/opt/fitmatch
+EnvironmentFile=/opt/fitmatch/.env
+ExecStart=/usr/bin/python3 /opt/fitmatch/start_server.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -105,63 +105,6 @@ def geocode_city(city: str) -> Optional[Tuple[float, float]]:
     except (GeocoderTimedOut, GeocoderServiceError, Exception):
         return None
 
-# Données mock pour les tests
-MOCK_COACHES = [
-    {
-        "id": 1,
-        "role": "coach",
-        "full_name": "Marie Dubois",
-        "city": "Élancourt",
-        "lat": 48.7863,
-        "lng": 2.0592,
-        "instagram_url": "https://instagram.com/marie_fit",
-        "bio": "Coach diplômée avec 8 ans d'expérience. Spécialisée dans la transformation physique et le coaching nutritionnel. Passionnée par l'accompagnement personnalisé.",
-        "radius_km": 25,
-        "price_from": 60,
-        "specialties": ["musculation", "nutrition", "cardio"]
-    },
-    {
-        "id": 2,
-        "role": "coach",
-        "full_name": "Thomas Martin",
-        "city": "Plaisir",
-        "lat": 48.8244,
-        "lng": 1.9486,
-        "instagram_url": "https://instagram.com/thomas_crossfit",
-        "bio": "Ancien athlète de haut niveau reconverti en coach CrossFit. Expert en préparation physique et développement de la force. Méthodes d'entraînement innovantes.",
-        "radius_km": 30,
-        "price_from": 75,
-        "specialties": ["crossfit", "musculation", "cardio"]
-    }
-]
-
-MOCK_TRANSFORMATIONS = [
-    {
-        "id": 1,
-        "coach_id": 1,
-        "title": "Transformation Marie - Client A",
-        "description": "Perte de 15kg en 4 mois avec programme personnalisé",
-        "duration_weeks": 16,
-        "consent": True
-    },
-    {
-        "id": 2,
-        "coach_id": 1,
-        "title": "Préparation compétition",
-        "description": "Préparation physique pour compétition de fitness",
-        "duration_weeks": 12,
-        "consent": True
-    },
-    {
-        "id": 3,
-        "coach_id": 2,
-        "title": "Challenge CrossFit",
-        "description": "Initiation et progression en CrossFit",
-        "duration_weeks": 8,
-        "consent": True
-    }
-]
-
 def get_supabase_anon_client():
     """
     Crée un client Supabase anonyme (respecte RLS).
@@ -230,51 +173,20 @@ def get_supabase_client_for_user(access_token: str):
         print(f"❌ Erreur création client authentifié: {e}")
         return None
 
-def search_coaches_mock(specialty: Optional[str] = None, 
-                       user_lat: Optional[float] = None, 
-                       user_lng: Optional[float] = None, 
+def search_coaches_mock(specialty: Optional[str] = None,
+                       user_lat: Optional[float] = None,
+                       user_lng: Optional[float] = None,
                        radius_km: int = 50) -> List[Dict]:
-    """
-    Version mock de la recherche de coachs.
-    """
-    coaches = []
-    
-    for coach in MOCK_COACHES:
-        # Filtrer par spécialité si spécifiée
-        if specialty and specialty not in coach["specialties"]:
-            continue
-            
-        # Calculer la distance si coordonnées fournies
-        if user_lat is not None and user_lng is not None:
-            distance = haversine_distance(user_lat, user_lng, coach["lat"], coach["lng"])
-            if distance > radius_km:
-                continue
-            coach_copy = coach.copy()
-            coach_copy["distance"] = distance
-        else:
-            coach_copy = coach.copy()
-            coach_copy["distance"] = 0
-            
-        coaches.append(coach_copy)
-    
-    # Trier par distance
-    coaches.sort(key=lambda x: x["distance"])
-    return coaches
+    """Fallback sans données factices : retourne une liste vide."""
+    return []
 
 def get_coach_by_id_mock(coach_id: int) -> Optional[Dict]:
-    """
-    Version mock pour récupérer un coach par ID.
-    """
-    for coach in MOCK_COACHES:
-        if coach["id"] == coach_id:
-            return coach.copy()
+    """Fallback sans données factices : retourne None."""
     return None
 
 def get_transformations_by_coach_mock(coach_id: int) -> List[Dict]:
-    """
-    Version mock pour récupérer les transformations d'un coach.
-    """
-    return [t for t in MOCK_TRANSFORMATIONS if t["coach_id"] == coach_id]
+    """Fallback sans données factices : retourne une liste vide."""
+    return []
 
 # Fonctions Supabase - Authentification
 def create_user_profile_on_confirmation(supabase_client, user_id: str, email: str, full_name: str, role: str, gender: Optional[str] = None, coach_gender_preference: Optional[str] = None, selected_gyms: Optional[str] = None) -> bool:
@@ -757,40 +669,8 @@ COACH_GYMS = []
 # Mapping unifié gym_id -> Set[coach_id] pour performances optimisées
 COACH_GYMS_BY_ID = {}
 
-# Données de test - Simuler qu'un coach demo a ajouté une salle
-def init_test_data():
-    """Initialise des données de test pour valider le système coach ↔ gym."""
-    global COACH_GYMS, COACH_GYMS_BY_ID
-    
-    # Simuler qu'un coach (ID=1, Marie Dubois) a ajouté une salle de test
-    if not COACH_GYMS:  # Éviter de dupliquer si déjà initialisé
-        test_gym_data = {
-            "name": "Salle Test Demo",
-            "address": "123 Rue de Test, 78000 Versailles, France",
-            "lat": 48.8014,
-            "lng": 2.1301
-        }
-        
-        # Ajouter la relation directement (comme si add_coach_gym avait été appelée)
-        relation = {
-            "id": 1,
-            "gym_id": "coach_gym_1",
-            "coach_id": "1",  # ID du coach Marie Dubois dans MOCK_COACHES
-            "gym_data": test_gym_data,
-            "created_at": "2025-09-17T17:00:00Z"
-        }
-        
-        COACH_GYMS.append(relation)
-        
-        # Ajouter dans le mapping unifié
-        if "coach_gym_1" not in COACH_GYMS_BY_ID:
-            COACH_GYMS_BY_ID["coach_gym_1"] = set()
-        COACH_GYMS_BY_ID["coach_gym_1"].add("1")
-        
-        print("✅ Données de test initialisées: coach 1 -> gym coach_gym_1")
-
-# Initialiser les données de test au démarrage
-init_test_data()
+# Données de test désactivées : plus d'injection de salles ou coachs factices.
+# Les relations coach ↔ salle viennent uniquement de la base (DB) ou des utilisateurs réels.
 
 def geocode_address(query: str) -> Optional[Dict]:
     """
@@ -1343,59 +1223,42 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
 
 def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
     """
-    Recherche MONDIALE de salles de sport via Google Places Autocomplete (Text Search).
-    Permet aux coachs et clients de chercher n'importe quelle salle dans le monde.
+    Recherche MONDIALE de salles via Google Places API (New) - Text Search.
+    Style Replit : toutes les salles du monde (gyms, fitness centers, salles de sport).
+    Essaie d'abord avec type "gym", puis sans filtre de type pour élargir les résultats.
     """
     try:
         import requests
         
-        # Utiliser GOOGLE_PLACES_API_KEY (nouvelle clé fournie)
         api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
         if not api_key:
-            print("⚠️ GOOGLE_PLACES_API_KEY non configurée")
+            print("⚠️ GOOGLE_PLACES_API_KEY / GOOGLE_MAPS_API_KEY non configurée")
             return []
         
-        if len(query.strip()) < 3:
+        if len(query.strip()) < 2:
             return []
         
-        # URL de l'API Places (New) - Text Search pour recherche mondiale
         url = "https://places.googleapis.com/v1/places:searchText"
-        
         headers = {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": api_key,
             "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.types,places.internationalPhoneNumber"
         }
         
-        payload = {
-            "textQuery": f"{query} gym fitness",
-            "maxResultCount": 20,
-            "includedType": "gym"
-        }
-        
-        print(f"🌍 Recherche mondiale Google Places: '{query}'")
-        
-        response = requests.post(url, headers=headers, json=payload, timeout=15)
-        
-        if response.status_code != 200:
-            print(f"❌ Erreur Google Places API: {response.status_code} - {response.text}")
-            return []
-        
-        data = response.json()
-        places = data.get("places", [])
-        
-        results = []
-        for place in places:
+        def parse_place(place: dict) -> dict:
             location = place.get("location", {})
             lat_place = location.get("latitude")
             lng_place = location.get("longitude")
-            
             if not lat_place or not lng_place:
-                continue
-            
-            gym_result = {
+                return None
+            display_name = place.get("displayName")
+            if isinstance(display_name, dict):
+                name_text = display_name.get("text", "Salle de sport")
+            else:
+                name_text = str(display_name) if display_name else "Salle de sport"
+            return {
                 "id": f"google_worldwide_{place.get('id', '')}",
-                "name": place.get("displayName", {}).get("text", "Salle de sport"),
+                "name": name_text,
                 "address": place.get("formattedAddress", "Adresse non disponible"),
                 "lat": lat_place,
                 "lng": lng_place,
@@ -1404,7 +1267,45 @@ def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
                 "source": "Google Places Worldwide",
                 "coach_count": 0
             }
-            results.append(gym_result)
+        
+        # 1) Recherche avec type "gym" (recommandé)
+        payload_gym = {
+            "textQuery": f"{query} gym fitness",
+            "maxResultCount": 20,
+            "includedType": "gym"
+        }
+        print(f"🌍 Recherche mondiale Google Places: '{query}'")
+        response = requests.post(url, headers=headers, json=payload_gym, timeout=15)
+        places = []
+        if response.status_code == 200:
+            data = response.json()
+            places = data.get("places", [])
+        
+        # 2) Si peu ou pas de résultats, refaire sans filtre de type (toutes les salles / fitness)
+        if len(places) < 5:
+            payload_broad = {
+                "textQuery": f"{query} gym fitness salle sport",
+                "maxResultCount": 20
+            }
+            resp_broad = requests.post(url, headers=headers, json=payload_broad, timeout=15)
+            if resp_broad.status_code == 200:
+                data_broad = resp_broad.json()
+                extra = data_broad.get("places", [])
+                seen_ids = {p.get("id") for p in places}
+                for p in extra:
+                    if p.get("id") not in seen_ids:
+                        places.append(p)
+                        seen_ids.add(p.get("id"))
+        
+        if response.status_code != 200 and (not places):
+            print(f"❌ Erreur Google Places API: {response.status_code} - {response.text[:200]}")
+            return []
+        
+        results = []
+        for place in places:
+            gym_result = parse_place(place)
+            if gym_result:
+                results.append(gym_result)
         
         print(f"✅ {len(results)} salles trouvées dans le monde pour '{query}'")
         return results

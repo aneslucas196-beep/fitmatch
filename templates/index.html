@@ -535,7 +535,9 @@
     <p class="subtitle">
       {{ t.home.become_coach_desc|default('Développe ton activité, attire plus de clients et gère tes réservations en ligne.') }}
     </p>
-
+    <p style="margin-bottom: 1.25rem;">
+      <a href="/coach-signup" class="btn-coach" style="display: inline-block;">{{ t.home.become_coach_btn|default('Devenir coach') }}</a>
+    </p>
     <div class="stats-grid">
       <div class="stat">
         <h3>{{ t.home.stat1|default('+60%') }}</h3>
@@ -635,12 +637,12 @@
         clearTimeout(searchTimeout);
       }
 
-      if (query.length < 3) {
+      if (query.length < 2) {
         autocompleteDropdown.classList.remove('active');
         return;
       }
 
-      autocompleteDropdown.innerHTML = '<div class="gym-autocomplete-loading">🔍 Recherche...</div>';
+      autocompleteDropdown.innerHTML = '<div class="gym-autocomplete-loading">🔍 Recherche mondiale...</div>';
       autocompleteDropdown.classList.add('active');
 
       searchTimeout = setTimeout(() => {
@@ -649,7 +651,7 @@
     });
 
     gymInput.addEventListener('focus', function() {
-      if (this.value.trim().length >= 3) {
+      if (this.value.trim().length >= 2) {
         autocompleteDropdown.classList.add('active');
       }
     });
@@ -668,11 +670,12 @@
         if (data.success && data.gyms && data.gyms.length > 0) {
           renderAutocomplete(data.gyms);
         } else {
+          const msg = (data && data.message) ? data.message : 'Aucune salle trouvée';
           autocompleteDropdown.innerHTML = `
             <div class="gym-autocomplete-empty">
               <div class="gym-autocomplete-empty-icon">🔍</div>
-              <div>Aucune salle trouvée</div>
-              <div style="font-size: 12px; margin-top: 4px;">Essayez un autre nom</div>
+              <div>${escapeHtml(msg)}</div>
+              <div style="font-size: 12px; margin-top: 4px;">Essayez un autre nom ou une ville (ex. Basic-Fit Paris)</div>
             </div>
           `;
         }
@@ -708,10 +711,10 @@
 
     function selectGym(gym) {
       const gymId = gym.place_id || gym.id || 'unknown';
+      const gymIdEncoded = encodeURIComponent(gymId);
       const gymName = encodeURIComponent(gym.name || 'Salle');
       const gymAddress = encodeURIComponent(gym.address || gym.formatted_address || '');
-      
-      window.location.href = `/gym/${gymId}?name=${gymName}&address=${gymAddress}`;
+      window.location.href = `/gym/${gymIdEncoded}?name=${gymName}&address=${gymAddress}`;
     }
 
     function clearSelectedGym() {
@@ -730,9 +733,9 @@
 
       try {
         const gymId = gym.place_id || gym.id;
-        const gymName = encodeURIComponent(gym.name);
-        
-        const response = await fetch(`/api/gym/${gymId}/coaches?gym_name=${gymName}`);
+        const gymIdEncoded = encodeURIComponent(gymId);
+        const gymName = encodeURIComponent(gym.name || '');
+        const response = await fetch(`/api/gym/${gymIdEncoded}/coaches?gym_name=${gymName}`);
         const data = await response.json();
 
         loadingState.style.display = 'none';

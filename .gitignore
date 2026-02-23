@@ -116,6 +116,9 @@ __pypackages__/
 celerybeat-schedule
 celerybeat.pid
 
+# FitMatch serveur arrière-plan
+fitmatch.pid
+
 # SageMath parsed files
 *.sage.py
 

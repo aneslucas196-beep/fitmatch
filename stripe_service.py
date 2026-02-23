@@ -8,9 +8,9 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-# Prix de l'abonnement mensuel coach (en centimes)
-COACH_MONTHLY_PRICE = 100  # 1€/mois
-COACH_ANNUAL_PRICE = 1000  # 10€/an
+# Prix abonnement coach (en centimes)
+COACH_MONTHLY_PRICE = 3000   # 30€/mois
+COACH_ANNUAL_PRICE = 30000   # 300€/an (équivalent 10 mois)
 
 
 async def get_stripe_credentials() -> Dict[str, str]:
@@ -32,35 +32,20 @@ async def get_stripe_credentials() -> Dict[str, str]:
     else:
         raise Exception("Pas de token Replit disponible")
     
-    # Utiliser les clés depuis les variables d'environnement
-    publishable_key = os.environ.get("STRIPE_PUBLIC_KEY")
+    publishable_key = os.environ.get("STRIPE_PUBLISHABLE_KEY") or os.environ.get("STRIPE_PUBLIC_KEY")
     secret_key = os.environ.get("STRIPE_SECRET_KEY")
-    
     if publishable_key and secret_key:
-        print(f"✅ Utilisation des clés Stripe depuis les secrets")
-        return {
-            "publishable_key": publishable_key,
-            "secret_key": secret_key
-        }
-    
-    raise Exception("Clés Stripe non configurées. Ajoutez STRIPE_PUBLIC_KEY et STRIPE_SECRET_KEY dans les secrets.")
+        return {"publishable_key": publishable_key, "secret_key": secret_key}
+    raise Exception("Clés Stripe non configurées. Ajoutez STRIPE_PUBLISHABLE_KEY (ou STRIPE_PUBLIC_KEY) et STRIPE_SECRET_KEY.")
 
 
 def get_stripe_credentials_sync() -> Dict[str, str]:
-    """
-    Récupère les credentials Stripe depuis les variables d'environnement.
-    """
-    publishable_key = os.environ.get("STRIPE_PUBLIC_KEY")
+    """Récupère les credentials Stripe (Render / env)."""
+    publishable_key = os.environ.get("STRIPE_PUBLISHABLE_KEY") or os.environ.get("STRIPE_PUBLIC_KEY")
     secret_key = os.environ.get("STRIPE_SECRET_KEY")
-    
     if publishable_key and secret_key:
-        print(f"✅ Utilisation des clés Stripe depuis les secrets")
-        return {
-            "publishable_key": publishable_key,
-            "secret_key": secret_key
-        }
-    
-    raise Exception("Clés Stripe non configurées. Ajoutez STRIPE_PUBLIC_KEY et STRIPE_SECRET_KEY dans les secrets.")
+        return {"publishable_key": publishable_key, "secret_key": secret_key}
+    raise Exception("Clés Stripe non configurées. STRIPE_PUBLISHABLE_KEY et STRIPE_SECRET_KEY requis.")
 
 
 def init_stripe():
@@ -109,7 +94,7 @@ def create_checkout_session(
 ) -> stripe.checkout.Session:
     """
     Crée une session Checkout Stripe pour l'abonnement.
-    billing_period: "monthly" (29€/mois) ou "annual" (560€/an avec -20% réduction)
+    billing_period: "monthly" (30€/mois) ou "annual" (300€/an)
     """
     init_stripe()
     

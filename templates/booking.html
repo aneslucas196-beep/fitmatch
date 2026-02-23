@@ -78,6 +78,11 @@
     <div class="max-w-5xl mx-auto px-4 py-6 sm:px-6 sm:py-8">
       <h1 class="text-xl sm:text-2xl font-bold text-slate-900 mb-1 sm:mb-2">Réserver une séance</h1>
       <p class="text-sm sm:text-base text-slate-600">Choisis un créneau pour <strong id="coachName" class="text-slate-900">{{ coach.full_name }}</strong></p>
+      {% if coach.payment_mode == 'required' %}
+      <p class="text-sm text-emerald-700 mt-2 flex items-center gap-2">
+        <span>💳</span> Paiement en ligne requis. Après confirmation, vous serez redirigé vers un paiement sécurisé (carte bancaire).
+      </p>
+      {% endif %}
     </div>
   </div>
 

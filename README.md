@@ -1,6 +1,8 @@
 # FitMatch
 
-Plateforme de mise en relation **clients** et **coachs sportifs** : recherche par ville/salle, réservation de séances, abonnements coach (Stripe), paiement en ligne des séances (Stripe Connect), rappels et emails (Resend).
+Plateforme de mise en relation **clients** et **coachs sportifs**
+
+**→ [You send me the keys, I do the rest](SEND_ME_THIS.md)** · **→ [Comment lancer le site (local ou en ligne) ?](COMMENT_LANCER_LE_SITE.md)** : recherche par ville/salle, réservation de séances, abonnements coach (Stripe), paiement en ligne des séances (Stripe Connect), rappels et emails (Resend).
 
 ## Prérequis
 
@@ -34,7 +36,15 @@ Copier `.env.example` vers `.env` et renseigner les valeurs. Principales variabl
 
 Voir **`.env.example`** pour la liste complète.
 
-## Lancer l'application
+## Lancer l'application (tout en un : web + rappels 24/7)
+
+Une seule commande lance le site **et** l’envoi des rappels (24h et 2h avant le RDV) en arrière-plan :
+
+```bash
+python start_server.py
+```
+
+Ou :
 
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 5000
@@ -49,6 +59,9 @@ python main.py
 - **App** : http://localhost:5000  
 - **Documentation API** : http://localhost:5000/docs  
 - **ReDoc** : http://localhost:5000/redoc  
+- **Rappels** : exécutés automatiquement toutes les 60 secondes (variable `REMINDERS_INTERVAL_SEC` pour changer). Aucun cron ni worker séparé nécessaire.
+
+**Serveur 24/7** : scripts `start.sh` / `start.bat` et service systemd → voir **[DEPLOIEMENT_24H.md](DEPLOIEMENT_24H.md)**.
 
 ## Checklist pré-production
 
@@ -62,14 +75,11 @@ python main.py
 - [ ] **JWT** : `SUPABASE_JWT_SECRET` (ou `JWT_SECRET_KEY`) pour vérifier les tokens en production
 - [ ] **Google Maps** : `GOOGLE_MAPS_API_KEY` si vous utilisez la carte / recherche de salles
 
-## Worker H24 – Rappels (Render)
+## Déploiement sur Render (Web + Worker)
 
-Les rappels (24h et 2h avant le RDV) sont traités par un **Background Worker** qui tourne en continu, sans dépendre de Vercel ni de cron.
+Le fichier **`render.yaml`** définit deux services : **fitmatch-web** (Web Service FastAPI) et **fitmatch-reminders-worker** (rappels 24h/2h en boucle). Python 3.12 est forcé (`.python-version` + `PYTHON_VERSION`).
 
-- **Fichier** : `worker.py` à la racine. Boucle infinie : `process_due_reminders()` puis `time.sleep(60)` (ou `REMINDERS_INTERVAL_SEC` en secondes).
-- **Déploiement recommandé** : [Render](https://render.com) en **Background Worker** via le fichier `render.yaml`.
-
-### Déployer le worker sur Render
+### À faire sur Render (toi)
 
 1. **Connexion** : [dashboard.render.com](https://dashboard.render.com) → connecte ton repo GitHub (FitMatch).
 2. **Blueprint** : dans le repo, le fichier `render.yaml` définit un service de type `worker`. Render le détecte si tu crées un **Blueprint** (New → Blueprint) et tu pointes vers ce repo.
