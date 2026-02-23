@@ -391,6 +391,7 @@ async function subscribe() {
         const response = await fetch('/api/stripe/create-checkout-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ billing_period: 'monthly' })
         });
         
@@ -399,14 +400,13 @@ async function subscribe() {
         if (data.url) {
             window.location.href = data.url;
         } else {
-            const msg = (response.status === 503 && data.code === 'STRIPE_NOT_CONFIGURED')
-                ? (data.error || 'Paiement bientôt disponible.')
-                : (data.error || 'Erreur lors de la création de la session');
+            const msg = (data.error || 'Erreur lors de la création de la session');
             throw new Error(msg);
         }
     } catch (error) {
         console.error('Erreur:', error);
-        alert(typeof error.message === 'string' ? error.message : i18n.error);
+        const msg = (error && error.message) ? error.message : i18n.error;
+        alert(msg);
         if (btn) { btn.disabled = false; }
         if (btnText) { btnText.textContent = i18n.subscribeNow; }
         if (btnSpinner) { btnSpinner.classList.add('hidden'); }
@@ -426,6 +426,7 @@ async function subscribeAnnual() {
         const response = await fetch('/api/stripe/create-checkout-session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ billing_period: 'annual' })
         });
         
@@ -434,14 +435,13 @@ async function subscribeAnnual() {
         if (data.url) {
             window.location.href = data.url;
         } else {
-            const msg = (response.status === 503 && data.code === 'STRIPE_NOT_CONFIGURED')
-                ? (data.error || 'Paiement bientôt disponible.')
-                : (data.error || 'Erreur lors de la création de la session');
+            const msg = (data.error || 'Erreur lors de la création de la session');
             throw new Error(msg);
         }
     } catch (error) {
         console.error('Erreur:', error);
-        alert(typeof error.message === 'string' ? error.message : i18n.error);
+        const msg = (error && error.message) ? error.message : i18n.error;
+        alert(msg);
         if (btn) { btn.disabled = false; }
         if (btnText) { btnText.textContent = i18n.subscribeAnnual; }
         if (btnSpinner) { btnSpinner.classList.add('hidden'); }

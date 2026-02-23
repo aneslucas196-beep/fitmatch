@@ -6590,8 +6590,12 @@ async def api_create_checkout_session(request: Request, user = Depends(require_c
         # Sauvegarder le customer_id
         update_coach_subscription(coach_email, stripe_customer_id=customer.id)
         
-        # Construire les URLs de retour avec session_id pour vérification
-        base_url = str(request.base_url).rstrip("/")
+        # URLs de retour Stripe : utiliser SITE_URL (https://fitmatch.fr) car request.base_url peut être interne sur Render
+        base_url = (os.environ.get("SITE_URL") or "").strip().rstrip("/")
+        if not base_url and request.url:
+            base_url = str(request.url).split("/")[0] + "//" + (request.headers.get("host") or "")
+        if not base_url:
+            base_url = str(request.base_url).rstrip("/")
         success_url = f"{base_url}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{base_url}/coach/subscription?cancelled=true"
         
