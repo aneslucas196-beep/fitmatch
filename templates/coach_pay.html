@@ -66,60 +66,45 @@
         <h1>{{ t.coach_pay.title|default('Abonnement coach FitMatch') }}</h1>
         <p>{{ t.coach_pay.subtitle|default('Un seul clic pour payer et activer ton compte.') }}</p>
         <div class="price">{{ t.coach_pay.price|default('30€ / mois') }}</div>
-        <button type="button" class="btn" id="payBtn">
-            <span id="btnText">{{ t.coach_pay.button|default('Payer par carte bancaire (Stripe)') }}</span>
+        <button type="button" class="btn" id="stripe-checkout-btn">
+            Payer par carte bancaire (Stripe)
         </button>
         <p id="errorMsg" class="error" style="display:none;"></p>
     </div>
     <script>
-        window.__COACH_PAY_I18N__ = {{ (t.coach_pay or {}) | tojson }};
-        var _cp = function() { return window.__COACH_PAY_I18N__ || {}; };
-        document.getElementById('payBtn').onclick = async function() {
-            var btn = this;
-            var btnText = document.getElementById('btnText');
-            var err = document.getElementById('errorMsg');
-            err.style.display = 'none';
-            btn.disabled = true;
-            btnText.innerHTML = '<span class="spinner"></span> ' + (_cp().redirecting || 'Redirection vers Stripe...');
-            var token = (new URLSearchParams(window.location.search)).get('token') || '';
-            var headers = { 'Content-Type': 'application/json' };
-            if (token) headers['X-Signup-Token'] = token;
-            var endpoints = ['/api/stripe/create-checkout-session', '/api/create_checkout_session'];
-            var lastError = '';
-            for (var i = 0; i < endpoints.length; i++) {
-                var url = endpoints[i];
-                try {
-                    console.log('[Stripe] POST', url, 'token:', token ? 'present' : 'absent');
-                    var r = await fetch(url, {
-                        method: 'POST',
-                        headers: headers,
-                        credentials: 'include',
-                        body: JSON.stringify({ billing_period: 'monthly' })
-                    });
-                    var data = {};
-                    try { data = await r.json(); } catch (_) { data = {}; }
-                    console.log('[Stripe] Reponse', url, 'status:', r.status, 'data:', JSON.stringify(data));
-                    if (r.ok && data && (data.url || data.checkout_url)) {
-                        var redirectUrl = data.url || data.checkout_url;
-                        console.log('[Stripe] URL recue:', redirectUrl);
-                        if (redirectUrl && redirectUrl.startsWith('http')) {
-                            console.log('[Stripe] Redirection vers Stripe Checkout');
-                            window.location.href = redirectUrl;
-                            return;
-                        }
-                    }
-                    lastError = data.error || data.detail || (r.status === 401 ? 'Session expiree. Rechargez la page.' : (r.status === 503 ? (data.error || 'Paiement indisponible') : 'Erreur serveur'));
-                    if (i === 0) console.log('[Stripe] Premier endpoint echoue, essai fallback...');
-                } catch (e) {
-                    console.error('[Stripe] Erreur', url, e);
-                    lastError = e.message || 'Erreur reseau';
-                }
-            }
-            err.textContent = lastError || (_cp().error_retry || 'Erreur. Rechargez et reessayez.');
-            err.style.display = 'block';
-            btn.disabled = false;
-            btnText.textContent = _cp().button || 'Payer par carte bancaire (Stripe)';
-        };
+    document.getElementById("stripe-checkout-btn").addEventListener("click", async function () {
+      try {
+        console.log("Bouton Stripe clique");
+
+        var token = (new URLSearchParams(window.location.search)).get("token") || "";
+        var headers = { "Content-Type": "application/json" };
+        if (token) headers["X-Signup-Token"] = token;
+
+        var response = await fetch("/api/create_checkout_session", {
+          method: "POST",
+          headers: headers,
+          credentials: "include",
+          body: JSON.stringify({ billing_period: "monthly" })
+        });
+
+        var data = await response.json();
+
+        console.log("Reponse backend:", data);
+
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          var errEl = document.getElementById("errorMsg");
+          if (errEl) { errEl.textContent = data.error || data.detail || "Erreur Stripe: pas d'URL retournee"; errEl.style.display = "block"; }
+          else alert("Erreur Stripe: pas d'URL retournee");
+        }
+      } catch (error) {
+        console.error("Erreur:", error);
+        var errEl = document.getElementById("errorMsg");
+        if (errEl) { errEl.textContent = "Erreur: " + error.message; errEl.style.display = "block"; }
+        else alert("Erreur Stripe: " + error.message);
+      }
+    });
     </script>
 </body>
 </html>
