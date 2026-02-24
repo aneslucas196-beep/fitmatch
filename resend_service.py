@@ -102,18 +102,27 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
         </div>
         """
         
-        response = requests.post(
-            "https://api.resend.com/emails",
-            headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
-            json={
-                "from": mail_from,
-                "to": [to_email],
-                "subject": f"{otp_subject}: {otp_code}",
-                "html": html_content
-            },
-            timeout=10
-        )
-        return {"success": response.status_code == 200}
+        for attempt in range(3):
+            try:
+                response = requests.post(
+                    "https://api.resend.com/emails",
+                    headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+                    json={
+                        "from": mail_from,
+                        "to": [to_email],
+                        "subject": f"{otp_subject}: {otp_code}",
+                        "html": html_content
+                    },
+                    timeout=10
+                )
+                return {"success": response.status_code == 200}
+            except (requests.RequestException, ConnectionError) as e:
+                if attempt < 2:
+                    import time
+                    time.sleep(1.0 * (attempt + 1))
+                else:
+                    raise
+        return {"success": False}
     except Exception as e:
         print(f"Error sending OTP email: {e}")
         return {"success": False}

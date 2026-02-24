@@ -5,6 +5,7 @@ Service de base de données PostgreSQL pour FitMatch
 import os
 import json
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
 from typing import Optional, Dict, Any, List
@@ -12,18 +13,57 @@ from typing import Optional, Dict, Any, List
 DATABASE_URL = os.environ.get("DATABASE_URL")
 # Timeout en secondes (évite de bloquer si Render ne peut pas joindre la DB, ex. port 5432 bloqué)
 _CONNECT_TIMEOUT = int(os.environ.get("DATABASE_CONNECT_TIMEOUT", "10"))
+_MIN_POOL = int(os.environ.get("DB_POOL_MIN", "1"))
+_MAX_POOL = int(os.environ.get("DB_POOL_MAX", "10"))
+
+_db_pool = None
+
+def _get_pool():
+    """Pool de connexions (singleton)."""
+    global _db_pool
+    if _db_pool is None and DATABASE_URL:
+        try:
+            _db_pool = pool.ThreadedConnectionPool(
+                _MIN_POOL, _MAX_POOL,
+                DATABASE_URL,
+                cursor_factory=RealDictCursor,
+                connect_timeout=_CONNECT_TIMEOUT,
+            )
+        except Exception as e:
+            print(f"[DB] Erreur creation pool: {e}")
+    return _db_pool
 
 def get_db_connection():
-    """Obtient une connexion à la base de données.
+    """Obtient une connexion à la base de données (depuis le pool si disponible).
     Sur Render, utiliser l'URL du pooler Supabase (port 6543) pour éviter 'Network is unreachable'.
     """
     if not DATABASE_URL:
         raise Exception("DATABASE_URL non configuré")
+    p = _get_pool()
+    if p:
+        try:
+            return p.getconn()
+        except Exception:
+            pass
     return psycopg2.connect(
         DATABASE_URL,
         cursor_factory=RealDictCursor,
         connect_timeout=_CONNECT_TIMEOUT,
     )
+
+def _return_connection(conn):
+    """Rend une connexion au pool."""
+    p = _get_pool()
+    if p:
+        try:
+            p.putconn(conn)
+            return
+        except Exception:
+            pass
+    try:
+        conn.close()
+    except Exception:
+        pass
 
 def load_users_from_db() -> Dict[str, Dict]:
     """Charge tous les utilisateurs depuis la base de données."""
@@ -33,7 +73,7 @@ def load_users_from_db() -> Dict[str, Dict]:
         cur.execute("SELECT * FROM users")
         rows = cur.fetchall()
         cur.close()
-        conn.close()
+        _return_connection(conn)
         
         users = {}
         for row in rows:
@@ -61,7 +101,7 @@ def get_user_from_db(email: str) -> Optional[Dict]:
         cur.execute("SELECT * FROM users WHERE email = %s", (email,))
         row = cur.fetchone()
         cur.close()
-        conn.close()
+        _return_connection(conn)
         
         if row:
             user_data = dict(row)
@@ -220,8 +260,8 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
         
         conn.commit()
         cur.close()
-        conn.close()
-        print(f"✅ Utilisateur {email} sauvegardé dans la DB")
+        _return_connection(conn)
+        print(f"[DB] Utilisateur {email} sauvegarde")
         return True
     except Exception as e:
         print(f"❌ Erreur sauvegarde utilisateur {email}: {e}")
@@ -235,7 +275,7 @@ def remove_user_from_db(email: str) -> bool:
         cur.execute("DELETE FROM users WHERE email = %s", (email,))
         conn.commit()
         cur.close()
-        conn.close()
+        _return_connection(conn)
         return True
     except Exception as e:
         print(f"❌ Erreur suppression utilisateur {email}: {e}")
@@ -272,7 +312,7 @@ def user_exists_in_db(email: str) -> bool:
         cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
         exists = cur.fetchone() is not None
         cur.close()
-        conn.close()
+        _return_connection(conn)
         return exists
     except Exception as e:
         print(f"❌ Erreur vérification existence {email}: {e}")
@@ -322,8 +362,8 @@ def update_stripe_connect_status(
         
         conn.commit()
         cur.close()
-        conn.close()
-        
+        _return_connection(conn)
+
         print(f"✅ Stripe Connect mis à jour pour {email}: status={status}")
         return True
     except Exception as e:
@@ -344,8 +384,7 @@ def get_stripe_connect_info(email: str) -> Optional[Dict]:
         """, (email,))
         row = cur.fetchone()
         cur.close()
-        conn.close()
-        
+        _return_connection(conn)
         if row:
             return {
                 "account_id": row.get('stripe_connect_account_id'),
@@ -371,8 +410,7 @@ def find_coach_by_stripe_connect_account(account_id: str) -> Optional[str]:
         """, (account_id,))
         row = cur.fetchone()
         cur.close()
-        conn.close()
-        
+        _return_connection(conn)
         if row:
             return row.get('email')
         return None

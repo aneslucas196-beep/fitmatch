@@ -6,6 +6,17 @@
     <meta name="description" content="{% block meta_description %}FitMatch - Trouvez votre coach sportif et réservez des séances en salle.{% endblock %}">
     <title>{% block title %}FitMatch{% endblock %}</title>
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{% block og_url %}https://fitmatch.fr/{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}FitMatch - Trouvez votre coach sportif{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Trouvez votre coach sportif et réservez des séances en salle.{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}https://fitmatch.fr/static/favicon.ico{% endblock %}">
+    <meta property="og:locale" content="fr_FR">
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block twitter_title %}FitMatch - Trouvez votre coach sportif{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}Trouvez votre coach sportif et réservez des séances en salle.{% endblock %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS et JS pour la carte -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />

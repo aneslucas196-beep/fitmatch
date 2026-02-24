@@ -13,12 +13,12 @@ except Exception:
     pass
 
 
-def _split_origins(value: Optional[str]) -> List[str]:
-    """Parse CORS_ORIGINS (virgules ou espaces). * retourne ['*']."""
+def _split_origins(value: Optional[str], is_production: bool = False) -> List[str]:
+    """Parse CORS_ORIGINS. En production, * est refuse pour la securite."""
     if not value or not value.strip():
-        return ["*"]
+        return []
     if value.strip() == "*":
-        return ["*"]
+        return [] if is_production else ["*"]
     return [o.strip() for o in value.replace(" ", ",").split(",") if o.strip()]
 
 
@@ -55,10 +55,17 @@ class Settings:
     SITE_URL: str = os.environ.get("SITE_URL", "http://localhost:5000")
     ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "development")
 
-    # CORS : en production, définir CORS_ORIGINS (ex: https://fitmatch.fr,https://www.fitmatch.fr)
+    # CORS : en production, CORS_ORIGINS obligatoire (ex: https://fitmatch.fr,https://www.fitmatch.fr)
     @property
     def CORS_ORIGINS(self) -> List[str]:
-        return _split_origins(os.environ.get("CORS_ORIGINS"))
+        origins = _split_origins(os.environ.get("CORS_ORIGINS"), self.IS_PRODUCTION)
+        if not origins and self.IS_PRODUCTION:
+            site = (os.environ.get("SITE_URL") or "").strip()
+            if site and site.startswith("http"):
+                base = site.rstrip("/")
+                www = base.replace("https://", "https://www.") if "www." not in base else base
+                return list(dict.fromkeys([base, www]))
+        return origins if origins else ["*"]
 
     @property
     def IS_PRODUCTION(self) -> bool:

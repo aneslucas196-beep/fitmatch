@@ -593,8 +593,9 @@ def _validate_signup_token(token: str) -> Optional[str]:
 
 
 def _set_session_cookie(response: Response, email: str, request: Request) -> None:
-    """Met le cookie session_token (sans domain pour éviter rejet navigateur/proxy)."""
-    unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+    """Met le cookie session_token (token sécurisé HMAC-SHA256)."""
+    from auth_utils import generate_session_token
+    unique_token = generate_session_token(email)
     base = _get_base_url(request)
     use_secure = os.environ.get("REPLIT_DEPLOYMENT") == "1" or (base or "").lower().startswith("https")
     response.set_cookie(
@@ -1048,7 +1049,7 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
     # même si Supabase est configuré, pour que /coach/subscription soit accessible après signup.
     if session_token.startswith("demo_"):
         from utils import load_demo_users, get_demo_user
-        import hashlib
+        from auth_utils import get_email_from_session_token
         if session_token in demo_token_map:
             email = demo_token_map[session_token]
             fresh_user_data = get_demo_user(email)
@@ -1056,16 +1057,13 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
                 fresh_user_data["_access_token"] = session_token
                 fresh_user_data["email"] = email
                 return fresh_user_data
-        all_demo_users = load_demo_users()
-        for email, user_data in all_demo_users.items():
-            expected_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
-            if session_token == expected_token:
-                fresh_user_data = get_demo_user(email)
-                if fresh_user_data:
-                    fresh_user_data["_access_token"] = session_token
-                    fresh_user_data["email"] = email
-                    return fresh_user_data
-                return None
+        email = get_email_from_session_token(session_token, load_demo_users)
+        if email:
+            fresh_user_data = get_demo_user(email)
+            if fresh_user_data:
+                fresh_user_data["_access_token"] = session_token
+                fresh_user_data["email"] = email
+                return fresh_user_data
         return None
 
     # Supabase/JWT : uniquement si pas de token demo_
@@ -1227,6 +1225,46 @@ async def favicon():
     """Retourne le favicon du site."""
     from fastapi.responses import FileResponse
     return FileResponse("static/favicon.ico", media_type="image/x-icon")
+
+# SEO: robots.txt et sitemap.xml
+@app.get("/robots.txt")
+async def robots_txt(request: Request):
+    """Fichier robots.txt pour les moteurs de recherche."""
+    base = _get_base_url(request)
+    sitemap_url = f"{base.rstrip('/')}/sitemap.xml"
+    content = f"""User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /coach/portal
+Disallow: /coach/profile-setup
+Disallow: /coach/subscription
+Disallow: /coach/verify-email
+Disallow: /coach-login
+Disallow: /login
+Disallow: /signup
+Disallow: /mon-compte
+
+Sitemap: {sitemap_url}
+"""
+    return Response(content=content, media_type="text/plain")
+
+@app.get("/sitemap.xml")
+async def sitemap_xml(request: Request):
+    """Sitemap XML pour le referencement."""
+    base = _get_base_url(request)
+    urls = [
+        ("/", "daily", "1.0"),
+        ("/coach-login", "weekly", "0.9"),
+        ("/gyms/finder", "weekly", "0.9"),
+        ("/contact", "monthly", "0.7"),
+        ("/faq", "monthly", "0.7"),
+    ]
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    for path, changefreq, priority in urls:
+        xml += f'  <url><loc>{base.rstrip("/")}{path}</loc><changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>\n'
+    xml += '</urlset>'
+    return Response(content=xml, media_type="application/xml")
 
 # Routes publiques
 @app.get("/", response_class=HTMLResponse)
@@ -1955,8 +1993,8 @@ async def verify_otp_submit(
                 
             response = RedirectResponse(url=redirect_url, status_code=303)
             # Créer un token unique pour cet utilisateur
-            import hashlib
-            unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+            from auth_utils import generate_session_token
+            unique_token = generate_session_token(email)
             response.set_cookie(
                 key="session_token",
                 value=unique_token,
@@ -2229,8 +2267,8 @@ async def login_submit(
             
             response = RedirectResponse(url=redirect_url, status_code=303)
             # Créer un token unique pour cet utilisateur
-            import hashlib
-            unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+            from auth_utils import generate_session_token
+            unique_token = generate_session_token(email)
             response.set_cookie(
                 key="session_token",
                 value=unique_token,
@@ -2560,7 +2598,8 @@ async def api_reset_password(request: Request):
         
         del password_reset_tokens[token]
         
-        session_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+        from auth_utils import generate_session_token
+        session_token = generate_session_token(email)
         role = user.get("role", "client")
         
         print(f"✅ Mot de passe réinitialisé pour {email}")
@@ -2711,8 +2750,8 @@ async def coach_login_submit(
                     }, status_code=401)
         
         if user_found:
-            import hashlib
-            unique_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
+            from auth_utils import generate_session_token
+            unique_token = generate_session_token(email)
             
             # Auto-upgrade grandfathered accounts (created before OTP/subscription system)
             # Only target truly legacy records: profile_completed=true AND subscription_status is null/None/empty
@@ -3019,20 +3058,15 @@ async def coach_profile_setup_post(
             
             # Mettre à jour l'utilisateur et sauvegarder dans le stockage persistant
             from utils import save_demo_user
-            
-            import hashlib
             session_token = user.get("_access_token", "")
             user_email = None
             
             if session_token.startswith("demo_"):
                 from utils import load_demo_users
-                all_demo_users = load_demo_users()
-                for email, user_data in all_demo_users.items():
-                    expected_token = f"demo_{hashlib.md5(email.encode()).hexdigest()[:16]}"
-                    if session_token == expected_token:
-                        user_email = email
-                        print(f"✅ Email extrait du token: {user_email}")
-                        break
+                from auth_utils import get_email_from_session_token
+                user_email = get_email_from_session_token(session_token, load_demo_users)
+                if user_email:
+                    print(f"[OK] Email extrait du token: {user_email}")
             
             if not user_email:
                 print("❌ Impossible d'identifier l'utilisateur (token invalide ou expiré)")
