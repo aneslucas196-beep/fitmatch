@@ -565,7 +565,7 @@ register_auth_routes(app, {
 from routes.coach_routes import register_coach_routes
 register_coach_routes(app, {
     "load_demo_users": load_demo_users,
-    "get_coaches_by_gym_id": get_coaches_by_gym_id,
+    "get_coaches_by_gym_id": get_coaches_by_gym,
     "log": log,
 })
 
