@@ -1,9 +1,21 @@
 """
-Routes système : health, favicon, robots.txt, sitemap.xml.
+Routes système : health, favicon, robots.txt, sitemap.xml, Google Search Console.
 """
 import os
-from fastapi import Request
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response, FileResponse
+
+# Router pour les endpoints simples (évite les conflits au démarrage)
+router = APIRouter()
+
+
+@router.get("/googlec08eb3bf.html", include_in_schema=False)
+async def google_verification():
+    """Fichier de vérification Google Search Console."""
+    return Response(
+        content="google-site-verification: googlec08eb3bf.html",
+        media_type="text/html"
+    )
 
 
 def register_system_routes(app, get_base_url_fn):
@@ -32,14 +44,6 @@ def register_system_routes(app, get_base_url_fn):
     async def favicon():
         """Retourne le favicon du site."""
         return FileResponse("static/favicon.ico", media_type="image/x-icon")
-
-    @app.get("/googlec08eb3bf.html", include_in_schema=False)
-    async def google_verification():
-        """Fichier de vérification Google Search Console."""
-        return Response(
-            content="google-site-verification: googlec08eb3bf.html",
-            media_type="text/html"
-        )
 
     @app.get("/robots.txt")
     async def robots_txt(request: Request):

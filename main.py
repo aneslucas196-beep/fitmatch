@@ -547,8 +547,9 @@ def _get_base_url(request: Request) -> str:
     return "https://localhost:5000"
 
 
-# Routes système (health, favicon, robots, sitemap)
-from routes.system_routes import register_system_routes
+# Routes système (health, favicon, robots, sitemap, Google Search Console)
+from routes.system_routes import register_system_routes, router as system_router
+app.include_router(system_router)
 register_system_routes(app, _get_base_url)
 
 # Routes auth (login API, logout)
