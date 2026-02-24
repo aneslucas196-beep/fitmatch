@@ -28,6 +28,9 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+from logger import get_logger
+log = get_logger()
+
 limiter = Limiter(key_func=get_remote_address)
 
 # CSRF : génération et vérification (cookie + champ formulaire / header)
@@ -60,10 +63,11 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 def verify_password(password: str, hashed: str) -> bool:
+    """Vérifie le mot de passe contre le hash bcrypt. Pas de fallback en clair."""
     try:
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
     except Exception:
-        return password == hashed
+        return False
 
 from utils import (
     geocode_city, 
@@ -119,7 +123,7 @@ from utils import (
 
 from resend_service import send_otp_email_resend
 from supabase_auth_service import signup_with_supabase_email_confirmation, resend_email_confirmation, sign_in_with_email_password, get_user_role
-from config import settings
+from config import settings, build_csp_header
 from api.cron import router as cron_router
 
 # Import du service d'internationalisation (i18n)
@@ -168,7 +172,7 @@ try:
     )
     STRIPE_AVAILABLE = True
 except Exception as stripe_import_error:
-    print(f"⚠️ Stripe non disponible: {stripe_import_error}")
+    log.warning(f"Stripe non disponible: {stripe_import_error}")
     STRIPE_AVAILABLE = False
 
 # ============================================
@@ -197,7 +201,7 @@ def load_scheduled_reminders() -> dict:
         # Fichier vide ou JSON invalide = pas de rappels, pas d'avertissement
         return {"reminders": []}
     except Exception as e:
-        print(f"Erreur chargement rappels: {e}")
+        log.error(f"Erreur chargement rappels: {e}")
     return {"reminders": []}
 
 def save_scheduled_reminders(data: dict):
@@ -206,7 +210,7 @@ def save_scheduled_reminders(data: dict):
         with open(_reminders_file_path(), "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f"❌ Erreur sauvegarde rappels: {e}")
+        log.error(f"Erreur sauvegarde rappels: {e}")
 
 def schedule_booking_reminders(booking: dict, coach_name: str):
     """
@@ -218,7 +222,7 @@ def schedule_booking_reminders(booking: dict, coach_name: str):
         booking_time = booking.get("time")
         
         if not booking_date or not booking_time:
-            print(f"⚠️ Date/heure manquante pour programmer les rappels")
+            log.warning(f"Date/heure manquante pour programmer les rappels")
             return
         
         # Normaliser l'heure (accepter "14:00" ou "14:00:00")
@@ -259,9 +263,9 @@ def schedule_booking_reminders(booking: dict, coach_name: str):
                 "sent": False,
                 "created_at": now.isoformat()
             })
-            print(f"📅 Rappel 24h programmé pour {reminder_24h.strftime('%d/%m/%Y %H:%M')}")
+            log.info(f"📅 Rappel 24h programmé pour {reminder_24h.strftime('%d/%m/%Y %H:%M')}")
         else:
-            print(f"⏭️ RDV dans moins de 24h, pas de rappel J-1")
+            log.info(f"⏭️ RDV dans moins de 24h, pas de rappel J-1")
         
         # Créer le rappel 2h (si le RDV est dans plus de 2h)
         if reminder_2h > now:
@@ -284,16 +288,16 @@ def schedule_booking_reminders(booking: dict, coach_name: str):
                 "sent": False,
                 "created_at": now.isoformat()
             })
-            print(f"⏰ Rappel 2h programmé pour {reminder_2h.strftime('%d/%m/%Y %H:%M')}")
+            log.info(f"⏰ Rappel 2h programmé pour {reminder_2h.strftime('%d/%m/%Y %H:%M')}")
         else:
-            print(f"⏭️ RDV dans moins de 2h, pas de rappel 2h")
+            log.info(f"⏭️ RDV dans moins de 2h, pas de rappel 2h")
         
         # Sauvegarder
         save_scheduled_reminders(reminders_data)
-        print(f"✅ Rappels programmés pour la réservation {booking.get('id')}")
+        log.info(f"✅ Rappels programmés pour la réservation {booking.get('id')}")
         
     except Exception as e:
-        print(f"❌ Erreur programmation rappels: {e}")
+        log.error(f"Erreur programmation rappels: {e}")
 
 def cancel_booking_reminders(booking_id: str):
     """Annule tous les rappels programmés pour une réservation."""
@@ -310,10 +314,10 @@ def cancel_booking_reminders(booking_id: str):
         removed_count = original_count - len(reminders_data["reminders"])
         if removed_count > 0:
             save_scheduled_reminders(reminders_data)
-            print(f"🗑️ {removed_count} rappel(s) annulé(s) pour la réservation {booking_id}")
+            log.info(f"🗑️ {removed_count} rappel(s) annulé(s) pour la réservation {booking_id}")
         
     except Exception as e:
-        print(f"❌ Erreur annulation rappels: {e}")
+        log.error(f"Erreur annulation rappels: {e}")
 
 def process_due_reminders():
     """
@@ -341,7 +345,7 @@ def process_due_reminders():
             
             if send_at <= now:
                 # C'est l'heure d'envoyer ce rappel
-                print(f"📧 Envoi du rappel {reminder.get('type')} pour {reminder.get('client_email')}")
+                log.info(f"📧 Envoi du rappel {reminder.get('type')} pour {reminder.get('client_email')}")
                 
                 # Formater la date en français
                 try:
@@ -372,9 +376,9 @@ def process_due_reminders():
                     reminder["sent"] = True
                     reminder["sent_at"] = now.isoformat()
                     sent_count += 1
-                    print(f"✅ Rappel {reminder.get('type')} envoyé à {reminder.get('client_email')}")
+                    log.info(f"✅ Rappel {reminder.get('type')} envoyé à {reminder.get('client_email')}")
                 else:
-                    print(f"❌ Échec envoi rappel: {result.get('error')}")
+                    log.error(f"Echec envoi rappel: {result.get('error')}")
         
         # Sauvegarder les mises à jour
         save_scheduled_reminders(reminders_data)
@@ -385,7 +389,7 @@ def process_due_reminders():
         return sent_count
         
     except Exception as e:
-        print(f"❌ Erreur traitement rappels: {e}")
+        log.error(f"Erreur traitement rappels: {e}")
         return 0
 
 def cleanup_old_reminders():
@@ -404,10 +408,10 @@ def cleanup_old_reminders():
         removed = original_count - len(reminders_data["reminders"])
         if removed > 0:
             save_scheduled_reminders(reminders_data)
-            print(f"🧹 {removed} ancien(s) rappel(s) nettoyé(s)")
+            log.info(f"🧹 {removed} ancien(s) rappel(s) nettoyé(s)")
             
     except Exception as e:
-        print(f"⚠️ Erreur nettoyage rappels: {e}")
+        log.warning(f"Erreur nettoyage rappels: {e}")
 
 # ============================================
 
@@ -427,27 +431,16 @@ app = FastAPI(
 app.state.limiter = limiter
 
 # Security headers pour la production (dont CSP)
-def _get_csp_header() -> str:
-    """Content-Security-Policy : autoriser scripts/styles depuis notre domaine et CDN connus."""
-    # default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'none';
-    return (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self'; "
-        "frame-ancestors 'none';"
-    )
-
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
+    nonce = secrets.token_urlsafe(16)
+    request.state.csp_nonce = nonce
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = _get_csp_header()
+    response.headers["Content-Security-Policy"] = build_csp_header(nonce, strict=False)
     return response
 app.include_router(cron_router)
 
@@ -507,7 +500,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Erreurs non gérées : page HTML 500 pour les pages, JSON pour les API."""
-    print(f"❌ Erreur non gérée: {exc}")
+    log.error(f"Erreur non gérée: {exc}")
     import traceback
     traceback.print_exc()
     if request.url.path.startswith("/api/"):
@@ -553,6 +546,27 @@ def _get_base_url(request: Request) -> str:
         return f"{scheme}://{request.headers.get('host', 'localhost')}"
     return "https://localhost:5000"
 
+
+# Routes système (health, favicon, robots, sitemap)
+from routes.system_routes import register_system_routes
+register_system_routes(app, _get_base_url)
+
+# Routes auth (login API, logout)
+from routes.auth_routes import register_auth_routes
+register_auth_routes(app, {
+    "get_demo_user": get_demo_user,
+    "verify_password": verify_password,
+    "log": log,
+    "limiter": app.state.limiter,
+})
+
+# Routes coaches (API /api/coaches)
+from routes.coach_routes import register_coach_routes
+register_coach_routes(app, {
+    "load_demo_users": load_demo_users,
+    "get_coaches_by_gym_id": get_coaches_by_gym_id,
+    "log": log,
+})
 
 # Token signup coach : signé pour être validable sur n'importe quelle instance (Render)
 def _signup_token_secret() -> str:
@@ -610,7 +624,7 @@ def _set_session_cookie(response: Response, email: str, request: Request) -> Non
 
 # Vérification production : PostgreSQL requis
 if not os.environ.get("DATABASE_URL"):
-    print("⚠️ DATABASE_URL non défini : la base de données est requise. Utilisateurs et réservations ne seront pas persistés.")
+    log.warning(f"DATABASE_URL non défini : la base de données est requise. Utilisateurs et réservations ne seront pas persistés.")
 
 # Helper function pour charger les coaches depuis JSON
 def load_coaches_from_json() -> List[Dict]:
@@ -670,6 +684,97 @@ def get_gym_by_id(gym_id: str) -> Optional[Dict]:
                     continue
     
     return None
+
+def get_gyms_by_ids(gym_ids: List[str]) -> Dict[str, Dict]:
+    """Récupère plusieurs salles en une seule passe (évite N+1). Retourne {gym_id: gym_data}."""
+    if not gym_ids:
+        return {}
+    result = {}
+    # 1. Salles locales (gyms.json)
+    gyms_file = os.path.join("static", "data", "gyms.json")
+    if os.path.exists(gyms_file):
+        with open(gyms_file, 'r', encoding='utf-8') as f:
+            local_gyms = json.load(f)
+            by_id = {g["id"]: g for g in local_gyms if g.get("id")}
+            for gid in gym_ids:
+                if gid in by_id and gid not in result:
+                    result[gid] = by_id[gid]
+    # 2. IDs Google Places restants
+    remaining = [gid for gid in gym_ids if gid not in result and gid.startswith("google_worldwide_")]
+    if remaining:
+        demo_users = load_demo_users()
+        for email, user_data in demo_users.items():
+            if user_data.get("role") != "coach":
+                continue
+            selected_gyms_data = user_data.get("selected_gyms_data", "[]")
+            try:
+                selected_gyms = json.loads(selected_gyms_data) if isinstance(selected_gyms_data, str) else (selected_gyms_data or [])
+            except Exception:
+                selected_gyms = []
+            for gym in selected_gyms:
+                if isinstance(gym, dict) and gym.get("id") in remaining:
+                    gid = gym["id"]
+                    if gid not in result:
+                        result[gid] = {
+                            "id": gym.get("id"),
+                            "name": gym.get("name", "Salle de sport"),
+                            "address": gym.get("address", ""),
+                            "city": gym.get("city", ""),
+                            "postal_code": "",
+                            "lat": gym.get("lat"),
+                            "lng": gym.get("lng"),
+                            "chain": gym.get("chain", "Google Places"),
+                            "phone": gym.get("phone", "Non disponible"),
+                            "hours": gym.get("hours", "Horaires non disponibles"),
+                            "photo": "/static/gym-default.jpg"
+                        }
+    return result
+
+def get_coaches_count_by_gym_ids(gym_ids: List[str]) -> Dict[str, int]:
+    """Compte les coachs par salle en une seule passe (évite N+1). Retourne {gym_id: count}."""
+    if not gym_ids:
+        return {}
+    gym_ids_set = set(gym_ids)
+    counts = {gid: 0 for gid in gym_ids}
+    gym_name_by_id = {}
+    gyms_file = os.path.join("static", "data", "gyms.json")
+    if os.path.exists(gyms_file):
+        with open(gyms_file, 'r', encoding='utf-8') as f:
+            for g in json.load(f):
+                if g.get("id") in gym_ids_set:
+                    gym_name_by_id[g["id"]] = (g.get("name") or "").lower().strip()
+    coaches_from_json = load_coaches_from_json()
+    seen_json = set()
+    for coach in coaches_from_json:
+        for gid in coach.get("gyms", []):
+            if gid in gym_ids_set and (coach.get("email") or coach.get("id"), gid) not in seen_json:
+                seen_json.add((coach.get("email") or coach.get("id"), gid))
+                counts[gid] = counts.get(gid, 0) + 1
+    demo_users = load_demo_users()
+    seen_demo = set()
+    for email, user_data in demo_users.items():
+        if user_data.get("role") != "coach" or not user_data.get("profile_completed"):
+            continue
+        sub = user_data.get("subscription_status", "")
+        if sub in ("blocked", "cancelled", "past_due"):
+            continue
+        selected_gyms_data = user_data.get("selected_gyms_data", "[]")
+        try:
+            selected_gyms = json.loads(selected_gyms_data) if isinstance(selected_gyms_data, str) else (selected_gyms_data or [])
+        except Exception:
+            selected_gyms = []
+        for gym in selected_gyms:
+            if not isinstance(gym, dict):
+                continue
+            gid = gym.get("id", "")
+            if gid not in gym_ids_set or (email, gid) in seen_demo:
+                continue
+            gym_name = (gym.get("name") or "").lower().strip()
+            gym_static_name = gym_name_by_id.get(gid, "")
+            if gym.get("id") == gid or (gym_static_name and gym_name == gym_static_name):
+                seen_demo.add((email, gid))
+                counts[gid] = counts.get(gid, 0) + 1
+    return counts
 
 def get_coaches_by_gym_id(gym_id: str) -> List[Dict]:
     """Récupère tous les coachs d'une salle spécifique depuis le JSON ET la base de données."""
@@ -852,7 +957,7 @@ async def upload_to_supabase_storage(supabase_client, content: bytes, filename: 
         else:
             return str(url_response)
     except Exception as e:
-        print(f"Erreur upload Supabase Storage: {e}")
+        log.info(f"Erreur upload Supabase Storage: {e}")
         return None
 
 # Exception handler pour rediriger automatiquement les utilisateurs non connectés
@@ -872,6 +977,11 @@ async def auth_exception_handler(request: Request, exc: HTTPException):
 _BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(_BASE_DIR / "templates"))
 templates.env.filters["tojson"] = lambda v: __import__("json").dumps(v, ensure_ascii=False) if v is not None else "null"
+def _get_csp_nonce(request: Request) -> str:
+    """Retourne le nonce CSP pour les scripts (évite unsafe-inline)."""
+    return getattr(request.state, "csp_nonce", "")
+templates.env.globals["get_csp_nonce"] = _get_csp_nonce
+templates.env.globals["site_url"] = (settings.SITE_URL or "https://fitmatch.fr").rstrip("/")
 _static_dir = _BASE_DIR / "static"
 _assets_dir = _BASE_DIR / "attached_assets"
 if _static_dir.exists():
@@ -893,29 +1003,46 @@ def _reminders_loop():
         try:
             n = process_due_reminders()
             if n > 0:
-                print(f"[Rappels] {datetime.now().isoformat()} – {n} rappel(s) envoyé(s)")
+                log.info(f"[Rappels] {datetime.now().isoformat()} – {n} rappel(s) envoyé(s)")
         except Exception as e:
-            print(f"[Rappels] Erreur: {e}")
+            log.info(f"[Rappels] Erreur: {e}")
         time.sleep(REMINDERS_LOOP_INTERVAL)
 
 
 @app.on_event("startup")
 def startup_check_database():
-    """En production, PostgreSQL (DATABASE_URL) est requis."""
+    """En production, PostgreSQL (DATABASE_URL) et JWT_SECRET sont requis. En local, démarrage sans DB autorisé."""
     try:
-        print("🔄 Démarrage FitMatch...")
+        log.info("🔄 Démarrage FitMatch...")
+        try:
+            from monitoring import init_sentry
+            if init_sentry():
+                log.info("✅ Sentry initialisé")
+        except Exception:
+            pass
+        ENVIRONMENT = os.environ.get("ENVIRONMENT", "development")
+        if ENVIRONMENT == "production":
+            jwt_secret = os.environ.get("JWT_SECRET_KEY") or os.environ.get("SUPABASE_JWT_SECRET")
+            if not jwt_secret or jwt_secret == "fitmatch-session-secret":
+                log.error("JWT_SECRET_KEY ou SUPABASE_JWT_SECRET requis en production.")
+                sys.exit(1)
         db_url = os.environ.get("DATABASE_URL")
         if not db_url or not db_url.strip():
-            print("❌ DATABASE_URL est requis. Configurez PostgreSQL dans Render > Environment.")
-            sys.stdout.flush()
-            sys.stderr.flush()
-            sys.exit(1)
+            if ENVIRONMENT == "production":
+                log.error("DATABASE_URL est requis en production.")
+                sys.stdout.flush()
+                sys.stderr.flush()
+                sys.exit(1)
+            else:
+                log.warning("DATABASE_URL non défini : mode développement sans base de données.")
+                log.info("Mode développement : démarrage sans base de données.")
+                return
         # Démarrer le thread des rappels (24h/2h) pour envoi des emails en continu
         t = threading.Thread(target=_reminders_loop, daemon=True)
         t.start()
-        print(f"✅ Rappels démarrés (toutes les {REMINDERS_LOOP_INTERVAL}s)")
+        log.info(f"✅ Rappels démarrés (toutes les {REMINDERS_LOOP_INTERVAL}s)")
     except Exception as e:
-        print(f"❌ Erreur au démarrage: {e}")
+        log.error(f"Erreur au démarrage: {e}")
         import traceback
         traceback.print_exc()
         sys.stdout.flush()
@@ -1081,34 +1208,34 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
             )
         else:
             if settings.IS_PRODUCTION:
-                print("⚠️ SUPABASE_JWT_SECRET ou JWT_SECRET_KEY non défini : vérification JWT désactivée (risque sécurité).")
+                log.warning(f"SUPABASE_JWT_SECRET ou JWT_SECRET_KEY non défini : vérification JWT désactivée (risque sécurité).")
             decoded_token = jwt.decode(session_token, options={"verify_signature": False})
         user_id = decoded_token.get("sub")
         
         if not user_id:
-            print("❌ Token JWT invalide (pas d'ID utilisateur)")
+            log.error(f" Token JWT invalide (pas d'ID utilisateur)")
             return None
             
         # Créer un client authentifié pour respecter les politiques RLS
         user_supabase = get_supabase_client_for_user(session_token)
         if not user_supabase:
-            print("❌ Impossible de créer le client authentifié")
+            log.error(f" Impossible de créer le client authentifié")
             return None
             
         # Charger le profil directement depuis la table profiles
         profile = get_user_profile(user_supabase, user_id)
         if profile:
             profile["_access_token"] = session_token  # Garder le token pour les futures requêtes
-            print(f"✅ Utilisateur authentifié: {profile.get('email', 'N/A')}")
+            log.info(f"✅ Utilisateur authentifié: {profile.get('email', 'N/A')}")
             return profile
         else:
             # Profil non trouvé - créer automatiquement lors de la première connexion
-            print(f"⚠️ Profil manquant pour utilisateur {user_id}, création automatique")
+            log.warning(f" Profil manquant pour utilisateur {user_id}, création automatique")
             
             # Récupérer l'email depuis le token JWT
             user_email = decoded_token.get("email")
             if not user_email:
-                print("❌ Email non trouvé dans le token")
+                log.error(f" Email non trouvé dans le token")
                 return None
                 
             # Créer un objet utilisateur mock pour la création de profil
@@ -1121,10 +1248,10 @@ def get_current_user(session_token: Optional[str] = Cookie(None)):
             return create_profile_on_first_login(user_supabase, mock_user, session_token)
             
     except jwt.DecodeError:
-        print("❌ Token JWT mal formé")
+        log.error(f" Token JWT mal formé")
         return None
     except Exception as e:
-        print(f"❌ Erreur authentification: {e}")
+        log.error(f"Erreur authentification: {e}")
         return None
 
 def create_profile_on_first_login(user_supabase, user, access_token: str):
@@ -1146,12 +1273,12 @@ def create_profile_on_first_login(user_supabase, user, access_token: str):
         if response.data:
             profile = response.data[0]
             profile["_access_token"] = access_token
-            print(f"✅ Profil créé automatiquement lors de la première connexion pour {user.email}")
+            log.info(f"✅ Profil créé automatiquement lors de la première connexion pour {user.email}")
             return profile
         
         return None
     except Exception as e:
-        print(f"❌ Erreur création profil automatique: {e}")
+        log.error(f"Erreur création profil automatique: {e}")
         return None
 
 def require_auth(user = Depends(get_current_user)):
@@ -1198,73 +1325,6 @@ def require_active_subscription(user = Depends(require_coach_role)):
         detail="Abonnement requis",
         headers={"Location": "/coach/subscription"}
     )
-
-# ============ Health check (Replit / monitoring) ============
-@app.get("/health", tags=["system"])
-async def health_check():
-    """Endpoint de santé pour monitoring et déploiement. Retourne 200 si le serveur répond."""
-    try:
-        db_ok = "skip"
-        if os.environ.get("DATABASE_URL"):
-            try:
-                from utils import load_demo_users
-                load_demo_users()
-                db_ok = "ok"
-            except Exception:
-                db_ok = "error"
-        return {"status": "ok", "db": db_ok}
-    except Exception as e:
-        return JSONResponse(
-            status_code=503,
-            content={"status": "error", "detail": str(e)}
-        )
-
-# Route favicon
-@app.get("/favicon.ico")
-async def favicon():
-    """Retourne le favicon du site."""
-    from fastapi.responses import FileResponse
-    return FileResponse("static/favicon.ico", media_type="image/x-icon")
-
-# SEO: robots.txt et sitemap.xml
-@app.get("/robots.txt")
-async def robots_txt(request: Request):
-    """Fichier robots.txt pour les moteurs de recherche."""
-    base = _get_base_url(request)
-    sitemap_url = f"{base.rstrip('/')}/sitemap.xml"
-    content = f"""User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /coach/portal
-Disallow: /coach/profile-setup
-Disallow: /coach/subscription
-Disallow: /coach/verify-email
-Disallow: /coach-login
-Disallow: /login
-Disallow: /signup
-Disallow: /mon-compte
-
-Sitemap: {sitemap_url}
-"""
-    return Response(content=content, media_type="text/plain")
-
-@app.get("/sitemap.xml")
-async def sitemap_xml(request: Request):
-    """Sitemap XML pour le referencement."""
-    base = _get_base_url(request)
-    urls = [
-        ("/", "daily", "1.0"),
-        ("/coach-login", "weekly", "0.9"),
-        ("/gyms/finder", "weekly", "0.9"),
-        ("/contact", "monthly", "0.7"),
-        ("/faq", "monthly", "0.7"),
-    ]
-    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
-    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    for path, changefreq, priority in urls:
-        xml += f'  <url><loc>{base.rstrip("/")}{path}</loc><changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>\n'
-    xml += '</urlset>'
-    return Response(content=xml, media_type="application/xml")
 
 # Routes publiques
 @app.get("/", response_class=HTMLResponse)
@@ -1592,8 +1652,11 @@ async def test_gym_data_validation():
         return {"success": False, "error": str(e)}
 
 @app.get("/api/gyms")
-async def get_gyms():
-    """API pour récupérer la liste des salles de sport disponibles - MISE À JOUR avec vraies salles."""
+async def get_gyms(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0)
+):
+    """API pour récupérer la liste des salles (pagination: limit, offset)."""
     try:
         # Récupérer un échantillon de vraies salles françaises via Data ES
         sample_gyms = []
@@ -1611,18 +1674,19 @@ async def get_gyms():
                     if len(sample_gyms) >= 50:  # Limiter à 50 salles au total
                         break
         except Exception as api_error:
-            print(f"⚠️ Erreur récupération échantillon Data ES: {api_error}")
+            log.warning(f"Erreur récupération échantillon Data ES: {api_error}")
         
         # Si pas assez de salles via API, compléter avec notre base locale
         if len(sample_gyms) < 20:
             sample_gyms.extend(GYMS_DATABASE[:30])  # Ajouter jusqu'à 30 salles locales
         
-        print(f"🏋️ API /gyms: {len(sample_gyms)} salles retournées ({len([g for g in sample_gyms if 'Data ES' in g.get('source', '')])} officielles)")
-        
-        return {"gyms": sample_gyms[:50]}  # Limiter la réponse à 50 salles max
+        total = len(sample_gyms)
+        gyms_page = sample_gyms[offset:offset + limit]
+        log.info(f"API /gyms: {len(gyms_page)} salles (total {total}, offset {offset})")
+        return {"gyms": gyms_page, "total": total, "limit": limit, "offset": offset}
         
     except Exception as e:
-        print(f"❌ Erreur /api/gyms: {e}")
+        log.error(f"Erreur /api/gyms: {e}")
         # Fallback vers base locale en cas d'erreur
         return {"gyms": GYMS_DATABASE}
 
@@ -1667,7 +1731,7 @@ async def get_user_gyms(user = Depends(get_current_user)):
                 return {"success": True, "selected_gyms": []}
                 
     except Exception as e:
-        print(f"❌ Erreur lors de la récupération des salles utilisateur: {e}")
+        log.error(f"Erreur lors de la récupération des salles utilisateur: {e}")
         return {"success": False, "message": "Erreur serveur", "selected_gyms": []}
 
 @app.post("/api/user/gyms")
@@ -1694,7 +1758,7 @@ async def save_user_gyms(request: Request, user = Depends(get_current_user)):
             if user_data:
                 user_data["selected_gyms"] = json.dumps(validated_gyms)
                 save_demo_user(email, user_data)
-                print(f"✅ Salles sauvegardées pour {email}: {validated_gyms}")
+                log.info(f"✅ Salles sauvegardées pour {email}: {validated_gyms}")
                 return {"success": True, "message": "Salles sauvegardées avec succès"}
             else:
                 return {"success": False, "message": "Utilisateur non trouvé"}
@@ -1705,13 +1769,13 @@ async def save_user_gyms(request: Request, user = Depends(get_current_user)):
             }).eq("id", user_id).execute()
             
             if response.data:
-                print(f"✅ Salles sauvegardées en Supabase pour l'utilisateur {user_id}: {validated_gyms}")
+                log.info(f"✅ Salles sauvegardées en Supabase pour l'utilisateur {user_id}: {validated_gyms}")
                 return {"success": True, "message": "Salles sauvegardées avec succès"}
             else:
                 return {"success": False, "message": "Erreur lors de la sauvegarde"}
                 
     except Exception as e:
-        print(f"❌ Erreur lors de la sauvegarde des salles: {e}")
+        log.error(f"Erreur lors de la sauvegarde des salles: {e}")
         return {"success": False, "message": "Erreur serveur"}
 
 @app.post("/signup")
@@ -1796,7 +1860,7 @@ async def signup_submit(
         if role == "client":
             selected_gyms_list = validate_selected_gyms(selected_gyms)
             if selected_gyms and not selected_gyms_list:
-                print(f"⚠️ Salles invalides reçues pour {email}: {selected_gyms}")
+                log.warning(f" Salles invalides reçues pour {email}: {selected_gyms}")
                 return templates.TemplateResponse("signup.html", {
                     "request": request,
                     "error": pr_signup.get("error_gyms_invalid", "Invalid gyms selected."),
@@ -1822,7 +1886,7 @@ async def signup_submit(
         }
         save_demo_user(email, user_data)
         
-        print(f"🔐 Code OTP généré pour {email}: {otp_code}")
+        log.info(f"🔐 Code OTP généré pour {email}: {otp_code}")
         
         # Envoyer l'email avec Resend
         # Get language for email
@@ -1849,7 +1913,7 @@ async def signup_submit(
         if role == "client":
             validated_gyms_list = validate_selected_gyms(selected_gyms)
             if selected_gyms and not validated_gyms_list:
-                print(f"⚠️ Salles invalides reçues pour {email}: {selected_gyms}")
+                log.warning(f" Salles invalides reçues pour {email}: {selected_gyms}")
                 return templates.TemplateResponse("signup.html", {
                     "request": request,
                     "error": pr_signup.get("error_gyms_invalid", "Invalid gyms selected."),
@@ -1897,7 +1961,7 @@ async def signup_submit(
             error_message = signup_result.get("error", pr_signup.get("error_signup_failed", "Registration error"))
             if "already registered" in error_message.lower() or "already exists" in error_message.lower():
                 error_message = pr_signup.get("error_email_exists", "This email is already in use.")
-            print(f"💥 Détails erreur inscription Supabase: {error_message}")
+            log.info(f"💥 Détails erreur inscription Supabase: {error_message}")
             return templates.TemplateResponse("signup.html", {
                 "request": request,
                 "error": error_message,
@@ -1911,7 +1975,7 @@ async def signup_submit(
                 **i18n
             }, status_code=400)
     except Exception as e:
-        print(f"❌ Erreur inscription OTP: {e}")
+        log.error(f"Erreur inscription OTP: {e}")
         return templates.TemplateResponse("signup.html", {
             "request": request,
             "error": pr_signup.get("error_signup_failed", "Registration error. Please try again."),
@@ -1939,7 +2003,7 @@ async def resend_confirmation_email(request: Request):
         return result
         
     except Exception as e:
-        print(f"❌ Erreur renvoi confirmation: {e}")
+        log.error(f"Erreur renvoi confirmation: {e}")
         return {"success": False, "error": str(e)}
 
 @app.get("/auth/email-confirmed")
@@ -2084,7 +2148,7 @@ async def verify_otp_submit(
         return response
         
     except Exception as e:
-        print(f"❌ Erreur vérification OTP: {e}")
+        log.error(f"Erreur vérification OTP: {e}")
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
@@ -2106,7 +2170,7 @@ async def resend_otp_submit(
     if not supabase_anon:
         new_otp_code = generate_otp_code(6)
         demo_otp_cache[email] = new_otp_code
-        print(f"🔐 Nouveau code OTP pour {email}: {new_otp_code}")
+        log.info(f"🔐 Nouveau code OTP pour {email}: {new_otp_code}")
         user_data = get_demo_user(email)
         full_name = user_data.get("full_name") if user_data else None
         locale = i18n["locale"]
@@ -2156,7 +2220,7 @@ async def resend_otp_submit(
             })
         error_details = email_result.get("error", "")
         error_message = pr_otp.get("resend_error", "Error sending code. Please try again.")
-        print(f"💥 Détails erreur renvoi email: {error_details}")
+        log.info(f"💥 Détails erreur renvoi email: {error_details}")
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
@@ -2164,52 +2228,13 @@ async def resend_otp_submit(
             **i18n
         }, status_code=500)
     except Exception as e:
-        print(f"❌ Erreur renvoi OTP: {e}")
+        log.error(f"Erreur renvoi OTP: {e}")
         return templates.TemplateResponse("verify_otp.html", {
             "request": request,
             "email": email,
             "error": pr_otp.get("resend_error", "Error resending code."),
             **i18n
         }, status_code=500)
-
-# API Login pour le JavaScript (accepte JSON)
-@app.post("/api/login", tags=["auth"])
-@limiter.limit("10/minute")
-async def api_login(request: Request):
-    """API de connexion pour JavaScript (JSON)."""
-    try:
-        data = await request.json()
-        email = data.get("email", "").lower().strip()
-        password = data.get("password", "")
-        
-        if not email or not password:
-            raise HTTPException(status_code=400, detail="Email et mot de passe requis")
-        
-        user_found = None
-        
-        # Vérifier les utilisateurs inscrits
-        cached_user = get_demo_user(email)
-        if cached_user:
-            stored_password = cached_user.get("password", "").strip()
-            if stored_password and verify_password(password.strip(), stored_password):
-                user_found = cached_user
-                print(f"✅ API Login: compte trouvé")
-        
-        if user_found:
-            return {
-                "success": True,
-                "full_name": user_found.get("full_name", email.split("@")[0]),
-                "email": email,
-                "role": user_found.get("role", "client")
-            }
-        else:
-            raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌ Erreur API login: {e}")
-        raise HTTPException(status_code=500, detail="Erreur serveur")
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_form(request: Request, message: Optional[str] = None, password_changed: Optional[str] = None):
@@ -2251,7 +2276,7 @@ async def login_submit(
             submitted_password = password.strip()
             if stored_password and verify_password(submitted_password, stored_password):
                 user_found = cached_user
-                print(f"✅ Connexion avec compte inscrit")
+                log.info(f"✅ Connexion avec compte inscrit")
         
         if user_found:
             # Redirection selon le rôle
@@ -2263,7 +2288,7 @@ async def login_submit(
             else:
                 redirect_url = "/coach/portal"
             
-            print(f"✅ Connexion réussie - Redirection vers {redirect_url} (rôle: {role})")
+            log.info(f"✅ Connexion réussie - Redirection vers {redirect_url} (rôle: {role})")
             
             response = RedirectResponse(url=redirect_url, status_code=303)
             # Créer un token unique pour cet utilisateur
@@ -2309,7 +2334,7 @@ async def login_submit(
             # Fallback si impossible de récupérer le profil
             redirect_url = "/coach/portal"
         
-        print(f"✅ Redirection vers {redirect_url} pour utilisateur rôle: {profile_result.get('role', 'inconnu')}")
+        log.info(f"✅ Redirection vers {redirect_url} pour utilisateur rôle: {profile_result.get('role', 'inconnu')}")
         
         response = RedirectResponse(url=redirect_url, status_code=303)
         # Cookie HttpOnly sécurisé
@@ -2346,7 +2371,7 @@ async def login_submit(
             }, status_code=401)
         else:
             # Autre erreur
-            print(f"💥 Erreur connexion: {error_message}")
+            log.info(f"💥 Erreur connexion: {error_message}")
             return templates.TemplateResponse("login.html", {
                 "request": request,
                 "error": "Erreur de connexion. Veuillez réessayer.",
@@ -2390,13 +2415,6 @@ async def resend_confirmation(
         "error": pr_ve.get("resend_error", "Error resending email."),
         **i18n
     })
-
-@app.get("/logout")
-async def logout():
-    """Déconnexion."""
-    response = RedirectResponse(url="/", status_code=303)
-    response.delete_cookie("session_token")
-    return response
 
 # === PASSWORD RESET ===
 import secrets
@@ -2514,16 +2532,16 @@ async def api_forgot_password(request: Request):
                     "subject": email_subject,
                     "html": html_content
                 })
-                print(f"✅ Email de réinitialisation envoyé à {email} (langue: {locale})")
+                log.info(f"✅ Email de réinitialisation envoyé à {email} (langue: {locale})")
             except Exception as e:
-                print(f"❌ Erreur envoi email: {e}")
+                log.error(f"Erreur envoi email: {e}")
         else:
-            print(f"⚠️ Resend non configuré ou SENDER_EMAIL manquant")
+            log.warning(f" Resend non configuré ou SENDER_EMAIL manquant")
         
         return {"success": True}
         
     except Exception as e:
-        print(f"❌ Erreur forgot-password: {e}")
+        log.error(f"Erreur forgot-password: {e}")
         return {"success": True}
 
 @app.get("/reset-password", response_class=HTMLResponse)
@@ -2602,7 +2620,7 @@ async def api_reset_password(request: Request):
         session_token = generate_session_token(email)
         role = user.get("role", "client")
         
-        print(f"✅ Mot de passe réinitialisé pour {email}")
+        log.info(f"✅ Mot de passe réinitialisé pour {email}")
         
         response = JSONResponse({
             "success": True, 
@@ -2621,7 +2639,7 @@ async def api_reset_password(request: Request):
         return response
         
     except Exception as e:
-        print(f"❌ Erreur reset-password: {e}")
+        log.error(f"Erreur reset-password: {e}")
         return JSONResponse({"success": False, "error": "Une erreur est survenue."})
 
 # Espace Coach - Page de connexion/inscription dédiée aux coaches
@@ -2709,7 +2727,7 @@ async def coach_login_submit(
         try:
             save_demo_user(email, new_coach)
         except Exception as e:
-            print(f"❌ Erreur inscription coach {email}: {e}")
+            log.error(f"Erreur inscription coach {email}: {e}")
             import traceback
             traceback.print_exc()
             return templates.TemplateResponse("coach_login.html", {
@@ -2718,7 +2736,7 @@ async def coach_login_submit(
                 "tab": "signup",
                 **i18n
             }, status_code=500)
-        print(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
+        log.info(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
         
         # Redirection vers la page offre coach (landing marketing + choix abonnement)
         base = _get_base_url(request)
@@ -2763,7 +2781,7 @@ async def coach_login_submit(
             is_legacy_account = profile_completed and (subscription_status is None or subscription_status == "")
             
             if is_legacy_account:
-                print(f"🔄 Auto-upgrading grandfathered coach account: {email}")
+                log.info(f"🔄 Auto-upgrading grandfathered coach account: {email}")
                 # Update only the specific user, not the entire file
                 updated_user = get_demo_user(email)
                 if updated_user:
@@ -2776,7 +2794,7 @@ async def coach_login_submit(
                     if email_verified is None or email_verified == "":
                         user_found["email_verified"] = True
                     subscription_status = "active"
-                    print(f"✅ Grandfathered coach upgraded: {email}")
+                    log.info(f"✅ Grandfathered coach upgraded: {email}")
 
             # Mettre à jour la langue du coach si absente (pour les e-mails dans la bonne langue)
             if not user_found.get("lang"):
@@ -2819,7 +2837,7 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     
     subscription_status = coach_data_fresh.get("subscription_status", "")
     email_verified = coach_data_fresh.get("email_verified", False)
-    print(f"🔍 Portal check: email={coach_email}, subscription_status='{subscription_status}', email_verified={email_verified}")
+    log.info(f"🔍 Portal check: email={coach_email}, subscription_status='{subscription_status}', email_verified={email_verified}")
     
     if subscription_status in ["blocked", "cancelled", "past_due"]:
         return RedirectResponse(url="/coach/subscription", status_code=302)
@@ -2845,7 +2863,7 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
             # Récupérer les transformations du coach
             transformations = get_transformations_by_coach_supabase(user_supabase, user_id)
         except Exception as e:
-            print(f"❌ Erreur lors de la vérification du profil: {e}")
+            log.error(f"Erreur lors de la vérification du profil: {e}")
             # En cas d'erreur, rediriger vers l'onboarding par sécurité
             return RedirectResponse(url="/coach/profile-setup", status_code=302)
     else:
@@ -2930,12 +2948,12 @@ async def coach_profile_setup_get(request: Request, user = Depends(require_coach
                 coach_data = profile_response.data
                 profile_completed = coach_data.get("profile_completed", False)
         except Exception as e:
-            print(f"❌ Erreur lors de la récupération du profil: {e}")
+            log.error(f"Erreur lors de la récupération du profil: {e}")
     else:
         # Charger les données depuis l'utilisateur connecté
         coach_data = user
         profile_completed = user.get("profile_completed", False)
-        print(f"🔧 Chargement des données du profil pour {user.get('email', 'coach')}")
+        log.info(f"🔧 Chargement des données du profil pour {user.get('email', 'coach')}")
     
     i18n_context = get_i18n_context(request)
     return templates.TemplateResponse("coach_profile_setup.html", {
@@ -2996,10 +3014,10 @@ async def coach_profile_setup_post(
                         f.write(original_content)
                     
                     profile_photo_url = f"/attached_assets/profile_photos/{filename.replace('/', '_')}"
-                    print(f"✅ Photo sauvegardée localement: {profile_photo_url}")
+                    log.info(f"✅ Photo sauvegardée localement: {profile_photo_url}")
                     
             except Exception as e:
-                print(f"❌ Erreur lors du traitement de la photo: {e}")
+                log.error(f"Erreur lors du traitement de la photo: {e}")
                 error_message = f"Erreur lors du traitement de la photo: {str(e)}"
         
         if user_supabase:
@@ -3049,12 +3067,12 @@ async def coach_profile_setup_post(
                 error_message = "Erreur lors de la mise à jour du profil."
         else:
             # Mise à jour réussie du profil
-            print(f"✅ Profil mis à jour pour {user.get('email', 'coach')} avec:")
-            print(f"   - Nom: {full_name}")
-            print(f"   - Ville: {city}")
-            print(f"   - Spécialités: {specialties}")
-            print(f"   - Salles IDs: {selected_gym_ids}")
-            print(f"   - Salles data: {selected_gyms_data[:100] if selected_gyms_data else 'None'}...")
+            log.info(f"✅ Profil mis à jour pour {user.get('email', 'coach')} avec:")
+            log.info(f"   - Nom: {full_name}")
+            log.info(f"   - Ville: {city}")
+            log.info(f"   - Spécialités: {specialties}")
+            log.info(f"   - Salles IDs: {selected_gym_ids}")
+            log.info(f"   - Salles data: {selected_gyms_data[:100] if selected_gyms_data else 'None'}...")
             
             # Mettre à jour l'utilisateur et sauvegarder dans le stockage persistant
             from utils import save_demo_user
@@ -3066,10 +3084,10 @@ async def coach_profile_setup_post(
                 from auth_utils import get_email_from_session_token
                 user_email = get_email_from_session_token(session_token, load_demo_users)
                 if user_email:
-                    print(f"[OK] Email extrait du token: {user_email}")
+                    log.info(f"[OK] Email extrait du token: {user_email}")
             
             if not user_email:
-                print("❌ Impossible d'identifier l'utilisateur (token invalide ou expiré)")
+                log.error(f" Impossible d'identifier l'utilisateur (token invalide ou expiré)")
                 error_message = "Session invalide. Veuillez vous reconnecter."
                 i18n_context = get_i18n_context(request)
                 return templates.TemplateResponse("coach_profile_setup.html", {
@@ -3081,7 +3099,7 @@ async def coach_profile_setup_post(
                     **i18n_context
                 }, status_code=401)
             
-            print(f"🔧 Sauvegarde profil pour: {user_email}")
+            log.info(f"🔧 Sauvegarde profil pour: {user_email}")
             
             # CORRECTION : Récupérer les données existantes pour préserver le mot de passe
             existing_user = get_demo_user(user_email) or {}
@@ -3092,7 +3110,7 @@ async def coach_profile_setup_post(
                 profile_slug = existing_slug
             else:
                 profile_slug = generate_unique_slug_for_coach(user_email, full_name)
-            print(f"🔗 Slug du profil: {profile_slug}")
+            log.info(f"🔗 Slug du profil: {profile_slug}")
             
             updated_user = {
                 "id": user.get("id", user_email),  # Utiliser email comme ID si pas d'ID
@@ -3126,17 +3144,17 @@ async def coach_profile_setup_post(
                 "otp_expiry": existing_user.get("otp_expiry")
             }
             
-            print(f"🔒 Mot de passe préservé: {'✅' if updated_user['password'] else '❌'}")
+            log.info(f"🔒 Mot de passe préservé: {'✅' if updated_user['password'] else '❌'}")
             
             # Sauvegarder les modifications dans le stockage persistant
             save_demo_user(user_email, updated_user)
-            print(f"✅ Profil coach sauvegardé avec profile_completed=True")
+            log.info(f"✅ Profil coach sauvegardé avec profile_completed=True")
             
             # Redirection vers le dashboard après succès
             return RedirectResponse(url="/coach/portal", status_code=303)
             
     except Exception as e:
-        print(f"❌ Erreur lors de la soumission du profil: {e}")
+        log.error(f"Erreur lors de la soumission du profil: {e}")
         error_message = "Une erreur s'est produite lors de la sauvegarde."
     
     # En cas d'erreur, recharger la page avec le message d'erreur
@@ -3378,7 +3396,7 @@ async def reserver_by_slug(request: Request, slug: str):
         except Exception:
             pass
     
-    print(f"📋 Profil coach {slug}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
+    log.info(f"📋 Profil coach {slug}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
     i18n_profile = get_i18n_context(request)
     return templates.TemplateResponse("coach_profile.html", {"request": request, "coach": coach, "gyms": gyms, "slug": slug, **i18n_profile})
 
@@ -3496,16 +3514,16 @@ async def coach_subscription_page(
                             subscription_status="active",
                             current_period_end=period_end
                         )
-                        print(f"✅ Abonnement activé via redirect pour {coach_email}")
+                        log.info(f"✅ Abonnement activé via redirect pour {coach_email}")
                     else:
                         update_coach_subscription(
                             coach_email=coach_email,
                             stripe_customer_id=customer_id,
                             subscription_status="active"
                         )
-                        print(f"✅ Paiement confirmé (sans subscription_id) pour {coach_email}")
+                        log.info(f"✅ Paiement confirmé (sans subscription_id) pour {coach_email}")
                 except Exception as sub_err:
-                    print(f"⚠️ Erreur récupération détails abonnement: {sub_err}")
+                    log.warning(f"Erreur récupération détails abonnement: {sub_err}")
                     # Activer quand même l'abonnement
                     update_coach_subscription(
                         coach_email=coach_email,
@@ -3514,7 +3532,7 @@ async def coach_subscription_page(
                     )
                 
         except Exception as e:
-            print(f"⚠️ Erreur vérification session Stripe: {e}")
+            log.warning(f"Erreur vérification session Stripe: {e}")
             # Si on a un session_id valide, on considère le paiement comme fait
             payment_confirmed = True
             update_coach_subscription(
@@ -3537,7 +3555,7 @@ async def coach_subscription_page(
                 demo_users[coach_email]["otp_expiry"] = otp_expiry
                 demo_users[coach_email]["email_verified"] = False
                 save_demo_users(demo_users)
-                print(f"✅ OTP sauvegardé pour {coach_email}")
+                log.info(f"✅ OTP sauvegardé pour {coach_email}")
             else:
                 # Créer l'entrée si elle n'existe pas
                 demo_users[coach_email] = {
@@ -3548,16 +3566,16 @@ async def coach_subscription_page(
                     "subscription_status": "active"
                 }
                 save_demo_users(demo_users)
-                print(f"✅ Nouvelle entrée + OTP créés pour {coach_email}")
+                log.info(f"✅ Nouvelle entrée + OTP créés pour {coach_email}")
             
             # Envoyer l'email avec le code
             full_name = user.get("full_name", "Coach")
             locale = get_locale_from_request(request)
             try:
                 send_otp_email_resend(coach_email, otp_code, full_name, lang=locale)
-                print(f"📧 Code OTP envoyé à {coach_email}: {otp_code}")
+                log.info(f"📧 Code OTP envoyé à {coach_email}: {otp_code}")
             except Exception as email_err:
-                print(f"⚠️ Erreur envoi email OTP: {email_err}")
+                log.warning(f"Erreur envoi email OTP: {email_err}")
             
             # Rediriger vers la page de vérification email
             return RedirectResponse(url="/coach/verify-email", status_code=303)
@@ -3658,11 +3676,11 @@ async def verify_coach_email(request: Request, user = Depends(require_coach_or_p
         demo_users[coach_email]["otp_expiry"] = None
         save_demo_users(demo_users)
         
-        print(f"✅ Email vérifié pour {coach_email}")
+        log.info(f"✅ Email vérifié pour {coach_email}")
         
         return JSONResponse({"success": True, "redirect": "/coach/profile-setup"})
     except Exception as e:
-        print(f"❌ Erreur vérification OTP: {e}")
+        log.error(f"Erreur vérification OTP: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/coach/resend-otp")
@@ -3689,11 +3707,11 @@ async def resend_coach_otp(request: Request, user = Depends(require_coach_or_pen
         
         locale = get_locale_from_request(request)
         result = send_otp_email_resend(coach_email, otp_code, full_name, lang=locale)
-        print(f"📧 Nouveau code OTP envoyé à {coach_email}: {otp_code}")
+        log.info(f"📧 Nouveau code OTP envoyé à {coach_email}: {otp_code}")
         
         return JSONResponse({"success": True, "message": "Code envoyé"})
     except Exception as e:
-        print(f"❌ Erreur renvoi OTP: {e}")
+        log.error(f"Erreur renvoi OTP: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 # ======================================
@@ -3725,7 +3743,7 @@ async def view_coach_profile(request: Request, coach_id: str):
                 if response.data:
                     coach = response.data
             except Exception as e:
-                print(f"Coach non trouvé dans Supabase: {e}")
+                log.info(f"Coach non trouvé dans Supabase: {e}")
         
         if not coach:
             from utils import load_demo_users
@@ -3766,11 +3784,9 @@ async def view_coach_profile(request: Request, coach_id: str):
     # Récupérer les salles associées au coach
     gyms = []
     if coach.get("gyms"):
-        # Pour les coaches du JSON
-        for gym_id in coach.get("gyms", []):
-            gym_data = get_gym_by_id(gym_id)
-            if gym_data:
-                gyms.append(gym_data)
+        gym_ids = coach.get("gyms", [])
+        gyms_map = get_gyms_by_ids(gym_ids)
+        gyms = [gyms_map[gid] for gid in gym_ids if gid in gyms_map]
     elif coach.get("selected_gyms_data"):
         # Pour les coaches avec selected_gyms_data (format JSON string)
         try:
@@ -3783,7 +3799,7 @@ async def view_coach_profile(request: Request, coach_id: str):
         except Exception:
             pass
     
-    print(f"📋 Profil coach {coach_id}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
+    log.info(f"📋 Profil coach {coach_id}: spécialités={coach.get('specialties')}, salles={len(gyms)}")
     
     locale = get_locale_from_request(request)
     translations = get_translations(locale)
@@ -3817,7 +3833,7 @@ async def booking_page(request: Request, coach_id: str):
                 if response.data:
                     coach = response.data
             except Exception as e:
-                print(f"Coach non trouvé dans Supabase: {e}")
+                log.info(f"Coach non trouvé dans Supabase: {e}")
         
         if not coach:
             from utils import load_demo_users
@@ -3981,7 +3997,7 @@ async def get_availability(coach_id: str, from_date: str = Query(..., alias="fro
         
         return availability
     except Exception as e:
-        print(f"Erreur lors de la récupération des disponibilités: {e}")
+        log.info(f"Erreur lors de la récupération des disponibilités: {e}")
         return []
 
 @app.get("/api/coach/unavailability")
@@ -3996,7 +4012,7 @@ async def get_coach_unavailability(coach_email: str):
             "unavailable_slots": coach_data.get("unavailable_slots", [])
         }
     except Exception as e:
-        print(f"Erreur: {e}")
+        log.info(f"Erreur: {e}")
         return {"unavailable_days": [], "unavailable_slots": []}
 
 @app.post("/api/coach/unavailability")
@@ -4058,7 +4074,7 @@ async def set_coach_unavailability(request: Request):
         }
         
     except Exception as e:
-        print(f"Erreur: {e}")
+        log.info(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/api/coach/working-hours")
@@ -4081,7 +4097,7 @@ async def get_coach_working_hours(coach_email: str):
         
         return coach_data.get("working_hours", default_hours)
     except Exception as e:
-        print(f"Erreur: {e}")
+        log.info(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/api/coach/working-hours")
@@ -4106,7 +4122,7 @@ async def set_coach_working_hours(request: Request):
         return {"success": True, "working_hours": working_hours}
         
     except Exception as e:
-        print(f"Erreur: {e}")
+        log.info(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/api/coach/session-duration")
@@ -4118,7 +4134,7 @@ async def get_coach_session_duration(coach_email: str):
         duration = coach_data.get("session_duration", 60)  # 60 min par défaut
         return {"success": True, "duration": duration}
     except Exception as e:
-        print(f"Erreur: {e}")
+        log.info(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 @app.post("/api/coach/session-duration")
@@ -4140,12 +4156,12 @@ async def set_coach_session_duration(request: Request):
         demo_users[coach_email]["session_duration"] = duration
         save_demo_user(coach_email, demo_users[coach_email])
         
-        print(f"Durée de séance mise à jour pour {coach_email}: {duration} min")
+        log.info(f"Durée de séance mise à jour pour {coach_email}: {duration} min")
         
         return {"success": True, "duration": duration}
         
     except Exception as e:
-        print(f"Erreur: {e}")
+        log.info(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 @app.get("/api/coach/pricing")
@@ -4156,10 +4172,10 @@ async def get_coach_pricing(coach_email: str):
         coach_data = demo_users.get(coach_email, {})
         # Essayer session_price puis price_from
         price = coach_data.get("session_price") or coach_data.get("price_from") or 40
-        print(f"💰 Prix coach {coach_email}: {price}€")
+        log.info(f"💰 Prix coach {coach_email}: {price}€")
         return {"success": True, "price": price}
     except Exception as e:
-        print(f"Erreur: {e}")
+        log.info(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 @app.post("/api/coach/payment-mode")
@@ -4182,10 +4198,10 @@ async def set_coach_payment_mode(request: Request, user = Depends(require_coach_
         
         if payment_mode == "required":
             connect_info = get_stripe_connect_info(coach_email)
-            print(f"📋 Vérification Stripe Connect pour {coach_email}")
-            print(f"   Connect Info: {connect_info}")
+            log.info(f"📋 Vérification Stripe Connect pour {coach_email}")
+            log.info(f"   Connect Info: {connect_info}")
             if not connect_info:
-                print(f"   ❌ Pas de compte Stripe Connect")
+                log.info(f"   ❌ Pas de compte Stripe Connect")
                 return JSONResponse(status_code=400, content={
                     "success": False, 
                     "error": "Vous devez d'abord connecter votre compte Stripe pour activer le paiement en ligne.",
@@ -4196,9 +4212,9 @@ async def set_coach_payment_mode(request: Request, user = Depends(require_coach_
             if not connect_info.get("charges_enabled"):
                 details_submitted = connect_info.get("details_submitted", False)
                 
-                print(f"   ⚠️  charges_enabled = False")
-                print(f"   Account ID: {connect_info.get('account_id')}")
-                print(f"   Details submitted: {details_submitted}")
+                log.info(f"   ⚠️  charges_enabled = False")
+                log.info(f"   Account ID: {connect_info.get('account_id')}")
+                log.info(f"   Details submitted: {details_submitted}")
                 
                 # Rejeter les comptes non vérifiés
                 return JSONResponse(status_code=400, content={
@@ -4212,12 +4228,12 @@ async def set_coach_payment_mode(request: Request, user = Depends(require_coach_
         demo_users[coach_email]["payment_mode"] = payment_mode
         save_demo_user(coach_email, demo_users[coach_email])
         
-        print(f"✅ Mode de paiement mis a jour pour {coach_email}: {payment_mode}")
+        log.info(f"✅ Mode de paiement mis a jour pour {coach_email}: {payment_mode}")
         
         return {"success": True, "payment_mode": payment_mode}
         
     except Exception as e:
-        print(f"❌ Erreur mise a jour mode paiement: {e}")
+        log.error(f"Erreur mise a jour mode paiement: {e}")
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 @app.get("/api/coach/{coach_id}/payment-mode")
@@ -4253,7 +4269,7 @@ async def get_coach_payment_mode(coach_id: str):
         }
         
     except Exception as e:
-        print(f"Erreur récupération mode paiement: {e}")
+        log.info(f"Erreur récupération mode paiement: {e}")
         return {"payment_mode": "disabled"}
 
 
@@ -4294,7 +4310,7 @@ async def get_stripe_connect_status(user = Depends(require_coach_role)):
         }
         
     except Exception as e:
-        print(f"Erreur statut Stripe Connect: {e}")
+        log.info(f"Erreur statut Stripe Connect: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
@@ -4344,7 +4360,7 @@ async def start_stripe_connect_onboarding(request: Request, user = Depends(requi
         }
         
     except Exception as e:
-        print(f"Erreur onboarding Stripe Connect: {e}")
+        log.info(f"Erreur onboarding Stripe Connect: {e}")
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 
@@ -4374,7 +4390,7 @@ async def refresh_stripe_connect_onboarding(request: Request, user = Depends(req
         return RedirectResponse(url="/coach/portal?error=stripe_link")
         
     except Exception as e:
-        print(f"Erreur refresh Stripe Connect: {e}")
+        log.info(f"Erreur refresh Stripe Connect: {e}")
         return RedirectResponse(url="/coach/portal?error=stripe_error")
 
 
@@ -4412,7 +4428,7 @@ async def sync_stripe_connect_status(user = Depends(require_coach_role)):
         }
         
     except Exception as e:
-        print(f"Erreur sync Stripe Connect: {e}")
+        log.info(f"Erreur sync Stripe Connect: {e}")
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 
@@ -4526,7 +4542,7 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
                             "status": "unavailable"
                         })
             except Exception as e:
-                print(f"Erreur parsing date indisponible {date_str}: {e}")
+                log.info(f"Erreur parsing date indisponible {date_str}: {e}")
                 pass
         
         # Ajouter les créneaux spécifiques indisponibles
@@ -4552,7 +4568,7 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
             "working_hours": working_hours
         }
     except Exception as e:
-        print(f"Erreur lors de la récupération des réservations: {e}")
+        log.info(f"Erreur lors de la récupération des réservations: {e}")
         return {"bookings": [], "working_hours": {}}
 
 @app.post("/api/bookings")
@@ -4607,7 +4623,7 @@ async def create_booking(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Erreur lors de la création de la réservation: {e}")
+        log.info(f"Erreur lors de la création de la réservation: {e}")
         raise HTTPException(status_code=500, detail="Erreur lors de la création de la réservation")
 
 # ======================================
@@ -4627,7 +4643,7 @@ async def get_coach_gym_locations(user = Depends(require_coach_role)):
         }
         
     except Exception as e:
-        print(f"Erreur récupération lieux coach: {e}")
+        log.info(f"Erreur récupération lieux coach: {e}")
         return {
             "success": False,
             "message": "Erreur lors de la récupération des lieux",
@@ -4655,7 +4671,7 @@ async def add_coach_gym_location(
         
         # Format NOUVEAU : gym_data complet (salle sélectionnée depuis l'autocomplétion)
         if "gym_data" in data:
-            print("🎯 NOUVEAU FORMAT: Salle pré-sélectionnée")
+            log.info("🎯 NOUVEAU FORMAT: Salle pré-sélectionnée")
             gym_data = data["gym_data"]
             
             # Valider les champs requis
@@ -4670,7 +4686,7 @@ async def add_coach_gym_location(
         
         # Format ANCIEN : query à géocoder (pour compatibilité)
         elif "query" in data:
-            print("🔄 ANCIEN FORMAT: Géocodage nécessaire")
+            log.info("🔄 ANCIEN FORMAT: Géocodage nécessaire")
             query = data["query"].strip()
             if not query:
                 return {
@@ -4693,7 +4709,7 @@ async def add_coach_gym_location(
                 "message": "Données requises: 'gym_data' (salle sélectionnée) OU 'query' (adresse à géocoder)"
             }
         
-        print(f"📍 Ajout salle: {gym_data['name']} à {gym_data['address']}")
+        log.info(f"📍 Ajout salle: {gym_data['name']} à {gym_data['address']}")
         
         # Ajouter la relation coach-salle
         success = add_coach_gym(coach_id, gym_data)
@@ -4711,7 +4727,7 @@ async def add_coach_gym_location(
             }
             
     except Exception as e:
-        print(f"Erreur ajout lieu coach: {e}")
+        log.info(f"Erreur ajout lieu coach: {e}")
         return {
             "success": False,
             "message": "Erreur lors de l'ajout du lieu"
@@ -4740,7 +4756,7 @@ async def remove_coach_gym_location(
             }
             
     except Exception as e:
-        print(f"Erreur suppression lieu coach: {e}")
+        log.info(f"Erreur suppression lieu coach: {e}")
         return {
             "success": False,
             "message": "Erreur lors de la suppression"
@@ -4749,85 +4765,6 @@ async def remove_coach_gym_location(
 # ======================================
 # ENDPOINTS API CLIENT - RECHERCHE SALLES
 # ======================================
-
-@app.get("/api/coaches")
-async def get_all_coaches_api(
-    gym_id: Optional[str] = None,
-    specialty: Optional[str] = None,
-    postal_code: Optional[str] = None
-):
-    """
-    Retourne les coaches depuis la base de données.
-    
-    Paramètres:
-    - gym_id: Filtrer par salle (ex: "fitness-park-maurepas")
-    - specialty: Filtrer par spécialité (ex: "musculation")
-    - postal_code: Filtrer par code postal
-    """
-    try:
-        coaches = []
-        
-        # Si filtrage par salle
-        if gym_id:
-            coaches = get_coaches_by_gym_id(gym_id)
-        else:
-            # Charger TOUS les vrais coaches
-            from utils import load_demo_users
-            demo_users = load_demo_users()
-            
-            for email, user_data in demo_users.items():
-                # Ne prendre que les coaches avec profil complété et abonnement actif
-                subscription_status = user_data.get("subscription_status", "")
-                is_blocked = subscription_status in ["blocked", "cancelled", "past_due"]
-                if user_data.get("role") == "coach" and user_data.get("profile_completed") and not is_blocked:
-                    coaches.append({
-                        "id": email.replace("@", "_").replace(".", "_"),
-                        "email": email,
-                        "full_name": user_data.get("full_name", "Coach"),
-                        "bio": user_data.get("bio", ""),
-                        "city": user_data.get("city", ""),
-                        "specialties": user_data.get("specialties", []),
-                        "price_from": user_data.get("price_from", 50),
-                        "rating": 4.5,
-                        "reviews_count": 10,
-                        "verified": True,
-                        "photo": user_data.get("photo", "/static/default-avatar.jpg"),
-                        "instagram_url": user_data.get("instagram_url", ""),
-                        "gyms": user_data.get("selected_gym_ids", "").split(",") if user_data.get("selected_gym_ids") else []
-                    })
-            
-            # Filtrer par spécialité si demandé
-            if specialty:
-                coaches = [c for c in coaches if specialty.lower() in [s.lower() for s in c.get("specialties", [])]]
-            
-            # Filtrer par code postal si demandé
-            if postal_code:
-                # Pour chaque coach, vérifier si une de ses salles est dans ce code postal
-                coaches_filtered = []
-                gyms_file = os.path.join("static", "data", "gyms.json")
-                if os.path.exists(gyms_file):
-                    with open(gyms_file, 'r', encoding='utf-8') as f:
-                        all_gyms = json.load(f)
-                        gyms_in_postal = [g["id"] for g in all_gyms if g.get("postal_code") == postal_code]
-                        
-                        for coach in coaches:
-                            if any(gym_id in coach.get("gyms", []) for gym_id in gyms_in_postal):
-                                coaches_filtered.append(coach)
-                        coaches = coaches_filtered
-        
-        return {
-            "success": True,
-            "count": len(coaches),
-            "coaches": coaches
-        }
-    
-    except Exception as e:
-        print(f"❌ Erreur API /api/coaches: {e}")
-        return {
-            "success": False,
-            "error": str(e),
-            "coaches": []
-        }
 
 @app.get("/api/gyms/search")
 async def search_gyms_by_location_api(
@@ -4848,7 +4785,7 @@ async def search_gyms_by_location_api(
         
         # 🆕 Recherche par code postal
         if postal_code:
-            print(f"🔍 Recherche salles par code postal: {postal_code}")
+            log.info(f"🔍 Recherche salles par code postal: {postal_code}")
             import json
             import os
             import re
@@ -4858,19 +4795,17 @@ async def search_gyms_by_location_api(
             if os.path.exists(gyms_file):
                 with open(gyms_file, 'r', encoding='utf-8') as f:
                     all_gyms = json.load(f)
-                    # Filtrer par code postal
-                    for gym in all_gyms:
-                        if gym.get("postal_code") == postal_code:
-                            # Compter les coachs dans cette salle
-                            coaches_in_gym = get_coaches_by_gym_id(gym["id"])
-                            gym_result = gym.copy()
-                            gym_result["coach_count"] = len(coaches_in_gym)
-                            results.append(gym_result)
+                    gyms_postal = [g for g in all_gyms if g.get("postal_code") == postal_code]
+                    coach_counts = get_coaches_count_by_gym_ids([g["id"] for g in gyms_postal if g.get("id")]) if gyms_postal else {}
+                    for gym in gyms_postal:
+                        gym_result = gym.copy()
+                        gym_result["coach_count"] = coach_counts.get(gym.get("id"), 0)
+                        results.append(gym_result)
             
             # 2. AUSSI charger les salles Google Places depuis les profils des coaches
             demo_users = load_demo_users()
             google_gyms_seen = set()
-            
+            google_gyms_to_add = []
             for email, user_data in demo_users.items():
                 if user_data.get("role") == "coach" and user_data.get("profile_completed"):
                     selected_gyms_data = user_data.get("selected_gyms_data", "[]")
@@ -4883,23 +4818,13 @@ async def search_gyms_by_location_api(
                         for gym in selected_gyms:
                             if isinstance(gym, dict) and gym.get("id", "").startswith("google_worldwide_"):
                                 gym_id = gym.get("id")
-                                
-                                # Éviter les doublons
                                 if gym_id in google_gyms_seen:
                                     continue
-                                
-                                # Extraire le code postal de l'adresse Google Places
                                 address = gym.get("address", "")
-                                # Chercher un pattern "78310" dans l'adresse
                                 cp_match = re.search(r'\b(\d{5})\b', address)
-                                
                                 if cp_match and cp_match.group(1) == postal_code:
                                     google_gyms_seen.add(gym_id)
-                                    
-                                    # Compter les coachs dans cette salle
-                                    coaches_in_gym = get_coaches_by_gym_id(gym_id)
-                                    
-                                    gym_result = {
+                                    google_gyms_to_add.append({
                                         "id": gym_id,
                                         "name": gym.get("name", "Salle de sport"),
                                         "chain": gym.get("chain", "Google Places"),
@@ -4911,13 +4836,17 @@ async def search_gyms_by_location_api(
                                         "phone": gym.get("phone", "Non disponible"),
                                         "hours": gym.get("hours", "Horaires non disponibles"),
                                         "photo": "/static/gym-default.jpg",
-                                        "coach_count": len(coaches_in_gym)
-                                    }
-                                    results.append(gym_result)
+                                    })
                     except Exception:
                         continue
+            if google_gyms_to_add:
+                google_gym_ids = [g["id"] for g in google_gyms_to_add]
+                google_coach_counts = get_coaches_count_by_gym_ids(google_gym_ids)
+                for gym_result in google_gyms_to_add:
+                    gym_result["coach_count"] = google_coach_counts.get(gym_result["id"], 0)
+                    results.append(gym_result)
             
-            print(f"✅ {len(results)} salles trouvées pour le code postal {postal_code}")
+            log.info(f"✅ {len(results)} salles trouvées pour le code postal {postal_code}")
             return {
                 "success": True,
                 "gyms": results,
@@ -4962,14 +4891,13 @@ async def search_gyms_by_location_api(
                     results.sort(key=lambda x: x.get("distance_km", 999))
                 else:
                     # Recherche par nom dans GYMS_DATABASE si géocodage échoue
-                    for gym in GYMS_DATABASE:
-                        if q.lower() in gym["name"].lower() or q.lower() in gym["address"].lower():
-                            # Compter les coachs dans cette salle
-                            coach_count = len(get_coaches_by_gym(gym["address"]))
-                            gym_result = gym.copy()
-                            gym_result["distance_km"] = None  # Pas de distance si recherche par nom
-                            gym_result["coach_count"] = coach_count
-                            results.append(gym_result)
+                    matching_gyms = [g for g in GYMS_DATABASE if q.lower() in g["name"].lower() or q.lower() in g["address"].lower()]
+                    coach_counts = get_coaches_count_by_gym_ids([g["id"] for g in matching_gyms]) if matching_gyms else {}
+                    for gym in matching_gyms:
+                        gym_result = gym.copy()
+                        gym_result["distance_km"] = None
+                        gym_result["coach_count"] = coach_counts.get(gym["id"], 0)
+                        results.append(gym_result)
         
         elif lat is not None and lng is not None:
             # Recherche par coordonnées
@@ -5007,7 +4935,7 @@ async def search_gyms_by_location_api(
         }
         
     except Exception as e:
-        print(f"Erreur recherche salles: {e}")
+        log.info(f"Erreur recherche salles: {e}")
         return {
             "success": False,
             "message": "Erreur lors de la recherche",
@@ -5047,7 +4975,7 @@ async def search_gyms_worldwide(q: str):
             "message": f"{len(results)} salle(s) trouvée(s)" if results else "Aucune salle trouvée pour cette recherche"
         }
     except Exception as e:
-        print(f"❌ Erreur recherche mondiale: {e}")
+        log.error(f"Erreur recherche mondiale: {e}")
         return {
             "success": False,
             "message": "Erreur lors de la recherche mondiale",
@@ -5063,7 +4991,7 @@ async def get_gym_suggestions(q: str):
     Paramètres: q = nom partiel de salle ou ville
     """
     try:
-        print(f"🎯 COACH RECHERCHE: {q}")
+        log.info(f"🎯 COACH RECHERCHE: {q}")
         
         if len(q.strip()) < 2:
             return {
@@ -5132,10 +5060,10 @@ async def get_gym_suggestions(q: str):
                         }
                         suggestions.append(suggestion)
                         
-                print(f"🏛️ API Data ES (par nom): {len(suggestions)} suggestions trouvées")
+                log.info(f"🏛️ API Data ES (par nom): {len(suggestions)} suggestions trouvées")
                         
             except Exception as api_error:
-                print(f"⚠️ Erreur API Data ES (par nom): {api_error}")
+                log.warning(f"Erreur API Data ES (par nom): {api_error}")
         
         # Compléter avec notre base locale si pas assez de résultats
         if len(suggestions) < 10:
@@ -5159,7 +5087,7 @@ async def get_gym_suggestions(q: str):
                         }
                         suggestions.append(suggestion)
         
-        print(f"🎯 TOTAL SUGGESTIONS COACH: {len(suggestions)} salles trouvées")
+        log.info(f"🎯 TOTAL SUGGESTIONS COACH: {len(suggestions)} salles trouvées")
         
         return {
             "success": True,
@@ -5168,7 +5096,7 @@ async def get_gym_suggestions(q: str):
         }
         
     except Exception as e:
-        print(f"Erreur suggestions coach: {e}")
+        log.info(f"Erreur suggestions coach: {e}")
         return {
             "success": False,
             "message": "Erreur lors de la recherche de suggestions",
@@ -5204,7 +5132,7 @@ async def get_gym_coaches(gym_address: str):
         }
         
     except Exception as e:
-        print(f"Erreur récupération coachs pour salle '{gym_address}': {e}")
+        log.info(f"Erreur récupération coachs pour salle '{gym_address}': {e}")
         return {
             "success": False,
             "message": "Erreur lors de la récupération des coachs",
@@ -5212,13 +5140,17 @@ async def get_gym_coaches(gym_address: str):
         }
 
 @app.get("/api/gyms/{gym_id}/coaches")  
-async def get_gym_coaches_by_id(gym_id: str):
+async def get_gym_coaches_by_id(
+    gym_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0)
+):
     """
     Récupère tous les coachs disponibles dans une salle par ID.
     🆕 NOUVEAU: Charge depuis static/data/coaches.json + tri par vérification, note, avis.
     """
     try:
-        print(f"🔍 Recherche coaches pour gym_id: {gym_id}")
+        log.info(f"🔍 Recherche coaches pour gym_id: {gym_id}")
         
         # 🆕 Charger depuis le JSON statique
         coaches = get_coaches_by_gym_id(gym_id)
@@ -5244,18 +5176,21 @@ async def get_gym_coaches_by_id(gym_id: str):
                 with open(gyms_file, 'r', encoding='utf-8') as f:
                     all_gyms = _json.load(f)
                     gym_info = next((g for g in all_gyms if g.get("id") == gym_id), None)
-        print(f"📊 Résultat pour {gym_id}: {len(coaches_sorted)} coaches trouvés")
-        
+        total = len(coaches_sorted)
+        coaches_page = coaches_sorted[offset:offset + limit]
         return {
             "success": True,
-            "coaches": coaches_sorted,
-            "count": len(coaches_sorted),
+            "coaches": coaches_page,
+            "count": len(coaches_page),
+            "total": total,
+            "limit": limit,
+            "offset": offset,
             "gym_id": gym_id,
             "gym_info": gym_info
         }
         
     except Exception as e:
-        print(f"❌ Erreur récupération coachs pour gym_id '{gym_id}': {e}")
+        log.error(f"Erreur récupération coachs pour gym_id '{gym_id}': {e}")
         import traceback
         traceback.print_exc()
         return {
@@ -5275,7 +5210,7 @@ async def get_coaches_for_gym(gym_id: str, gym_name: Optional[str] = None):
     - gym_name: Nom de la salle (optionnel, pour recherche par nom)
     """
     try:
-        print(f"🔍 Recherche coaches - gym_id: {gym_id}, gym_name: {gym_name}")
+        log.info(f"🔍 Recherche coaches - gym_id: {gym_id}, gym_name: {gym_name}")
         
         coaches_found = []
         demo_users = load_demo_users()
@@ -5334,7 +5269,7 @@ async def get_coaches_for_gym(gym_id: str, gym_name: Optional[str] = None):
             key=lambda c: (-int(c.get("verified", False)), -c.get("rating", 0))
         )
         
-        print(f"📊 Résultat: {len(coaches_sorted)} coaches trouvés pour {gym_name or gym_id}")
+        log.info(f"📊 Résultat: {len(coaches_sorted)} coaches trouvés pour {gym_name or gym_id}")
         
         return {
             "success": True,
@@ -5345,7 +5280,7 @@ async def get_coaches_for_gym(gym_id: str, gym_name: Optional[str] = None):
         }
         
     except Exception as e:
-        print(f"❌ Erreur récupération coaches: {e}")
+        log.error(f"Erreur récupération coaches: {e}")
         import traceback
         traceback.print_exc()
         return {
@@ -5369,7 +5304,7 @@ async def get_countries():
             "count": len(countries)
         }
     except Exception as e:
-        print(f"❌ Erreur récupération pays: {e}")
+        log.error(f"Erreur récupération pays: {e}")
         return {
             "success": False,
             "message": "Erreur lors de la récupération des pays",
@@ -5462,7 +5397,7 @@ async def get_gyms_worldwide(
         }
         
     except Exception as e:
-        print(f"❌ Erreur récupération salles mondiales: {e}")
+        log.error(f"Erreur récupération salles mondiales: {e}")
         return {
             "success": False,
             "message": "Erreur lors de la récupération des salles",
@@ -5538,7 +5473,7 @@ async def search_gyms_near_location(
         }
         
     except Exception as e:
-        print(f"❌ Erreur recherche géographique salles: {e}")
+        log.error(f"Erreur recherche géographique salles: {e}")
         return {
             "success": False,
             "message": "Erreur lors de la recherche géographique",
@@ -5603,7 +5538,7 @@ async def signup_reservation(request: Request, body: SignupReservationRequest):
         full_name = body.fullName.strip()
         password = body.password
         
-        print(f"🔐 API signup-reservation appelée pour {email} ({full_name})")
+        log.info(f"🔐 API signup-reservation appelée pour {email} ({full_name})")
         
         # Vérifier si l'utilisateur existe déjà
         demo_users = load_demo_users()
@@ -5613,7 +5548,7 @@ async def signup_reservation(request: Request, body: SignupReservationRequest):
             if existing_user.get("full_name") != full_name:
                 existing_user["full_name"] = full_name
                 save_demo_users(demo_users)
-                print(f"✅ Nom mis à jour pour {email}: {full_name}")
+                log.info(f"✅ Nom mis à jour pour {email}: {full_name}")
         else:
             # Créer un nouvel utilisateur client
             user_data = {
@@ -5626,13 +5561,13 @@ async def signup_reservation(request: Request, body: SignupReservationRequest):
             }
             demo_users[email] = user_data
             save_demo_users(demo_users)
-            print(f"✅ Nouvel utilisateur créé: {email} ({full_name})")
+            log.info(f"✅ Nouvel utilisateur créé: {email} ({full_name})")
         
         # Créer un token de session pour le client
         token = f"demo_{secrets.token_hex(8)}"
         demo_token_map[token] = email
         
-        print(f"🔐 Session créée pour {email} avec token {token}")
+        log.info(f"🔐 Session créée pour {email} avec token {token}")
         
         # Créer la réponse JSON et y ajouter le cookie
         json_response = JSONResponse({
@@ -5654,12 +5589,12 @@ async def signup_reservation(request: Request, body: SignupReservationRequest):
             secure=os.environ.get("REPLIT_DEPLOYMENT") == "1"
         )
         
-        print(f"🍪 Cookie session_token défini avec token {token}")
+        log.info(f"🍪 Cookie session_token défini avec token {token}")
         
         return json_response
         
     except Exception as e:
-        print(f"❌ Erreur inscription: {e}")
+        log.error(f"Erreur inscription: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/send-otp-email")
@@ -5680,7 +5615,7 @@ async def send_otp_email(request: SendOTPRequest, raw_request: Request = None):
             "expires_at": datetime.now() + timedelta(minutes=5)
         }
         
-        print(f"✅ Email OTP envoyé à {request.email} avec le code {code}")
+        log.info(f"✅ Email OTP envoyé à {request.email} avec le code {code}")
         
         return JSONResponse({
             "success": True,
@@ -5689,7 +5624,7 @@ async def send_otp_email(request: SendOTPRequest, raw_request: Request = None):
         })
         
     except Exception as e:
-        print(f"❌ Erreur envoi email: {e}")
+        log.error(f"Erreur envoi email: {e}")
         raise HTTPException(status_code=500, detail=f"Erreur lors de l'envoi de l'email: {str(e)}")
 
 @app.post("/api/verify-otp")
@@ -5722,50 +5657,12 @@ async def verify_otp(request: VerifyOTPRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Erreur vérification OTP: {e}")
+        log.error(f"Erreur vérification OTP: {e}")
         raise HTTPException(status_code=500, detail=f"Erreur lors de la vérification: {str(e)}")
 
 
 # ===== CONFIRMATION DE RÉSERVATION AVEC EMAIL =====
-class ConfirmBookingRequest(BaseModel):
-    client_name: str
-    client_email: EmailStr
-    coach_name: str
-    coach_email: Optional[EmailStr] = None
-    gym_name: str
-    gym_address: Optional[str] = "Adresse non renseignée"
-    date: str
-    time: str
-    service: str
-    duration: str
-    price: str
-    coach_photo: Optional[str] = None
-    lang: Optional[str] = "fr"
-
-
-class CancelBookingRequest(BaseModel):
-    client_name: str
-    client_email: EmailStr
-    coach_name: str
-    coach_email: Optional[EmailStr] = None
-    gym_name: str
-    gym_address: Optional[str] = "Adresse non renseignée"
-    date: str
-    time: str
-    service: str
-    duration: str
-    price: str
-    coach_photo: Optional[str] = None
-    booking_url: Optional[str] = None
-    booking_id: Optional[str] = None
-    lang: Optional[str] = "fr"
-
-
-class CoachBookingRequest(BaseModel):
-    coach_email: EmailStr
-    booking_id: str
-    action: str  # "confirm" ou "reject"
-
+from models.booking import ConfirmBookingRequest, CancelBookingRequest, CoachBookingRequest, DeleteBookingRequest
 
 @app.post("/api/confirm-booking")
 @limiter.limit("30/minute")
@@ -5780,9 +5677,9 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
         
         date_fr = body.date
         
-        print(f"📧 Confirmation réservation pour {body.client_name} ({body.client_email})")
-        print(f"   Coach: {body.coach_name}, Salle: {body.gym_name}")
-        print(f"   Date: {date_fr} à {body.time}")
+        log.info(f"📧 Confirmation réservation pour {body.client_name} ({body.client_email})")
+        log.info(f"   Coach: {body.coach_name}, Salle: {body.gym_name}")
+        log.info(f"   Date: {date_fr} à {body.time}")
         
         # Générer un ID unique pour la réservation
         booking_id = str(uuid.uuid4())[:8]
@@ -5793,12 +5690,12 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
             
             # Trouver le coach - priorité à l'email si fourni
             coach_email = None
-            print(f"🔍 Recherche coach - email reçu: '{body.coach_email}', nom: '{body.coach_name}'")
+            log.info(f"🔍 Recherche coach - email reçu: '{body.coach_email}', nom: '{body.coach_name}'")
             
             # 1. Match direct par email
             if body.coach_email and body.coach_email in demo_users:
                 coach_email = body.coach_email
-                print(f"✅ Coach trouvé par email direct: {coach_email}")
+                log.info(f"✅ Coach trouvé par email direct: {coach_email}")
             
             # 2. Fallback: décoder le slug (email_avec_underscore → email@réel)
             if not coach_email and body.coach_email:
@@ -5808,7 +5705,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                     if encoded_email == body.coach_email:
                         if demo_users[email].get("role") == "coach":
                             coach_email = email
-                            print(f"✅ Coach trouvé par slug décodé: {coach_email}")
+                            log.info(f"✅ Coach trouvé par slug décodé: {coach_email}")
                             break
             
             # 3. Fallback: recherche par nom normalisé (strip + lower)
@@ -5819,11 +5716,11 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                         stored_name = user_data.get("full_name", "").strip().lower()
                         if stored_name == normalized_coach_name:
                             coach_email = email
-                            print(f"✅ Coach trouvé par nom normalisé: {coach_email}")
+                            log.info(f"✅ Coach trouvé par nom normalisé: {coach_email}")
                             break
             
             if not coach_email:
-                print(f"⚠️ Coach non trouvé - email: {body.coach_email}, nom: {body.coach_name}")
+                log.warning(f" Coach non trouvé - email: {body.coach_email}, nom: {body.coach_name}")
                 return JSONResponse({
                     "success": False,
                     "message": "Coach non trouvé",
@@ -5833,7 +5730,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
             # Vérifier le mode de paiement du coach
             coach_data = demo_users[coach_email]
             payment_mode = coach_data.get("payment_mode", "disabled")
-            print(f"💳 Mode de paiement du coach: {payment_mode}")
+            log.info(f"💳 Mode de paiement du coach: {payment_mode}")
             
             # Créer l'objet réservation
             new_booking = {
@@ -5863,7 +5760,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                 demo_users[coach_email]["pending_bookings"].append(new_booking)
                 save_demo_user(coach_email, demo_users[coach_email])
                 
-                print(f"💳 Réservation {booking_id} en attente de paiement")
+                log.info(f"💳 Réservation {booking_id} en attente de paiement")
                 
                 # Créer une session Stripe Checkout pour le paiement de la séance
                 if STRIPE_AVAILABLE:
@@ -5876,7 +5773,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                         
                         # Accepter les comptes Stripe partiels
                         if not connect_info:
-                            print(f"❌ Coach {coach_email} n'a pas de compte Stripe Connect")
+                            log.error(f" Coach {coach_email} n'a pas de compte Stripe Connect")
                             return JSONResponse({
                                 "success": False,
                                 "message": "Le coach n'a pas configuré son compte bancaire pour recevoir les paiements",
@@ -5885,7 +5782,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                         
                         has_account_id = connect_info.get("account_id") is not None
                         if not has_account_id:
-                            print(f"❌ Coach {coach_email} n'a pas d'account_id Stripe")
+                            log.error(f" Coach {coach_email} n'a pas d'account_id Stripe")
                             return JSONResponse({
                                 "success": False,
                                 "message": "Le coach n'a pas configuré son compte bancaire pour recevoir les paiements",
@@ -5893,7 +5790,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                             }, status_code=400)
                         
                         if not connect_info.get("charges_enabled"):
-                            print(f"❌ Coach {coach_email} a un compte Stripe non vérifié (charges_enabled=False)")
+                            log.error(f" Coach {coach_email} a un compte Stripe non vérifié (charges_enabled=False)")
                             return JSONResponse({
                                 "success": False,
                                 "message": "Le coach n'a pas terminé la vérification de son compte Stripe. Le paiement en ligne n'est pas disponible.",
@@ -5925,15 +5822,15 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                         )
                         
                         if not checkout_result.get("success"):
-                            print(f"❌ Erreur création checkout: {checkout_result.get('error')}")
+                            log.error(f"Erreur création checkout: {checkout_result.get('error')}")
                             return JSONResponse({
                                 "success": False,
                                 "message": "Erreur lors de la création du paiement",
                                 "error": checkout_result.get("error")
                             }, status_code=500)
                         
-                        print(f"✅ Session Stripe Connect créée: {checkout_result.get('session_id')}")
-                        print(f"   💸 L'argent ira directement au coach ({coach_connect_account_id})")
+                        log.info(f"✅ Session Stripe Connect créée: {checkout_result.get('session_id')}")
+                        log.info(f"   💸 L'argent ira directement au coach ({coach_connect_account_id})")
                         
                         return JSONResponse({
                             "success": True,
@@ -5946,7 +5843,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                         })
                         
                     except Exception as stripe_error:
-                        print(f"❌ Erreur Stripe: {stripe_error}")
+                        log.error(f"Erreur Stripe: {stripe_error}")
                         return JSONResponse({
                             "success": False,
                             "message": "Erreur lors de la création du paiement",
@@ -5969,7 +5866,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                 demo_users[coach_email]["pending_bookings"].append(new_booking)
                 save_demo_user(coach_email, demo_users[coach_email])
                 
-                print(f"✅ Réservation {booking_id} sauvegardée pour coach {coach_email}")
+                log.info(f"✅ Réservation {booking_id} sauvegardée pour coach {coach_email}")
                 
                 # Envoyer notification au coach
                 coach_notification = send_coach_notification_email(
@@ -5987,9 +5884,9 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                     booking_id=booking_id,
                     lang=coach_data.get("lang", "fr")
                 )
-                print(f"📧 Notification coach: {coach_notification}")
+                log.info(f"📧 Notification coach: {coach_notification}")
                 
-                print(f"📋 Réservation en attente de confirmation du coach")
+                log.info(f"📋 Réservation en attente de confirmation du coach")
                 
                 return JSONResponse({
                     "success": True,
@@ -6002,7 +5899,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                 })
                 
         except Exception as save_error:
-            print(f"⚠️ Erreur sauvegarde réservation: {save_error}")
+            log.warning(f"Erreur sauvegarde réservation: {save_error}")
             return JSONResponse({
                 "success": False,
                 "message": "Erreur lors de la sauvegarde de la réservation",
@@ -6010,7 +5907,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
             }, status_code=500)
             
     except Exception as e:
-        print(f"❌ Erreur confirmation réservation: {e}")
+        log.error(f"Erreur confirmation réservation: {e}")
         return JSONResponse({
             "success": False,
             "message": "Erreur lors de la réservation",
@@ -6026,9 +5923,9 @@ async def cancel_booking(request: Request, body: CancelBookingRequest):
     try:
         from resend_service import send_cancellation_email, send_cancellation_to_coach_email
         
-        print(f"📧 Annulation réservation pour {body.client_name} ({body.client_email})")
-        print(f"   Coach: {body.coach_name}, Salle: {body.gym_name}")
-        print(f"   Date: {body.date} à {body.time}")
+        log.info(f"📧 Annulation réservation pour {body.client_name} ({body.client_email})")
+        log.info(f"   Coach: {body.coach_name}, Salle: {body.gym_name}")
+        log.info(f"   Date: {body.date} à {body.time}")
         
         # Supprimer la réservation en base
         demo_users = load_demo_users()
@@ -6052,7 +5949,7 @@ async def cancel_booking(request: Request, body: CancelBookingRequest):
                         found_coach_email = coach_email
                         found_coach_name = coach_data.get("full_name", body.coach_name)
                         found_coach_data = coach_data
-                        print(f"✅ Réservation {body.booking_id} supprimée de {list_name} du coach {coach_email}")
+                        log.info(f"✅ Réservation {body.booking_id} supprimée de {list_name} du coach {coach_email}")
                         break
                 
                 if booking_removed:
@@ -6085,7 +5982,7 @@ async def cancel_booking(request: Request, body: CancelBookingRequest):
                     if len(new_bookings) < len(bookings):
                         coach_data[list_name] = new_bookings
                         booking_removed = True
-                        print(f"✅ Réservation supprimée de {list_name} du coach {coach_email} (fallback)")
+                        log.info(f"✅ Réservation supprimée de {list_name} du coach {coach_email} (fallback)")
                 
                 if booking_removed:
                     break
@@ -6093,7 +5990,7 @@ async def cancel_booking(request: Request, body: CancelBookingRequest):
         # Sauvegarder les modifications
         if booking_removed:
             save_demo_users(demo_users)
-            print(f"✅ Base de données mise à jour")
+            log.info(f"✅ Base de données mise à jour")
         
         # Envoyer l'email d'annulation AU COACH
         coach_notified = False
@@ -6114,9 +6011,9 @@ async def cancel_booking(request: Request, body: CancelBookingRequest):
             )
             coach_notified = coach_result.get("success", False)
             if coach_notified:
-                print(f"✅ Email d'annulation envoyé au coach {found_coach_email}")
+                log.info(f"✅ Email d'annulation envoyé au coach {found_coach_email}")
             else:
-                print(f"⚠️ Erreur envoi email au coach: {coach_result.get('error')}")
+                log.warning(f"Erreur envoi email au coach: {coach_result.get('error')}")
         
         # Envoyer l'email d'annulation AU CLIENT
         result = send_cancellation_email(
@@ -6145,7 +6042,7 @@ async def cancel_booking(request: Request, body: CancelBookingRequest):
                 "email_id": result.get("email_id")
             })
         else:
-            print(f"⚠️ Email client non envoyé mais réservation annulée: {result.get('error')}")
+            log.warning(f" Email client non envoyé mais réservation annulée: {result.get('error')}")
             return JSONResponse({
                 "success": True,
                 "message": "Réservation annulée (email client non envoyé)",
@@ -6156,7 +6053,7 @@ async def cancel_booking(request: Request, body: CancelBookingRequest):
             })
             
     except Exception as e:
-        print(f"❌ Erreur annulation réservation: {e}")
+        log.error(f"Erreur annulation réservation: {e}")
         return JSONResponse({
             "success": True,
             "message": "Réservation annulée (erreur email)",
@@ -6176,8 +6073,12 @@ async def reservation_cancelled(request: Request):
 # ===== API COACH - GESTION DES RÉSERVATIONS =====
 
 @app.get("/api/coach/bookings")
-async def get_coach_bookings(user=Depends(require_coach_role)):
-    """Récupère les réservations en attente et confirmées du coach connecté (session requise)."""
+async def get_coach_bookings(
+    user=Depends(require_coach_role),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0)
+):
+    """Récupère les réservations du coach (pagination sur confirmed/rejected)."""
     coach_email = user.get("email")
     if not coach_email:
         return JSONResponse({"success": False, "error": "Non autorisé"}, status_code=401)
@@ -6189,14 +6090,22 @@ async def get_coach_bookings(user=Depends(require_coach_role)):
         pending_bookings = coach_data.get("pending_bookings", [])
         confirmed_bookings = coach_data.get("confirmed_bookings", [])
         rejected_bookings = coach_data.get("rejected_bookings", [])
+        total_confirmed = len(confirmed_bookings)
+        total_rejected = len(rejected_bookings)
+        confirmed_page = confirmed_bookings[offset:offset + limit]
+        rejected_page = rejected_bookings[offset:offset + limit]
         return JSONResponse({
             "success": True,
             "pending": pending_bookings,
-            "confirmed": confirmed_bookings,
-            "rejected": rejected_bookings
+            "confirmed": confirmed_page,
+            "rejected": rejected_page,
+            "total_confirmed": total_confirmed,
+            "total_rejected": total_rejected,
+            "limit": limit,
+            "offset": offset
         })
     except Exception as e:
-        print(f"❌ Erreur récupération réservations coach: {e}")
+        log.error(f"Erreur récupération réservations coach: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
@@ -6224,13 +6133,17 @@ async def get_booking_by_id(booking_id: str, user=Depends(get_current_user)):
                         return JSONResponse({"success": True, "booking": booking_with_coach})
         return JSONResponse({"success": False, "error": "Booking non trouvé"}, status_code=404)
     except Exception as e:
-        print(f"❌ Erreur récupération booking: {e}")
+        log.error(f"Erreur récupération booking: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
 @app.get("/api/client/bookings", tags=["client"])
-async def get_client_bookings(user=Depends(get_current_user)):
-    """Récupère les réservations du client connecté (session). Nécessite une session valide."""
+async def get_client_bookings(
+    user=Depends(get_current_user),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0)
+):
+    """Récupère les réservations du client connecté (pagination: limit, offset)."""
     if not user or not user.get("email"):
         return JSONResponse({"success": False, "error": "Non autorisé"}, status_code=401)
     client_email = user.get("email")
@@ -6251,9 +6164,17 @@ async def get_client_bookings(user=Depends(get_current_user)):
                         b["coach_name"] = coach_name
                         client_bookings.append(b)
 
-        return JSONResponse({"success": True, "bookings": client_bookings})
+        total = len(client_bookings)
+        page = client_bookings[offset:offset + limit]
+        return JSONResponse({
+            "success": True,
+            "bookings": page,
+            "total": total,
+            "limit": limit,
+            "offset": offset
+        })
     except Exception as e:
-        print(f"❌ Erreur récupération bookings client: {e}")
+        log.error(f"Erreur récupération bookings client: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
@@ -6311,7 +6232,7 @@ async def respond_to_booking(body: CoachBookingRequest, user=Depends(require_coa
         # Sauvegarder dans la DB ET le fichier JSON
         save_demo_user(coach_email, coach_data)
         
-        print(f"✅ Réservation {body.booking_id} {action_label} par {coach_email}")
+        log.info(f"✅ Réservation {body.booking_id} {action_label} par {coach_email}")
         
         # Envoyer email au client pour l'informer
         email_sent = False
@@ -6322,7 +6243,7 @@ async def respond_to_booking(body: CoachBookingRequest, user=Depends(require_coa
         client_name = booking_to_update.get("client_name", "Client")
         
         if not client_email:
-            print(f"⚠️ Email client manquant pour la réservation {body.booking_id}")
+            log.warning(f" Email client manquant pour la réservation {body.booking_id}")
             email_error_msg = "Email client non disponible"
         else:
             # Formater la date en français
@@ -6367,14 +6288,14 @@ async def respond_to_booking(body: CoachBookingRequest, user=Depends(require_coa
                     email_sent = email_result.get("success", False)
                     if not email_sent:
                         email_error_msg = email_result.get("error", "Erreur inconnue")
-                    print(f"📧 Email confirmation client: {email_result}")
+                    log.info(f"📧 Email confirmation client: {email_result}")
                     
                     # Programmer les rappels (24h avant + 2h avant)
                     schedule_booking_reminders(booking_to_update, coach_name)
                     
                 except Exception as email_error:
                     email_error_msg = str(email_error)
-                    print(f"⚠️ Erreur envoi email confirmation: {email_error}")
+                    log.warning(f"Erreur envoi email confirmation: {email_error}")
             
             elif body.action == "reject":
                 # Envoyer l'email d'ANNULATION au client
@@ -6397,10 +6318,10 @@ async def respond_to_booking(body: CoachBookingRequest, user=Depends(require_coa
                     email_sent = email_result.get("success", False)
                     if not email_sent:
                         email_error_msg = email_result.get("error", "Erreur inconnue")
-                    print(f"📧 Email rejet client: {email_result}")
+                    log.info(f"📧 Email rejet client: {email_result}")
                 except Exception as email_error:
                     email_error_msg = str(email_error)
-                    print(f"⚠️ Erreur envoi email rejet: {email_error}")
+                    log.warning(f"Erreur envoi email rejet: {email_error}")
         
         response_data = {
             "success": True,
@@ -6414,13 +6335,9 @@ async def respond_to_booking(body: CoachBookingRequest, user=Depends(require_coa
         return JSONResponse(response_data)
         
     except Exception as e:
-        print(f"❌ Erreur réponse réservation: {e}")
+        log.error(f"Erreur réponse réservation: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
-
-class DeleteBookingRequest(BaseModel):
-    coach_email: EmailStr
-    booking_id: str
 
 @app.post("/api/coach/bookings/delete")
 async def delete_booking(body: DeleteBookingRequest, user=Depends(require_coach_role)):
@@ -6466,7 +6383,7 @@ async def delete_booking(body: DeleteBookingRequest, user=Depends(require_coach_
         # Sauvegarder via la fonction centralisée (DB ou JSON)
         save_demo_user(coach_email, coach_data)
         
-        print(f"🗑️ Réservation {body.booking_id} supprimée par {coach_email}")
+        log.info(f"🗑️ Réservation {body.booking_id} supprimée par {coach_email}")
         
         # Annuler les rappels programmés pour cette réservation
         cancel_booking_reminders(body.booking_id)
@@ -6497,8 +6414,8 @@ async def delete_booking(body: DeleteBookingRequest, user=Depends(require_coach_
                         except Exception:
                             pass
                     
-                    print(f"📧 Envoi email annulation au client {client_name} ({client_email})")
-                    print(f"   Coach: {coach_name}, Date: {formatted_date} à {time_str}")
+                    log.info(f"📧 Envoi email annulation au client {client_name} ({client_email})")
+                    log.info(f"   Coach: {coach_name}, Date: {formatted_date} à {time_str}")
                     
                     email_result = send_coach_cancelled_email(
                         client_email=client_email,
@@ -6509,9 +6426,9 @@ async def delete_booking(body: DeleteBookingRequest, user=Depends(require_coach_
                         lang=deleted_booking.get("lang", "fr")
                     )
                     email_sent = email_result.get("success", False)
-                    print(f"📧 Email annulation client: {email_result}")
+                    log.info(f"📧 Email annulation client: {email_result}")
                 except Exception as email_error:
-                    print(f"⚠️ Erreur envoi email annulation: {email_error}")
+                    log.warning(f"Erreur envoi email annulation: {email_error}")
         
         return JSONResponse({
             "success": True,
@@ -6520,7 +6437,7 @@ async def delete_booking(body: DeleteBookingRequest, user=Depends(require_coach_
         })
         
     except Exception as e:
-        print(f"❌ Erreur suppression réservation: {e}")
+        log.error(f"Erreur suppression réservation: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
@@ -6590,7 +6507,7 @@ async def send_message(body: SendMessageRequest, user=Depends(get_current_user))
         save_messages(messages)
         return JSONResponse({"success": True, "message": new_message})
     except Exception as e:
-        print(f"❌ Erreur envoi message: {e}")
+        log.error(f"Erreur envoi message: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/messages/{booking_id}")
@@ -6611,7 +6528,7 @@ async def get_messages(booking_id: str, user=Depends(get_current_user), client_e
             return JSONResponse({"success": True, "conversation": conv})
         return JSONResponse({"success": True, "conversation": {"messages": []}})
     except Exception as e:
-        print(f"❌ Erreur récupération messages: {e}")
+        log.error(f"Erreur récupération messages: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.get("/api/conversations")
@@ -6634,7 +6551,7 @@ async def get_conversations(user=Depends(get_current_user), role: str = Query(No
                 user_conversations.append(conv)
         return JSONResponse({"success": True, "conversations": user_conversations})
     except Exception as e:
-        print(f"❌ Erreur récupération conversations: {e}")
+        log.error(f"Erreur récupération conversations: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/messages/mark-read")
@@ -6691,7 +6608,7 @@ def _run_reminders_process(request: Request, secret: Optional[str] = None):
             "message": f"{sent_count} rappel(s) envoyé(s)"
         })
     except Exception as e:
-        print(f"❌ Erreur API process reminders: {e}")
+        log.error(f"Erreur API process reminders: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
@@ -6766,30 +6683,30 @@ def check_and_block_unpaid_coaches():
                         retry_url=f"{base_url}/coach/subscription" if base_url else "/coach/subscription",
                         lang=user_data.get("lang", "fr")
                     )
-                    print(f"🚫 Compte bloqué pour non-paiement: {email}")
+                    log.info(f"🚫 Compte bloqué pour non-paiement: {email}")
         
         return blocked_count
     except Exception as e:
-        print(f"⚠️ Erreur vérification blocage: {e}")
+        log.warning(f"Erreur vérification blocage: {e}")
         return 0
 
 def reminder_checker_thread():
     """Thread qui vérifie les rappels et blocages toutes les 5 minutes."""
-    print("🔔 Démarrage du thread de vérification des rappels...")
+    log.info("🔔 Démarrage du thread de vérification des rappels...")
     while True:
         try:
             # Vérifier les rappels
             sent = process_due_reminders()
             if sent > 0:
-                print(f"🔔 {sent} rappel(s) envoyé(s) automatiquement")
+                log.info(f"🔔 {sent} rappel(s) envoyé(s) automatiquement")
             
             # Vérifier les coaches à bloquer (paiement échoué depuis 24h+)
             blocked = check_and_block_unpaid_coaches()
             if blocked > 0:
-                print(f"🚫 {blocked} compte(s) bloqué(s) pour non-paiement")
+                log.info(f"🚫 {blocked} compte(s) bloqué(s) pour non-paiement")
                 
         except Exception as e:
-            print(f"⚠️ Erreur thread rappels: {e}")
+            log.warning(f"Erreur thread rappels: {e}")
         
         # Attendre 5 minutes avant la prochaine vérification
         time.sleep(300)
@@ -6823,145 +6740,17 @@ async def get_coach_for_checkout(request: Request):
                 return u
     raise HTTPException(status_code=401, detail="Authentification requise. Rechargez la page /coach/offre et réessayez.")
 
-@app.post("/api/stripe/create-checkout-session")
-async def api_create_checkout_session(request: Request, user = Depends(get_coach_for_checkout)):
-    """Crée une session Checkout Stripe pour l'abonnement (accessible même sans abonnement actif)."""
-    print("[Stripe] create_checkout_session appele")
-    try:
-        if not _is_stripe_configured():
-            print("[Stripe] ERREUR: Stripe non configure")
-            return JSONResponse(
-                {"error": "Paiement temporairement indisponible. Les cles Stripe seront configurees prochainement.", "code": "STRIPE_NOT_CONFIGURED"},
-                status_code=503
-            )
-        base_url = _get_base_url(request)
-        coach_email = user.get("email")
-        print(f"[Stripe] Coach authentifie: {coach_email or 'N/A'}")
-        if not coach_email:
-            print("[Stripe] ERREUR: Email coach introuvable")
-            return JSONResponse({"error": "Email du coach introuvable"}, status_code=400)
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        billing_period = body.get("billing_period", "monthly")
-        coach_name = user.get("full_name", user.get("name", "Coach"))
-        coach_id = user.get("id", coach_email)
-        success_url = f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{base_url.rstrip('/')}/coach/subscription?cancelled=true"
-        stripe_price_id = (os.environ.get("STRIPE_PRICE_ID") or os.environ.get("STRIPE_MONTHLY_PRICE_ID") or "").strip()
-        if stripe_price_id and stripe_price_id.startswith("price_"):
-            import stripe
-            from stripe_service import init_stripe
-            init_stripe()
-            print(f"[Stripe] Creation session avec STRIPE_PRICE_ID: {stripe_price_id[:25]}...")
-            session = stripe.checkout.Session.create(
-                mode="subscription",
-                customer_email=coach_email,
-                line_items=[{"price": stripe_price_id, "quantity": 1}],
-                success_url=success_url,
-                cancel_url=cancel_url,
-                metadata={"coach_email": coach_email, "platform": "fitmatch"},
-            )
-        else:
-            try:
-                customer = create_or_get_customer(coach_email, coach_name, coach_id)
-                print(f"[Stripe] Customer Stripe: {customer.id}")
-            except Exception as customer_error:
-                print(f"[Stripe] ERREUR create_or_get_customer: {customer_error}")
-                return JSONResponse({"error": f"Erreur client Stripe: {str(customer_error)}"}, status_code=500)
-            update_coach_subscription(coach_email, stripe_customer_id=customer.id)
-            session = create_checkout_session(
-                customer_id=customer.id,
-                success_url=success_url,
-                cancel_url=cancel_url,
-                coach_email=coach_email,
-                billing_period=billing_period
-            )
-        checkout_url = getattr(session, "url", None) if session else None
-        if not checkout_url:
-            print("[Stripe] ERREUR: session.url vide")
-            return JSONResponse({"error": "Stripe n'a pas retourne d'URL"}, status_code=500)
-        print(f"[Stripe] Session creee: {session.id}")
-        print(f"[Stripe] URL Stripe: {checkout_url[:80]}...")
-        return JSONResponse({"url": checkout_url})
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"[Stripe] ERREUR globale: {e}")
-        import traceback
-        traceback.print_exc()
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-@app.post("/api/create_checkout_session")
-async def create_checkout_session_simple(request: Request):
-    """
-    Cree une session Stripe Checkout. Mensuel 20€ ou annuel 200€.
-    Auth : cookie ou header X-Signup-Token.
-    """
-    try:
-        print("[Stripe] /api/create_checkout_session appele")
-        coach = None
-        try:
-            coach = await get_coach_for_checkout(request)
-        except HTTPException:
-            return JSONResponse({"error": "Coach non authentifie. Rechargez la page /coach/offre."}, status_code=401)
-        if not coach:
-            print("[Stripe] ERREUR: Aucun coach trouve (auth echouee)")
-            return JSONResponse({"error": "Coach non authentifie"}, status_code=401)
-        coach_email = coach.get("email")
-        print(f"[Stripe] Coach authentifie: {coach_email}")
-        if not _is_stripe_configured():
-            return JSONResponse({"error": "Stripe non configure"}, status_code=503)
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        billing_period = body.get("billing_period", "monthly")
-        base_url = _get_base_url(request)
-        success_url = f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{base_url.rstrip('/')}/coach/subscription?cancelled=true"
-        if billing_period == "annual":
-            price_id = (os.environ.get("STRIPE_ANNUAL_PRICE_ID") or "").strip()
-        else:
-            price_id = (os.environ.get("STRIPE_PRICE_ID") or os.environ.get("STRIPE_MONTHLY_PRICE_ID") or "").strip()
-        if price_id and price_id.startswith("price_"):
-            import stripe
-            from stripe_service import init_stripe
-            init_stripe()
-            session = stripe.checkout.Session.create(
-                mode="subscription",
-                customer_email=coach_email,
-                line_items=[{"price": price_id, "quantity": 1}],
-                success_url=success_url,
-                cancel_url=cancel_url,
-                metadata={"coach_email": coach_email, "platform": "fitmatch"},
-            )
-        else:
-            coach_id = coach.get("id") or coach.get("email", coach_email)
-            customer = create_or_get_customer(coach_email, coach.get("full_name", "Coach"), str(coach_id))
-            update_coach_subscription(coach_email, stripe_customer_id=customer.id)
-            session = create_checkout_session(
-                customer_id=customer.id,
-                success_url=success_url,
-                cancel_url=cancel_url,
-                coach_email=coach_email,
-                billing_period=billing_period,
-            )
-        checkout_url = getattr(session, "url", None) if session else None
-        if not checkout_url:
-            print("[Stripe] ERREUR: session.url vide")
-            return JSONResponse({"error": "Stripe n'a pas retourne d'URL"}, status_code=500)
-        print(f"[Stripe] Session creee: {session.id}, URL: {checkout_url[:60]}...")
-        return JSONResponse({"url": checkout_url})
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"[Stripe] ERREUR create_checkout_session: {e}")
-        import traceback
-        traceback.print_exc()
-        return JSONResponse({"error": str(e)}, status_code=500)
-
+# Routes Stripe (extrait dans routes/payment_routes.py)
+from routes.payment_routes import register_payment_routes
+register_payment_routes(app, {
+    "get_coach_for_checkout": get_coach_for_checkout,
+    "_get_base_url": _get_base_url,
+    "_is_stripe_configured": _is_stripe_configured,
+    "create_or_get_customer": create_or_get_customer,
+    "create_checkout_session": create_checkout_session,
+    "update_coach_subscription": update_coach_subscription,
+    "log": log,
+})
 
 @app.post("/api/stripe/create-portal-session")
 async def api_create_portal_session(request: Request, user = Depends(require_coach_role)):
@@ -6988,7 +6777,7 @@ async def api_create_portal_session(request: Request, user = Depends(require_coa
         
         return JSONResponse({"url": session.url})
     except Exception as e:
-        print(f"❌ Erreur création portal session: {e}")
+        log.error(f"Erreur création portal session: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/api/stripe/webhook", tags=["stripe"])
@@ -7009,7 +6798,7 @@ async def stripe_webhook(request: Request):
 
     # En production (SITE_URL défini), refuser de traiter sans secret pour éviter les faux webhooks
     if site_url and not webhook_secret:
-        print("❌ STRIPE_WEBHOOK_SECRET manquant en production - webhook refusé")
+        log.error(f" STRIPE_WEBHOOK_SECRET manquant en production - webhook refusé")
         return JSONResponse(
             status_code=503,
             content={"error": "Webhook non configuré"}
@@ -7022,24 +6811,24 @@ async def stripe_webhook(request: Request):
                 event = stripe.Webhook.construct_event(
                     payload, sig_header, webhook_secret
                 )
-                print(f"✅ Signature webhook vérifiée")
+                log.info(f"✅ Signature webhook vérifiée")
             except ValueError as e:
-                print(f"❌ Erreur signature invalide: {e}")
+                log.error(f"Erreur signature invalide: {e}")
                 return JSONResponse({"error": "Signature invalide"}, status_code=400)
             except stripe.error.SignatureVerificationError as e:
-                print(f"❌ Erreur vérification signature: {e}")
+                log.error(f"Erreur vérification signature: {e}")
                 return JSONResponse({"error": "Erreur signature"}, status_code=400)
         else:
             # Mode développement uniquement (pas de SITE_URL ou secret vide en local)
             if site_url:
                 return JSONResponse({"error": "Signature requise"}, status_code=400)
-            print("⚠️ STRIPE_WEBHOOK_SECRET non configuré, vérification signature désactivée (dev)")
+            log.warning(f" STRIPE_WEBHOOK_SECRET non configuré, vérification signature désactivée (dev)")
             event = json.loads(payload)
         
         event_type = event.get("type")
         data = event.get("data", {}).get("object", {})
         
-        print(f"📩 Webhook Stripe reçu: {event_type}")
+        log.info(f"📩 Webhook Stripe reçu: {event_type}")
         
         if event_type == "checkout.session.completed":
             metadata = data.get("metadata", {})
@@ -7051,7 +6840,7 @@ async def stripe_webhook(request: Request):
                 coach_email = metadata.get("coach_email")
                 client_email = metadata.get("client_email")
                 
-                print(f"💳 Paiement séance réussi - booking_id: {booking_id}, coach: {coach_email}")
+                log.info(f"💳 Paiement séance réussi - booking_id: {booking_id}, coach: {coach_email}")
                 
                 if coach_email and booking_id:
                     try:
@@ -7080,7 +6869,7 @@ async def stripe_webhook(request: Request):
                                 coach_data["pending_bookings"] = pending
                                 
                                 save_demo_user(coach_email, coach_data)
-                                print(f"✅ Réservation {booking_id} confirmée après paiement")
+                                log.info(f"✅ Réservation {booking_id} confirmée après paiement")
                                 
                                 # Programmer les rappels
                                 schedule_booking_reminders(booking_to_confirm, coach_data.get("full_name", "Coach"))
@@ -7108,7 +6897,7 @@ async def stripe_webhook(request: Request):
                                         reservation_id=booking_id,
                                         lang=booking_to_confirm.get("lang", "fr")
                                     )
-                                    print(f"📧 Email confirmation envoyé au client")
+                                    log.info(f"📧 Email confirmation envoyé au client")
                                     
                                     # Envoyer le certificat de paiement au client
                                     from resend_service import send_session_payment_receipt
@@ -7125,11 +6914,11 @@ async def stripe_webhook(request: Request):
                                         amount=f"{booking_to_confirm.get('price')}€",
                                         lang=booking_to_confirm.get("lang", "fr")
                                     )
-                                    print(f"📧 Certificat paiement séance envoyé au client")
+                                    log.info(f"📧 Certificat paiement séance envoyé au client")
                                 except Exception as email_error:
-                                    print(f"⚠️ Erreur email confirmation: {email_error}")
+                                    log.warning(f"Erreur email confirmation: {email_error}")
                     except Exception as booking_error:
-                        print(f"❌ Erreur confirmation réservation après paiement: {booking_error}")
+                        log.error(f"Erreur confirmation réservation après paiement: {booking_error}")
                 
                 return JSONResponse({"received": True})
             
@@ -7138,7 +6927,7 @@ async def stripe_webhook(request: Request):
             subscription_id = data.get("subscription")
             customer_id = data.get("customer")
             
-            print(f"📩 checkout.session.completed - coach_email: {coach_email}, subscription_id: {subscription_id}")
+            log.info(f"📩 checkout.session.completed - coach_email: {coach_email}, subscription_id: {subscription_id}")
             
             if coach_email and subscription_id:
                 try:
@@ -7153,7 +6942,7 @@ async def stripe_webhook(request: Request):
                         subscription_status="active",
                         current_period_end=period_end
                     )
-                    print(f"✅ Abonnement activé pour {coach_email}")
+                    log.info(f"✅ Abonnement activé pour {coach_email}")
                     
                     # Envoyer email de bienvenue
                     from resend_service import send_subscription_success_email, send_subscription_payment_receipt
@@ -7167,7 +6956,7 @@ async def stripe_webhook(request: Request):
                         subscription_url=f"{base_url}/coach/portal" if base_url else "/coach/portal",
                         lang=coach_data.get("lang", "fr") if coach_data else "fr"
                     )
-                    print(f"📧 Email de bienvenue envoyé à {coach_email}")
+                    log.info(f"📧 Email de bienvenue envoyé à {coach_email}")
                     
                     # Envoyer le certificat de paiement au coach
                     subscription_type = data.get("metadata", {}).get("subscription_type", "monthly")
@@ -7192,10 +6981,10 @@ async def stripe_webhook(request: Request):
                         subscription_end=period_end_date.strftime("%d/%m/%Y"),
                         lang=coach_data.get("lang", "fr") if coach_data else "fr"
                     )
-                    print(f"📧 Certificat paiement abonnement envoyé à {coach_email}")
+                    log.info(f"📧 Certificat paiement abonnement envoyé à {coach_email}")
                     
                 except Exception as sub_error:
-                    print(f"❌ Erreur récupération subscription: {sub_error}")
+                    log.error(f"Erreur récupération subscription: {sub_error}")
             elif coach_email:
                 # Si pas de subscription_id mais coach_email, activer quand même
                 update_coach_subscription(
@@ -7203,7 +6992,7 @@ async def stripe_webhook(request: Request):
                     stripe_customer_id=customer_id,
                     subscription_status="active"
                 )
-                print(f"✅ Abonnement activé (sans sub ID) pour {coach_email}")
+                log.info(f"✅ Abonnement activé (sans sub ID) pour {coach_email}")
                 
                 # Envoyer email de bienvenue et certificat
                 from resend_service import send_subscription_success_email, send_subscription_payment_receipt
@@ -7241,7 +7030,7 @@ async def stripe_webhook(request: Request):
                     subscription_end=end_date.strftime("%d/%m/%Y"),
                     lang=coach_data.get("lang", "fr") if coach_data else "fr"
                 )
-                print(f"📧 Certificat paiement abonnement envoyé à {coach_email}")
+                log.info(f"📧 Certificat paiement abonnement envoyé à {coach_email}")
         
         elif event_type == "customer.subscription.updated":
             # Mise à jour de l'abonnement
@@ -7256,7 +7045,7 @@ async def stripe_webhook(request: Request):
                     subscription_status=status,
                     current_period_end=period_end
                 )
-                print(f"🔄 Abonnement mis à jour pour {coach_email}: {status}")
+                log.info(f"🔄 Abonnement mis à jour pour {coach_email}: {status}")
                 
                 # Si le statut revient à active, débloquer le compte
                 if status == "active":
@@ -7266,7 +7055,7 @@ async def stripe_webhook(request: Request):
                         coach_data["blocked_at"] = None
                         coach_data["payment_failed_at"] = None
                         save_demo_user(coach_email, coach_data)
-                        print(f"✅ Compte débloqué pour {coach_email}")
+                        log.info(f"✅ Compte débloqué pour {coach_email}")
                         
                         # Email de compte restauré
                         from resend_service import send_account_restored_email
@@ -7288,7 +7077,7 @@ async def stripe_webhook(request: Request):
                     coach_email=coach_email,
                     subscription_status="cancelled"
                 )
-                print(f"🚫 Abonnement annulé pour {coach_email}")
+                log.info(f"🚫 Abonnement annulé pour {coach_email}")
                 
                 # Bloquer le compte immédiatement
                 coach_data = get_demo_user(coach_email)
@@ -7340,7 +7129,7 @@ async def stripe_webhook(request: Request):
                         retry_url=f"{base_url}/coach/subscription",
                         lang=coach_data.get("lang", "fr") if coach_data else "fr"
                     )
-                    print(f"⚠️ Paiement échoué pour {coach_email} - email envoyé")
+                    log.warning(f" Paiement échoué pour {coach_email} - email envoyé")
         
         elif event_type == "invoice.payment_succeeded":
             # Paiement réussi (renouvellement) - débloquer si nécessaire
@@ -7377,7 +7166,7 @@ async def stripe_webhook(request: Request):
                                 coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
                                 lang=coach_data.get("lang", "fr") if coach_data else "fr"
                             )
-                            print(f"✅ Compte restauré pour {coach_email}")
+                            log.info(f"✅ Compte restauré pour {coach_email}")
                         # Renouvellement : envoyer le certificat de paiement par email (comme au premier paiement)
                         from resend_service import send_subscription_payment_receipt
                         amount_paid = (data.get("amount_paid") or 0) / 100.0
@@ -7399,11 +7188,11 @@ async def stripe_webhook(request: Request):
                             subscription_end=period_end,
                             lang=coach_data.get("lang", "fr") if coach_data else "fr"
                         )
-                        print(f"📧 Certificat de paiement (renouvellement) envoyé à {coach_email}")
+                        log.info(f"📧 Certificat de paiement (renouvellement) envoyé à {coach_email}")
                         if not was_blocked:
-                            print(f"✅ Renouvellement réussi pour {coach_email}")
+                            log.info(f"✅ Renouvellement réussi pour {coach_email}")
                 except Exception as renewal_error:
-                    print(f"⚠️ Erreur traitement renouvellement: {renewal_error}")
+                    log.warning(f"Erreur traitement renouvellement: {renewal_error}")
         
         elif event_type == "account.updated":
             # Mise à jour du compte Stripe Connect d'un coach
@@ -7413,8 +7202,8 @@ async def stripe_webhook(request: Request):
             charges_enabled = data.get("charges_enabled", False)
             payouts_enabled = data.get("payouts_enabled", False)
             
-            print(f"🔄 Compte Connect mis à jour: {account_id}")
-            print(f"   Email: {account_email}, Charges: {charges_enabled}, Payouts: {payouts_enabled}")
+            log.info(f"🔄 Compte Connect mis à jour: {account_id}")
+            log.info(f"   Email: {account_email}, Charges: {charges_enabled}, Payouts: {payouts_enabled}")
             
             from db_service import update_stripe_connect_status, find_coach_by_stripe_connect_account
             
@@ -7439,12 +7228,12 @@ async def stripe_webhook(request: Request):
                         payouts_enabled=payouts_enabled,
                         details_submitted=details_submitted
                     )
-                    print(f"✅ Statut Stripe Connect synchronisé pour {coach_found}: {status}")
+                    log.info(f"✅ Statut Stripe Connect synchronisé pour {coach_found}: {status}")
                 else:
-                    print(f"⚠️ Coach non trouvé pour account_id: {account_id}")
+                    log.warning(f" Coach non trouvé pour account_id: {account_id}")
                     
             except Exception as connect_error:
-                print(f"❌ Erreur synchronisation compte Connect: {connect_error}")
+                log.error(f"Erreur synchronisation compte Connect: {connect_error}")
         
         elif event_type == "checkout.session.expired":
             # Session de paiement expirée ou échec
@@ -7459,7 +7248,7 @@ async def stripe_webhook(request: Request):
             
             # Échec paiement SÉANCE CLIENT
             if booking_type == "session_payment" and client_email:
-                print(f"❌ Paiement séance expiré pour client: {client_email}")
+                log.error(f" Paiement séance expiré pour client: {client_email}")
                 try:
                     from resend_service import send_session_payment_failed_email
                     
@@ -7479,13 +7268,13 @@ async def stripe_webhook(request: Request):
                         retry_url=retry_url,
                         lang=metadata.get("lang", "fr")
                     )
-                    print(f"📧 Email échec paiement séance envoyé à {client_email}")
+                    log.info(f"📧 Email échec paiement séance envoyé à {client_email}")
                 except Exception as email_error:
-                    print(f"⚠️ Erreur envoi email échec séance: {email_error}")
+                    log.warning(f"Erreur envoi email échec séance: {email_error}")
             
             # Échec paiement ABONNEMENT COACH (inscription initiale)
             elif coach_email and not booking_type:
-                print(f"❌ Paiement abonnement expiré pour coach: {coach_email}")
+                log.error(f" Paiement abonnement expiré pour coach: {coach_email}")
                 try:
                     from resend_service import send_coach_signup_payment_failed_email
                     
@@ -7498,14 +7287,14 @@ async def stripe_webhook(request: Request):
                         retry_url=f"{base_url}/coach-signup",
                         lang=coach_data.get("lang", "fr") if coach_data else "fr"
                     )
-                    print(f"📧 Email échec paiement inscription envoyé à {coach_email}")
+                    log.info(f"📧 Email échec paiement inscription envoyé à {coach_email}")
                 except Exception as email_error:
-                    print(f"⚠️ Erreur envoi email échec inscription: {email_error}")
+                    log.warning(f"Erreur envoi email échec inscription: {email_error}")
         
         return JSONResponse({"received": True})
     
     except Exception as e:
-        print(f"❌ Erreur webhook Stripe: {e}")
+        log.error(f"Erreur webhook Stripe: {e}")
         return JSONResponse({"error": str(e)}, status_code=400)
 
 @app.get("/api/coach/subscription-status")
@@ -7562,7 +7351,7 @@ async def booking_success_page(request: Request, booking_id: str = None, session
                         
                         # Sauvegarder
                         save_demo_user(coach_email, coach_data)
-                        print(f"✅ Réservation {booking_id} confirmée après paiement Stripe")
+                        log.info(f"✅ Réservation {booking_id} confirmée après paiement Stripe")
                         
                         # Envoyer email de confirmation + reçu de paiement au client
                         try:
@@ -7588,7 +7377,7 @@ async def booking_success_page(request: Request, booking_id: str = None, session
                                 reservation_id=booking_id,
                                 lang=booking.get("lang", "fr")
                             )
-                            print(f"📧 Email de confirmation envoyé à {booking.get('client_email')}")
+                            log.info(f"📧 Email de confirmation envoyé à {booking.get('client_email')}")
                             from resend_service import send_session_payment_receipt
                             send_session_payment_receipt(
                                 to_email=booking.get("client_email"),
@@ -7603,12 +7392,12 @@ async def booking_success_page(request: Request, booking_id: str = None, session
                                 amount=pr,
                                 lang=booking.get("lang", "fr")
                             )
-                            print(f"📧 Reçu de paiement envoyé à {booking.get('client_email')}")
+                            log.info(f"📧 Reçu de paiement envoyé à {booking.get('client_email')}")
                         except Exception as email_err:
-                            print(f"⚠️ Erreur email: {email_err}")
+                            log.warning(f"Erreur email: {email_err}")
                         break
         except Exception as e:
-            print(f"⚠️ Erreur confirmation réservation: {e}")
+            log.warning(f"Erreur confirmation réservation: {e}")
     
     return templates.TemplateResponse("booking_success.html", {
         "request": request,

@@ -12,6 +12,9 @@ from uuid import UUID
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 
+from logger import get_logger
+log = get_logger()
+
 # Géocodeur global
 geolocator = Nominatim(user_agent="coach_fitness_app")
 
@@ -122,11 +125,11 @@ def get_supabase_anon_client():
             if url.startswith("https://") and ".supabase.co" in url:
                 return create_client(url, anon_key)
             else:
-                print(f"⚠️ URL Supabase invalide: {url}")
+                log.warning(f"⚠️ URL Supabase invalide: {url}")
                 return None
         return None
     except Exception as e:
-        print(f"⚠️ Erreur lors de l'initialisation Supabase: {e}")
+        log.warning(f"⚠️ Erreur lors de l'initialisation Supabase: {e}")
         return None
 
 def get_supabase_client_for_user(access_token: str):
@@ -138,7 +141,7 @@ def get_supabase_client_for_user(access_token: str):
     
     # Validation des paramètres
     if not access_token or not isinstance(access_token, str) or len(access_token.strip()) == 0:
-        print("❌ Token d'accès invalide ou manquant")
+        log.error("❌ Token d'accès invalide ou manquant")
         return None
     
     if access_token.startswith("demo_") or access_token == "demo_token":
@@ -148,12 +151,12 @@ def get_supabase_client_for_user(access_token: str):
     key = os.getenv("SUPABASE_KEY")
     
     if not url or not key:
-        print("❌ Configuration Supabase manquante (URL ou KEY)")
+        log.error("❌ Configuration Supabase manquante (URL ou KEY)")
         return None
     
     # Validation de l'URL Supabase
     if not url.startswith("https://") or ".supabase.co" not in url:
-        print(f"❌ URL Supabase invalide: {url}")
+        log.error(f"❌ URL Supabase invalide: {url}")
         return None
         
     try:
@@ -164,13 +167,13 @@ def get_supabase_client_for_user(access_token: str):
         if access_token and len(access_token) > 20:  # JWT minimal length check
             # Définir le token d'authentification pour respecter les politiques RLS
             client.postgrest.auth(access_token)
-            print(f"✅ Client authentifié créé avec succès")
+            log.info(f"✅ Client authentifié créé avec succès")
             return client
         else:
-            print(f"❌ Format de token d'accès invalide")
+            log.error(f"❌ Format de token d'accès invalide")
             return None
     except Exception as e:
-        print(f"❌ Erreur création client authentifié: {e}")
+        log.error(f"❌ Erreur création client authentifié: {e}")
         return None
 
 def search_coaches_mock(specialty: Optional[str] = None,
@@ -210,14 +213,14 @@ def create_user_profile_on_confirmation(supabase_client, user_id: str, email: st
         
         response = supabase_client.table("profiles").insert(profile_data).execute()
         if response.data:
-            print(f"✅ Profil créé pour {normalized_email} avec le rôle {role}")
+            log.info(f"✅ Profil créé pour {normalized_email} avec le rôle {role}")
             return True
         else:
-            print(f"❌ Échec création profil pour {normalized_email}")
+            log.error(f"❌ Échec création profil pour {normalized_email}")
             return False
             
     except Exception as e:
-        print(f"❌ Erreur création profil: {e}")
+        log.error(f"❌ Erreur création profil: {e}")
         return False
 
 def sign_in_user(supabase_client, email: str, password: str) -> Optional[Dict]:
@@ -235,7 +238,7 @@ def sign_in_user(supabase_client, email: str, password: str) -> Optional[Dict]:
             return {"user": auth_response.user, "session": auth_response.session}
         return None
     except Exception as e:
-        print(f"Erreur connexion: {e}")
+        log.error(f"Erreur connexion: {e}")
         # Retourner l'erreur pour permettre la détection d'email non confirmé
         return {"error": str(e)}
 
@@ -252,7 +255,7 @@ def resend_confirmation_email(supabase_client, email: str) -> bool:
         
         return True
     except Exception as e:
-        print(f"Erreur renvoi email: {e}")
+        log.error(f"Erreur renvoi email: {e}")
         return False
 
 def get_user_profile(supabase_client, user_id: str) -> Optional[Dict]:
@@ -261,7 +264,7 @@ def get_user_profile(supabase_client, user_id: str) -> Optional[Dict]:
         response = supabase_client.table("profiles").select("*").eq("id", user_id).single().execute()
         return response.data
     except Exception as e:
-        print(f"Erreur récupération profil: {e}")
+        log.error(f"Erreur récupération profil: {e}")
         return None
 
 # === Fonctions OTP ===
@@ -311,14 +314,14 @@ def store_otp_code_for_user(supabase_client, email: str, user_id: str, code: str
         response = supabase_client.table("otp_codes").insert(otp_data).execute()
         
         if response.data:
-            print(f"✅ Code OTP hashé sauvegardé pour {normalized_email}")
+            log.info(f"✅ Code OTP hashé sauvegardé pour {normalized_email}")
             return True
         else:
-            print(f"❌ Échec sauvegarde OTP pour {normalized_email}")
+            log.error(f"❌ Échec sauvegarde OTP pour {normalized_email}")
             return False
             
     except Exception as e:
-        print(f"❌ Erreur sauvegarde OTP: {e}")
+        log.error(f"❌ Erreur sauvegarde OTP: {e}")
         return False
 
 def store_otp_code(supabase_client, email: str, full_name: str, role: str, code: str, expiration_minutes: int = 10) -> bool:
@@ -351,14 +354,14 @@ def store_otp_code(supabase_client, email: str, full_name: str, role: str, code:
         response = supabase_client.table("otp_codes").insert(otp_data).execute()
         
         if response.data:
-            print(f"✅ Code OTP hashé sauvegardé pour {normalized_email}")
+            log.info(f"✅ Code OTP hashé sauvegardé pour {normalized_email}")
             return True
         else:
-            print(f"❌ Échec sauvegarde OTP pour {normalized_email}")
+            log.error(f"❌ Échec sauvegarde OTP pour {normalized_email}")
             return False
             
     except Exception as e:
-        print(f"❌ Erreur sauvegarde OTP: {e}")
+        log.error(f"❌ Erreur sauvegarde OTP: {e}")
         return False
 
 def verify_otp_code(supabase_client, email: str, code: str) -> bool:
@@ -375,7 +378,7 @@ def verify_otp_code(supabase_client, email: str, code: str) -> bool:
         response = supabase_client.table("otp_codes").select("*").eq("email", normalized_email).eq("code_hash", code_hash).eq("consumed", False).gt("expires_at", current_time).order("created_at", desc=True).limit(1).execute()
         
         if not response.data:
-            print(f"❌ Code OTP introuvable ou expiré pour {normalized_email}")
+            log.error(f"❌ Code OTP introuvable ou expiré pour {normalized_email}")
             return False
         
         otp_record = response.data[0]
@@ -383,11 +386,11 @@ def verify_otp_code(supabase_client, email: str, code: str) -> bool:
         # Marquer le code comme consommé
         supabase_client.table("otp_codes").update({"consumed": True}).eq("id", otp_record['id']).execute()
         
-        print(f"✅ Code OTP vérifié avec succès pour {normalized_email}")
+        log.info(f"✅ Code OTP vérifié avec succès pour {normalized_email}")
         return True
         
     except Exception as e:
-        print(f"❌ Erreur vérification OTP: {e}")
+        log.error(f"❌ Erreur vérification OTP: {e}")
         return False
 
 def cleanup_expired_otp_codes(supabase_client) -> int:
@@ -399,12 +402,12 @@ def cleanup_expired_otp_codes(supabase_client) -> int:
         
         deleted_count = len(response.data) if response.data else 0
         if deleted_count > 0:
-            print(f"🧹 {deleted_count} codes OTP expirés supprimés")
+            log.info(f"🧹 {deleted_count} codes OTP expirés supprimés")
         
         return deleted_count
         
     except Exception as e:
-        print(f"❌ Erreur nettoyage codes OTP: {e}")
+        log.error(f"❌ Erreur nettoyage codes OTP: {e}")
         return 0
 
 def get_pending_otp_data(supabase_client, email: str) -> Optional[Dict]:
@@ -422,7 +425,7 @@ def get_pending_otp_data(supabase_client, email: str) -> Optional[Dict]:
         return None
         
     except Exception as e:
-        print(f"❌ Erreur récupération données OTP: {e}")
+        log.error(f"❌ Erreur récupération données OTP: {e}")
         return None
 
 def store_pending_registration(supabase_client, email: str, full_name: str, password: str, role: str, gender: Optional[str] = None, coach_gender_preference: Optional[str] = None, selected_gyms: Optional[str] = None, expiration_minutes: int = 10) -> bool:
@@ -456,14 +459,14 @@ def store_pending_registration(supabase_client, email: str, full_name: str, pass
         response = supabase_client.table("pending_registrations").insert(pending_data).execute()
         
         if response.data:
-            print(f"✅ Données d'inscription en attente sauvegardées pour {normalized_email}")
+            log.info(f"✅ Données d'inscription en attente sauvegardées pour {normalized_email}")
             return True
         else:
-            print(f"❌ Échec sauvegarde données en attente pour {normalized_email}")
+            log.error(f"❌ Échec sauvegarde données en attente pour {normalized_email}")
             return False
             
     except Exception as e:
-        print(f"❌ Erreur sauvegarde données en attente: {e}")
+        log.error(f"❌ Erreur sauvegarde données en attente: {e}")
         return False
 
 def create_user_account_with_otp(supabase_client, email: str, password: str, full_name: str, role: str) -> Dict:
@@ -495,14 +498,14 @@ def create_user_account_with_otp(supabase_client, email: str, password: str, ful
             )
             
             if profile_created:
-                print(f"✅ Compte créé avec succès pour {normalized_email}")
+                log.info(f"✅ Compte créé avec succès pour {normalized_email}")
                 return {
                     "success": True,
                     "user": auth_response.user,
                     "session": auth_response.session
                 }
             else:
-                print(f"⚠️ Utilisateur créé mais échec création profil pour {normalized_email}")
+                log.warning(f"⚠️ Utilisateur créé mais échec création profil pour {normalized_email}")
                 return {
                     "success": True,
                     "user": auth_response.user,
@@ -510,11 +513,11 @@ def create_user_account_with_otp(supabase_client, email: str, password: str, ful
                     "warning": "Profil non créé"
                 }
         else:
-            print(f"❌ Échec création utilisateur pour {normalized_email}")
+            log.error(f"❌ Échec création utilisateur pour {normalized_email}")
             return {"success": False, "error": "Échec création compte"}
             
     except Exception as e:
-        print(f"❌ Erreur création compte: {e}")
+        log.error(f"❌ Erreur création compte: {e}")
         return {"success": False, "error": str(e)}
 
 # Fonctions Supabase - Coaches
@@ -555,7 +558,7 @@ def search_coaches_supabase(supabase_client, specialty: Optional[str] = None,
         result.sort(key=lambda x: x["distance"])
         return result
     except Exception as e:
-        print(f"Erreur recherche coaches: {e}")
+        log.error(f"Erreur recherche coaches: {e}")
         return search_coaches_mock(specialty, user_lat, user_lng, radius_km)
 
 def get_coach_by_id_supabase(supabase_client, coach_id: str) -> Optional[Dict]:
@@ -570,7 +573,7 @@ def get_coach_by_id_supabase(supabase_client, coach_id: str) -> Optional[Dict]:
             coach["specialties"] = [s["specialty"] for s in coach.get("coach_specialties", [])]
         return coach
     except Exception as e:
-        print(f"Erreur récupération coach: {e}")
+        log.error(f"Erreur récupération coach: {e}")
         try:
             return get_coach_by_id_mock(int(coach_id))
         except (ValueError, TypeError):
@@ -582,7 +585,7 @@ def get_transformations_by_coach_supabase(supabase_client, coach_id: str) -> Lis
         response = supabase_client.table("transformations").select("*").eq("coach_id", coach_id).execute()
         return response.data
     except Exception as e:
-        print(f"Erreur récupération transformations: {e}")
+        log.error(f"Erreur récupération transformations: {e}")
         try:
             return get_transformations_by_coach_mock(int(coach_id))
         except (ValueError, TypeError):
@@ -601,7 +604,7 @@ def update_coach_profile(supabase_client, coach_id: str, profile_data: Dict) -> 
         supabase_client.table("profiles").update(profile_data).eq("id", coach_id).execute()
         return True
     except Exception as e:
-        print(f"Erreur mise à jour profil: {e}")
+        log.error(f"Erreur mise à jour profil: {e}")
         return False
 
 def update_coach_specialties(supabase_client, coach_id: str, specialties: List[str]) -> bool:
@@ -617,7 +620,7 @@ def update_coach_specialties(supabase_client, coach_id: str, specialties: List[s
         
         return True
     except Exception as e:
-        print(f"Erreur mise à jour spécialités: {e}")
+        log.error(f"Erreur mise à jour spécialités: {e}")
         return False
 
 def add_transformation(supabase_client, coach_id: str, transformation_data: Dict) -> Optional[Dict]:
@@ -627,7 +630,7 @@ def add_transformation(supabase_client, coach_id: str, transformation_data: Dict
         response = supabase_client.table("transformations").insert(transformation_data).execute()
         return response.data[0] if response.data else None
     except Exception as e:
-        print(f"Erreur ajout transformation: {e}")
+        log.error(f"Erreur ajout transformation: {e}")
         return None
 
 def upload_transformation_images(supabase_client, transformation_id: str, before_file, after_file) -> Tuple[Optional[str], Optional[str]]:
@@ -656,7 +659,7 @@ def upload_transformation_images(supabase_client, transformation_id: str, before
         
         return before_url, after_url
     except Exception as e:
-        print(f"Erreur upload images: {e}")
+        log.error(f"Erreur upload images: {e}")
         return None, None
 
 # ======================================
@@ -694,7 +697,7 @@ def geocode_address(query: str) -> Optional[Dict]:
                 }
         return None
     except (GeocoderTimedOut, GeocoderServiceError, Exception) as e:
-        print(f"Erreur géocodage pour '{query}': {e}")
+        log.error(f"Erreur géocodage pour '{query}': {e}")
         return None
 
 def get_coach_gyms(coach_id: str) -> List[Dict]:
@@ -740,11 +743,11 @@ def add_coach_gym(coach_id: str, gym_data: Dict) -> bool:
             COACH_GYMS_BY_ID[gym_id] = set()
         COACH_GYMS_BY_ID[gym_id].add(coach_id)
         
-        print(f"✅ Relation ajoutée: coach {coach_id} -> gym {gym_id}")
+        log.info(f"✅ Relation ajoutée: coach {coach_id} -> gym {gym_id}")
         return True
         
     except Exception as e:
-        print(f"Erreur ajout coach-gym: {e}")
+        log.error(f"Erreur ajout coach-gym: {e}")
         return False
 
 def remove_coach_gym(coach_id: str, relation_id: str) -> bool:
@@ -776,13 +779,13 @@ def remove_coach_gym(coach_id: str, relation_id: str) -> bool:
                 if not COACH_GYMS_BY_ID[gym_id]:
                     del COACH_GYMS_BY_ID[gym_id]
             
-            print(f"✅ Relation supprimée: coach {coach_id} -> gym {gym_id}")
+            log.info(f"✅ Relation supprimée: coach {coach_id} -> gym {gym_id}")
             return len(COACH_GYMS) < initial_count
         
         return False
         
     except Exception as e:
-        print(f"Erreur suppression coach-gym: {e}")
+        log.error(f"Erreur suppression coach-gym: {e}")
         return False
 
 def generate_comprehensive_french_gyms_database() -> List[Dict]:
@@ -841,7 +844,7 @@ def generate_comprehensive_french_gyms_database() -> List[Dict]:
         count = chain_data["count"]
         cities = chain_data["cities"]
         
-        print(f"⚙️  Génération {chain_name}: {count} salles prévues...")
+        log.info(f"⚙️  Génération {chain_name}: {count} salles prévues...")
         
         # Distribution cyclique garantie : chaque ville reçoit des salles jusqu'à épuisement du quota
         for gym_index in range(count):
@@ -887,9 +890,9 @@ def generate_comprehensive_french_gyms_database() -> List[Dict]:
                 all_gyms.append(gym)
                 gym_id_counter += 1
         
-        print(f"✅ {chain_name}: {count} salles générées (quota respecté)")
+        log.info(f"✅ {chain_name}: {count} salles générées (quota respecté)")
     
-    print(f"🏁 GÉNÉRATION TERMINÉE : {len(all_gyms)} salles au total")
+    log.info(f"🏁 GÉNÉRATION TERMINÉE : {len(all_gyms)} salles au total")
     
     return all_gyms
 
@@ -980,7 +983,7 @@ def test_national_gym_data_completeness() -> Dict:
     SANS dépendance API externe problématique.
     """
     try:
-        print("🔍 VALIDATION NATIONALE - Test de notre base complète salles françaises...")
+        log.info("🔍 VALIDATION NATIONALE - Test de notre base complète salles françaises...")
         
         # Tester directement notre base complète
         all_gyms = generate_comprehensive_french_gyms_database()
@@ -1004,19 +1007,19 @@ def test_national_gym_data_completeness() -> Dict:
             "method": "Base complète française générée"
         }
         
-        print(f"📊 VALIDATION BASE COMPLÈTE FRANÇAISE :")
-        print(f"   • TOTAL NATIONAL: {total_count:,} salles de sport")
-        print(f"   • Objectif: 5,600-5,900 salles")
-        print(f"   • Statut: {validation_results['status']}")
-        print(f"   • Répartition par chaînes:")
+        log.info(f"📊 VALIDATION BASE COMPLÈTE FRANÇAISE :")
+        log.info(f"   • TOTAL NATIONAL: {total_count:,} salles de sport")
+        log.info(f"   • Objectif: 5,600-5,900 salles")
+        log.info(f"   • Statut: {validation_results['status']}")
+        log.info(f"   • Répartition par chaînes:")
         
         for chain, count in sorted(chain_counts.items(), key=lambda x: x[1], reverse=True):
-            print(f"     - {chain}: {count:,} salles")
+            log.info(f"     - {chain}: {count:,} salles")
         
         return validation_results
         
     except Exception as e:
-        print(f"❌ Erreur validation: {e}")
+        log.error(f"❌ Erreur validation: {e}")
         return {"error": str(e)}
 
 def search_gyms_by_zone(query: str) -> List[Dict]:
@@ -1030,7 +1033,7 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
         from main import GYMS_DATABASE
         
         query_lower = query.lower().strip()
-        print(f"🔍 Recherche par zone: {query}")
+        log.info(f"🔍 Recherche par zone: {query}")
         
         # API officielle française Data ES - 330 000+ équipements sportifs
         api_url = "https://equipements.sports.gouv.fr/api/explore/v2.1/catalog/datasets/data-es/records"
@@ -1104,10 +1107,10 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
                     }
                     results.append(gym_result)
                     
-                print(f"🏛️ API Data ES: {len(results)} vraies salles trouvées")
+                log.info(f"🏛️ API Data ES: {len(results)} vraies salles trouvées")
         
         except Exception as api_error:
-            print(f"⚠️ Erreur API Data ES: {api_error}")
+            log.warning(f"⚠️ Erreur API Data ES: {api_error}")
         
         # 2. AJOUTER LES CHAÎNES PRIVÉES MANQUANTES
         try:
@@ -1133,10 +1136,10 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
                     if not is_duplicate:
                         results.append(gym)
             
-            print(f"🏪 Chaînes privées: {len([g for g in results if g['source'] == 'Chaînes privées'])} salles ajoutées")
+            log.info(f"🏪 Chaînes privées: {len([g for g in results if g['source'] == 'Chaînes privées'])} salles ajoutées")
         
         except Exception as chain_error:
-            print(f"⚠️ Erreur chaînes privées: {chain_error}")
+            log.warning(f"⚠️ Erreur chaînes privées: {chain_error}")
         
         # 3. COMPLÉTER AVEC NOS DONNÉES STATIQUES (backup)
         # Recherche dans notre base existante pour compléter
@@ -1211,14 +1214,14 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
             data_es_count = len([r for r in results if r.get("source") == "Data ES (officiel)"])
             total_count = len(results)
             
-            print(f"🎯 Recherche {query}: {total_count} salles trouvées ({data_es_count} officielles + {total_count - data_es_count} locales)")
+            log.info(f"🎯 Recherche {query}: {total_count} salles trouvées ({data_es_count} officielles + {total_count - data_es_count} locales)")
             return results
         
-        print(f"❌ Aucune salle trouvée pour: {query}")
+        log.error(f"❌ Aucune salle trouvée pour: {query}")
         return []
         
     except Exception as e:
-        print(f"Erreur recherche par zone: {e}")
+        log.error(f"Erreur recherche par zone: {e}")
         return []
 
 def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
@@ -1232,7 +1235,7 @@ def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
         
         api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
         if not api_key:
-            print("⚠️ GOOGLE_PLACES_API_KEY / GOOGLE_MAPS_API_KEY non configurée")
+            log.info("⚠️ GOOGLE_PLACES_API_KEY / GOOGLE_MAPS_API_KEY non configurée")
             return []
         
         if len(query.strip()) < 2:
@@ -1274,7 +1277,7 @@ def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
             "maxResultCount": 20,
             "includedType": "gym"
         }
-        print(f"🌍 Recherche mondiale Google Places: '{query}'")
+        log.info(f"🌍 Recherche mondiale Google Places: '{query}'")
         response = requests.post(url, headers=headers, json=payload_gym, timeout=15)
         places = []
         if response.status_code == 200:
@@ -1298,7 +1301,7 @@ def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
                         seen_ids.add(p.get("id"))
         
         if response.status_code != 200 and (not places):
-            print(f"❌ Erreur Google Places API: {response.status_code} - {response.text[:200]}")
+            log.error(f"❌ Erreur Google Places API: {response.status_code} - {response.text[:200]}")
             return []
         
         results = []
@@ -1307,11 +1310,11 @@ def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
             if gym_result:
                 results.append(gym_result)
         
-        print(f"✅ {len(results)} salles trouvées dans le monde pour '{query}'")
+        log.info(f"✅ {len(results)} salles trouvées dans le monde pour '{query}'")
         return results
         
     except Exception as e:
-        print(f"❌ Erreur recherche mondiale Google Places: {e}")
+        log.error(f"❌ Erreur recherche mondiale Google Places: {e}")
         return []
 
 def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> List[Dict]:
@@ -1324,7 +1327,7 @@ def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> Li
         
         api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
         if not api_key:
-            print("⚠️ GOOGLE_PLACES_API_KEY non configurée")
+            log.info("⚠️ GOOGLE_PLACES_API_KEY non configurée")
             return []
         
         # Convertir radius_km en mètres (max 50000m pour Places API)
@@ -1353,12 +1356,12 @@ def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> Li
             }
         }
         
-        print(f"🔍 Recherche Google Places API autour de ({lat}, {lng}) - rayon {radius_km}km")
+        log.info(f"🔍 Recherche Google Places API autour de ({lat}, {lng}) - rayon {radius_km}km")
         
         response = requests.post(url, headers=headers, json=payload, timeout=10)
         
         if response.status_code != 200:
-            print(f"❌ Erreur Google Places API: {response.status_code} - {response.text}")
+            log.error(f"❌ Erreur Google Places API: {response.status_code} - {response.text}")
             return []
         
         data = response.json()
@@ -1396,11 +1399,11 @@ def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> Li
         # Trier par distance
         results.sort(key=lambda x: x["distance_km"])
         
-        print(f"✅ Google Places API: {len(results)} salles trouvées")
+        log.info(f"✅ Google Places API: {len(results)} salles trouvées")
         return results
         
     except Exception as e:
-        print(f"❌ Erreur Google Places API: {e}")
+        log.error(f"❌ Erreur Google Places API: {e}")
         return []
 
 def search_gyms_by_location(lat: float, lng: float, radius_km: int = 25) -> List[Dict]:
@@ -1465,7 +1468,7 @@ def search_gyms_by_location(lat: float, lng: float, radius_km: int = 25) -> List
         return results
         
     except Exception as e:
-        print(f"Erreur recherche salles: {e}")
+        log.error(f"Erreur recherche salles: {e}")
         return []
 
 def get_coaches_by_gym(gym_id: str) -> List[Dict]:
@@ -1476,7 +1479,7 @@ def get_coaches_by_gym(gym_id: str) -> List[Dict]:
         # 1. Chercher dans COACH_GYMS_BY_ID (gym_id dynamiques: coach_gym_X)
         if gym_id in COACH_GYMS_BY_ID:
             coach_ids.update(COACH_GYMS_BY_ID[gym_id])
-            print(f"✅ Trouvé {len(coach_ids)} coaches dans COACH_GYMS_BY_ID pour gym {gym_id}")
+            log.info(f"✅ Trouvé {len(coach_ids)} coaches dans COACH_GYMS_BY_ID pour gym {gym_id}")
         
         # 2. Pour les gyms statiques, chercher aussi par adresse dans COACH_GYMS
         # (compatibilité avec gyms ajoutées avant le nouveau système)
@@ -1488,7 +1491,7 @@ def get_coaches_by_gym(gym_id: str) -> List[Dict]:
                 for relation in COACH_GYMS:
                     if relation["gym_data"]["address"] == gym_static["address"]:
                         coach_ids.add(relation["coach_id"])
-                        print(f"✅ Coach {relation['coach_id']} trouvé par adresse pour gym statique {gym_id}")
+                        log.info(f"✅ Coach {relation['coach_id']} trouvé par adresse pour gym statique {gym_id}")
         except ImportError:
             pass
         
@@ -1498,15 +1501,15 @@ def get_coaches_by_gym(gym_id: str) -> List[Dict]:
             coach = next((c for c in MOCK_COACHES if str(c["id"]) == str(coach_id)), None)
             if coach:
                 coaches.append(coach)
-                print(f"✅ Détails coach récupérés: {coach['full_name']} (ID: {coach_id})")
+                log.info(f"✅ Détails coach récupérés: {coach['full_name']} (ID: {coach_id})")
             else:
-                print(f"⚠️ Coach ID {coach_id} non trouvé dans MOCK_COACHES")
+                log.warning(f"⚠️ Coach ID {coach_id} non trouvé dans MOCK_COACHES")
         
-        print(f"📊 Résultat final pour gym {gym_id}: {len(coaches)} coaches trouvés")
+        log.info(f"📊 Résultat final pour gym {gym_id}: {len(coaches)} coaches trouvés")
         return coaches
         
     except Exception as e:
-        print(f"❌ Erreur récupération coachs pour gym {gym_id}: {e}")
+        log.error(f"❌ Erreur récupération coachs pour gym {gym_id}: {e}")
         return []
 
 
@@ -1534,7 +1537,7 @@ def _load_demo_users_from_file() -> Dict:
             with open(p, "r", encoding="utf-8") as f:
                 return json.load(f)
     except Exception as e:
-        print(f"⚠️ Fallback file read: {e}")
+        log.warning(f"⚠️ Fallback file read: {e}")
     return {}
 
 def _save_demo_users_to_file(users: Dict) -> None:
@@ -1544,7 +1547,7 @@ def _save_demo_users_to_file(users: Dict) -> None:
         with open(p, "w", encoding="utf-8") as f:
             json.dump(ser, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f"⚠️ Fallback file write: {e}")
+        log.warning(f"⚠️ Fallback file write: {e}")
 
 def _ensure_fallback_loaded() -> None:
     global _demo_users_fallback, _demo_users_file_loaded
@@ -1556,20 +1559,44 @@ def use_database() -> bool:
     """Vérifie si PostgreSQL est configuré. En production, DATABASE_URL est requis."""
     return os.environ.get("DATABASE_URL") is not None
 
+# Cache pour load_demo_users : en production, evite 50+ appels DB par requete
+_users_cache: Dict = {}
+_users_cache_time: float = 0
+_USERS_CACHE_TTL = int(os.environ.get("USERS_CACHE_TTL_SEC", "60"))  # 60s en prod, 0 en dev pour desactiver
+
+def _invalidate_users_cache() -> None:
+    """Invalide le cache apres save_demo_user/save_demo_users."""
+    global _users_cache_time
+    _users_cache_time = 0
+
 def load_demo_users() -> Dict:
-    """Charge les utilisateurs depuis PostgreSQL. Si DB inaccessible, utilise le fichier de fallback."""
+    """Charge les utilisateurs depuis PostgreSQL (avec cache en prod) ou fichier fallback."""
+    global _users_cache, _users_cache_time
+    env = os.environ.get("ENVIRONMENT", "development").lower()
+    is_prod = env in ("production", "prod")
+    now = __import__("time").time()
+    if is_prod and use_database() and _users_cache and (now - _users_cache_time) < _USERS_CACHE_TTL:
+        return dict(_users_cache)
     if not use_database():
         _ensure_fallback_loaded()
-        return _demo_users_fallback
+        return dict(_demo_users_fallback)
     try:
         from db_service import load_users_from_db
         users = load_users_from_db()
         if users:
-            return serialize_for_json(users)
+            result = serialize_for_json(users)
+            if is_prod:
+                _users_cache = result
+                _users_cache_time = now
+            return result
         _ensure_fallback_loaded()
         return dict(_demo_users_fallback)
     except Exception as e:
-        print(f"❌ Erreur chargement utilisateurs depuis DB: {e}")
+        try:
+            from logger import get_logger
+            get_logger().error("Erreur chargement utilisateurs depuis DB: %s", e)
+        except Exception:
+            pass
         _ensure_fallback_loaded()
         return dict(_demo_users_fallback)
 
@@ -1581,15 +1608,19 @@ def save_demo_user(email: str, user_data: Dict) -> bool:
             from db_service import save_user_to_db
             ok = save_user_to_db(email, serialized_data)
             if ok:
-                print(f"✅ Utilisateur {email} sauvegardé (DB)")
+                _invalidate_users_cache()
             return ok
         except Exception as e:
-            print(f"❌ Erreur sauvegarde {email}: {e}")
+            try:
+                from logger import get_logger
+                get_logger().error("Erreur sauvegarde %s: %s", email, e)
+            except Exception:
+                pass
     global _demo_users_fallback, _demo_users_file_loaded
     _ensure_fallback_loaded()
     _demo_users_fallback[email] = serialized_data
     _save_demo_users_to_file(_demo_users_fallback)
-    print(f"✅ Utilisateur {email} sauvegardé (fallback fichier)")
+    _invalidate_users_cache()
     return True
 
 def save_demo_users(users: Dict) -> bool:
@@ -1605,9 +1636,14 @@ def save_demo_users(users: Dict) -> bool:
         from db_service import save_user_to_db
         for email, user_data in serialized_users.items():
             save_user_to_db(email, user_data)
+        _invalidate_users_cache()
         return True
     except Exception as e:
-        print(f"❌ Erreur sauvegarde utilisateurs: {e}")
+        try:
+            from logger import get_logger
+            get_logger().error("Erreur sauvegarde utilisateurs: %s", e)
+        except Exception:
+            pass
         _demo_users_fallback.update(serialized_users)
         _save_demo_users_to_file(_demo_users_fallback)
         return True
@@ -1621,20 +1657,30 @@ def get_demo_user(email: str) -> Optional[Dict]:
             if u is not None:
                 return u
         except Exception as e:
-            print(f"❌ Erreur récupération {email}: {e}")
+            try:
+                from logger import get_logger
+                get_logger().error("Erreur recuperation %s: %s", email, e)
+            except Exception:
+                pass
     _ensure_fallback_loaded()
     return _demo_users_fallback.get(email)
 
 def remove_demo_user(email: str) -> bool:
     """Supprime un utilisateur de la base PostgreSQL."""
     if not use_database():
-        print("⚠️ DATABASE_URL non défini : impossible de supprimer.")
         return False
     try:
         from db_service import remove_user_from_db
-        return remove_user_from_db(email)
+        ok = remove_user_from_db(email)
+        if ok:
+            _invalidate_users_cache()
+        return ok
     except Exception as e:
-        print(f"❌ Erreur suppression {email}: {e}")
+        try:
+            from logger import get_logger
+            get_logger().error("Erreur suppression %s: %s", email, e)
+        except Exception:
+            pass
         return False
 
 

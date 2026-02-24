@@ -1,0 +1,19 @@
+# Dépendances de développement FitMatch
+-r requirements.txt
+
+# Tests
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-asyncio>=0.21.0
+httpx>=0.24.0
+
+# Qualité de code
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.0.0
+
+# Sécurité
+pip-audit>=2.0.0
+
+# Monitoring (optionnel en prod : pip install sentry-sdk)
+sentry-sdk[fastapi]>=1.40.0

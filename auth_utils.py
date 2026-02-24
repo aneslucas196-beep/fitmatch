@@ -9,13 +9,22 @@ from typing import Optional
 
 
 def _session_secret() -> bytes:
-    """Secret pour la dérivation des tokens de session."""
+    """Secret pour la dérivation des tokens de session. En production, JWT_SECRET_KEY ou SUPABASE_JWT_SECRET requis."""
+    import os
+    env = os.environ.get("ENVIRONMENT", "development")
     secret = (
-        __import__("os").environ.get("JWT_SECRET_KEY")
-        or __import__("os").environ.get("SUPABASE_JWT_SECRET")
-        or __import__("os").environ.get("SITE_URL")
-        or "fitmatch-session-secret"
+        os.environ.get("JWT_SECRET_KEY")
+        or os.environ.get("SUPABASE_JWT_SECRET")
+        or (os.environ.get("SITE_URL") if env != "production" else "")
+        or ""
     )
+    if not secret or not secret.strip():
+        if env == "production":
+            raise RuntimeError(
+                "JWT_SECRET_KEY ou SUPABASE_JWT_SECRET requis en production. "
+                "Configurez dans Render > Environment."
+            )
+        secret = "fitmatch-session-secret-dev"
     return (secret or "")[:64].encode("utf-8").ljust(64, b"\0")
 
 

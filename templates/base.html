@@ -3,26 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{% block meta_description %}FitMatch - Trouvez votre coach sportif et réservez des séances en salle.{% endblock %}">
-    <title>{% block title %}FitMatch{% endblock %}</title>
+    <title>{% block title %}FitMatch – Trouvez des coachs sportifs et des salles près de vous{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}FitMatch est la plateforme pour trouver des coachs sportifs, gérer vos clients et développer votre activité fitness. Inscription gratuite pour les coachs et les salles.{% endblock %}">
+    <meta name="keywords" content="coach sportif, fitness, salle de sport, coach personnel, FitMatch, trouver coach fitness">
+    <meta name="author" content="FitMatch">
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="{% block og_url %}https://fitmatch.fr/{% endblock %}">
-    <meta property="og:title" content="{% block og_title %}FitMatch - Trouvez votre coach sportif{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}Trouvez votre coach sportif et réservez des séances en salle.{% endblock %}">
-    <meta property="og:image" content="{% block og_image %}https://fitmatch.fr/static/favicon.ico{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}{{ site_url|default('https://fitmatch.fr') }}/{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}FitMatch – Plateforme pour coachs sportifs{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Développez votre activité fitness avec FitMatch. Trouvez des clients, gérez vos réservations et développez votre business.{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ site_url|default('https://fitmatch.fr') }}/static/logo.png{% endblock %}">
     <meta property="og:locale" content="fr_FR">
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{% block twitter_title %}FitMatch - Trouvez votre coach sportif{% endblock %}">
-    <meta name="twitter:description" content="{% block twitter_description %}Trouvez votre coach sportif et réservez des séances en salle.{% endblock %}">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="twitter:title" content="{% block twitter_title %}FitMatch – Plateforme fitness{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}La plateforme pour coachs sportifs et salles de sport.{% endblock %}">
+    <meta name="twitter:image" content="{{ site_url|default('https://fitmatch.fr') }}/static/logo.png">
+    <!-- Données structurées Google (Schema.org) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "FitMatch",
+      "url": "{{ site_url|default('https://fitmatch.fr') }}",
+      "description": "Plateforme pour coachs sportifs et fitness",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "{{ site_url|default('https://fitmatch.fr') }}/gyms/finder?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <script src="https://cdn.tailwindcss.com" nonce="{{ get_csp_nonce(request) if request else '' }}"></script>
     <!-- Leaflet CSS et JS pour la carte -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" nonce="{{ get_csp_nonce(request) if request else '' }}"></script>
     <!-- Script de debug pour la recherche -->
-    <script src="/static/search-debug.js"></script>
+    <script src="/static/search-debug.js" nonce="{{ get_csp_nonce(request) if request else '' }}"></script>
+    <!-- Sélecteur de langue (externalisé pour CSP) -->
+    <script src="/static/language-selector.js" nonce="{{ get_csp_nonce(request) if request else '' }}"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <nav class="bg-blue-600 text-white shadow-lg">
@@ -50,17 +70,6 @@
                         </div>
                     </div>
                 </div>
-                <script>
-                    function toggleLanguageMenu() {
-                        const menu = document.getElementById('langMenu');
-                        menu.classList.toggle('hidden');
-                    }
-                    document.addEventListener('click', function(e) {
-                        const menu = document.getElementById('langMenu');
-                        const btn = e.target.closest('.language-selector');
-                        if (!btn && menu) menu.classList.add('hidden');
-                    });
-                </script>
             </div>
         </div>
     </nav>

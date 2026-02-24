@@ -28,13 +28,15 @@ def load_translations(locale: str) -> Dict[str, Any]:
             _translations_cache[locale] = translations
             return translations
     except FileNotFoundError:
-        print(f"[WARN] Fichier de traduction non trouve: {locale}.json")
+        import logging
+        logging.getLogger("fitmatch").warning(f"Fichier de traduction non trouve: {locale}.json")
         # Fallback vers l'anglais
         if locale != DEFAULT_LOCALE:
             return load_translations(DEFAULT_LOCALE)
         return {}
     except json.JSONDecodeError as e:
-        print(f"[ERR] Erreur JSON dans {locale}.json: {e}")
+        import logging
+        logging.getLogger("fitmatch").error(f"Erreur JSON dans {locale}.json: {e}")
         return {}
 
 def get_preferred_locale(accept_language: Optional[str]) -> str:
@@ -115,7 +117,8 @@ def preload_all_translations():
     """Précharge toutes les traductions en mémoire."""
     for locale in SUPPORTED_LOCALES:
         load_translations(locale)
-    print(f"[OK] Traductions prechargees: {', '.join(SUPPORTED_LOCALES)}")
+    import logging
+    logging.getLogger("fitmatch").info(f"Traductions prechargees: {', '.join(SUPPORTED_LOCALES)}")
 
 # Liste des langues disponibles pour le sélecteur
 def get_available_languages() -> list:

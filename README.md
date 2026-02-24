@@ -18,6 +18,8 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+**Développement** : `pip install -r requirements-dev.txt` pour black, isort, pytest-cov, pip-audit.
+
 ## Variables d'environnement
 
 Copier `.env.example` vers `.env` et renseigner les valeurs. Principales variables :
@@ -35,6 +37,11 @@ Copier `.env.example` vers `.env` et renseigner les valeurs. Principales variabl
 | `GOOGLE_MAPS_API_KEY` | Optionnel | Carte et recherche de salles |
 
 Voir **`.env.example`** pour la liste complète.
+
+## Documentation
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** : guide de contribution (tests, formatage, PR)
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** : diagrammes d'architecture, flux, composants
 
 ## Lancer l'application (tout en un : web + rappels 24/7)
 

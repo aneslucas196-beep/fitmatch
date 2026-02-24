@@ -76,4 +76,31 @@ class Settings:
         return self.SUPABASE_JWT_SECRET or self.JWT_SECRET_KEY
 
 
+def build_csp_header(nonce: Optional[str] = None, strict: bool = False) -> str:
+    """
+    Construit l'en-tête Content-Security-Policy.
+    - nonce : permet d'autoriser les scripts avec attribut nonce
+    - strict : en production avec nonce, utilise 'strict-dynamic' (réduit unsafe-inline)
+    """
+    env = os.environ.get("ENVIRONMENT", "development")
+    is_prod = env.lower() in ("production", "prod")
+    script_src = "'self' https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net https://maps.googleapis.com"
+    if nonce:
+        script_src += f" 'nonce-{nonce}'"
+    if strict and is_prod and nonce:
+        script_src += " 'strict-dynamic'"  # Réduit unsafe-inline, scripts noncés autorisés
+    else:
+        script_src += " 'unsafe-inline' 'unsafe-eval'"  # Dev + Tailwind CDN
+    return (
+        "default-src 'self'; "
+        f"script-src {script_src}; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https: blob:; "
+        "connect-src 'self' https://api.stripe.com https://*.supabase.co https://equipements.sports.gouv.fr; "
+        "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; "
+        "frame-ancestors 'none';"
+    )
+
+
 settings = Settings()

@@ -1,6 +1,8 @@
 """
 Service de base de données PostgreSQL pour FitMatch
 """
+from logger import get_logger
+log = get_logger()
 
 import os
 import json
@@ -30,7 +32,7 @@ def _get_pool():
                 connect_timeout=_CONNECT_TIMEOUT,
             )
         except Exception as e:
-            print(f"[DB] Erreur creation pool: {e}")
+            log.error(f"[DB] Erreur creation pool: {e}")
     return _db_pool
 
 def get_db_connection():
@@ -90,7 +92,7 @@ def load_users_from_db() -> Dict[str, Dict]:
         
         return users
     except Exception as e:
-        print(f"❌ Erreur chargement utilisateurs depuis DB: {e}")
+        log.error(f"Erreur chargement utilisateurs depuis DB: {e}")
         return {}
 
 def get_user_from_db(email: str) -> Optional[Dict]:
@@ -115,7 +117,7 @@ def get_user_from_db(email: str) -> Optional[Dict]:
             return user_data
         return None
     except Exception as e:
-        print(f"❌ Erreur récupération utilisateur {email}: {e}")
+        log.error(f"Erreur récupération utilisateur {email}: {e}")
         return None
 
 def save_user_to_db(email: str, user_data: Dict) -> bool:
@@ -261,10 +263,10 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
         conn.commit()
         cur.close()
         _return_connection(conn)
-        print(f"[DB] Utilisateur {email} sauvegarde")
+        log.info(f"[DB] Utilisateur {email} sauvegarde")
         return True
     except Exception as e:
-        print(f"❌ Erreur sauvegarde utilisateur {email}: {e}")
+        log.error(f"Erreur sauvegarde utilisateur {email}: {e}")
         return False
 
 def remove_user_from_db(email: str) -> bool:
@@ -278,7 +280,7 @@ def remove_user_from_db(email: str) -> bool:
         _return_connection(conn)
         return True
     except Exception as e:
-        print(f"❌ Erreur suppression utilisateur {email}: {e}")
+        log.error(f"Erreur suppression utilisateur {email}: {e}")
         return False
 
 def migrate_json_to_db():
@@ -286,7 +288,7 @@ def migrate_json_to_db():
     try:
         json_file = "demo_users.json"
         if not os.path.exists(json_file):
-            print("⚠️ Pas de fichier demo_users.json à migrer")
+            log.info("⚠️ Pas de fichier demo_users.json à migrer")
             return 0
         
         with open(json_file, 'r', encoding='utf-8') as f:
@@ -298,10 +300,10 @@ def migrate_json_to_db():
             if save_user_to_db(email, user_data):
                 migrated += 1
         
-        print(f"✅ Migration terminée: {migrated} utilisateurs migrés")
+        log.info(f"✅ Migration terminée: {migrated} utilisateurs migrés")
         return migrated
     except Exception as e:
-        print(f"❌ Erreur migration: {e}")
+        log.error(f"Erreur migration: {e}")
         return 0
 
 def user_exists_in_db(email: str) -> bool:
@@ -315,7 +317,7 @@ def user_exists_in_db(email: str) -> bool:
         _return_connection(conn)
         return exists
     except Exception as e:
-        print(f"❌ Erreur vérification existence {email}: {e}")
+        log.error(f"Erreur vérification existence {email}: {e}")
         return False
 
 
@@ -364,10 +366,10 @@ def update_stripe_connect_status(
         cur.close()
         _return_connection(conn)
 
-        print(f"✅ Stripe Connect mis à jour pour {email}: status={status}")
+        log.info(f"✅ Stripe Connect mis à jour pour {email}: status={status}")
         return True
     except Exception as e:
-        print(f"❌ Erreur mise à jour Stripe Connect {email}: {e}")
+        log.error(f"Erreur mise à jour Stripe Connect {email}: {e}")
         return False
 
 
@@ -395,7 +397,7 @@ def get_stripe_connect_info(email: str) -> Optional[Dict]:
             }
         return None
     except Exception as e:
-        print(f"❌ Erreur récupération Stripe Connect {email}: {e}")
+        log.error(f"Erreur récupération Stripe Connect {email}: {e}")
         return None
 
 
@@ -415,5 +417,5 @@ def find_coach_by_stripe_connect_account(account_id: str) -> Optional[str]:
             return row.get('email')
         return None
     except Exception as e:
-        print(f"❌ Erreur recherche coach par Connect account {account_id}: {e}")
+        log.error(f"Erreur recherche coach par Connect account {account_id}: {e}")
         return None

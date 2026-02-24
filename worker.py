@@ -16,15 +16,17 @@ def main():
     # Import ici pour que les variables d'env soient lues au démarrage
     from main import process_due_reminders
 
-    print(f"[Worker] Démarrage – intervalle {INTERVAL_SEC}s. Ctrl+C pour arrêter.")
+    from logger import get_logger
+    log = get_logger()
+    log.info(f"[Worker] Démarrage – intervalle {INTERVAL_SEC}s. Ctrl+C pour arrêter.")
     while True:
         ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
         try:
-            print(f"[{ts}] Running process_due_reminders()...")
+            log.info(f"[{ts}] Running process_due_reminders()...")
             result = process_due_reminders()
-            print(f"[{ts}] Done – rappels envoyés: {result}")
+            log.info(f"[{ts}] Done – rappels envoyés: {result}")
         except Exception as e:
-            print(f"[{ts}] Error: {e}")
+            log.error(f"[{ts}] Error: {e}")
             import traceback
             traceback.print_exc()
         time.sleep(INTERVAL_SEC)

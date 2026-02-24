@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Request, HTTPException, Query
 import os
 from typing import Optional
+from logger import get_logger
+log = get_logger()
 
 router = APIRouter()
 
@@ -16,5 +18,5 @@ async def cron_job(request: Request, secret: Optional[str] = Query(None)):
         if not (bearer_ok or query_ok):
             raise HTTPException(status_code=401, detail="Unauthorized")
 
-    print("Cron job executed successfully")
+    log.info("Cron job executed successfully")
     return {"status": "ok"}

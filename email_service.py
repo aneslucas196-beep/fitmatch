@@ -11,8 +11,10 @@ def send_otp_email(to_email: str, otp_code: str, full_name: Optional[str] = None
     """
     sendgrid_key = os.environ.get('SENDGRID_API_KEY')
     if not sendgrid_key:
-        print("⚠️ SENDGRID_API_KEY non configuré, simulation d'envoi d'email")
-        print(f"📧 Email simulé envoyé à {to_email}: Code OTP = {otp_code}")
+        from logger import get_logger
+        log = get_logger()
+        log.warning("SENDGRID_API_KEY non configuré, simulation d'envoi d'email")
+        log.info(f"Email simulé envoyé à {to_email[:3]}...: Code OTP = {otp_code}")
         return True
     
     try:
@@ -85,9 +87,11 @@ def send_otp_email(to_email: str, otp_code: str, full_name: Optional[str] = None
         message.add_content(Content("text/plain", text_content))
         
         response = sg.send(message)
-        print(f"✅ Email OTP envoyé à {to_email} (Status: {response.status_code})")
+        from logger import get_logger
+        get_logger().info(f"Email OTP envoyé à {to_email[:3]}... (Status: {response.status_code})")
         return True
         
     except Exception as e:
-        print(f"❌ Erreur envoi email: {e}")
+        from logger import get_logger
+        get_logger().error(f"Erreur envoi email: {e}")
         return False

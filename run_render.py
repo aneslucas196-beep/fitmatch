@@ -8,9 +8,11 @@ import sys
 
 def main():
     port = os.environ.get("PORT", "5000")
-    print(f"[run_render] Démarrage sur le port {port}")
-    print(f"[run_render] DATABASE_URL présent: {bool(os.environ.get('DATABASE_URL'))}")
-    print(f"[run_render] SUPABASE_URL présent: {bool(os.environ.get('SUPABASE_URL'))}")
+    from logger import get_logger
+    log = get_logger()
+    log.info(f"[run_render] Démarrage sur le port {port}")
+    log.info(f"[run_render] DATABASE_URL présent: {bool(os.environ.get('DATABASE_URL'))}")
+    log.info(f"[run_render] SUPABASE_URL présent: {bool(os.environ.get('SUPABASE_URL'))}")
     
     try:
         import uvicorn
@@ -21,7 +23,7 @@ def main():
             log_level="info"
         )
     except Exception as e:
-        print(f"\n❌ ERREUR AU DÉMARRAGE: {e}")
+        log.error(f"ERREUR AU DÉMARRAGE: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

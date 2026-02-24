@@ -5,7 +5,8 @@ Définit DATABASE_URL pour éviter sys.exit au startup (les tests qui touchent l
 import os
 import sys
 
-# Définir DATABASE_URL avant l'import de main pour que le startup ne quitte pas
+# Définir l'environnement de test avant l'import de main
+os.environ.setdefault("ENVIRONMENT", "development")
 os.environ.setdefault("DATABASE_URL", "postgresql://localhost:5432/fitmatch_test")
 
 # Ajouter la racine du projet au path

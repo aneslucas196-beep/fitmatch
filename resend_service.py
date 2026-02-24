@@ -1,4 +1,7 @@
 # Service email avec Resend API
+from logger import get_logger
+log = get_logger()
+
 import os
 import json
 import requests
@@ -29,7 +32,7 @@ def get_email_translations(lang: str = 'fr') -> dict:
             _email_translations_cache[lang] = data.get('emails', {})
             return _email_translations_cache[lang]
     except Exception as e:
-        print(f"Error loading translations for {lang}: {e}")
+        log.warning(f"Error loading translations for {lang}: {e}")
         return {}
 
 def get_social_footer(lang: str = 'fr') -> str:
@@ -64,7 +67,7 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email OTP non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email OTP non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -124,7 +127,7 @@ def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str]
                     raise
         return {"success": False}
     except Exception as e:
-        print(f"Error sending OTP email: {e}")
+        log.error(f"Error sending OTP email: {e}")
         return {"success": False}
 
 def send_booking_confirmation_email(to_email: str, client_name: str, coach_name: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, coach_photo: Optional[str] = None, reservation_id: Optional[str] = None, lang: str = 'fr') -> dict:
@@ -136,7 +139,7 @@ def send_booking_confirmation_email(to_email: str, client_name: str, coach_name:
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email confirmation non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email confirmation non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -181,7 +184,7 @@ def send_booking_confirmation_email(to_email: str, client_name: str, coach_name:
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending booking email: {e}")
+        log.error(f"Error sending booking email: {e}")
         return {"success": False}
 
 def send_subscription_success_email(to_email: str, coach_name: str, subscription_url: str, lang: str = 'fr') -> dict:
@@ -191,7 +194,7 @@ def send_subscription_success_email(to_email: str, coach_name: str, subscription
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email abonnement non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email abonnement non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -230,7 +233,7 @@ def send_subscription_success_email(to_email: str, coach_name: str, subscription
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending sub success email: {e}")
+        log.error(f"Error sending sub success email: {e}")
         return {"success": False}
 
 def send_payment_failed_email(to_email: str, coach_name: str, retry_url: str, lang: str = 'fr') -> dict:
@@ -240,7 +243,7 @@ def send_payment_failed_email(to_email: str, coach_name: str, retry_url: str, la
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email échec paiement non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email échec paiement non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -279,7 +282,7 @@ def send_payment_failed_email(to_email: str, coach_name: str, retry_url: str, la
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending pay failed email: {e}")
+        log.error(f"Error sending pay failed email: {e}")
         return {"success": False}
 
 def send_session_payment_receipt(to_email: str, client_name: str, coach_name: str, gym_name: str, gym_address: str, session_date: str, session_time: str, service_name: str, duration: str, amount: str, lang: str = 'fr') -> dict:
@@ -289,7 +292,7 @@ def send_session_payment_receipt(to_email: str, client_name: str, coach_name: st
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - reçu de paiement non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - reçu de paiement non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -338,7 +341,7 @@ def send_session_payment_receipt(to_email: str, client_name: str, coach_name: st
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending session receipt: {e}")
+        log.error(f"Error sending session receipt: {e}")
         return {"success": False}
 
 def send_account_blocked_email(to_email: str, coach_name: str, retry_url: str, lang: str = 'fr') -> dict:
@@ -348,7 +351,7 @@ def send_account_blocked_email(to_email: str, coach_name: str, retry_url: str, l
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email compte bloqué non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email compte bloqué non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -387,7 +390,7 @@ def send_account_blocked_email(to_email: str, coach_name: str, retry_url: str, l
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending blocked email: {e}")
+        log.error(f"Error sending blocked email: {e}")
         return {"success": False}
 
 def send_reminder_email(to_email: str, client_name: str, coach_name: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, reminder_type: str = "24h", booking_id: str = None, lang: str = 'fr') -> dict:
@@ -397,7 +400,7 @@ def send_reminder_email(to_email: str, client_name: str, coach_name: str, gym_na
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - rappel non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - rappel non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -443,7 +446,7 @@ def send_reminder_email(to_email: str, client_name: str, coach_name: str, gym_na
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending reminder email: {e}")
+        log.error(f"Error sending reminder email: {e}")
         return {"success": False}
 
 def send_cancellation_email(to_email: str, client_name: str, coach_name: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, coach_photo: Optional[str] = None, booking_url: Optional[str] = None, lang: str = 'fr') -> dict:
@@ -453,7 +456,7 @@ def send_cancellation_email(to_email: str, client_name: str, coach_name: str, gy
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email annulation non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email annulation non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -499,7 +502,7 @@ def send_cancellation_email(to_email: str, client_name: str, coach_name: str, gy
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending cancellation email: {e}")
+        log.error(f"Error sending cancellation email: {e}")
         return {"success": False}
 
 def send_cancellation_to_coach_email(to_email: str, coach_name: str, client_name: str, client_email: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, lang: str = 'fr') -> dict:
@@ -509,7 +512,7 @@ def send_cancellation_to_coach_email(to_email: str, coach_name: str, client_name
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email annulation coach non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email annulation coach non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -555,7 +558,7 @@ def send_cancellation_to_coach_email(to_email: str, coach_name: str, client_name
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending cancellation coach email: {e}")
+        log.error(f"Error sending cancellation coach email: {e}")
         return {"success": False}
 
 def send_coach_notification_email(to_email: str, coach_name: str, client_name: str, client_email: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, booking_id: str = None, lang: str = 'fr') -> dict:
@@ -567,7 +570,7 @@ def send_coach_notification_email(to_email: str, coach_name: str, client_name: s
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - notification coach non envoyée à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - notification coach non envoyée à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -619,7 +622,7 @@ def send_coach_notification_email(to_email: str, coach_name: str, client_name: s
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending coach notification: {e}")
+        log.error(f"Error sending coach notification: {e}")
         return {"success": False}
 
 def send_rejection_email_to_client(to_email: str, client_name: str, coach_name: str, gym_name: str, gym_address: str, date_str: str, time_str: str, service_name: str, duration: str, price: str, lang: str = 'fr') -> dict:
@@ -629,7 +632,7 @@ def send_rejection_email_to_client(to_email: str, client_name: str, coach_name: 
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email refus non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email refus non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -673,7 +676,7 @@ def send_rejection_email_to_client(to_email: str, client_name: str, coach_name: 
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending rejection email: {e}")
+        log.error(f"Error sending rejection email: {e}")
         return {"success": False}
 
 def send_coach_cancelled_email(client_email: str, client_name: str, coach_name: str, gym_name: str, date: str, lang: str = 'fr') -> dict:
@@ -683,7 +686,7 @@ def send_coach_cancelled_email(client_email: str, client_name: str, coach_name: 
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email annulation coach non envoyé à {client_email}")
+        log.warning(f"RESEND_API_KEY manquante - email annulation coach non envoyé à {client_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -720,7 +723,7 @@ def send_coach_cancelled_email(client_email: str, client_name: str, coach_name: 
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending coach cancellation email: {e}")
+        log.error(f"Error sending coach cancellation email: {e}")
         return {"success": False}
 
 def send_subscription_payment_receipt(to_email: str, coach_name: str, amount: str, billing_period: str, subscription_start: str, subscription_end: str, lang: str = 'fr') -> dict:
@@ -730,7 +733,7 @@ def send_subscription_payment_receipt(to_email: str, coach_name: str, amount: st
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - reçu abonnement non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - reçu abonnement non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -778,7 +781,7 @@ def send_subscription_payment_receipt(to_email: str, coach_name: str, amount: st
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending subscription receipt: {e}")
+        log.error(f"Error sending subscription receipt: {e}")
         return {"success": False}
 
 def send_session_payment_failed_email(to_email: str, client_name: str, coach_name: str, session_date: str, session_time: str, retry_url: str, lang: str = 'fr') -> dict:
@@ -788,7 +791,7 @@ def send_session_payment_failed_email(to_email: str, client_name: str, coach_nam
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email échec paiement séance non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email échec paiement séance non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -834,7 +837,7 @@ def send_session_payment_failed_email(to_email: str, client_name: str, coach_nam
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending session payment failed email: {e}")
+        log.error(f"Error sending session payment failed email: {e}")
         return {"success": False}
 
 def send_coach_signup_payment_failed_email(to_email: str, coach_name: str, retry_url: str, lang: str = 'fr') -> dict:
@@ -844,7 +847,7 @@ def send_coach_signup_payment_failed_email(to_email: str, coach_name: str, retry
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email échec inscription non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email échec inscription non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -883,7 +886,7 @@ def send_coach_signup_payment_failed_email(to_email: str, coach_name: str, retry
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending coach signup payment failed email: {e}")
+        log.error(f"Error sending coach signup payment failed email: {e}")
         return {"success": False}
 
 def send_account_restored_email(to_email: str, coach_name: str, lang: str = 'fr') -> dict:
@@ -893,7 +896,7 @@ def send_account_restored_email(to_email: str, coach_name: str, lang: str = 'fr'
     t = get_email_translations(lang)
     
     if not resend_key:
-        print(f"⚠️ RESEND_API_KEY manquante - email restauration non envoyé à {to_email}")
+        log.warning(f"RESEND_API_KEY manquante - email restauration non envoyé à {to_email}")
         return {"success": False, "error": "RESEND_API_KEY manquante"}
     
     try:
@@ -928,5 +931,5 @@ def send_account_restored_email(to_email: str, coach_name: str, lang: str = 'fr'
         )
         return {"success": response.status_code == 200}
     except Exception as e:
-        print(f"Error sending restored email: {e}")
+        log.error(f"Error sending restored email: {e}")
         return {"success": False}

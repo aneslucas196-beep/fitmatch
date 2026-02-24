@@ -2,6 +2,9 @@
 Service pour l'authentification Supabase avec email de confirmation intégré
 Remplace le système Resend pour utiliser le service email natif de Supabase
 """
+from logger import get_logger
+log = get_logger()
+
 import os
 from typing import Optional, Dict
 from supabase import create_client, Client
@@ -12,7 +15,7 @@ def get_supabase_client() -> Optional[Client]:
     supabase_key = os.environ.get('SUPABASE_KEY')
     
     if not supabase_url or not supabase_key:
-        print("⚠️ SUPABASE_URL ou SUPABASE_KEY manquant")
+        log.warning("SUPABASE_URL ou SUPABASE_KEY manquant")
         return None
     
     return create_client(supabase_url, supabase_key)
@@ -44,9 +47,7 @@ def signup_with_supabase_email_confirmation(
                 site_url = f"https://{site_url}"
             redirect_url = f"{site_url.rstrip('/')}/auth/email-confirmed"
         
-        print(f"🔧 Inscription Supabase avec confirmation email:")
-        print(f"  - Email: {email}")
-        print(f"  - URL de redirection: {redirect_url}")
+        log.info(f"Inscription Supabase: email={email[:3]}..., redirect={redirect_url[:50]}...")
         
         # Inscription avec confirmation email automatique
         auth_response = client.auth.sign_up({
@@ -63,8 +64,7 @@ def signup_with_supabase_email_confirmation(
         })
         
         if auth_response.user:
-            print(f"✅ Compte créé avec succès pour {email}")
-            print(f"📧 Email de confirmation envoyé automatiquement par Supabase")
+            log.info(f"Compte créé pour {email[:3]}..., email confirmation envoyé")
             
             return {
                 "success": True,
@@ -82,7 +82,7 @@ def signup_with_supabase_email_confirmation(
             }
             
     except Exception as e:
-        print(f"❌ Erreur inscription Supabase: {e}")
+        log.error(f"Erreur inscription Supabase: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -107,7 +107,7 @@ def resend_email_confirmation(email: str) -> Dict:
             "email": email
         })
         
-        print(f"📧 Email de confirmation renvoyé pour {email}")
+        log.info(f"Email de confirmation renvoyé pour {email[:3]}...")
         
         return {
             "success": True,
@@ -116,7 +116,7 @@ def resend_email_confirmation(email: str) -> Dict:
         }
         
     except Exception as e:
-        print(f"❌ Erreur renvoi email confirmation: {e}")
+        log.error(f"Erreur renvoi email confirmation: {e}")
         return {
             "success": False,
             "error": str(e)
@@ -149,7 +149,7 @@ def sign_in_with_email_password(email: str, password: str) -> Dict:
                     "mode": "email_not_confirmed"
                 }
             
-            print(f"✅ Connexion réussie pour {email}")
+            log.info(f"Connexion réussie pour {email[:3]}...")
             return {
                 "success": True,
                 "user": auth_response.user,
@@ -164,7 +164,7 @@ def sign_in_with_email_password(email: str, password: str) -> Dict:
             }
             
     except Exception as e:
-        print(f"❌ Erreur connexion: {e}")
+        log.error(f"Erreur connexion: {e}")
         return {
             "success": False,
             "error": str(e),
@@ -199,7 +199,7 @@ def get_user_role(user_id: str) -> Dict:
             }
             
     except Exception as e:
-        print(f"❌ Erreur récupération profil: {e}")
+        log.error(f"Erreur récupération profil: {e}")
         return {
             "success": False,
             "error": str(e)

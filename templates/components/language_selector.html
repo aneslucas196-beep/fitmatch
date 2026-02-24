@@ -11,14 +11,4 @@
     {% endfor %}
   </div>
 </div>
-<script>
-  function toggleLanguageMenu() {
-    const menu = document.getElementById('langMenu');
-    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-  }
-  document.addEventListener('click', function(e) {
-    const menu = document.getElementById('langMenu');
-    const btn = e.target.closest('.language-selector');
-    if (!btn && menu) menu.style.display = 'none';
-  });
-</script>
+<script src="/static/language-selector.js"></script>

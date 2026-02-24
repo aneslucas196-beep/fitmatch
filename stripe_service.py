@@ -1,6 +1,8 @@
 """
 Service Stripe pour les abonnements mensuels des coachs FitMatch
 """
+from logger import get_logger
+log = get_logger()
 
 import stripe
 import os
@@ -101,7 +103,7 @@ def create_checkout_session(
     init_stripe()
     
     if not customer_id:
-        print("❌ Erreur: customer_id manquant pour create_checkout_session")
+        log.error("Erreur: customer_id manquant pour create_checkout_session")
         raise Exception("customer_id manquant")
 
     if billing_period == "annual":
@@ -118,7 +120,7 @@ def create_checkout_session(
     if price_id and price_id.startswith("price_"):
         # Utiliser un Price ID existant (Dashboard Stripe)
         line_items = [{"price": price_id, "quantity": 1}]
-        print(f"💳 Création session avec Price ID: {price_id[:20]}...")
+        log.info(f"💳 Création session avec Price ID: {price_id[:20]}...")
     else:
         # Mode dynamique (price_data)
         line_items = [{
@@ -155,7 +157,7 @@ def create_checkout_session(
         )
         return session
     except Exception as e:
-        print(f"❌ Erreur stripe.checkout.Session.create: {e}")
+        log.error(f"Erreur stripe.checkout.Session.create: {e}")
         raise e
 
 
@@ -237,11 +239,11 @@ def update_coach_subscription(
     try:
         from utils import get_demo_user, save_demo_user
     except ImportError:
-        print("⚠️ utils non disponible pour update_coach_subscription")
+        log.warning("utils non disponible pour update_coach_subscription")
         return False
     user = get_demo_user(coach_email)
     if not user:
-        print(f"⚠️ Coach {coach_email} non trouvé en base")
+        log.warning(f"Coach {coach_email} non trouvé en base")
         return False
     if stripe_customer_id is not None:
         user["stripe_customer_id"] = stripe_customer_id
@@ -253,7 +255,7 @@ def update_coach_subscription(
         user["subscription_period_end"] = current_period_end
     ok = save_demo_user(coach_email, user)
     if ok:
-        print(f"✅ Abonnement mis à jour pour {coach_email}: status={subscription_status}")
+        log.info(f"✅ Abonnement mis à jour pour {coach_email}: status={subscription_status}")
     return ok
 
 
