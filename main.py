@@ -2681,10 +2681,10 @@ async def coach_login_submit(
             }, status_code=500)
         print(f"✅ Nouveau coach inscrit (en attente de paiement): {email}")
         
-        # Redirection directe vers la page "Payer 30€" (un seul écran, un bouton → Stripe)
+        # Redirection vers la page offre coach (landing marketing + choix abonnement)
         base = _get_base_url(request)
         signup_token = _create_signup_token(email)
-        pay_url = f"{base.rstrip('/')}/coach/pay?token={signup_token}"
+        pay_url = f"{base.rstrip('/')}/coach/offre?token={signup_token}"
         response = RedirectResponse(url=pay_url, status_code=302)
         _set_session_cookie(response, email, request)
         return response
@@ -2749,11 +2749,11 @@ async def coach_login_submit(
                         save_demo_user(email, u)
                         user_found["lang"] = coach_locale
             
-            # Si le coach n'a pas encore payé → page unique "Payer 30€" (même parcours qu'après inscription)
+            # Si le coach n'a pas encore payé → page offre coach (landing + choix abonnement)
             if subscription_status == "pending_payment":
                 pay_token = _create_signup_token(email)
                 base = _get_base_url(request)
-                redirect_url = f"{base.rstrip('/')}/coach/pay?token={pay_token}"
+                redirect_url = f"{base.rstrip('/')}/coach/offre?token={pay_token}"
             else:
                 redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
             response = RedirectResponse(url=redirect_url, status_code=302)
@@ -2785,10 +2785,10 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     if subscription_status in ["blocked", "cancelled", "past_due"]:
         return RedirectResponse(url="/coach/subscription", status_code=302)
     if subscription_status == "pending_payment":
-        # Même flux que post-signup : page unique "Payer 30€" avec bouton Stripe
+        # Page offre coach (landing + choix abonnement)
         pay_token = _create_signup_token(coach_email)
         base = _get_base_url(request)
-        return RedirectResponse(url=f"{base.rstrip('/')}/coach/pay?token={pay_token}", status_code=302)
+        return RedirectResponse(url=f"{base.rstrip('/')}/coach/offre?token={pay_token}", status_code=302)
     
     # Vérifier si le profil est complété
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
@@ -3382,14 +3382,14 @@ async def coach_subscription_set_session(
     request: Request,
     signup_token: Optional[str] = Query(None),
 ):
-    """Après inscription : redirige vers la page de paiement unique /coach/pay."""
+    """Après inscription : redirige vers la page offre coach /coach/offre."""
     if not signup_token:
         return RedirectResponse(url="/coach-login?tab=signup&error=missing_token", status_code=302)
     email = _validate_signup_token(signup_token)
     if not email:
         return RedirectResponse(url="/coach-login?tab=signup&error=session_expired", status_code=302)
     base = _get_base_url(request)
-    response = RedirectResponse(url=f"{base.rstrip('/')}/coach/pay?token={signup_token}", status_code=302)
+    response = RedirectResponse(url=f"{base.rstrip('/')}/coach/offre?token={signup_token}", status_code=302)
     _set_session_cookie(response, email, request)
     return response
 
@@ -3399,9 +3399,21 @@ async def coach_pay_page(
     request: Request,
     token: Optional[str] = Query(None),
 ):
+    """Redirection vers la page offre coach (ancienne URL)."""
+    if not token:
+        return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
+    base = _get_base_url(request)
+    return RedirectResponse(url=f"{base.rstrip('/')}/coach/offre?token={token}", status_code=302)
+
+
+@app.get("/coach/offre", response_class=HTMLResponse)
+async def coach_offre_page(
+    request: Request,
+    token: Optional[str] = Query(None),
+):
     """
-    Page unique : "Payer 30€ par carte". Pas d'auth requise : on valide le token, on pose le cookie, on affiche le bouton.
-    Un clic → appel API (avec cookie) → redirection Stripe.
+    Page landing "offre coach" : arguments FitMatch + choix abonnement (20€/mois ou 200€/an).
+    Token requis pour authentification au checkout.
     """
     if not token:
         return RedirectResponse(url="/coach-login?tab=signup", status_code=302)
@@ -3409,7 +3421,7 @@ async def coach_pay_page(
     if not email:
         return RedirectResponse(url="/coach-login?tab=signup&error=session_expired", status_code=302)
     i18n = get_i18n_context(request)
-    response = templates.TemplateResponse("coach_pay.html", {"request": request, **i18n})
+    response = templates.TemplateResponse("coach_offre.html", {"request": request, **i18n})
     _set_session_cookie(response, email, request)
     return response
 
@@ -6775,7 +6787,7 @@ async def get_coach_for_checkout(request: Request):
             if u is None:
                 u = {"email": email, "role": "coach", "full_name": "Coach", "id": email}
                 return u
-    raise HTTPException(status_code=401, detail="Authentification requise. Rechargez la page /coach/pay et réessayez.")
+    raise HTTPException(status_code=401, detail="Authentification requise. Rechargez la page /coach/offre et réessayez.")
 
 @app.post("/api/stripe/create-checkout-session")
 async def api_create_checkout_session(request: Request, user = Depends(get_coach_for_checkout)):
@@ -6850,7 +6862,7 @@ async def api_create_checkout_session(request: Request, user = Depends(get_coach
 @app.post("/api/create_checkout_session")
 async def create_checkout_session_simple(request: Request):
     """
-    Variante simplifiee : utilise STRIPE_PRICE_ID si defini.
+    Cree une session Stripe Checkout. Mensuel 20€ ou annuel 200€.
     Auth : cookie ou header X-Signup-Token.
     """
     try:
@@ -6859,7 +6871,7 @@ async def create_checkout_session_simple(request: Request):
         try:
             coach = await get_coach_for_checkout(request)
         except HTTPException:
-            return JSONResponse({"error": "Coach non authentifie. Rechargez la page /coach/pay."}, status_code=401)
+            return JSONResponse({"error": "Coach non authentifie. Rechargez la page /coach/offre."}, status_code=401)
         if not coach:
             print("[Stripe] ERREUR: Aucun coach trouve (auth echouee)")
             return JSONResponse({"error": "Coach non authentifie"}, status_code=401)
@@ -6867,18 +6879,26 @@ async def create_checkout_session_simple(request: Request):
         print(f"[Stripe] Coach authentifie: {coach_email}")
         if not _is_stripe_configured():
             return JSONResponse({"error": "Stripe non configure"}, status_code=503)
-        stripe_price_id = (os.environ.get("STRIPE_PRICE_ID") or os.environ.get("STRIPE_MONTHLY_PRICE_ID") or "").strip()
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        billing_period = body.get("billing_period", "monthly")
         base_url = _get_base_url(request)
         success_url = f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{base_url.rstrip('/')}/coach/subscription?cancelled=true"
-        if stripe_price_id and stripe_price_id.startswith("price_"):
+        if billing_period == "annual":
+            price_id = (os.environ.get("STRIPE_ANNUAL_PRICE_ID") or "").strip()
+        else:
+            price_id = (os.environ.get("STRIPE_PRICE_ID") or os.environ.get("STRIPE_MONTHLY_PRICE_ID") or "").strip()
+        if price_id and price_id.startswith("price_"):
             import stripe
             from stripe_service import init_stripe
             init_stripe()
             session = stripe.checkout.Session.create(
                 mode="subscription",
                 customer_email=coach_email,
-                line_items=[{"price": stripe_price_id, "quantity": 1}],
+                line_items=[{"price": price_id, "quantity": 1}],
                 success_url=success_url,
                 cancel_url=cancel_url,
                 metadata={"coach_email": coach_email, "platform": "fitmatch"},
@@ -6892,7 +6912,7 @@ async def create_checkout_session_simple(request: Request):
                 success_url=success_url,
                 cancel_url=cancel_url,
                 coach_email=coach_email,
-                billing_period="monthly",
+                billing_period=billing_period,
             )
         checkout_url = getattr(session, "url", None) if session else None
         if not checkout_url:
