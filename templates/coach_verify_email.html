@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ t.verify_email.page_title|default('Vérification email - FitMatch') }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com" nonce="{{ csp_nonce }}"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', sans-serif; }
@@ -108,7 +108,7 @@
         </div>
     </main>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
         const i18n = {
             enterDigits: '{{ t.verify_email.enter_digits|default("Enter the 6 digits of the code") }}',
             incorrectCode: '{{ t.verify_email.incorrect_code|default("Incorrect code") }}',

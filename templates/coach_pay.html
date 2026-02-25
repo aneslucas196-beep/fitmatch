@@ -71,7 +71,7 @@
         </button>
         <p id="errorMsg" class="error" style="display:none;"></p>
     </div>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     document.getElementById("stripe-checkout-btn").addEventListener("click", async function () {
       try {
         console.log("Bouton Stripe clique");

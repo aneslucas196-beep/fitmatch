@@ -438,7 +438,7 @@
     <a href="/login" class="cta">{{ t.nav.login|default('Se connecter') }}</a>
   </div>
 </nav>
-<script src="/static/language-selector.js?v=2"></script>
+<script src="/static/language-selector.js?v=2" nonce="{{ csp_nonce }}"></script>
 
 <section class="fm-signup">
   <div class="fm-wrap">
@@ -577,7 +577,7 @@
   </div>
 </section>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function togglePassword() {
   const input = document.getElementById('password');
   const icon = document.getElementById('eye-icon');

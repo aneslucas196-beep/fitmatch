@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ t.client.page_title }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com" nonce="{{ csp_nonce }}"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -32,7 +32,7 @@
     {{ t.client.password_changed }}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 if (new URLSearchParams(window.location.search).get('password_changed')) {
     const toast = document.getElementById('passwordToast');
     toast.classList.remove('hidden');
@@ -165,7 +165,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
     </div>
 </dialog>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 const STORAGE_KEY = 'fitmatch';
 const USER_KEY = 'fitmatch.user';
 let currentCancelIndex = null;

@@ -998,6 +998,15 @@ def _get_csp_nonce(request: Request) -> str:
     """Retourne le nonce CSP pour les scripts (évite unsafe-inline)."""
     return getattr(request.state, "csp_nonce", "")
 templates.env.globals["get_csp_nonce"] = _get_csp_nonce
+
+# Injecter csp_nonce dans tous les templates pour CSP
+_original_template_response = templates.TemplateResponse
+def _template_response_with_csp(name, context, **kwargs):
+    ctx = dict(context)
+    req = ctx.get("request")
+    ctx["csp_nonce"] = getattr(req.state, "csp_nonce", "") if req else ""
+    return _original_template_response(name, ctx, **kwargs)
+templates.TemplateResponse = _template_response_with_csp
 templates.env.globals["site_url"] = (settings.SITE_URL or "https://fitmatch.fr").rstrip("/")
 try:
     from config import get_maps_api_key

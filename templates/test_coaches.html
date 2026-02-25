@@ -18,7 +18,7 @@
     <div id="status">Chargement...</div>
     <div id="coaches"></div>
     
-    <script>
+    <script nonce="{{ csp_nonce }}">
         async function loadCoaches() {
             try {
                 const response = await fetch('/api/coaches');

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ t.subscription.page_title|default('Abonnement Coach - FitMatch') }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com" nonce="{{ csp_nonce }}"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -41,7 +41,7 @@
     {{ t.subscription.cancelled_toast|default('Abonnement annulé') }}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('success')) {
     document.getElementById('successToast').classList.remove('hidden');
@@ -370,7 +370,7 @@ if (urlParams.get('cancelled')) {
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 const i18n = {
     redirecting: '{{ t.subscription.redirecting|default("Redirection...") }}',
     error: '{{ t.subscription.error_occurred|default("Une erreur est survenue. Veuillez réessayer.") }}',

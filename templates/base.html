@@ -23,7 +23,7 @@
     <!-- Google Search Console -->
     <meta name="google-site-verification" content="6RLUMpf8WPZRYEqruobA78LZW_pso5reKAZXRZ5QDy0" />
     <!-- Données structurées Google (Schema.org) - logo + sitelinks -->
-    <script type="application/ld+json">
+    <script type="application/ld+json" nonce="{{ csp_nonce }}">
     {
       "@context": "https://schema.org",
       "@type": "Organization",
@@ -33,7 +33,7 @@
       "description": "FitMatch vous aide à trouver le coach sportif idéal et réserver facilement. Coaching, salles partenaires, paiements sécurisés."
     }
     </script>
-    <script type="application/ld+json">
+    <script type="application/ld+json" nonce="{{ csp_nonce }}">
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
@@ -46,14 +46,14 @@
       }
     }
     </script>
-    <script src="https://cdn.tailwindcss.com" nonce="{{ get_csp_nonce(request) if request else '' }}"></script>
+    <script src="https://cdn.tailwindcss.com" nonce="{{ csp_nonce }}"></script>
     <!-- Leaflet CSS et JS pour la carte -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" nonce="{{ get_csp_nonce(request) if request else '' }}"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" nonce="{{ csp_nonce }}"></script>
     <!-- Script de debug pour la recherche -->
-    <script src="/static/search-debug.js" nonce="{{ get_csp_nonce(request) if request else '' }}"></script>
+    <script src="/static/search-debug.js" nonce="{{ csp_nonce }}"></script>
     <!-- Sélecteur de langue (externalisé pour CSP) -->
-    <script src="/static/language-selector.js?v=2" nonce="{{ get_csp_nonce(request) if request else '' }}"></script>
+    <script src="/static/language-selector.js?v=2" nonce="{{ csp_nonce }}"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <nav class="bg-blue-600 text-white shadow-lg">

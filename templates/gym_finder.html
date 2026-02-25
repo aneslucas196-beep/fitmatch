@@ -139,7 +139,7 @@
     </div>
   </div>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
     let map, placesService, autocomplete, center, markers = [];
     let nextPageToken = null;
     let currentRequest = null;
@@ -551,9 +551,9 @@
 
   {% if google_maps_api_key %}
   <!-- Charge Maps JS + Places -->
-  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&language=fr&region=FR&callback=initMap" async defer></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&language=fr&region=FR&callback=initMap" async defer nonce="{{ csp_nonce }}"></script>
   {% else %}
-  <script>
+  <script nonce="{{ csp_nonce }}">
     (function() {
       var el = document.getElementById('map');
       if (el) el.innerHTML = '<div style="padding:40px;text-align:center;color:#856404;background:#fff3cd;border-radius:12px;margin:20px;">Maps non configuré</div>';

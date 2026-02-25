@@ -470,7 +470,7 @@
       <a href="/login" class="btn-compte">{{ t.nav.my_account|default('Mon compte') }}</a>
     </div>
   </header>
-  <script src="/static/language-selector.js?v=2"></script>
+  <script src="/static/language-selector.js?v=2" nonce="{{ csp_nonce }}"></script>
 
   <section class="hero">
     <div class="overlay"></div>
@@ -627,7 +627,7 @@
     </div>
   </section>
 
-  <script>
+  <script nonce="{{ csp_nonce }}">
     let searchTimeout = null;
     let selectedGym = null;
 

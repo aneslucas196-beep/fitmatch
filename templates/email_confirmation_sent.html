@@ -71,7 +71,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function checkEmailConfirmation() {
     // Redirection vers la page de connexion pour vérifier la confirmation
     window.location.href = "/login?confirmed=true&email={{ email }}";

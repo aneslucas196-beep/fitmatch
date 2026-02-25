@@ -528,7 +528,7 @@
     <a href="/signup" class="cta">{{ t.nav.signup|default("S'inscrire") }}</a>
   </div>
 </nav>
-<script src="/static/language-selector.js?v=2"></script>
+<script src="/static/language-selector.js?v=2" nonce="{{ csp_nonce }}"></script>
 
 <section class="fm-login">
   <div class="fm-wrap">
@@ -703,7 +703,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 function showForgotModal() {
   document.getElementById('forgotModal').classList.add('active');
   document.getElementById('forgotFormView').style.display = 'block';

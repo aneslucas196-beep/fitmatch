@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Réserver une séance - FitMatch</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com" nonce="{{ csp_nonce }}"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -158,7 +158,7 @@
 </div>
 <span id="serviceLabel" data-service="{{ t.booking_page.session_coaching|default('Séance de coaching') }}" aria-hidden="true"></span>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 window.__BOOKING_PAGE_I18N__ = {{ (t.booking_page or {}) | tojson }};
 const _bp = () => (window.__BOOKING_PAGE_I18N__ || {});
 const COACH_ID = "{{ coach.id }}";

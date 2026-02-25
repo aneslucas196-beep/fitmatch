@@ -99,7 +99,7 @@
         </section>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce }}">
     (function() {
         var token = (new URLSearchParams(window.location.search)).get("token") || "";
         var headers = { "Content-Type": "application/json" };
