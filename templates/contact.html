@@ -1,29 +1,24 @@
-<!DOCTYPE html>
-<html lang="{{ locale|default('fr') }}" {% if text_direction == 'rtl' %}dir="rtl"{% endif %}>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ t.legal.contact_title if t and t.get('legal') else 'Contact' }} - FitMatch</title>
-  <script src="https://cdn.tailwindcss.com" nonce="{{ csp_nonce }}"></script>
-</head>
-<body class="bg-gray-50 min-h-screen">
-  <header class="bg-white border-b shadow-sm">
-    <div class="max-w-3xl mx-auto px-4 py-4">
-      <a href="/" class="text-emerald-600 font-semibold">← FitMatch</a>
-    </div>
-  </header>
-  <main class="max-w-3xl mx-auto px-4 py-10">
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">{{ t.legal.contact_title if t and t.get('legal') else 'Contact' }}</h1>
+{% extends "base.html" %}
+{% block title %}{{ t.legal.contact_title if t and t.get('legal') else 'Contact' }} - FitMatch{% endblock %}
+{% block meta_description %}Contactez FitMatch pour toute question sur les réservations, votre compte coach ou client. Réponse rapide par email.{% endblock %}
+{% block og_title %}{{ t.legal.contact_title if t and t.get('legal') else 'Contact' }} - FitMatch{% endblock %}
+{% block og_description %}Contactez FitMatch. Questions réservations, compte, partenariats.{% endblock %}
+{% block og_url %}{{ site_url|default('https://fitmatch.fr') }}/contact{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+  <section class="py-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-6">{{ t.legal.contact_title if t and t.get('legal') else 'Contact' }}</h1>
     <div class="prose prose-gray max-w-none space-y-4 text-gray-700">
       <p>{{ t.legal.contact_intro if t and t.get('legal') else 'Pour toute question sur FitMatch, les réservations ou votre compte :' }}</p>
       <p>
         <strong>{{ t.legal.email_label if t and t.get('legal') else 'Email' }} :</strong>
-        <a href="mailto:contact@fitmatch.fr" class="text-emerald-600 underline">contact@fitmatch.fr</a>
+        <a href="mailto:contact@fitmatch.fr" class="text-blue-600 underline hover:text-blue-700">contact@fitmatch.fr</a>
       </p>
       <p class="mt-6">
-        <a href="/" class="inline-block bg-emerald-600 text-white px-4 py-2 rounded-lg">{{ t.nav.home if t and t.get('nav') else 'Accueil' }}</a>
+        <a href="/" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700">{{ t.nav.home if t and t.get('nav') else 'Accueil' }}</a>
       </p>
     </div>
-  </main>
-</body>
-</html>
+  </section>
+</div>
+{% endblock %}

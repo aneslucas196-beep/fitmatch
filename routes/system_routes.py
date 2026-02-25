@@ -90,13 +90,20 @@ Sitemap: {sitemap_url}
         base = base.rstrip("/") if base else "https://fitmatch.fr"
         urls = [
             ("/", "daily", "1.0"),
+            ("/about", "monthly", "0.8"),
+            ("/pricing", "monthly", "0.8"),
+            ("/projects", "monthly", "0.8"),
+            ("/blog", "weekly", "0.8"),
+            ("/blog/fitmatch-trouver-coach", "monthly", "0.7"),
+            ("/gyms", "monthly", "0.8"),
+            ("/gyms/finder", "weekly", "0.9"),
+            ("/coaches", "monthly", "0.8"),
+            ("/contact", "monthly", "0.7"),
             ("/signup", "weekly", "0.9"),
             ("/login", "weekly", "0.9"),
             ("/coach-signup", "weekly", "0.9"),
             ("/coach-login", "weekly", "0.9"),
             ("/coach/offre", "weekly", "0.9"),
-            ("/gyms/finder", "weekly", "0.9"),
-            ("/contact", "monthly", "0.7"),
             ("/faq", "monthly", "0.7"),
         ]
         xml = '<?xml version="1.0" encoding="UTF-8"?>\n'

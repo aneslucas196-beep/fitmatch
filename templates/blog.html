@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Blog - FitMatch | Actualités fitness et coaching{% endblock %}
+{% block meta_description %}Articles et actualités FitMatch : conseils fitness, témoignages coachs, astuces pour trouver son coach sportif.{% endblock %}
+{% block og_title %}Blog - FitMatch{% endblock %}
+{% block og_description %}Articles et actualités FitMatch. Conseils fitness et coaching.{% endblock %}
+{% block og_url %}{{ site_url|default('https://fitmatch.fr') }}/blog{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <section class="py-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Blog FitMatch</h1>
+    <p class="text-xl text-gray-600 mb-8">Actualités, conseils et témoignages autour du fitness et du coaching sportif.</p>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <div class="space-y-6">
+      <article class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
+        <a href="/blog/fitmatch-trouver-coach" class="block">
+          <h2 class="text-xl font-bold text-gray-900 hover:text-blue-600">Comment FitMatch vous aide à trouver le coach idéal</h2>
+          <p class="text-gray-600 mt-2">Découvrez comment la plateforme FitMatch simplifie la recherche de votre coach sportif près de chez vous.</p>
+          <span class="inline-block mt-4 text-sm text-blue-600 font-medium">Lire l'article →</span>
+        </a>
+      </article>
+    </div>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <div class="flex flex-wrap gap-4">
+      <a href="/" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700">Trouver un coach</a>
+      <a href="/coach-signup" class="inline-block border border-blue-600 text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50">Devenir coach</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

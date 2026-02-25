@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Salles de sport - FitMatch | Trouvez votre salle et vos coachs{% endblock %}
+{% block meta_description %}Trouvez les salles de sport près de chez vous avec FitMatch. Recherchez par ville, découvrez les coachs disponibles et réservez en ligne.{% endblock %}
+{% block og_title %}Salles de sport - FitMatch{% endblock %}
+{% block og_description %}Trouvez votre salle de sport et les coachs disponibles. Recherche par ville, réservation en ligne.{% endblock %}
+{% block og_url %}{{ site_url|default('https://fitmatch.fr') }}/gyms{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <section class="py-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Trouvez votre salle de sport</h1>
+    <p class="text-xl text-gray-600 mb-8">Recherchez les salles près de chez vous et découvrez les coachs disponibles pour vos séances.</p>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <h2 class="text-2xl font-bold text-gray-900 mb-4">Comment ça marche</h2>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <span class="text-3xl font-bold text-blue-600">1</span>
+        <h3 class="font-semibold text-gray-900 mt-2">Recherchez</h3>
+        <p class="text-gray-600 text-sm mt-1">Entrez une ville, une adresse ou un nom de salle.</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <span class="text-3xl font-bold text-blue-600">2</span>
+        <h3 class="font-semibold text-gray-900 mt-2">Découvrez</h3>
+        <p class="text-gray-600 text-sm mt-1">Consultez les coachs disponibles dans chaque salle.</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <span class="text-3xl font-bold text-blue-600">3</span>
+        <h3 class="font-semibold text-gray-900 mt-2">Réservez</h3>
+        <p class="text-gray-600 text-sm mt-1">Choisissez votre créneau et payez en ligne.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <h2 class="text-2xl font-bold text-gray-900 mb-4">Prêt à trouver votre salle ?</h2>
+    <a href="/gyms/finder" class="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg font-medium hover:bg-blue-700 text-lg">Rechercher une salle →</a>
+  </section>
+</div>
+{% endblock %}

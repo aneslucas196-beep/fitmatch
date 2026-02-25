@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Tarifs - FitMatch | Prix et abonnements coachs{% endblock %}
+{% block meta_description %}Découvrez les tarifs FitMatch pour les coachs sportifs. Abonnement mensuel, paiement sécurisé Stripe, pas de frais cachés.{% endblock %}
+{% block og_title %}Tarifs - FitMatch{% endblock %}
+{% block og_description %}Tarifs FitMatch pour coachs sportifs. Abonnement mensuel, paiement Stripe.{% endblock %}
+{% block og_url %}{{ site_url|default('https://fitmatch.fr') }}/pricing{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <section class="py-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Tarifs FitMatch</h1>
+    <p class="text-xl text-gray-600 mb-8">Des tarifs simples et transparents pour les coachs sportifs. Développez votre activité sans frais cachés.</p>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">Pour les coachs</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white p-8 rounded-xl shadow-sm border-2 border-blue-600">
+        <h3 class="text-xl font-bold text-gray-900">Abonnement Coach</h3>
+        <p class="text-3xl font-bold text-blue-600 mt-2">À partir de 29€/mois</p>
+        <ul class="mt-4 space-y-2 text-gray-700">
+          <li>✓ Profil coach visible</li>
+          <li>✓ Gestion des réservations</li>
+          <li>✓ Paiement en ligne Stripe</li>
+          <li>✓ Rappels automatiques</li>
+        </ul>
+        <a href="/coach-signup" class="mt-6 inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700">Commencer</a>
+      </div>
+      <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+        <h3 class="text-xl font-bold text-gray-900">Pour les clients</h3>
+        <p class="text-2xl font-bold text-gray-900 mt-2">Gratuit</p>
+        <p class="mt-2 text-gray-600">Recherchez, comparez et réservez. Vous payez uniquement les séances.</p>
+        <a href="/" class="mt-6 inline-block border border-blue-600 text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50">Trouver un coach</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <h2 class="text-2xl font-bold text-gray-900 mb-4">CTA</h2>
+    <div class="flex flex-wrap gap-4">
+      <a href="/coach-signup" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700">S'inscrire</a>
+      <a href="/contact" class="inline-block border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50">Contact</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

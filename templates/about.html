@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}À propos - FitMatch | Plateforme coachs sportifs{% endblock %}
+{% block meta_description %}FitMatch connecte clients et coachs sportifs. Découvrez notre mission, notre équipe et notre vision pour le fitness en France.{% endblock %}
+{% block og_title %}À propos - FitMatch{% endblock %}
+{% block og_description %}FitMatch connecte clients et coachs sportifs. Découvrez notre mission et notre vision.{% endblock %}
+{% block og_url %}{{ site_url|default('https://fitmatch.fr') }}/about{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <section class="py-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">À propos de FitMatch</h1>
+    <p class="text-xl text-gray-600 mb-8">La plateforme qui connecte les passionnés de fitness avec les meilleurs coachs sportifs près de chez eux.</p>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <h2 class="text-2xl font-bold text-gray-900 mb-4">Notre mission</h2>
+    <p class="text-gray-700 leading-relaxed mb-4">FitMatch facilite la mise en relation entre les clients souhaitant progresser et les coachs sportifs qualifiés. Recherchez une salle, choisissez votre coach, réservez en quelques clics.</p>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <h2 class="text-2xl font-bold text-gray-900 mb-4">Comment ça marche</h2>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <span class="text-3xl font-bold text-blue-600">1</span>
+        <h3 class="font-semibold text-gray-900 mt-2">Trouvez une salle</h3>
+        <p class="text-gray-600 text-sm mt-1">Recherchez les salles près de chez vous et découvrez les coachs disponibles.</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <span class="text-3xl font-bold text-blue-600">2</span>
+        <h3 class="font-semibold text-gray-900 mt-2">Choisissez votre coach</h3>
+        <p class="text-gray-600 text-sm mt-1">Consultez les profils, spécialités et tarifs des coachs.</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <span class="text-3xl font-bold text-blue-600">3</span>
+        <h3 class="font-semibold text-gray-900 mt-2">Réservez</h3>
+        <p class="text-gray-600 text-sm mt-1">Paiement sécurisé en ligne, rappels automatiques.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <h2 class="text-2xl font-bold text-gray-900 mb-4">CTA</h2>
+    <div class="flex flex-wrap gap-4">
+      <a href="/" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700">Trouver un coach</a>
+      <a href="/coach-signup" class="inline-block border border-blue-600 text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50">Devenir coach</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

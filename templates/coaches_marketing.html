@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Coachs sportifs - FitMatch | Devenez coach ou trouvez le vôtre{% endblock %}
+{% block meta_description %}Devenez coach sur FitMatch ou trouvez le coach sportif idéal. Inscription gratuite pour les coachs, recherche facile pour les clients.{% endblock %}
+{% block og_title %}Coachs sportifs - FitMatch{% endblock %}
+{% block og_description %}Devenez coach ou trouvez votre coach sportif. FitMatch connecte coachs et clients.{% endblock %}
+{% block og_url %}{{ site_url|default('https://fitmatch.fr') }}/coaches{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <section class="py-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Coachs sportifs</h1>
+    <p class="text-xl text-gray-600 mb-8">Que vous soyez coach ou client, FitMatch vous connecte avec les bons partenaires.</p>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">Deux parcours</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white p-8 rounded-xl shadow-sm border-2 border-blue-600">
+        <h3 class="text-xl font-bold text-gray-900">Je suis coach</h3>
+        <p class="text-gray-600 mt-2">Inscrivez-vous gratuitement, créez votre profil et recevez des réservations. Gérez vos séances, vos tarifs et vos salles.</p>
+        <a href="/coach-signup" class="mt-6 inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700">Devenir coach</a>
+      </div>
+      <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+        <h3 class="text-xl font-bold text-gray-900">Je cherche un coach</h3>
+        <p class="text-gray-600 mt-2">Recherchez par salle ou par ville. Comparez les profils, les tarifs et réservez en ligne.</p>
+        <a href="/" class="mt-6 inline-block border border-blue-600 text-blue-600 px-6 py-3 rounded-lg font-medium hover:bg-blue-50">Trouver un coach</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="py-8 border-t border-gray-200">
+    <div class="flex flex-wrap gap-4">
+      <a href="/coach-signup" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700">S'inscrire comme coach</a>
+      <a href="/coach-login" class="inline-block border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50">Espace Coach</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

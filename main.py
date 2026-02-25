@@ -1638,6 +1638,84 @@ async def partner_page(request: Request):
     i18n = get_i18n_context(request)
     return templates.TemplateResponse("partner.html", {"request": request, **i18n})
 
+# Pages marketing SEO (sitelinks Google)
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request):
+    """Page À propos."""
+    i18n = get_i18n_context(request)
+    base = _get_base_url(request)
+    return templates.TemplateResponse("about.html", {
+        "request": request,
+        "canonical_url": f"{base.rstrip('/')}/about",
+        **i18n
+    })
+
+@app.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(request: Request):
+    """Page Tarifs."""
+    i18n = get_i18n_context(request)
+    base = _get_base_url(request)
+    return templates.TemplateResponse("pricing.html", {
+        "request": request,
+        "canonical_url": f"{base.rstrip('/')}/pricing",
+        **i18n
+    })
+
+@app.get("/projects", response_class=HTMLResponse)
+async def projects_page(request: Request):
+    """Page Projets / Case studies."""
+    i18n = get_i18n_context(request)
+    base = _get_base_url(request)
+    return templates.TemplateResponse("projects.html", {
+        "request": request,
+        "canonical_url": f"{base.rstrip('/')}/projects",
+        **i18n
+    })
+
+@app.get("/blog", response_class=HTMLResponse)
+async def blog_page(request: Request):
+    """Page listing blog."""
+    i18n = get_i18n_context(request)
+    base = _get_base_url(request)
+    return templates.TemplateResponse("blog.html", {
+        "request": request,
+        "canonical_url": f"{base.rstrip('/')}/blog",
+        **i18n
+    })
+
+@app.get("/blog/fitmatch-trouver-coach", response_class=HTMLResponse)
+async def blog_article_page(request: Request):
+    """Article blog : Comment FitMatch vous aide à trouver le coach idéal."""
+    i18n = get_i18n_context(request)
+    base = _get_base_url(request)
+    return templates.TemplateResponse("blog_article.html", {
+        "request": request,
+        "canonical_url": f"{base.rstrip('/')}/blog/fitmatch-trouver-coach",
+        **i18n
+    })
+
+@app.get("/gyms", response_class=HTMLResponse)
+async def gyms_marketing_page(request: Request):
+    """Page marketing salles → redirige vers /gyms/finder."""
+    i18n = get_i18n_context(request)
+    base = _get_base_url(request)
+    return templates.TemplateResponse("gyms_marketing.html", {
+        "request": request,
+        "canonical_url": f"{base.rstrip('/')}/gyms",
+        **i18n
+    })
+
+@app.get("/coaches", response_class=HTMLResponse)
+async def coaches_marketing_page(request: Request):
+    """Page marketing coachs → coach-signup / coach-login."""
+    i18n = get_i18n_context(request)
+    base = _get_base_url(request)
+    return templates.TemplateResponse("coaches_marketing.html", {
+        "request": request,
+        "canonical_url": f"{base.rstrip('/')}/coaches",
+        **i18n
+    })
+
 @app.get("/mentions-legales", response_class=HTMLResponse)
 async def mentions_legales_page(request: Request):
     """Mentions légales / CGU."""
@@ -1654,7 +1732,12 @@ async def confidentialite_page(request: Request):
 async def contact_page(request: Request):
     """Page contact."""
     i18n = get_i18n_context(request)
-    return templates.TemplateResponse("contact.html", {"request": request, **i18n})
+    base = _get_base_url(request)
+    return templates.TemplateResponse("contact.html", {
+        "request": request,
+        "canonical_url": f"{base.rstrip('/')}/contact",
+        **i18n
+    })
 
 @app.get("/faq", response_class=HTMLResponse)
 async def faq_page(request: Request):

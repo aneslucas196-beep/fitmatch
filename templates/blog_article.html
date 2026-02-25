@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Comment FitMatch vous aide à trouver le coach idéal - Blog FitMatch{% endblock %}
+{% block meta_description %}Découvrez comment FitMatch simplifie la recherche de votre coach sportif. Recherche par salle, profils détaillés, réservation en ligne.{% endblock %}
+{% block og_title %}Comment trouver le coach idéal avec FitMatch{% endblock %}
+{% block og_description %}FitMatch simplifie la recherche de coach sportif. Par salle, par spécialité, réservation en ligne.{% endblock %}
+{% block og_url %}{{ site_url|default('https://fitmatch.fr') }}/blog/fitmatch-trouver-coach{% endblock %}
+
+{% block content %}
+<article class="max-w-3xl mx-auto">
+  <header class="py-12">
+    <a href="/blog" class="text-blue-600 hover:underline text-sm mb-4 inline-block">← Retour au blog</a>
+    <h1 class="text-4xl font-bold text-gray-900 mb-4">Comment FitMatch vous aide à trouver le coach idéal</h1>
+    <p class="text-gray-600">Publié le 15 janvier 2025</p>
+  </header>
+
+  <div class="prose prose-gray max-w-none space-y-6 text-gray-700">
+    <p>Trouver un coach sportif adapté à vos objectifs et à votre emploi du temps peut sembler compliqué. FitMatch a été conçu pour simplifier cette recherche.</p>
+
+    <h2 class="text-2xl font-bold text-gray-900 mt-8">1. Recherchez par salle</h2>
+    <p>Commencez par trouver une salle de sport près de chez vous ou de votre lieu de travail. FitMatch référence des milliers de salles en France. Une fois la salle sélectionnée, vous accédez à la liste des coachs qui y exercent.</p>
+
+    <h2 class="text-2xl font-bold text-gray-900 mt-8">2. Comparez les profils</h2>
+    <p>Chaque coach dispose d'un profil détaillé : spécialités (musculation, cardio, perte de poids…), tarifs, disponibilités. Vous pouvez consulter les avis et les transformations réalisées par le coach.</p>
+
+    <h2 class="text-2xl font-bold text-gray-900 mt-8">3. Réservez en quelques clics</h2>
+    <p>Une fois votre coach choisi, réservez directement en ligne. Paiement sécurisé par carte bancaire. Vous recevez des rappels automatiques avant chaque séance.</p>
+
+    <h2 class="text-2xl font-bold text-gray-900 mt-8">En résumé</h2>
+    <p>FitMatch centralise la recherche, la comparaison et la réservation. Plus besoin de chercher un coach sur plusieurs plateformes ou de gérer les paiements à la main.</p>
+  </div>
+
+  <footer class="py-8 border-t border-gray-200 mt-8">
+    <div class="flex flex-wrap gap-4">
+      <a href="/" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700">Trouver un coach</a>
+      <a href="/blog" class="inline-block border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50">Retour au blog</a>
+    </div>
+  </footer>
+</article>
+{% endblock %}
