@@ -45,8 +45,8 @@ def register_payment_routes(app, deps: dict):
             billing_period = body.get("billing_period", "monthly")
             coach_name = user.get("full_name", user.get("name", "Coach"))
             coach_id = user.get("id", coach_email)
-            success_url = f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
-            cancel_url = f"{base_url.rstrip('/')}/coach/subscription?cancelled=true"
+            success_url = f"{base_url.rstrip('/')}/stripe/success?session_id={{CHECKOUT_SESSION_ID}}"
+            cancel_url = f"{base_url.rstrip('/')}/pricing"
             stripe_price_id = (os.environ.get("STRIPE_PRICE_ID") or os.environ.get("STRIPE_MONTHLY_PRICE_ID") or "").strip()
             if stripe_price_id and stripe_price_id.startswith("price_"):
                 import stripe
@@ -58,7 +58,7 @@ def register_payment_routes(app, deps: dict):
                     line_items=[{"price": stripe_price_id, "quantity": 1}],
                     success_url=success_url,
                     cancel_url=cancel_url,
-                    metadata={"coach_email": coach_email, "platform": "fitmatch"},
+                    metadata={"coach_email": coach_email, "platform": "fitmatch", "subscription_type": billing_period},
                 )
             else:
                 try:
@@ -109,8 +109,8 @@ def register_payment_routes(app, deps: dict):
                 body = {}
             billing_period = body.get("billing_period", "monthly")
             base_url = _get_base_url(request)
-            success_url = f"{base_url.rstrip('/')}/coach/subscription?success=true&session_id={{CHECKOUT_SESSION_ID}}"
-            cancel_url = f"{base_url.rstrip('/')}/coach/subscription?cancelled=true"
+            success_url = f"{base_url.rstrip('/')}/stripe/success?session_id={{CHECKOUT_SESSION_ID}}"
+            cancel_url = f"{base_url.rstrip('/')}/pricing"
             if billing_period == "annual":
                 price_id = (os.environ.get("STRIPE_ANNUAL_PRICE_ID") or "").strip()
             else:
@@ -125,7 +125,7 @@ def register_payment_routes(app, deps: dict):
                     line_items=[{"price": price_id, "quantity": 1}],
                     success_url=success_url,
                     cancel_url=cancel_url,
-                    metadata={"coach_email": coach_email, "platform": "fitmatch"},
+                    metadata={"coach_email": coach_email, "platform": "fitmatch", "subscription_type": billing_period},
                 )
             else:
                 coach_id = coach.get("id") or coach.get("email", coach_email)

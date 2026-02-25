@@ -131,7 +131,9 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
             except Exception:
                 unavailable_slots = []
         
-        cur.execute("""
+        # Colonne password peut ne pas exister (ex: Supabase auth.users séparé)
+        # Essayer avec password, puis sans si "column does not exist"
+        sql_with_pwd = """
             INSERT INTO users (
                 email, password, full_name, role, gender, country_code,
                 coach_gender_preference, profile_completed, verified, email_verified,
@@ -180,41 +182,92 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
                 payment_mode = COALESCE(EXCLUDED.payment_mode, users.payment_mode),
                 session_duration = COALESCE(EXCLUDED.session_duration, users.session_duration),
                 updated_at = CURRENT_TIMESTAMP
-        """, (
-            email,
-            user_data.get('password'),
-            user_data.get('full_name'),
-            user_data.get('role', 'client'),
-            user_data.get('gender'),
-            user_data.get('country_code'),
-            user_data.get('coach_gender_preference'),
-            user_data.get('profile_completed', False),
-            user_data.get('verified', False),
-            user_data.get('email_verified', False),
-            user_data.get('bio'),
-            user_data.get('city'),
-            user_data.get('instagram_url'),
-            user_data.get('price_from', 50),
-            user_data.get('radius_km', 10),
-            user_data.get('profile_photo_url'),
-            user_data.get('profile_slug'),
-            json.dumps(specialties),
-            user_data.get('selected_gym_ids'),
-            json.dumps(selected_gyms_data),
-            user_data.get('subscription_status', 'pending_payment'),
-            user_data.get('stripe_customer_id'),
-            user_data.get('stripe_subscription_id'),
-            user_data.get('subscription_period_end'),
-            user_data.get('otp_code'),
-            user_data.get('otp_expiry'),
-            json.dumps(pending_bookings),
-            json.dumps(confirmed_bookings),
-            json.dumps(rejected_bookings),
-            json.dumps(unavailable_days),
-            json.dumps(unavailable_slots),
-            user_data.get('payment_mode', 'disabled'),
-            user_data.get('session_duration', 60)
-        ))
+        """
+        sql_no_pwd = """
+            INSERT INTO users (
+                email, full_name, role, gender, country_code,
+                coach_gender_preference, profile_completed, verified, email_verified,
+                bio, city, instagram_url, price_from, radius_km, profile_photo_url,
+                profile_slug, specialties, selected_gym_ids, selected_gyms_data,
+                subscription_status, stripe_customer_id, stripe_subscription_id,
+                subscription_period_end, otp_code, otp_expiry,
+                pending_bookings, confirmed_bookings, rejected_bookings,
+                unavailable_days, unavailable_slots, payment_mode, session_duration, updated_at
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+            )
+            ON CONFLICT (email) DO UPDATE SET
+                full_name = COALESCE(EXCLUDED.full_name, users.full_name),
+                role = COALESCE(EXCLUDED.role, users.role),
+                gender = COALESCE(EXCLUDED.gender, users.gender),
+                country_code = COALESCE(EXCLUDED.country_code, users.country_code),
+                coach_gender_preference = EXCLUDED.coach_gender_preference,
+                profile_completed = COALESCE(EXCLUDED.profile_completed, users.profile_completed),
+                verified = COALESCE(EXCLUDED.verified, users.verified),
+                email_verified = COALESCE(EXCLUDED.email_verified, users.email_verified),
+                bio = COALESCE(EXCLUDED.bio, users.bio),
+                city = COALESCE(EXCLUDED.city, users.city),
+                instagram_url = COALESCE(EXCLUDED.instagram_url, users.instagram_url),
+                price_from = COALESCE(EXCLUDED.price_from, users.price_from),
+                radius_km = COALESCE(EXCLUDED.radius_km, users.radius_km),
+                profile_photo_url = COALESCE(EXCLUDED.profile_photo_url, users.profile_photo_url),
+                profile_slug = COALESCE(EXCLUDED.profile_slug, users.profile_slug),
+                specialties = COALESCE(EXCLUDED.specialties, users.specialties),
+                selected_gym_ids = COALESCE(EXCLUDED.selected_gym_ids, users.selected_gym_ids),
+                selected_gyms_data = COALESCE(EXCLUDED.selected_gyms_data, users.selected_gyms_data),
+                subscription_status = COALESCE(EXCLUDED.subscription_status, users.subscription_status),
+                stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, users.stripe_customer_id),
+                stripe_subscription_id = COALESCE(EXCLUDED.stripe_subscription_id, users.stripe_subscription_id),
+                subscription_period_end = EXCLUDED.subscription_period_end,
+                otp_code = EXCLUDED.otp_code,
+                otp_expiry = EXCLUDED.otp_expiry,
+                pending_bookings = COALESCE(EXCLUDED.pending_bookings, users.pending_bookings),
+                confirmed_bookings = COALESCE(EXCLUDED.confirmed_bookings, users.confirmed_bookings),
+                rejected_bookings = COALESCE(EXCLUDED.rejected_bookings, users.rejected_bookings),
+                unavailable_days = COALESCE(EXCLUDED.unavailable_days, users.unavailable_days),
+                unavailable_slots = COALESCE(EXCLUDED.unavailable_slots, users.unavailable_slots),
+                payment_mode = COALESCE(EXCLUDED.payment_mode, users.payment_mode),
+                session_duration = COALESCE(EXCLUDED.session_duration, users.session_duration),
+                updated_at = CURRENT_TIMESTAMP
+        """
+        vals_with_pwd = (
+            email, user_data.get('password'), user_data.get('full_name'), user_data.get('role', 'client'),
+            user_data.get('gender'), user_data.get('country_code'), user_data.get('coach_gender_preference'),
+            user_data.get('profile_completed', False), user_data.get('verified', False), user_data.get('email_verified', False),
+            user_data.get('bio'), user_data.get('city'), user_data.get('instagram_url'), user_data.get('price_from', 50),
+            user_data.get('radius_km', 10), user_data.get('profile_photo_url'), user_data.get('profile_slug'),
+            json.dumps(specialties), user_data.get('selected_gym_ids'), json.dumps(selected_gyms_data),
+            user_data.get('subscription_status', 'pending_payment'), user_data.get('stripe_customer_id'),
+            user_data.get('stripe_subscription_id'), user_data.get('subscription_period_end'),
+            user_data.get('otp_code'), user_data.get('otp_expiry'),
+            json.dumps(pending_bookings), json.dumps(confirmed_bookings), json.dumps(rejected_bookings),
+            json.dumps(unavailable_days), json.dumps(unavailable_slots),
+            user_data.get('payment_mode', 'disabled'), user_data.get('session_duration', 60)
+        )
+        vals_no_pwd = (
+            email, user_data.get('full_name'), user_data.get('role', 'client'),
+            user_data.get('gender'), user_data.get('country_code'), user_data.get('coach_gender_preference'),
+            user_data.get('profile_completed', False), user_data.get('verified', False), user_data.get('email_verified', False),
+            user_data.get('bio'), user_data.get('city'), user_data.get('instagram_url'), user_data.get('price_from', 50),
+            user_data.get('radius_km', 10), user_data.get('profile_photo_url'), user_data.get('profile_slug'),
+            json.dumps(specialties), user_data.get('selected_gym_ids'), json.dumps(selected_gyms_data),
+            user_data.get('subscription_status', 'pending_payment'), user_data.get('stripe_customer_id'),
+            user_data.get('stripe_subscription_id'), user_data.get('subscription_period_end'),
+            user_data.get('otp_code'), user_data.get('otp_expiry'),
+            json.dumps(pending_bookings), json.dumps(confirmed_bookings), json.dumps(rejected_bookings),
+            json.dumps(unavailable_days), json.dumps(unavailable_slots),
+            user_data.get('payment_mode', 'disabled'), user_data.get('session_duration', 60)
+        )
+        try:
+            cur.execute(sql_with_pwd, vals_with_pwd)
+        except Exception as e1:
+            err_msg = str(e1).lower()
+            if "password" in err_msg and ("does not exist" in err_msg or "column" in err_msg):
+                cur.execute(sql_no_pwd, vals_no_pwd)
+            else:
+                raise
         
         conn.commit()
         cur.close()

@@ -6982,522 +6982,150 @@ async def api_create_portal_session(request: Request, user = Depends(require_coa
         log.error(f"[Stripe] Erreur création portal session (contexte: coach={user.get('email')}): {type(e).__name__}: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
-@app.post("/api/stripe/webhook", tags=["stripe"])
-async def stripe_webhook(request: Request):
+
+@app.get("/stripe/success", tags=["stripe"])
+async def stripe_success(request: Request, session_id: Optional[str] = Query(None)):
     """
-    Webhook Stripe pour gérer les événements d'abonnement.
-    Met à jour le statut des abonnements des coachs.
+    Page publique après paiement Stripe Checkout.
+    Vérifie payment_status puis redirige vers /coach-login?payment=success ou /pricing?payment=failed.
     """
+    if not session_id:
+        return RedirectResponse(url="/pricing?payment=failed", status_code=302)
+    try:
+        import stripe
+        from stripe_service import init_stripe
+        init_stripe()
+        session = stripe.checkout.Session.retrieve(session_id)
+        if session.payment_status != "paid":
+            return RedirectResponse(url="/pricing?payment=failed", status_code=302)
+        return RedirectResponse(url="/coach-login?payment=success", status_code=302)
+    except Exception as e:
+        log.warning(f"[Stripe] Erreur stripe_success: {e}")
+        return RedirectResponse(url="/pricing?payment=failed", status_code=302)
+
+
+async def activate_coach_subscription(customer_email: str, session: dict):
+    """Active l'abonnement coach après paiement Stripe (création DB, emails)."""
     import stripe
     from stripe_service import init_stripe
-    
     init_stripe()
-    
+    subscription_id = session.get("subscription")
+    customer_id = session.get("customer")
+    coach_data = get_demo_user(customer_email)
+    if not coach_data:
+        demo_users = load_demo_users()
+        demo_users[customer_email] = {
+            "email": customer_email,
+            "full_name": (session.get("customer_details") or {}).get("name", "Coach"),
+            "role": "coach",
+            "subscription_status": "inactive",
+            "stripe_customer_id": customer_id or "",
+            "stripe_subscription_id": subscription_id or "",
+        }
+        save_demo_users(demo_users)
+        log.info(f"✅ Nouveau coach créé en DB: {customer_email}")
+    if subscription_id:
+        try:
+            subscription = stripe.Subscription.retrieve(subscription_id)
+            period_end = datetime.fromtimestamp(subscription.current_period_end).isoformat()
+            update_coach_subscription(
+                coach_email=customer_email,
+                stripe_customer_id=customer_id,
+                stripe_subscription_id=subscription_id,
+                subscription_status="active",
+                current_period_end=period_end
+            )
+        except Exception as e:
+            log.warning(f"Erreur récupération subscription: {e}")
+    else:
+        update_coach_subscription(
+            coach_email=customer_email,
+            stripe_customer_id=customer_id,
+            subscription_status="active"
+        )
+    coach_data = get_demo_user(customer_email)
+    base_url = (os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")).strip()
+    if base_url and not base_url.startswith("http"):
+        base_url = f"https://{base_url}"
+    try:
+        from resend_service import send_subscription_success_email, send_subscription_payment_receipt
+        subscription_type = session.get("metadata", {}).get("subscription_type", "monthly")
+        send_subscription_success_email(
+            to_email=customer_email,
+            coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
+            subscription_url=f"{base_url}/coach/portal" if base_url else "/coach/portal",
+            lang=coach_data.get("lang", "fr") if coach_data else "fr"
+        )
+        amount_paid = 10.0 if subscription_type == "annual" else 1.0
+        if subscription_id:
+            try:
+                sub = stripe.Subscription.retrieve(subscription_id)
+                inv = stripe.Invoice.retrieve(sub.latest_invoice)
+                amount_paid = inv.amount_paid / 100
+            except Exception:
+                pass
+        from datetime import timedelta
+        today = datetime.now()
+        end_date = today + timedelta(days=365 if subscription_type == "annual" else 30)
+        send_subscription_payment_receipt(
+            to_email=customer_email,
+            coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
+            amount=f"{amount_paid:.2f}€",
+            billing_period=subscription_type,
+            subscription_start=today.strftime("%d/%m/%Y"),
+            subscription_end=end_date.strftime("%d/%m/%Y"),
+            lang=coach_data.get("lang", "fr") if coach_data else "fr"
+        )
+    except Exception as e:
+        log.warning(f"Erreur envoi email bienvenue: {e}")
+
+
+async def stripe_webhook_handler(request: Request):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
-    webhook_secret = (os.environ.get("STRIPE_WEBHOOK_SECRET") or "").strip()
-    site_url = (os.environ.get("SITE_URL") or "").strip()
-
-    # En production (SITE_URL défini), refuser de traiter sans secret pour éviter les faux webhooks
-    if site_url and not webhook_secret:
-        log.error(f" STRIPE_WEBHOOK_SECRET manquant en production - webhook refusé")
-        return JSONResponse(
-            status_code=503,
-            content={"error": "Webhook non configuré"}
-        )
 
     try:
-        # Vérifier la signature du webhook si la clé secrète est configurée
-        if webhook_secret and sig_header:
-            try:
-                event = stripe.Webhook.construct_event(
-                    payload, sig_header, webhook_secret
-                )
-                log.info(f"✅ Signature webhook vérifiée")
-            except ValueError as e:
-                log.error(f"Erreur signature invalide: {e}")
-                return JSONResponse({"error": "Signature invalide"}, status_code=400)
-            except stripe.error.SignatureVerificationError as e:
-                log.error(f"Erreur vérification signature: {e}")
-                return JSONResponse({"error": "Erreur signature"}, status_code=400)
-        else:
-            # Mode développement uniquement (pas de SITE_URL ou secret vide en local)
-            if site_url:
-                return JSONResponse({"error": "Signature requise"}, status_code=400)
-            log.warning(f" STRIPE_WEBHOOK_SECRET non configuré, vérification signature désactivée (dev)")
-            event = json.loads(payload)
-        
-        event_type = event.get("type")
-        data = event.get("data", {}).get("object", {})
-        
-        log.info(f"📩 Webhook Stripe reçu: {event_type}")
-        
-        if event_type == "checkout.session.completed":
-            metadata = data.get("metadata", {})
-            booking_type = metadata.get("booking_type")
-            
-            # PAIEMENT DE SÉANCE (mode paiement obligatoire)
-            if booking_type == "session_payment":
-                booking_id = metadata.get("booking_id")
-                coach_email = metadata.get("coach_email")
-                client_email = metadata.get("client_email")
-                
-                log.info(f"💳 Paiement séance réussi - booking_id: {booking_id}, coach: {coach_email}")
-                
-                if coach_email and booking_id:
-                    try:
-                        from resend_service import send_booking_confirmation_email
-                        
-                        demo_users = load_demo_users()
-                        if coach_email in demo_users:
-                            coach_data = demo_users[coach_email]
-                            pending = coach_data.get("pending_bookings", [])
-                            
-                            # Trouver et déplacer la réservation vers confirmed_bookings
-                            booking_to_confirm = None
-                            for i, booking in enumerate(pending):
-                                if booking.get("id") == booking_id:
-                                    booking_to_confirm = pending.pop(i)
-                                    break
-                            
-                            if booking_to_confirm:
-                                booking_to_confirm["status"] = "confirmed"
-                                booking_to_confirm["payment_status"] = "paid"
-                                booking_to_confirm["confirmed_at"] = datetime.now().isoformat()
-                                
-                                if "confirmed_bookings" not in coach_data:
-                                    coach_data["confirmed_bookings"] = []
-                                coach_data["confirmed_bookings"].append(booking_to_confirm)
-                                coach_data["pending_bookings"] = pending
-                                
-                                save_demo_user(coach_email, coach_data)
-                                log.info(f"✅ Réservation {booking_id} confirmée après paiement")
-                                
-                                # Programmer les rappels
-                                schedule_booking_reminders(booking_to_confirm, coach_data.get("full_name", "Coach"))
-                                
-                                # Envoyer emails de confirmation
-                                try:
-                                    from datetime import datetime as dt
-                                    date_obj = dt.strptime(booking_to_confirm.get("date"), "%Y-%m-%d")
-                                    jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
-                                    mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
-                                    date_fr = f"{jours[date_obj.weekday()]} {date_obj.day} {mois[date_obj.month - 1]} {date_obj.year}"
-                                    
-                                    send_booking_confirmation_email(
-                                        to_email=booking_to_confirm.get("client_email"),
-                                        client_name=booking_to_confirm.get("client_name"),
-                                        coach_name=coach_data.get("full_name", "Coach"),
-                                        gym_name=booking_to_confirm.get("gym_name"),
-                                        gym_address=booking_to_confirm.get("gym_address", ""),
-                                        date_str=date_fr,
-                                        time_str=booking_to_confirm.get("time"),
-                                        service_name=booking_to_confirm.get("service"),
-                                        duration=f"{booking_to_confirm.get('duration')} min",
-                                        price=f"{booking_to_confirm.get('price')}€",
-                                        coach_photo=coach_data.get("profile_photo_url"),
-                                        reservation_id=booking_id,
-                                        lang=booking_to_confirm.get("lang", "fr")
-                                    )
-                                    log.info(f"📧 Email confirmation envoyé au client")
-                                    
-                                    # Envoyer le certificat de paiement au client
-                                    from resend_service import send_session_payment_receipt
-                                    send_session_payment_receipt(
-                                        to_email=booking_to_confirm.get("client_email"),
-                                        client_name=booking_to_confirm.get("client_name"),
-                                        coach_name=coach_data.get("full_name", "Coach"),
-                                        gym_name=booking_to_confirm.get("gym_name"),
-                                        gym_address=booking_to_confirm.get("gym_address", ""),
-                                        session_date=date_fr,
-                                        session_time=booking_to_confirm.get("time"),
-                                        service_name=booking_to_confirm.get("service"),
-                                        duration=f"{booking_to_confirm.get('duration')} min",
-                                        amount=f"{booking_to_confirm.get('price')}€",
-                                        lang=booking_to_confirm.get("lang", "fr")
-                                    )
-                                    log.info(f"📧 Certificat paiement séance envoyé au client")
-                                except Exception as email_error:
-                                    log.warning(f"Erreur email confirmation: {email_error}")
-                    except Exception as booking_error:
-                        log.error(f"Erreur confirmation réservation après paiement: {booking_error}")
-                
-                return JSONResponse({"received": True})
-            
-            # PAIEMENT ABONNEMENT COACH (flux existant)
-            coach_email = data.get("metadata", {}).get("coach_email")
-            subscription_id = data.get("subscription")
-            customer_id = data.get("customer")
-            
-            log.info(f"📩 checkout.session.completed - coach_email: {coach_email}, subscription_id: {subscription_id}")
-            
-            if coach_email and subscription_id:
-                try:
-                    # Récupérer les infos de l'abonnement
-                    subscription = stripe.Subscription.retrieve(subscription_id)
-                    period_end = datetime.fromtimestamp(subscription.current_period_end).isoformat()
-                    
-                    update_coach_subscription(
-                        coach_email=coach_email,
-                        stripe_customer_id=customer_id,
-                        stripe_subscription_id=subscription_id,
-                        subscription_status="active",
-                        current_period_end=period_end
-                    )
-                    log.info(f"✅ Abonnement activé pour {coach_email}")
-                    
-                    # Envoyer email de bienvenue
-                    from resend_service import send_subscription_success_email, send_subscription_payment_receipt
-                    coach_data = get_demo_user(coach_email)
-                    base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
-                    if base_url and not base_url.startswith("http"):
-                        base_url = f"https://{base_url}"
-                    send_subscription_success_email(
-                        to_email=coach_email,
-                        coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                        subscription_url=f"{base_url}/coach/portal" if base_url else "/coach/portal",
-                        lang=coach_data.get("lang", "fr") if coach_data else "fr"
-                    )
-                    log.info(f"📧 Email de bienvenue envoyé à {coach_email}")
-                    
-                    # Envoyer le certificat de paiement au coach
-                    subscription_type = data.get("metadata", {}).get("subscription_type", "monthly")
-                    
-                    # Récupérer le montant depuis la dernière facture Stripe
-                    try:
-                        latest_invoice = stripe.Invoice.retrieve(subscription.latest_invoice)
-                        amount_paid = latest_invoice.amount_paid / 100  # Convertir centimes en euros
-                    except Exception:
-                        # Fallback: utiliser le prix défini
-                        amount_paid = 10.0 if subscription_type == "annual" else 1.0
-                    
-                    period_start = datetime.fromtimestamp(subscription.current_period_start)
-                    period_end_date = datetime.fromtimestamp(subscription.current_period_end)
-                    
-                    send_subscription_payment_receipt(
-                        to_email=coach_email,
-                        coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                        amount=f"{amount_paid:.2f}€",
-                        billing_period=subscription_type,
-                        subscription_start=period_start.strftime("%d/%m/%Y"),
-                        subscription_end=period_end_date.strftime("%d/%m/%Y"),
-                        lang=coach_data.get("lang", "fr") if coach_data else "fr"
-                    )
-                    log.info(f"📧 Certificat paiement abonnement envoyé à {coach_email}")
-                    
-                except Exception as sub_error:
-                    log.error(f"Erreur récupération subscription: {sub_error}")
-            elif coach_email:
-                # Si pas de subscription_id mais coach_email, activer quand même
-                update_coach_subscription(
-                    coach_email=coach_email,
-                    stripe_customer_id=customer_id,
-                    subscription_status="active"
-                )
-                log.info(f"✅ Abonnement activé (sans sub ID) pour {coach_email}")
-                
-                # Envoyer email de bienvenue et certificat
-                from resend_service import send_subscription_success_email, send_subscription_payment_receipt
-                coach_data = get_demo_user(coach_email)
-                base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
-                if base_url and not base_url.startswith("http"):
-                    base_url = f"https://{base_url}"
-                send_subscription_success_email(
-                    to_email=coach_email,
-                    coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                    subscription_url=f"{base_url}/coach/portal" if base_url else "/coach/portal",
-                    lang=coach_data.get("lang", "fr") if coach_data else "fr"
-                )
-                
-                # Certificat de paiement
-                subscription_type = data.get("metadata", {}).get("subscription_type", "monthly")
-                
-                # Utiliser les prix définis
-                amount_paid = 10.0 if subscription_type == "annual" else 1.0
-                
-                # Calcul des dates de manière sûre avec timedelta
-                from datetime import timedelta
-                today = datetime.now()
-                if subscription_type == "annual":
-                    end_date = today + timedelta(days=365)
-                else:
-                    end_date = today + timedelta(days=30)
-                
-                send_subscription_payment_receipt(
-                    to_email=coach_email,
-                    coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                    amount=f"{amount_paid:.2f}€",
-                    billing_period=subscription_type,
-                    subscription_start=today.strftime("%d/%m/%Y"),
-                    subscription_end=end_date.strftime("%d/%m/%Y"),
-                    lang=coach_data.get("lang", "fr") if coach_data else "fr"
-                )
-                log.info(f"📧 Certificat paiement abonnement envoyé à {coach_email}")
-        
-        elif event_type == "customer.subscription.updated":
-            # Mise à jour de l'abonnement
-            subscription_id = data.get("id")
-            status = data.get("status")
-            coach_email = data.get("metadata", {}).get("coach_email")
-            
-            if coach_email:
-                period_end = datetime.fromtimestamp(data.get("current_period_end", 0)).isoformat()
-                update_coach_subscription(
-                    coach_email=coach_email,
-                    subscription_status=status,
-                    current_period_end=period_end
-                )
-                log.info(f"🔄 Abonnement mis à jour pour {coach_email}: {status}")
-                
-                # Si le statut revient à active, débloquer le compte
-                if status == "active":
-                    coach_data = get_demo_user(coach_email)
-                    if coach_data and coach_data.get("subscription_status") == "blocked":
-                        coach_data["subscription_status"] = "active"
-                        coach_data["blocked_at"] = None
-                        coach_data["payment_failed_at"] = None
-                        save_demo_user(coach_email, coach_data)
-                        log.info(f"✅ Compte débloqué pour {coach_email}")
-                        
-                        # Email de compte restauré
-                        from resend_service import send_account_restored_email
-                        base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
-                        if base_url and not base_url.startswith("http"):
-                            base_url = f"https://{base_url}"
-                        send_account_restored_email(
-                            to_email=coach_email,
-                            coach_name=coach_data.get("full_name", "Coach"),
-                            lang=coach_data.get("lang", "fr")
-                        )
-        
-        elif event_type == "customer.subscription.deleted":
-            # Abonnement annulé
-            coach_email = data.get("metadata", {}).get("coach_email")
-            
-            if coach_email:
-                update_coach_subscription(
-                    coach_email=coach_email,
-                    subscription_status="cancelled"
-                )
-                log.info(f"🚫 Abonnement annulé pour {coach_email}")
-                
-                # Bloquer le compte immédiatement
-                coach_data = get_demo_user(coach_email)
-                if coach_data:
-                    coach_data["subscription_status"] = "blocked"
-                    coach_data["blocked_at"] = datetime.now().isoformat()
-                    save_demo_user(coach_email, coach_data)
-                    
-                    # Email de compte bloqué
-                    from resend_service import send_account_blocked_email
-                    base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
-                    if base_url and not base_url.startswith("http"):
-                        base_url = f"https://{base_url}"
-                    send_account_blocked_email(
-                        to_email=coach_email,
-                        coach_name=coach_data.get("full_name", "Coach"),
-                        retry_url=f"{base_url}/coach/subscription" if base_url else "/coach/subscription",
-                        lang=coach_data.get("lang", "fr")
-                    )
-        
-        elif event_type == "invoice.payment_failed":
-            # Paiement échoué - envoyer email d'avertissement
-            subscription_id = data.get("subscription")
-            if subscription_id:
-                subscription = stripe.Subscription.retrieve(subscription_id)
-                coach_email = subscription.metadata.get("coach_email")
-                
-                if coach_email:
-                    update_coach_subscription(
-                        coach_email=coach_email,
-                        subscription_status="past_due"
-                    )
-                    
-                    # Enregistrer la date d'échec pour le blocage 24h
-                    coach_data = get_demo_user(coach_email)
-                    if coach_data:
-                        coach_data["payment_failed_at"] = datetime.now().isoformat()
-                        coach_data["subscription_status"] = "past_due"
-                        save_demo_user(coach_email, coach_data)
-                    
-                    # Envoyer email d'avertissement
-                    from resend_service import send_payment_failed_email
-                    base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
-                    if base_url and not base_url.startswith("http"):
-                        base_url = f"https://{base_url}"
-                    send_payment_failed_email(
-                        to_email=coach_email,
-                        coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                        retry_url=f"{base_url}/coach/subscription",
-                        lang=coach_data.get("lang", "fr") if coach_data else "fr"
-                    )
-                    log.warning(f" Paiement échoué pour {coach_email} - email envoyé")
-        
-        elif event_type == "invoice.payment_succeeded":
-            # Paiement réussi (renouvellement) - débloquer si nécessaire
-            subscription_id = data.get("subscription")
-            if subscription_id:
-                try:
-                    subscription = stripe.Subscription.retrieve(subscription_id)
-                    coach_email = subscription.metadata.get("coach_email")
-                    
-                    if coach_email:
-                        coach_data = get_demo_user(coach_email)
-                        was_blocked = coach_data and coach_data.get("subscription_status") == "blocked"
-                        
-                        # Mettre à jour le statut
-                        update_coach_subscription(
-                            coach_email=coach_email,
-                            subscription_status="active"
-                        )
-                        
-                        if coach_data:
-                            coach_data["subscription_status"] = "active"
-                            coach_data["blocked_at"] = None
-                            coach_data["payment_failed_at"] = None
-                            save_demo_user(coach_email, coach_data)
-                        
-                        # Si le compte était bloqué, envoyer email de restauration
-                        if was_blocked:
-                            from resend_service import send_account_restored_email
-                            base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
-                            if base_url and not base_url.startswith("http"):
-                                base_url = f"https://{base_url}"
-                            send_account_restored_email(
-                                to_email=coach_email,
-                                coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                                lang=coach_data.get("lang", "fr") if coach_data else "fr"
-                            )
-                            log.info(f"✅ Compte restauré pour {coach_email}")
-                        # Renouvellement : envoyer le certificat de paiement par email (comme au premier paiement)
-                        from resend_service import send_subscription_payment_receipt
-                        amount_paid = (data.get("amount_paid") or 0) / 100.0
-                        period_start_ts = data.get("period_start") or subscription.get("current_period_start")
-                        period_end_ts = data.get("period_end") or subscription.get("current_period_end")
-                        period_start = datetime.fromtimestamp(period_start_ts).strftime("%d/%m/%Y")
-                        period_end = datetime.fromtimestamp(period_end_ts).strftime("%d/%m/%Y")
-                        items_data = (subscription.get("items") or {}).get("data") or []
-                        first_item = items_data[0] if items_data else {}
-                        plan = first_item.get("plan") or first_item.get("price") or {}
-                        interval = plan.get("interval", "month") if isinstance(plan, dict) else "month"
-                        billing_period = "annual" if interval == "year" else "monthly"
-                        send_subscription_payment_receipt(
-                            to_email=coach_email,
-                            coach_name=coach_data.get("full_name", "Coach") if coach_data else "Coach",
-                            amount=f"{amount_paid:.2f}€",
-                            billing_period=billing_period,
-                            subscription_start=period_start,
-                            subscription_end=period_end,
-                            lang=coach_data.get("lang", "fr") if coach_data else "fr"
-                        )
-                        log.info(f"📧 Certificat de paiement (renouvellement) envoyé à {coach_email}")
-                        if not was_blocked:
-                            log.info(f"✅ Renouvellement réussi pour {coach_email}")
-                except Exception as renewal_error:
-                    log.warning(f"Erreur traitement renouvellement: {renewal_error}")
-        
-        elif event_type == "account.updated":
-            # Mise à jour du compte Stripe Connect d'un coach
-            account_id = data.get("id")
-            account_email = data.get("email")
-            details_submitted = data.get("details_submitted", False)
-            charges_enabled = data.get("charges_enabled", False)
-            payouts_enabled = data.get("payouts_enabled", False)
-            
-            log.info(f"🔄 Compte Connect mis à jour: {account_id}")
-            log.info(f"   Email: {account_email}, Charges: {charges_enabled}, Payouts: {payouts_enabled}")
-            
-            from db_service import update_stripe_connect_status, find_coach_by_stripe_connect_account
-            
-            try:
-                # Chercher le coach par account_id dans la base de données PostgreSQL
-                coach_found = find_coach_by_stripe_connect_account(account_id)
-                
-                if coach_found:
-                    # Déterminer le statut
-                    if charges_enabled and payouts_enabled:
-                        status = "active"
-                    elif details_submitted:
-                        status = "pending"
-                    else:
-                        status = "incomplete"
-                    
-                    update_stripe_connect_status(
-                        email=coach_found,
-                        account_id=account_id,
-                        status=status,
-                        charges_enabled=charges_enabled,
-                        payouts_enabled=payouts_enabled,
-                        details_submitted=details_submitted
-                    )
-                    log.info(f"✅ Statut Stripe Connect synchronisé pour {coach_found}: {status}")
-                else:
-                    log.warning(f" Coach non trouvé pour account_id: {account_id}")
-                    
-            except Exception as connect_error:
-                log.error(f"Erreur synchronisation compte Connect: {connect_error}")
-        
-        elif event_type == "checkout.session.expired":
-            # Session de paiement expirée ou échec
-            metadata = data.get("metadata", {})
-            booking_type = metadata.get("booking_type")
-            coach_email = metadata.get("coach_email")
-            client_email = metadata.get("client_email")
-            
-            base_url = os.environ.get("SITE_URL") or os.environ.get("REPLIT_DEV_DOMAIN", "")
-            if base_url and not base_url.startswith("http"):
-                base_url = f"https://{base_url}"
-            
-            # Échec paiement SÉANCE CLIENT
-            if booking_type == "session_payment" and client_email:
-                log.error(f" Paiement séance expiré pour client: {client_email}")
-                try:
-                    from resend_service import send_session_payment_failed_email
-                    
-                    coach_name = metadata.get("coach_name", "Coach")
-                    session_date = metadata.get("session_date", "")
-                    session_time = metadata.get("session_time", "")
-                    coach_slug = metadata.get("coach_slug", "")
-                    
-                    retry_url = f"{base_url}/coach/{coach_slug}" if coach_slug else base_url
-                    
-                    send_session_payment_failed_email(
-                        to_email=client_email,
-                        client_name=metadata.get("client_name", "Client"),
-                        coach_name=coach_name,
-                        session_date=session_date,
-                        session_time=session_time,
-                        retry_url=retry_url,
-                        lang=metadata.get("lang", "fr")
-                    )
-                    log.info(f"📧 Email échec paiement séance envoyé à {client_email}")
-                except Exception as email_error:
-                    log.warning(f"Erreur envoi email échec séance: {email_error}")
-            
-            # Échec paiement ABONNEMENT COACH (inscription initiale)
-            elif coach_email and not booking_type:
-                log.error(f" Paiement abonnement expiré pour coach: {coach_email}")
-                try:
-                    from resend_service import send_coach_signup_payment_failed_email
-                    
-                    coach_data = get_demo_user(coach_email)
-                    coach_name = coach_data.get("full_name", "Coach") if coach_data else "Coach"
-                    
-                    send_coach_signup_payment_failed_email(
-                        to_email=coach_email,
-                        coach_name=coach_name,
-                        retry_url=f"{base_url}/coach-signup",
-                        lang=coach_data.get("lang", "fr") if coach_data else "fr"
-                    )
-                    log.info(f"📧 Email échec paiement inscription envoyé à {coach_email}")
-                except Exception as email_error:
-                    log.warning(f"Erreur envoi email échec inscription: {email_error}")
-        
-        return JSONResponse({"received": True})
-    
+        import stripe
+        from stripe_service import init_stripe
+        init_stripe()
+        event = stripe.Webhook.construct_event(
+            payload,
+            sig_header,
+            os.getenv("STRIPE_WEBHOOK_SECRET")
+        )
+
+        # Gestion checkout.session.completed
+        if event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+
+            customer_email = (
+                session.get("customer_details", {}).get("email")
+                or session.get("metadata", {}).get("coach_email")
+                or session.get("metadata", {}).get("email")
+            )
+
+            if customer_email:
+                await activate_coach_subscription(customer_email, session)
+
+        return JSONResponse({"status": "success"})
+
     except Exception as e:
-        log.error(f"[Stripe] Erreur webhook (contexte: traitement événement): {type(e).__name__}: {e}")
-        return JSONResponse({"error": str(e)}, status_code=400)
+        log.error(f"Webhook error: {e}")
+        return JSONResponse({"status": "error"}, status_code=400)
+
+
+# IMPORTANT : enregistrer explicitement les routes POST
+app.add_api_route(
+    "/stripe/webhook",
+    stripe_webhook_handler,
+    methods=["POST"]
+)
+
+app.add_api_route(
+    "/api/stripe/webhook",
+    stripe_webhook_handler,
+    methods=["POST"]
+)
 
 @app.get("/api/coach/subscription-status")
 async def api_coach_subscription_status(request: Request, user = Depends(require_coach_role)):
