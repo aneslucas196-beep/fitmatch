@@ -438,17 +438,7 @@
     <a href="/login" class="cta">{{ t.nav.login|default('Se connecter') }}</a>
   </div>
 </nav>
-<script>
-  function toggleLanguageMenu() {
-    const menu = document.getElementById('langMenu');
-    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-  }
-  document.addEventListener('click', function(e) {
-    const menu = document.getElementById('langMenu');
-    const btn = e.target.closest('.language-selector');
-    if (!btn && menu) menu.style.display = 'none';
-  });
-</script>
+<script src="/static/language-selector.js?v=2"></script>
 
 <section class="fm-signup">
   <div class="fm-wrap">

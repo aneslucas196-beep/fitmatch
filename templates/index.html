@@ -470,7 +470,7 @@
       <a href="/login" class="btn-compte">{{ t.nav.my_account|default('Mon compte') }}</a>
     </div>
   </header>
-  <script src="/static/language-selector.js"></script>
+  <script src="/static/language-selector.js?v=2"></script>
 
   <section class="hero">
     <div class="overlay"></div>
@@ -704,15 +704,31 @@
     }
 
     function renderAutocomplete(gyms) {
-      autocompleteDropdown.innerHTML = gyms.map(gym => `
-        <div class="gym-autocomplete-item" onclick='selectGym(${JSON.stringify(gym).replace(/'/g, "\\'")})'>
+      autocompleteDropdown.innerHTML = gyms.map(gym => {
+        const gymId = String(gym.place_id || gym.id || 'unknown').replace(/["'<>]/g, '');
+        const gymName = escapeHtml(gym.name || 'Salle');
+        const gymAddr = escapeHtml(gym.address || gym.formatted_address || '');
+        const safe = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return `<div class="gym-autocomplete-item" data-id="${safe(gymId)}" data-name="${safe(gym.name)}" data-address="${safe(gym.address || gym.formatted_address)}" role="button" tabindex="0">
           <div class="gym-autocomplete-icon">🏋️</div>
           <div class="gym-autocomplete-info">
-            <div class="gym-autocomplete-name">${escapeHtml(gym.name)}</div>
-            <div class="gym-autocomplete-address">${escapeHtml(gym.address || gym.formatted_address || '')}</div>
+            <div class="gym-autocomplete-name">${gymName}</div>
+            <div class="gym-autocomplete-address">${gymAddr}</div>
           </div>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
+      autocompleteDropdown.querySelectorAll('.gym-autocomplete-item').forEach(el => {
+        el.addEventListener('click', function() {
+          const g = {
+            id: this.getAttribute('data-id') || 'unknown',
+            place_id: this.getAttribute('data-id') || 'unknown',
+            name: this.getAttribute('data-name') || 'Salle',
+            address: this.getAttribute('data-address') || '',
+            formatted_address: this.getAttribute('data-address') || ''
+          };
+          selectGym(g);
+        });
+      });
     }
 
     function escapeHtml(text) {

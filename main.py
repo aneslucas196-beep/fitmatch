@@ -1380,11 +1380,16 @@ async def set_language(request: Request, locale: str):
     """Change la langue de l'utilisateur."""
     if locale not in SUPPORTED_LOCALES:
         locale = DEFAULT_LOCALE
-    
-    # Rediriger vers la page précédente ou l'accueil
-    referer = request.headers.get("referer", "/")
-    response = RedirectResponse(url=referer, status_code=303)
-    response.set_cookie(key=LOCALE_COOKIE_NAME, value=locale, max_age=31536000)
+
+    referer = (request.headers.get("referer") or request.headers.get("Referer") or "").strip()
+    base = str(request.base_url).rstrip("/")
+    site = (os.environ.get("SITE_URL") or base).rstrip("/")
+    if referer and (referer.startswith(site) or referer.startswith(base) or referer.startswith("/")):
+        redirect_url = referer if referer.startswith("http") else (base + referer) if referer.startswith("/") else "/"
+    else:
+        redirect_url = "/"
+    response = RedirectResponse(url=redirect_url, status_code=303)
+    response.set_cookie(key=LOCALE_COOKIE_NAME, value=locale, max_age=31536000, path="/", samesite="lax")
     return response
 
 @app.get("/search", response_class=HTMLResponse)
