@@ -2956,7 +2956,7 @@ async def coach_login_submit(
 # Routes protégées - Espace Coach
 @app.get("/coach/portal", response_class=HTMLResponse)
 async def coach_portal(request: Request, user = Depends(require_coach_role)):
-    """Dashboard coach - avec vérification du profil complété et de l'abonnement."""
+    """Dashboard coach - avec vérification du profil complété, abonnement et email (verified_at)."""
     
     # Charger les données fraîches depuis le fichier JSON
     coach_email = user.get("email")
@@ -2964,8 +2964,18 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     coach_data_fresh = demo_users.get(coach_email, {})
     
     subscription_status = coach_data_fresh.get("subscription_status", "")
-    email_verified = coach_data_fresh.get("email_verified", False)
-    log.info(f"🔍 Portal check: email={coach_email}, subscription_status='{subscription_status}', email_verified={email_verified}")
+    log.info(f"🔍 Portal check: email={coach_email}, subscription_status='{subscription_status}'")
+    
+    # Vérifier email_verifications.verified_at (obligatoire après paiement)
+    try:
+        from utils import use_database
+        if use_database():
+            from email_verification_service import is_email_verified
+            if not is_email_verified(coach_email):
+                from urllib.parse import quote
+                return RedirectResponse(url=f"/verify-email?email={quote(coach_email)}", status_code=303)
+    except Exception as e:
+        log.warning(f"Check verified_at: {e}")
     
     if subscription_status in ["blocked", "cancelled", "past_due"]:
         return RedirectResponse(url="/coach/subscription", status_code=302)
@@ -3736,7 +3746,81 @@ async def coach_subscription_page(
     })
 
 # ======================================
-# ROUTE VERIFICATION EMAIL COACH
+# ROUTES /verify-email (post-paiement Stripe, OTP DB)
+# ======================================
+
+@app.get("/verify-email", response_class=HTMLResponse)
+async def verify_email_page(
+    request: Request,
+    email: Optional[str] = Query(None),
+    payment: Optional[str] = Query(None),
+):
+    """Page de saisie du code OTP après paiement. Email en query param."""
+    i18n = get_i18n_context(request)
+    locale = get_locale_from_request(request)
+    translations = get_translations(locale)
+    email_val = (email or "").strip().lower()
+    payment_success = payment == "success"
+    return templates.TemplateResponse("verify_email_subscription.html", {
+        "request": request,
+        "email": email_val,
+        "payment_success": payment_success,
+        "t": translations,
+        "locale": locale,
+        "csp_nonce": getattr(request.state, "csp_nonce", ""),
+    })
+
+
+@app.post("/verify-email")
+@limiter.limit("10/minute")
+async def verify_email_submit(request: Request):
+    """Vérifie le code OTP, crée la session, redirige vers /coach/portal."""
+    try:
+        data = await request.json()
+        email = (data.get("email") or "").strip().lower()
+        code = (data.get("code") or "").strip()
+        if not email or not code:
+            return JSONResponse({"success": False, "error": "Code invalide ou expiré"}, status_code=400)
+        from email_verification_service import verify_email_code
+        ok, err = verify_email_code(email, code)
+        if not ok:
+            return JSONResponse({"success": False, "error": err or "Code invalide ou expiré"}, status_code=400)
+        # Vérifier que c'est bien un coach avec abonnement actif
+        coach_data = get_demo_user(email)
+        if not coach_data or coach_data.get("role") != "coach":
+            return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=400)
+        if coach_data.get("subscription_status") != "active":
+            return JSONResponse({"success": False, "error": "Abonnement non actif"}, status_code=400)
+        # Créer la session et rediriger
+        response = JSONResponse({"success": True, "redirect": "/coach/portal"})
+        _set_session_cookie(response, email, request)
+        return response
+    except Exception as e:
+        log.error(f"Erreur verify_email: {e}")
+        return JSONResponse({"success": False, "error": "Erreur serveur"}, status_code=500)
+
+
+@app.post("/verify-email/resend")
+@limiter.limit("3/minute")
+async def verify_email_resend(request: Request):
+    """Renvoye un nouveau code OTP par email."""
+    try:
+        data = await request.json()
+        email = (data.get("email") or "").strip().lower()
+        if not email:
+            return JSONResponse({"success": False, "error": "Email requis"}, status_code=400)
+        from email_verification_service import send_email_verification_code
+        ok, err = send_email_verification_code(email)
+        if ok:
+            return JSONResponse({"success": True})
+        return JSONResponse({"success": False, "error": err or "Erreur envoi"}, status_code=400)
+    except Exception as e:
+        log.error(f"Erreur verify_email resend: {e}")
+        return JSONResponse({"success": False, "error": "Erreur serveur"}, status_code=500)
+
+
+# ======================================
+# ROUTE VERIFICATION EMAIL COACH (legacy, session requise)
 # ======================================
 
 @app.get("/coach/verify-email", response_class=HTMLResponse)
@@ -6987,7 +7071,7 @@ async def api_create_portal_session(request: Request, user = Depends(require_coa
 async def stripe_success(request: Request, session_id: Optional[str] = Query(None)):
     """
     Page publique après paiement Stripe Checkout.
-    Vérifie payment_status puis redirige vers /coach-login?payment=success ou /pricing?payment=failed.
+    Vérifie payment_status puis redirige vers /verify-email?email=...&payment=success.
     """
     if not session_id:
         return RedirectResponse(url="/pricing?payment=failed", status_code=302)
@@ -6998,6 +7082,14 @@ async def stripe_success(request: Request, session_id: Optional[str] = Query(Non
         session = stripe.checkout.Session.retrieve(session_id)
         if session.payment_status != "paid":
             return RedirectResponse(url="/pricing?payment=failed", status_code=302)
+        details = getattr(session, "customer_details", None) or session.get("customer_details")
+        meta = getattr(session, "metadata", None) or session.get("metadata") or {}
+        email_from_details = details.get("email") if isinstance(details, dict) else (getattr(details, "email", None) if details else None)
+        customer_email = email_from_details or meta.get("coach_email") or meta.get("email")
+        if customer_email:
+            from urllib.parse import quote
+            redirect_url = f"/verify-email?email={quote(customer_email)}&payment=success"
+            return RedirectResponse(url=redirect_url, status_code=302)
         return RedirectResponse(url="/coach-login?payment=success", status_code=302)
     except Exception as e:
         log.warning(f"[Stripe] Erreur stripe_success: {e}")
@@ -7076,6 +7168,11 @@ async def activate_coach_subscription(customer_email: str, session: dict):
             subscription_end=end_date.strftime("%d/%m/%Y"),
             lang=coach_data.get("lang", "fr") if coach_data else "fr"
         )
+        # Envoi du code OTP pour vérification email (obligatoire avant accès portail)
+        from email_verification_service import send_email_verification_code
+        ok, err = send_email_verification_code(customer_email)
+        if not ok:
+            log.warning(f"Erreur envoi code OTP à {customer_email}: {err}")
     except Exception as e:
         log.warning(f"Erreur envoi email bienvenue: {e}")
 

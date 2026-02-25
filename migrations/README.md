@@ -33,6 +33,7 @@ psql -d $DATABASE_URL -f migrations/001_add_profile_completed.sql
 ## Migration Files
 
 - `001_add_profile_completed.sql` - Adds profile_completed boolean field to profiles table for coach onboarding flow
+- `002_add_email_verifications.sql` - Creates email_verifications table for coach OTP flow (post-Stripe payment)
 
 ## Notes
 

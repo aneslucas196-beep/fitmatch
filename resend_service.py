@@ -59,6 +59,66 @@ def get_social_footer(lang: str = 'fr') -> str:
 </div>
 '''
 
+def send_email_verification_code_email(to_email: str, otp_code: str, verify_url: str, lang: str = 'fr') -> dict:
+    """Envoie l'email OTP post-paiement coach (objet: Votre code FitMatch, code en gros)."""
+    resend_key = os.environ.get('RESEND_API_KEY')
+    mail_from = _mail_from()
+    t = get_email_translations(lang)
+    
+    if not resend_key:
+        log.warning(f"RESEND_API_KEY manquante - email OTP non envoyé à {to_email}")
+        return {"success": False, "error": "RESEND_API_KEY manquante"}
+    
+    try:
+        otp_subject = t.get('otp_subject', 'Votre code FitMatch')
+        otp_welcome = t.get('otp_welcome', 'Bienvenue sur FitMatch ! Voici votre code de vérification :')
+        otp_expires = t.get('otp_expires', 'Ce code expire dans')
+        otp_minutes = t.get('otp_minutes', '10 minutes')
+        otp_instruction = t.get('otp_instruction', 'Saisissez ce code pour activer votre compte.')
+        validate_btn = t.get('validate_email_btn', 'Valider mon email')
+        platform_connects = t.get('platform_connects', 'La plateforme qui connecte coachs et clients')
+
+        html_content = f"""
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+            <div style="background: #008f57; padding: 40px; text-align: center; color: white;">
+                <h1>FitMatch</h1>
+                <p>{t.get('platform_tagline', 'Votre plateforme de coaching fitness')}</p>
+            </div>
+            <div style="padding: 40px; background: white;">
+                <h2>{otp_welcome}</h2>
+                <div style="border: 2px solid #008f57; padding: 20px; text-align: center; margin: 20px 0; font-size: 32px; font-weight: bold; color: #008f57;">
+                    {otp_code}
+                </div>
+                <p style="font-size: 14px; color: #64748b;">⏱️ {otp_expires} {otp_minutes}</p>
+                <p>{otp_instruction}</p>
+                <div style="text-align: center; margin-top: 25px;">
+                    <a href="{verify_url}" style="background: #008f57; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">{validate_btn}</a>
+                </div>
+            </div>
+            {get_social_footer(lang)}
+            <div style="padding: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+                <p>{platform_connects}</p>
+            </div>
+        </div>
+        """
+        
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {resend_key}", "Content-Type": "application/json"},
+            json={
+                "from": mail_from,
+                "to": [to_email],
+                "subject": f"{otp_subject}: {otp_code}",
+                "html": html_content
+            },
+            timeout=10
+        )
+        return {"success": response.status_code == 200}
+    except Exception as e:
+        log.error(f"Error sending email verification code: {e}")
+        return {"success": False, "error": str(e)}
+
+
 def send_otp_email_resend(to_email: str, otp_code: str, full_name: Optional[str] = None, lang: str = 'fr') -> dict:
     """Envoie un code OTP par email via Resend API"""
     resend_key = os.environ.get('RESEND_API_KEY')
