@@ -64,8 +64,8 @@
                 <div class="h-48 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center overflow-hidden">
                     {% if coach.photo %}
                     <img src="{{ coach.photo }}" alt="{{ coach.full_name }}" 
-                         class="w-full h-full object-cover"
-                         onerror="this.parentElement.innerHTML='<div class=\'text-6xl\'>👤</div>'">
+                         class="w-full h-full object-cover coach-photo-img"
+                         data-error-display="👤">
                     {% else %}
                     <div class="text-6xl">👤</div>
                     {% endif %}
@@ -141,4 +141,16 @@
         {% endif %}
     </div>
 </div>
+
+<script nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('img[data-error-display]').forEach(function(img) {
+    img.addEventListener('error', function() {
+      var emoji = this.getAttribute('data-error-display') || '👤';
+      var parent = this.parentElement;
+      if (parent) parent.innerHTML = '<div class="text-6xl flex items-center justify-center w-full h-full">' + emoji + '</div>';
+    });
+  });
+});
+</script>
 {% endblock %}

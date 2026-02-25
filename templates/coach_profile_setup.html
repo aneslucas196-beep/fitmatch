@@ -336,6 +336,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========================================
     // GESTION DES SALLES
     // ========================================
+    // Délégation CSP: boutons remove-gym dynamiques
+    document.body.addEventListener('click', function(e) {
+        const btn = e.target.closest('[data-action="remove-gym"]');
+        if (btn) removeGym(btn.getAttribute('data-gym-id'));
+    });
+    
     // Afficher les salles sauvegardées au chargement
     if (selectedGyms.length > 0) {
         updateSelectedGymsList();
@@ -478,7 +484,7 @@ function updateSelectedGymsList() {
                 <div class="font-medium text-gray-900">${gym.name}</div>
                 <div class="text-sm text-gray-600">${gym.address}</div>
             </div>
-            <button type="button" onclick="removeGym('${gym.id}')" 
+            <button type="button" data-action="remove-gym" data-gym-id="${gym.id}" 
                     class="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition text-sm">
                 🗑️ ${TRANSLATIONS.delete_btn}
             </button>

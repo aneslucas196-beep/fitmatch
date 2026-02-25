@@ -232,7 +232,7 @@
 
 <nav>
   <a href="/" class="nav-logo">
-    <img src="/static/logo.png" alt="FitMatch" onerror="this.style.display='none'">
+    <img src="/static/logo.png" alt="FitMatch" class="logo-img" data-error-display="none">
     <span>FitMatch</span>
   </a>
 </nav>
@@ -314,6 +314,9 @@ document.getElementById('otp_code').addEventListener('paste', function(e) {
       setTimeout(() => e.target.form.submit(), 200);
     }
   }, 10);
+});
+document.querySelectorAll('img[data-error-display]').forEach(function(img) {
+  img.addEventListener('error', function() { this.style.display = 'none'; });
 });
 </script>
 </body>

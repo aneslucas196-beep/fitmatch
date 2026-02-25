@@ -501,7 +501,7 @@
 <!-- Navbar -->
 <nav>
   <a href="/" class="nav-logo">
-    <img src="/static/logo.png" alt="FitMatch" onerror="this.style.display='none'">
+    <img src="/static/logo.png" alt="FitMatch" class="logo-img" data-error-display="none">
     <span>FitMatch</span>
   </a>
   
@@ -513,7 +513,7 @@
   <div class="nav-right" style="display: flex; align-items: center; gap: 12px;">
     <!-- Sélecteur de langue -->
     <div class="language-selector" style="position: relative;">
-      <button onclick="toggleLanguageMenu()" class="cta-outline" style="padding: 8px 12px; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+      <button type="button" class="cta-outline" id="lang-toggle-btn" style="padding: 8px 12px; font-size: 14px; display: flex; align-items: center; gap: 6px;">
         🌐 {{ locale|default('fr')|upper }}
       </button>
       <div id="langMenu" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); min-width: 150px; z-index: 1000; overflow: hidden;">
@@ -619,14 +619,14 @@
               placeholder="{{ t.login.password_placeholder|default('Votre mot de passe') }}"
               autocomplete="current-password"
             >
-            <button type="button" class="fm-password-toggle" onclick="togglePassword()" aria-label="Afficher le mot de passe">
+            <button type="button" class="fm-password-toggle" id="login-password-toggle" aria-label="Afficher le mot de passe">
               <svg id="eye-icon" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
               </svg>
             </button>
           </div>
-          <a href="#" class="fm-forgot-link" onclick="showForgotModal(); return false;">{{ t.login.forgot_password|default("Mot de passe oublié ?") }}</a>
+          <a href="#" class="fm-forgot-link" id="forgot-password-link">{{ t.login.forgot_password|default("Mot de passe oublié ?") }}</a>
         </div>
         
         <button type="submit" class="fm-btn">{{ t.login.login_button|default("Se connecter") }}</button>
@@ -661,7 +661,7 @@
 <div class="fm-modal-overlay" id="forgotModal">
   <div class="fm-modal">
     <div class="fm-modal-content">
-      <button class="fm-modal-close" onclick="closeForgotModal()">&times;</button>
+      <button type="button" class="fm-modal-close" id="forgot-modal-close">&times;</button>
       
       <div id="forgotFormView">
         <div class="fm-modal-header">
@@ -687,7 +687,7 @@
         </form>
         
         <div class="fm-modal-footer">
-          <a onclick="closeForgotModal()">{{ t.login.back_to_login|default("Retour à la connexion") }}</a>
+          <a href="#" id="forgot-back-link">{{ t.login.back_to_login|default("Retour à la connexion") }}</a>
         </div>
       </div>
       
@@ -697,7 +697,7 @@
           <h3>{{ t.login.email_sent_title|default("Email envoyé !") }}</h3>
           <p>{{ t.login.email_sent_desc|default("Si un compte existe avec cette adresse, vous recevrez un lien de réinitialisation.") }}</p>
         </div>
-        <button class="fm-btn" onclick="closeForgotModal()" style="margin-top:20px;">{{ t.common.close|default("Fermer") }}</button>
+        <button type="button" class="fm-btn" id="forgot-close-btn" style="margin-top:20px;">{{ t.common.close|default("Fermer") }}</button>
       </div>
     </div>
   </div>
@@ -756,20 +756,30 @@ if (document.getElementById('passwordChangedToast')) {
 function togglePassword() {
   const input = document.getElementById('password');
   const icon = document.getElementById('eye-icon');
-  
+  if (!input || !icon) return;
   if (input.type === 'password') {
     input.type = 'text';
-    icon.innerHTML = `
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
-    `;
+    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>';
   } else {
     input.type = 'password';
-    icon.innerHTML = `
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-    `;
+    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
   }
 }
+document.addEventListener('DOMContentLoaded', function() {
+  var el = document.getElementById('login-password-toggle');
+  if (el) el.addEventListener('click', togglePassword);
+  el = document.getElementById('forgot-password-link');
+  if (el) el.addEventListener('click', function(e) { e.preventDefault(); showForgotModal(); });
+  el = document.getElementById('forgot-modal-close');
+  if (el) el.addEventListener('click', closeForgotModal);
+  el = document.getElementById('forgot-back-link');
+  if (el) el.addEventListener('click', function(e) { e.preventDefault(); closeForgotModal(); });
+  el = document.getElementById('forgot-close-btn');
+  if (el) el.addEventListener('click', closeForgotModal);
+  document.querySelectorAll('img[data-error-display]').forEach(function(img) {
+    img.addEventListener('error', function() { this.style.display = 'none'; });
+  });
+});
 </script>
 </body>
 </html>

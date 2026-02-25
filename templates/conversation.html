@@ -217,7 +217,7 @@
 </head>
 <body>
     <header class="chat-header">
-        <button class="back-btn" onclick="goBack()">
+        <button type="button" class="back-btn" id="conversation-back-btn">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M15 18l-6-6 6-6"/>
             </svg>
@@ -235,7 +235,7 @@
     
     <div class="chat-input">
         <input type="text" id="message-input" placeholder="{{ t.conversation.write_message|default('Écrivez votre message...') }}" onkeypress="handleKeyPress(event)">
-        <button class="send-btn" id="send-btn" onclick="sendMessage()">
+        <button type="button" class="send-btn" id="send-btn">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
             </svg>
@@ -542,7 +542,13 @@
             if (pollingInterval) clearInterval(pollingInterval);
         });
         
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', function() {
+            init();
+            var el = document.getElementById('conversation-back-btn');
+            if (el) el.addEventListener('click', goBack);
+            el = document.getElementById('send-btn');
+            if (el) el.addEventListener('click', sendMessage);
+        });
     </script>
 </body>
 </html>

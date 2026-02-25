@@ -69,7 +69,7 @@
                     <a href="/coach-login" class="hover:text-blue-200">Espace Coach</a>
                     <!-- Sélecteur de langue -->
                     <div class="language-selector relative ml-4">
-                        <button onclick="toggleLanguageMenu()" class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded-lg text-sm flex items-center gap-1">
+                        <button type="button" class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded-lg text-sm flex items-center gap-1" id="lang-toggle-btn">
                             🌐 {{ locale|default('fr')|upper }}
                         </button>
                         <div id="langMenu" class="hidden absolute top-full right-0 mt-2 bg-white rounded-lg shadow-xl min-w-[150px] z-50 overflow-hidden">

@@ -479,7 +479,7 @@
           src="{{ coach.photo_url or '/static/default-coach.jpg' }}" 
           alt="{{ coach.name }}" 
           class="coach-card-image"
-          onerror="this.src='https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop'"
+          data-fallback-img="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop"
         >
         <div class="coach-card-body">
           <div class="coach-card-header">
@@ -487,7 +487,7 @@
               src="{{ coach.photo_url or '/static/default-avatar.jpg' }}" 
               alt="" 
               class="coach-card-avatar"
-              onerror="this.style.background='linear-gradient(135deg, #008f57, #00c77b)'"
+              data-fallback-style="background:linear-gradient(135deg, #008f57, #00c77b)"
             >
             <div class="coach-card-info">
               <h3>
@@ -531,6 +531,23 @@
     </div>
     {% endif %}
   </main>
+
+<script nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('img[data-fallback-img]').forEach(function(img) {
+    img.addEventListener('error', function() {
+      var fallback = this.getAttribute('data-fallback-img');
+      if (fallback) this.src = fallback;
+    });
+  });
+  document.querySelectorAll('img[data-fallback-style]').forEach(function(img) {
+    img.addEventListener('error', function() {
+      var s = this.getAttribute('data-fallback-style');
+      if (s) this.style.cssText = (this.style.cssText || '') + ';' + s;
+    });
+  });
+});
+</script>
 
 </body>
 </html>

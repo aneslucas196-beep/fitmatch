@@ -12,6 +12,11 @@ function toggleLanguageMenu() {
     }
 }
 
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.language-selector button, button.btn-lang').forEach(function(btn) {
+        btn.addEventListener('click', function(e) { e.preventDefault(); toggleLanguageMenu(); });
+    });
+});
 document.addEventListener('click', function(e) {
     const menu = document.getElementById('langMenu');
     const btn = e.target.closest('.language-selector');

@@ -453,7 +453,7 @@
     <div class="logo">FitMatch</div>
     <div class="nav-buttons">
       <div class="language-selector" style="position: relative; margin-right: 12px;">
-        <button onclick="toggleLanguageMenu()" class="btn-lang" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+        <button type="button" class="btn-lang" id="lang-toggle-btn" style="background: transparent; border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px;">
           🌐 {{ locale|default('fr')|upper }}
         </button>
         <div id="langMenu" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); min-width: 150px; z-index: 1000; overflow: hidden;">
@@ -500,7 +500,7 @@
         <div class="selected-gym-address" id="selectedGymAddress"></div>
       </div>
     </div>
-    <button class="selected-gym-clear" onclick="clearSelectedGym()">✕ {{ t.common.cancel|default('Changer de salle') }}</button>
+    <button type="button" class="selected-gym-clear" id="selected-gym-clear-btn">✕ {{ t.common.cancel|default('Changer de salle') }}</button>
   </div>
 
   <section id="resultsSection" class="results-section" style="display: none;">
@@ -753,6 +753,10 @@
       resultsSection.style.display = 'none';
       gymInput.focus();
     }
+    document.addEventListener('DOMContentLoaded', function() {
+      var btn = document.getElementById('selected-gym-clear-btn');
+      if (btn) btn.addEventListener('click', clearSelectedGym);
+    });
 
     async function loadCoachesForGym(gym) {
       resultsSection.style.display = 'block';
@@ -796,12 +800,10 @@
 
         return `
           <a href="/coach/${coachId}" class="coach-card">
-            <img src="${photoUrl}" alt="${escapeHtml(coach.name)}" class="coach-card-image" 
-                 onerror="this.src='https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop'">
+            <img src="${photoUrl}" alt="${escapeHtml(coach.name)}" class="coach-card-image" data-fallback-img="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop">
             <div class="coach-card-body">
               <div class="coach-card-header">
-                <img src="${photoUrl}" alt="" class="coach-card-avatar"
-                     onerror="this.style.background='linear-gradient(135deg, #008f57, #00c77b)'">
+                <img src="${photoUrl}" alt="" class="coach-card-avatar" data-fallback-style="background:linear-gradient(135deg, #008f57, #00c77b)">
                 <div>
                   <h3 class="coach-card-name">
                     ${escapeHtml(coach.name)}
@@ -822,6 +824,18 @@
           </a>
         `;
       }).join('');
+      resultsGrid.querySelectorAll('img[data-fallback-img]').forEach(function(img) {
+        img.addEventListener('error', function() {
+          var fallback = this.getAttribute('data-fallback-img');
+          if (fallback) this.src = fallback;
+        });
+      });
+      resultsGrid.querySelectorAll('img[data-fallback-style]').forEach(function(img) {
+        img.addEventListener('error', function() {
+          var s = this.getAttribute('data-fallback-style');
+          if (s) this.setAttribute('style', s);
+        });
+      });
     }
   </script>
 

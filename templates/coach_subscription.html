@@ -123,7 +123,7 @@ if (urlParams.get('cancelled')) {
             </div>
 
             {% if subscription_info.stripe_customer_id %}
-            <button onclick="openPortal()" 
+            <button type="button" id="open-portal-btn" 
                     class="w-full bg-slate-900 text-white py-4 rounded-xl font-semibold hover:bg-slate-800 transition duration-200">
                 {{ t.subscription.manage_subscription|default('Gérer mon abonnement') }}
             </button>
@@ -216,7 +216,7 @@ if (urlParams.get('cancelled')) {
                 </ul>
                 
                 {% if stripe_available|default(true) %}
-                <button onclick="subscribeAnnual()" id="subscribeAnnualBtn"
+                <button type="button" id="subscribeAnnualBtn"
                         class="w-full bg-slate-900 text-white py-4 rounded-xl font-semibold hover:bg-slate-800 transition duration-200 flex items-center justify-center">
                     <span id="btnAnnualText">{{ t.subscription.subscribe_annual|default("S'abonner pour 1 an") }}</span>
                     <svg id="btnAnnualSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
@@ -304,7 +304,7 @@ if (urlParams.get('cancelled')) {
                 </ul>
                 
                 {% if stripe_available|default(true) %}
-                <button onclick="subscribe()" id="subscribeBtn"
+                <button type="button" id="subscribeBtn"
                         class="w-full bg-emerald-500 text-white py-4 rounded-xl font-semibold hover:bg-emerald-600 transition duration-200 flex items-center justify-center">
                     <span id="btnText">{{ t.subscription.subscribe_now|default("S'abonner maintenant") }}</span>
                     <svg id="btnSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
@@ -470,6 +470,14 @@ async function openPortal() {
         alert(typeof error.message === 'string' ? error.message : i18n.error);
     }
 }
+document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('open-portal-btn');
+    if (el) el.addEventListener('click', openPortal);
+    el = document.getElementById('subscribeAnnualBtn');
+    if (el) el.addEventListener('click', subscribeAnnual);
+    el = document.getElementById('subscribeBtn');
+    if (el) el.addEventListener('click', subscribe);
+});
 </script>
 
 </body>

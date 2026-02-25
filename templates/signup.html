@@ -411,7 +411,7 @@
 <!-- Navbar -->
 <nav>
   <a href="/" class="nav-logo">
-    <img src="/static/logo.png" alt="FitMatch" onerror="this.style.display='none'">
+    <img src="/static/logo.png" alt="FitMatch" class="logo-img" data-error-display="none">
     <span>FitMatch</span>
   </a>
   
@@ -423,7 +423,7 @@
   <div class="nav-right">
     <!-- Sélecteur de langue -->
     <div class="language-selector" style="position: relative;">
-      <button onclick="toggleLanguageMenu()" class="cta-outline" style="padding: 8px 12px; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+      <button type="button" class="cta-outline" id="lang-toggle-btn" style="padding: 8px 12px; font-size: 14px; display: flex; align-items: center; gap: 6px;">
         🌐 {{ locale|default('fr')|upper }}
       </button>
       <div id="langMenu" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); min-width: 150px; z-index: 1000; overflow: hidden;">
@@ -472,11 +472,11 @@
 
         <!-- Role toggle -->
         <div class="fm-role-toggle">
-          <label class="fm-role-option {% if role != 'client' %}active{% endif %}" onclick="setRole('coach')">
+          <label class="fm-role-option {% if role != 'client' %}active{% endif %}" id="role-coach" role="button" tabindex="0">
             <input type="radio" name="role" value="coach" {% if role != 'client' %}checked{% endif %}>
             {{ t.signup.role_coach|default('Je suis coach') }}
           </label>
-          <label class="fm-role-option {% if role == 'client' %}active{% endif %}" onclick="setRole('client')">
+          <label class="fm-role-option {% if role == 'client' %}active{% endif %}" id="role-client" role="button" tabindex="0">
             <input type="radio" name="role" value="client" {% if role == 'client' %}checked{% endif %}>
             {{ t.signup.role_client|default('Je cherche un coach') }}
           </label>
@@ -544,7 +544,7 @@
               placeholder="{{ t.signup.password_placeholder|default('Créez un mot de passe') }}"
               autocomplete="new-password"
             >
-            <button type="button" class="fm-password-toggle" onclick="togglePassword()" aria-label="Afficher le mot de passe">
+            <button type="button" class="fm-password-toggle" id="signup-password-toggle" aria-label="Afficher le mot de passe">
               <svg id="eye-icon" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -599,12 +599,27 @@ function togglePassword() {
 function setRole(role) {
   document.querySelectorAll('.fm-role-option').forEach(opt => {
     opt.classList.remove('active');
-    if (opt.querySelector('input').value === role) {
+    var inp = opt.querySelector('input');
+    if (inp && inp.value === role) {
       opt.classList.add('active');
-      opt.querySelector('input').checked = true;
+      inp.checked = true;
     }
   });
 }
+document.addEventListener('DOMContentLoaded', function() {
+  var el = document.getElementById('role-coach');
+  if (el) el.addEventListener('click', function() { setRole('coach'); });
+  el = document.getElementById('role-client');
+  if (el) el.addEventListener('click', function() { setRole('client'); });
+  el = document.getElementById('signup-password-toggle');
+  if (el) el.addEventListener('click', togglePassword);
+  document.querySelectorAll('img[data-error-display]').forEach(function(img) {
+    img.addEventListener('error', function() {
+      var d = this.getAttribute('data-error-display');
+      if (d === 'none') this.style.display = 'none';
+    });
+  });
+});
 </script>
 </body>
 </html>

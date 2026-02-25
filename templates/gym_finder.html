@@ -218,7 +218,7 @@
               ${openNow}
             </div>
             ${p.place_id ? `
-              <button onclick="showPlaceDetails('${p.place_id}')" 
+              <button type="button" data-place-id="${p.place_id}" 
                       class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">
                 Voir détails
               </button>
@@ -280,7 +280,7 @@
                 <div class="p-6">
                   <div class="flex justify-between items-start mb-4">
                     <h3 class="text-xl font-bold">${place.name}</h3>
-                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+                    <button type="button" class="place-modal-close-btn text-gray-400 hover:text-gray-600">✕</button>
                   </div>
                   <p class="text-gray-600 mb-3">${place.formatted_address}</p>
           `;
@@ -300,6 +300,7 @@
           details += `</div></div></div>`;
           
           document.body.insertAdjacentHTML('beforeend', details);
+          document.querySelector('.place-modal-close-btn')?.addEventListener('click', closeModal);
         }
       });
     }
@@ -547,6 +548,11 @@
     // Obtenir la clé API depuis le serveur
     const GOOGLE_API_KEY = "{{ google_maps_api_key|default('') }}";
     window.initMap = initMap;
+
+    document.getElementById('results')?.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-place-id]');
+      if (btn) showPlaceDetails(btn.getAttribute('data-place-id'));
+    });
   </script>
 
   {% if google_maps_api_key %}

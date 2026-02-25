@@ -159,8 +159,8 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
         <h2 style="font-size:20px;font-weight:600;margin:0 0 12px;" id="cancel-modal-title">{{ t.client.cancel_confirm }}</h2>
         <p style="color:#666;margin:0 0 20px;" id="cancel-info"></p>
         <div style="display:flex;gap:12px;">
-            <button onclick="document.getElementById('cancel-modal').close()" style="flex:1;padding:12px;border-radius:8px;border:1px solid #ddd;background:white;font-weight:500;cursor:pointer;" id="btn-keep">{{ t.common.cancel if t.common and t.common.cancel else 'OK' }}</button>
-            <button onclick="confirmCancel()" style="flex:1;padding:12px;border-radius:8px;border:none;background:#ef4444;color:white;font-weight:500;cursor:pointer;" id="btn-confirm">{{ t.client.cancel }}</button>
+            <button type="button" style="flex:1;padding:12px;border-radius:8px;border:1px solid #ddd;background:white;font-weight:500;cursor:pointer;" id="btn-keep">{{ t.common.cancel if t.common and t.common.cancel else 'OK' }}</button>
+            <button type="button" style="flex:1;padding:12px;border-radius:8px;border:none;background:#ef4444;color:white;font-weight:500;cursor:pointer;" id="btn-confirm">{{ t.client.cancel }}</button>
         </div>
     </div>
 </dialog>
@@ -392,7 +392,7 @@ async function loadBookings(skipSync = false) {
                                 Message
                             </a>
                         ` : ''}
-                        <button onclick="openCancelModal(${idx})" class="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-full transition-colors flex items-center gap-1">
+                        <button type="button" data-open-cancel="${idx}" class="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-full transition-colors flex items-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
@@ -496,6 +496,14 @@ document.addEventListener('DOMContentLoaded', function() {
     displayRandomMotivation();
     setInterval(displayRandomMotivation, 10000);
     loadBookings();
+    var el = document.getElementById('btn-keep');
+    if (el) el.addEventListener('click', function() { document.getElementById('cancel-modal').close(); });
+    el = document.getElementById('btn-confirm');
+    if (el) el.addEventListener('click', confirmCancel);
+    document.getElementById('bookings-list')?.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-open-cancel]');
+        if (btn) openCancelModal(parseInt(btn.getAttribute('data-open-cancel'), 10));
+    });
 });
 </script>
 

@@ -400,7 +400,7 @@
 <!-- Navbar -->
 <nav>
   <a href="/" class="nav-logo">
-    <img src="/static/logo.png" alt="FitMatch" onerror="this.style.display='none'">
+    <img src="/static/logo.png" alt="FitMatch" class="logo-img" data-error-display="none">
     <span>FitMatch</span>
   </a>
   
@@ -446,8 +446,8 @@
 
       <!-- Tabs -->
       <div class="fm-tabs">
-        <button type="button" class="fm-tab active" id="tab-login" onclick="showTab('login')">{{ t.coach_portal.tab_login|default('Se connecter') }}</button>
-        <button type="button" class="fm-tab" id="tab-signup" onclick="showTab('signup')">{{ t.coach_portal.tab_signup|default("S'inscrire") }}</button>
+        <button type="button" class="fm-tab active" id="tab-login">{{ t.coach_portal.tab_login|default('Se connecter') }}</button>
+        <button type="button" class="fm-tab" id="tab-signup">{{ t.coach_portal.tab_signup|default("S'inscrire") }}</button>
       </div>
 
       <!-- Login Form -->
@@ -480,7 +480,7 @@
               placeholder="{{ t.coach_portal.password_placeholder|default('Votre mot de passe') }}"
               autocomplete="current-password"
             >
-            <button type="button" class="fm-password-toggle" onclick="togglePassword('login-password', 'login-eye')" aria-label="Afficher le mot de passe">
+            <button type="button" class="fm-password-toggle" id="login-pw-toggle" aria-label="Afficher le mot de passe">
               <svg id="login-eye" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -536,7 +536,7 @@
               placeholder="{{ t.coach_portal.password_min|default('Minimum 8 caractères') }}"
               autocomplete="new-password"
             >
-            <button type="button" class="fm-password-toggle" onclick="togglePassword('signup-password', 'signup-eye')" aria-label="Afficher le mot de passe">
+            <button type="button" class="fm-password-toggle" id="signup-pw-toggle" aria-label="Afficher le mot de passe">
               <svg id="signup-eye" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -606,6 +606,19 @@ const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('tab') === 'signup' || {% if tab == 'signup' %}true{% else %}false{% endif %}) {
   showTab('signup');
 }
+document.addEventListener('DOMContentLoaded', function() {
+  var el = document.getElementById('tab-login');
+  if (el) el.addEventListener('click', function() { showTab('login'); });
+  el = document.getElementById('tab-signup');
+  if (el) el.addEventListener('click', function() { showTab('signup'); });
+  el = document.getElementById('login-pw-toggle');
+  if (el) el.addEventListener('click', function() { togglePassword('login-password', 'login-eye'); });
+  el = document.getElementById('signup-pw-toggle');
+  if (el) el.addEventListener('click', function() { togglePassword('signup-password', 'signup-eye'); });
+  document.querySelectorAll('img[data-error-display]').forEach(function(img) {
+    img.addEventListener('error', function() { this.style.display = 'none'; });
+  });
+});
 </script>
 </body>
 </html>

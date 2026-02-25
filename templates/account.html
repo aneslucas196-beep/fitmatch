@@ -250,7 +250,7 @@
                 <a href="/account/info" class="{{ 'active' if account_tab == 'info' else '' }}">{{ t.account.my_info|default('Mes informations') }}</a>
                 <a href="/account/payments" class="{{ 'active' if account_tab == 'payments' else '' }}">{{ t.account.my_payments|default('Mes paiements') }}</a>
             </nav>
-            <button class="fm-link-danger" onclick="logout()">{{ t.account.logout|default('Se déconnecter') }}</button>
+            <button type="button" class="fm-link-danger" id="logout-btn">{{ t.account.logout|default('Se déconnecter') }}</button>
         </aside>
 
         <main class="fm-account-main">
@@ -312,7 +312,7 @@
             </div>
 
             <div style="display: flex; gap: 10px;">
-                <button onclick="closeCancelModal()" style="
+                <button type="button" id="cancel-modal-keep" style="
                     flex: 1;
                     padding: 12px;
                     border-radius: 10px;
@@ -324,7 +324,7 @@
                     font-weight: 500;
                     transition: 0.2s;
                 ">{{ t.account.do_not_cancel|default('Ne pas annuler') }}</button>
-                <button onclick="confirmCancellation()" style="
+                <button type="button" id="cancel-modal-confirm" style="
                     flex: 1;
                     padding: 12px;
                     border-radius: 10px;
@@ -471,8 +471,8 @@
                 <div class="fm-booking-body">
                     <p class="fm-booking-service">${booking.service || sessionDefault} – ${booking.duration || 60} min • ${booking.price || 40}€</p>
                     <div class="fm-booking-actions">
-                        <button class="fm-btn-outline" onclick="addToCalendar(${index})">📅 ${addCal}</button>
-                        <button class="fm-btn-outline fm-btn-danger" onclick="cancelBooking(${index})">${cancelBtn}</button>
+                        <button type="button" class="fm-btn-outline" data-add-calendar="${index}">📅 ${addCal}</button>
+                        <button type="button" class="fm-btn-outline fm-btn-danger" data-cancel-booking="${index}">${cancelBtn}</button>
                     </div>
                 </div>
             `;
@@ -589,7 +589,21 @@
             window.location.href = '/';
         }
         
-        document.addEventListener('DOMContentLoaded', loadBookings);
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBookings();
+            var el = document.getElementById('logout-btn');
+            if (el) el.addEventListener('click', logout);
+            el = document.getElementById('cancel-modal-keep');
+            if (el) el.addEventListener('click', closeCancelModal);
+            el = document.getElementById('cancel-modal-confirm');
+            if (el) el.addEventListener('click', confirmCancellation);
+            document.getElementById('bookings-list')?.addEventListener('click', function(e) {
+                var btn = e.target.closest('[data-add-calendar]');
+                if (btn) { addToCalendar(parseInt(btn.getAttribute('data-add-calendar'), 10)); return; }
+                btn = e.target.closest('[data-cancel-booking]');
+                if (btn) { cancelBooking(parseInt(btn.getAttribute('data-cancel-booking'), 10)); }
+            });
+        });
     </script>
 </body>
 </html>
