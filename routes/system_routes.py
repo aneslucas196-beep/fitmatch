@@ -109,6 +109,7 @@ Sitemap: {sitemap_url}
         xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
         xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
         for path, changefreq, priority in urls:
-            xml += f'  <url><loc>{base}{path}</loc><changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>\n'
+            loc = f"{base}{path}"
+            xml += f'    <url>\n        <loc>{loc}</loc>\n        <changefreq>{changefreq}</changefreq>\n        <priority>{priority}</priority>\n    </url>\n'
         xml += '</urlset>'
         return Response(content=xml, media_type="application/xml")
