@@ -415,6 +415,21 @@
       color: #fff;
     }
 
+    .footer-column form button {
+      background: none;
+      border: none;
+      color: #ccc;
+      padding: 0;
+      margin-bottom: 8px;
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+      transition: 0.2s;
+    }
+    .footer-column form button:hover {
+      color: #fff;
+    }
+
     .footer-bottom {
       text-align: center;
       color: #aaa;
@@ -449,7 +464,9 @@
           {% endfor %}
         </div>
       </div>
-      <a href="/partner" class="btn-coach">{{ t.nav.become_coach|default('Je suis un coach') }}</a>
+      <form action="/coach-signup" method="GET" style="display: inline;">
+        <button type="submit" class="btn-coach">{{ t.nav.become_coach|default('Devenir coach') }}</button>
+      </form>
       <a href="/login" class="btn-compte">{{ t.nav.my_account|default('Mon compte') }}</a>
     </div>
   </header>
@@ -467,7 +484,7 @@
           type="text" 
           id="gymSearchInput" 
           class="gym-search-input"
-          placeholder="{{ t.home.search_placeholder|default('Rechercher par ville ou code postal...') }}"
+          placeholder="{{ t.home.search_placeholder|default('Ex: Basic-Fit, Paris, Lyon, 75001...') }}"
           autocomplete="off"
         />
         <div id="gymAutocomplete" class="gym-autocomplete"></div>
@@ -527,7 +544,9 @@
       {{ t.home.become_coach_desc|default('Développe ton activité, attire plus de clients et gère tes réservations en ligne.') }}
     </p>
     <p style="margin-bottom: 1.25rem;">
-      <a href="/coach-signup" class="btn-coach" style="display: inline-block;">{{ t.home.become_coach_btn|default('Devenir coach') }}</a>
+      <form action="/coach-signup" method="GET" style="display: inline;">
+        <button type="submit" class="btn-coach" style="display: inline-block;">{{ t.home.become_coach_btn|default('Devenir coach') }}</button>
+      </form>
     </p>
     <div class="stats-grid">
       <div class="stat">
@@ -812,7 +831,7 @@
 
       <div class="footer-column">
         <h3>{{ t.footer.about_us|default('À propos de FitMatch') }}</h3>
-        <a href="/partner">{{ t.nav.become_coach|default('Devenir coach partenaire') }}</a>
+        <form action="/coach-signup" method="GET" style="display: inline;"><button type="submit">{{ t.nav.become_coach|default('Devenir coach') }}</button></form>
         <a href="/mentions-legales?lang={{ locale|default('fr') }}">{{ t.footer.terms|default('CGU') }}</a>
         <a href="/confidentialite?lang={{ locale|default('fr') }}">{{ t.footer.privacy|default('Confidentialité') }}</a>
         <a href="/contact?lang={{ locale|default('fr') }}">{{ t.footer.contact|default('Contact support') }}</a>

@@ -4975,10 +4975,9 @@ async def search_gyms_by_location_api(
         }
 
 @app.get("/api/gyms/worldwide-search")
-async def search_gyms_worldwide(q: str):
+async def search_gyms_worldwide(q: Optional[str] = Query(None)):
     """
-    🌍 Recherche MONDIALE de salles (Google Places API - style Replit).
-    Toutes les salles du monde : gyms, fitness, salles de sport.
+    🌍 Recherche MONDIALE de salles (Google Places API ou fallback local).
     Paramètres: q = nom, adresse, ville, pays...
     """
     try:
@@ -4987,18 +4986,54 @@ async def search_gyms_worldwide(q: str):
             return {
                 "success": True,
                 "gyms": [],
-                "message": "Tapez au moins 2 caractères",
+                "message": "Tapez au moins 2 caractères (ex. Basic-Fit, Paris, Lyon)",
                 "count": 0
             }
         has_key = bool(os.environ.get("GOOGLE_PLACES_API_KEY") or os.environ.get("GOOGLE_MAPS_API_KEY"))
         if not has_key:
+            # Fallback : salles locales (GYMS_DATABASE) + recherche par zone (Data ES) pour que la recherche fonctionne sans Google
+            results = []
+            q_lower = q_clean.lower()
+            # Mots-clés génériques : afficher des salles de référence
+            generic_keywords = ("salle", "gym", "fitness", "sport", "room")
+            if any(kw in q_lower for kw in generic_keywords):
+                results = [{
+                    "id": g["id"], "place_id": g["id"], "name": g["name"],
+                    "address": g.get("address", ""), "formatted_address": g.get("address", ""),
+                    "city": g.get("city", ""),
+                } for g in GYMS_DATABASE[:25]]
+            else:
+                for gym in GYMS_DATABASE:
+                    if (q_lower in (gym.get("name") or "").lower() or
+                        q_lower in (gym.get("address") or "").lower() or
+                        q_lower in (gym.get("city") or "").lower() or
+                        q_lower in (gym.get("chain") or "").lower()):
+                        results.append({
+                            "id": gym["id"], "place_id": gym["id"], "name": gym["name"],
+                            "address": gym.get("address", ""), "formatted_address": gym.get("address", ""),
+                            "city": gym.get("city", ""),
+                        })
+            # Ajouter résultats Data ES (ville/code postal) si pas d'erreur
+            try:
+                zone_results = search_gyms_by_zone(q_clean)
+                seen_ids = {g["id"] for g in results}
+                for gym in zone_results:
+                    if gym.get("id") not in seen_ids:
+                        seen_ids.add(gym["id"])
+                        results.append({
+                            "id": gym["id"], "place_id": gym["id"], "name": gym["name"],
+                            "address": gym.get("address", ""), "formatted_address": gym.get("address", ""),
+                            "city": gym.get("city", gym.get("zone", "")),
+                        })
+            except Exception as zone_err:
+                log.warning(f"Recherche zone fallback: {zone_err}")
             return {
-                "success": False,
-                "gyms": [],
-                "message": "Recherche de salles temporairement indisponible.",
-                "count": 0
+                "success": True,
+                "gyms": results[:30],
+                "count": len(results),
+                "message": f"{len(results)} salle(s) trouvée(s)" if results else "Aucune salle trouvée. Essayez: Basic-Fit, Paris, Lyon"
             }
-        
+
         results = search_gyms_worldwide_autocomplete(q_clean)
         return {
             "success": True,
