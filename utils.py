@@ -1208,27 +1208,46 @@ def search_gyms_by_zone(query: str) -> List[Dict]:
         if results:
             # Trier par source (Data ES en premier) puis par nom
             results.sort(key=lambda x: (x.get("source", "zzz") != "Data ES (officiel)", x["name"]))
-            city_name = results[0]["zone"] if results else "zone"
-            
-            # Compter par source
-            data_es_count = len([r for r in results if r.get("source") == "Data ES (officiel)"])
             total_count = len(results)
-            
-            log.info(f"🎯 Recherche {query}: {total_count} salles trouvées ({data_es_count} officielles + {total_count - data_es_count} locales)")
+            data_es_count = len([r for r in results if r.get("source") == "Data ES (officiel)"])
+            db_count = total_count - data_es_count
+            source_str = "data_es" if data_es_count else "db"
+            if data_es_count and db_count:
+                source_str = "data_es+db"
+            log.info(f"source={source_str} query={query!r} nb_results={total_count}")
             return results
         
-        log.error(f"❌ Aucune salle trouvée pour: {query}")
+        log.info(f"source=data_es/db query={query!r} nb_results=0")
         return []
         
     except Exception as e:
         log.error(f"Erreur recherche par zone: {e}")
         return []
 
-def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
+def _detect_google_api_error(response, text: str = "") -> Optional[Dict]:
+    """
+    Détecte si la réponse Google API indique une erreur fatale (billing/restrictions).
+    Retourne {"code": str, "message": str} ou None si pas d'erreur fatale.
+    """
+    raw = text if text else (getattr(response, "text", "") if response else "")
+    err_text = raw if isinstance(raw, str) else str(raw)
+    err_text_lower = err_text.lower()
+    if "REQUEST_DENIED" in err_text or "request_denied" in err_text_lower:
+        return {"code": "REQUEST_DENIED", "message": "Clé API invalide ou facturation non activée"}
+    if "OVER_QUERY_LIMIT" in err_text or "over_query_limit" in err_text_lower:
+        return {"code": "OVER_QUERY_LIMIT", "message": "Quota API dépassé"}
+    if "ApiNotActivatedMapError" in err_text or "apinotactivatedmaperror" in err_text_lower:
+        return {"code": "API_NOT_ACTIVATED", "message": "API Places/Maps non activée"}
+    if "INVALID_REQUEST" in err_text or "invalid_request" in err_text_lower:
+        return {"code": "INVALID_REQUEST", "message": "Requête invalide"}
+    return None
+
+
+def search_gyms_worldwide_autocomplete(query: str) -> Tuple[List[Dict], Optional[Dict]]:
     """
     Recherche MONDIALE de salles via Google Places API (New) - Text Search.
-    Style Replit : toutes les salles du monde (gyms, fitness centers, salles de sport).
-    Essaie d'abord avec type "gym", puis sans filtre de type pour élargir les résultats.
+    Retourne (results, google_error) où google_error est None si succès, ou un dict
+    {"code": str, "message": str} en cas d'erreur REQUEST_DENIED/OVER_QUERY_LIMIT/ApiNotActivatedMapError.
     """
     try:
         import requests
@@ -1240,10 +1259,10 @@ def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
             api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
         if not api_key:
             log.info("⚠️ Google Maps/Places : clé API non configurée (GOOGLE_MAPS_API_KEY ou GOOGLE_PLACES_API_KEY)")
-            return []
+            return [], None
         
         if len(query.strip()) < 2:
-            return []
+            return [], None
         
         url = "https://places.googleapis.com/v1/places:searchText"
         headers = {
@@ -1281,12 +1300,18 @@ def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
             "maxResultCount": 20,
             "includedType": "gym"
         }
-        log.info(f"🌍 Recherche mondiale Google Places: '{query}'")
+        log.info(f"source=google query={query!r} nb_results=0 (en cours)")
         response = requests.post(url, headers=headers, json=payload_gym, timeout=15)
         places = []
         if response.status_code == 200:
             data = response.json()
             places = data.get("places", [])
+        
+        # Détecter erreur Google (billing, quota, restrictions) - surtout si status != 200
+        google_err = _detect_google_api_error(response, response.text) if response.status_code != 200 else None
+        if google_err:
+            log.warning(f"source=google query={query!r} nb_results=0 google_error={google_err['code']} {google_err.get('message', '')}")
+            return [], google_err
         
         # 2) Si peu ou pas de résultats, refaire sans filtre de type (toutes les salles / fitness)
         if len(places) < 5:
@@ -1306,7 +1331,7 @@ def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
         
         if response.status_code != 200 and (not places):
             log.error(f"❌ Erreur Google Places API: {response.status_code} - {response.text[:200]}")
-            return []
+            return [], {"code": "HTTP_ERROR", "message": f"HTTP {response.status_code}"}
         
         results = []
         for place in places:
@@ -1314,20 +1339,27 @@ def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
             if gym_result:
                 results.append(gym_result)
         
-        log.info(f"✅ {len(results)} salles trouvées dans le monde pour '{query}'")
-        return results
+        log.info(f"source=google query={query!r} nb_results={len(results)}")
+        return results, None
         
     except Exception as e:
         log.error(f"❌ Erreur recherche mondiale Google Places: {e}")
-        return []
+        return [], {"code": "EXCEPTION", "message": str(e)}
 
-def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> List[Dict]:
+def search_gyms_google_places(
+    query: str,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    radius_km: int = 25
+) -> Tuple[List[Dict], Optional[Dict]]:
     """
-    Recherche les salles de sport via Google Places API (New).
-    Retourne une liste de salles avec leurs infos complètes.
+    Recherche salles via Google Places Text Search API (source principale).
+    Endpoint: https://maps.googleapis.com/maps/api/place/textsearch/json
+    Pas de filtre, pas de limite. Fallback uniquement si clé absente, REQUEST_DENIED ou OVER_QUERY_LIMIT.
     """
     try:
         import requests
+        import time
         
         try:
             from config import get_maps_api_key
@@ -1335,84 +1367,99 @@ def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> Li
         except Exception:
             api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
         if not api_key:
-            log.info("⚠️ Google Maps/Places : clé API non configurée")
-            return []
+            log.info("[Google Places] query='%s' results=0 (clé absente)", (query or "?")[:80])
+            return [], None
         
-        # Convertir radius_km en mètres (max 50000m pour Places API)
-        radius_meters = min(radius_km * 1000, 50000)
-        
-        # URL de l'API Places (New) - Nearby Search
-        url = "https://places.googleapis.com/v1/places:searchNearby"
-        
-        headers = {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": api_key,
-            "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.types,places.businessStatus"
+        url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+        params: Dict[str, Any] = {
+            "query": (query or "gym").strip(),
+            "key": api_key,
+            "region": "fr"
         }
+        if lat is not None and lng is not None:
+            params["location"] = f"{lat},{lng}"
+            params["radius"] = 50000
         
-        payload = {
-            "includedTypes": ["gym"],
-            "maxResultCount": 20,
-            "locationRestriction": {
-                "circle": {
-                    "center": {
-                        "latitude": lat,
-                        "longitude": lng
-                    },
-                    "radius": radius_meters
-                }
+        results: List[Dict] = []
+        seen_place_ids: set = set()
+        FALLBACK_ONLY = ("REQUEST_DENIED", "OVER_QUERY_LIMIT")
+        
+        def _parse(place: dict) -> Optional[Dict]:
+            place_id = place.get("place_id")
+            if not place_id or place_id in seen_place_ids:
+                return None
+            seen_place_ids.add(place_id)
+            loc = (place.get("geometry") or {}).get("location", {})
+            lat_p, lng_p = loc.get("lat"), loc.get("lng")
+            if lat_p is None or lng_p is None:
+                return None
+            addr = place.get("formatted_address", "Adresse non disponible")
+            return {
+                "id": place_id,
+                "place_id": place_id,
+                "name": place.get("name", "Salle de sport"),
+                "address": addr,
+                "formatted_address": addr,
+                "lat": lat_p,
+                "lng": lng_p,
+                "source": "google"
             }
-        }
         
-        log.info(f"🔍 Recherche Google Places API autour de ({lat}, {lng}) - rayon {radius_km}km")
+        def _fetch(pagetoken: Optional[str] = None) -> Dict:
+            p = {"key": api_key}
+            if pagetoken:
+                p["pagetoken"] = pagetoken
+            else:
+                p["query"] = params["query"]
+                p["region"] = params["region"]
+                if "location" in params:
+                    p["location"] = params["location"]
+                    p["radius"] = params["radius"]
+            resp = requests.get(url, params=p, timeout=15)
+            data = resp.json() if resp.status_code == 200 else {}
+            status = data.get("status", "HTTP_ERROR" if resp.status_code != 200 else "")
+            if resp.status_code != 200:
+                err = _detect_google_api_error(None, resp.text)
+                return {"error": True, "status": status, "google_err": err or {"status": status, "message": resp.text[:200]}}
+            if status in FALLBACK_ONLY or "ApiNotActivatedMapError" in (data.get("error_message") or ""):
+                return {"error": True, "status": status, "google_err": {"status": status, "message": data.get("error_message", status)}}
+            if status == "ZERO_RESULTS":
+                return {"error": False, "results": [], "next_page_token": None}
+            return {"error": False, "results": data.get("results", []), "next_page_token": data.get("next_page_token")}
         
-        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        data = _fetch()
+        if data.get("error"):
+            ge = data.get("google_err", {"status": data.get("status", "UNKNOWN"), "message": ""})
+            log.warning("[Google Places] query='%s' results=0 google_error=%s", (query or "?")[:80], ge.get("status", "?"))
+            return [], ge
         
-        if response.status_code != 200:
-            log.error(f"❌ Erreur Google Places API: {response.status_code} - {response.text}")
-            return []
+        for place in data.get("results", []):
+            g = _parse(place)
+            if g:
+                results.append(g)
         
-        data = response.json()
-        places = data.get("places", [])
+        next_token = data.get("next_page_token")
+        page_count = 1
+        while next_token and page_count < 3:
+            time.sleep(2)
+            page_count += 1
+            data = _fetch(next_token)
+            if data.get("error"):
+                break
+            for place in data.get("results", []):
+                g = _parse(place)
+                if g:
+                    results.append(g)
+            next_token = data.get("next_page_token")
+            if not next_token:
+                break
         
-        results = []
-        for place in places:
-            # Vérifier que c'est ouvert
-            if place.get("businessStatus") != "OPERATIONAL":
-                continue
-            
-            location = place.get("location", {})
-            lat_place = location.get("latitude")
-            lng_place = location.get("longitude")
-            
-            if not lat_place or not lng_place:
-                continue
-            
-            # Calculer la distance réelle
-            distance = haversine_distance(lat, lng, lat_place, lng_place)
-            
-            gym_result = {
-                "id": f"google_worldwide_{place.get('id', '')}",
-                "name": place.get("displayName", {}).get("text", "Salle de sport"),
-                "address": place.get("formattedAddress", "Adresse non disponible"),
-                "lat": lat_place,
-                "lng": lng_place,
-                "chain": "Google Places",
-                "distance_km": round(distance, 1),
-                "coach_count": 0,
-                "source": "Google Places API"
-            }
-            results.append(gym_result)
-        
-        # Trier par distance
-        results.sort(key=lambda x: x["distance_km"])
-        
-        log.info(f"✅ Google Places API: {len(results)} salles trouvées")
-        return results
+        log.info("[Google Places] query='%s' results=%d", (query or "?")[:80], len(results))
+        return results, None
         
     except Exception as e:
-        log.error(f"❌ Erreur Google Places API: {e}")
-        return []
+        log.error("[Google Places] Erreur: %s", type(e).__name__)
+        return [], {"status": "EXCEPTION", "message": str(e)}
 
 def search_gyms_by_location(lat: float, lng: float, radius_km: int = 25) -> List[Dict]:
     """

@@ -311,7 +311,10 @@
     }
 
     function doNearbySearch(append = false) {
-      if (!append) showLoading();
+      if (!append) {
+        window._gymFinderGoogleError = null;
+        showLoading();
+      }
 
       const radius = parseInt(document.getElementById('radius').value, 10);
       console.log(`🔍 RECHERCHE SALLES - Centre: ${center.lat}, ${center.lng} - Rayon: ${radius}m`);
@@ -375,15 +378,33 @@
             });
           }
           
+          // Tracker si Google a renvoyé une erreur fatale (billing/restrictions)
+          if (!window._gymFinderGoogleError && (status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED || status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT)) {
+            window._gymFinderGoogleError = status;
+          }
+          
           // Quand toutes les recherches sont terminées
           if (searchesCompleted === searches.length) {
             console.log(`✅ TOUTES RECHERCHES TERMINÉES - Total: ${allResults.length} salles uniques trouvées`);
             
             if (allResults.length === 0) {
-              console.error(`❌ AUCUNE SALLE TROUVÉE dans ${searches.length} recherches`);
               hideLoading();
               if (!append) {
-                document.getElementById('no-results').classList.remove('hidden');
+                const noResultsEl = document.getElementById('no-results');
+                noResultsEl.classList.remove('hidden');
+                if (window._gymFinderGoogleError) {
+                  noResultsEl.innerHTML = `
+                    <div class="text-amber-600 text-6xl mb-4">⚠️</div>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-2">Google Maps/Places non disponible</h3>
+                    <p class="text-gray-600">La recherche de salles nécessite une clé API Google valide avec facturation activée. Vérifiez la configuration (REQUEST_DENIED, quota dépassé ou API non activée).</p>
+                  `;
+                } else {
+                  noResultsEl.innerHTML = `
+                    <div class="text-gray-400 text-6xl mb-4">🏋️‍♂️</div>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-2">Aucune salle trouvée</h3>
+                    <p class="text-gray-600">Essayez d'élargir votre rayon de recherche ou changez de localisation.</p>
+                  `;
+                }
                 document.getElementById('more').classList.add('hidden');
               }
               return;

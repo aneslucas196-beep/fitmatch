@@ -412,8 +412,8 @@ function fetchGymSuggestions(query) {
                 allSuggestions = formattedSuggestions;
                 showSuggestions(formattedSuggestions);
             } else {
-                // Si aucun résultat mondial, afficher un message
-                showNoResults();
+                // Si aucun résultat, afficher un message (ou Google désactivé)
+                showNoResults(data.google_error);
             }
         })
         .catch(error => {
@@ -422,9 +422,12 @@ function fetchGymSuggestions(query) {
         });
 }
 
-function showNoResults() {
+function showNoResults(googleError) {
     const suggestionsDiv = document.getElementById('gym-suggestions');
-    suggestionsDiv.innerHTML = `<div class="p-3 text-gray-500 text-sm">🌍 ${TRANSLATIONS.no_gym_found}</div>`;
+    const msg = googleError
+        ? '⚠️ Google Maps/Places non disponible (facturation ou restrictions). Résultats limités aux données locales.'
+        : `🌍 ${TRANSLATIONS.no_gym_found}`;
+    suggestionsDiv.innerHTML = `<div class="p-3 text-gray-500 text-sm">${msg}</div>`;
     suggestionsDiv.classList.remove('hidden');
 }
 

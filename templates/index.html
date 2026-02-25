@@ -683,12 +683,17 @@
         if (data.success && data.gyms && data.gyms.length > 0) {
           renderAutocomplete(data.gyms);
         } else {
-          const msg = (data && data.message) ? data.message : 'Aucune salle trouvée';
+          let msg = (data && data.message) ? data.message : 'Aucune salle trouvée';
+          let hint = 'Essayez un autre nom ou une ville (ex. Basic-Fit Paris)';
+          if (data && data.google_error) {
+            msg = 'Google Maps/Places non disponible (facturation ou restrictions). Résultats limités aux données locales.';
+            hint = 'Vérifiez la configuration de la clé API Google ou essayez une autre recherche.';
+          }
           autocompleteDropdown.innerHTML = `
             <div class="gym-autocomplete-empty">
-              <div class="gym-autocomplete-empty-icon">🔍</div>
+              <div class="gym-autocomplete-empty-icon">${data && data.google_error ? '⚠️' : '🔍'}</div>
               <div>${escapeHtml(msg)}</div>
-              <div style="font-size: 12px; margin-top: 4px;">Essayez un autre nom ou une ville (ex. Basic-Fit Paris)</div>
+              <div style="font-size: 12px; margin-top: 4px;">${escapeHtml(hint)}</div>
             </div>
           `;
         }

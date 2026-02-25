@@ -257,7 +257,11 @@
           displayGyms(data.gyms);
           displayMarkers(data.gyms);
         } else {
-          document.getElementById('gymsList').innerHTML = '<div class="no-results">Aucune salle trouvée dans cette zone. Essayez une autre adresse.</div>';
+          let msg = 'Aucune salle trouvée dans cette zone. Essayez une autre adresse.';
+          if (data.google_error) {
+            msg = 'Google Maps/Places n\'est pas disponible (facturation ou restrictions). Activez la facturation sur votre projet Google Cloud ou vérifiez les restrictions de la clé API.';
+          }
+          document.getElementById('gymsList').innerHTML = '<div class="no-results">' + msg + '</div>';
         }
       } catch (error) {
         console.error('Erreur:', error);

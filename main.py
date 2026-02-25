@@ -110,7 +110,6 @@ from utils import (
     remove_coach_gym,
     search_gyms_by_location,
     search_gyms_google_places,
-    search_gyms_worldwide_autocomplete,
     search_gyms_by_zone,
     get_coaches_by_gym,
     # Géolocalisation et pays
@@ -4828,6 +4827,7 @@ async def search_gyms_by_location_api(
         results = []
         search_lat = None
         search_lng = None
+        search_google_error = None
         
         # 🆕 Recherche par code postal
         if postal_code:
@@ -4901,71 +4901,91 @@ async def search_gyms_by_location_api(
             }
         
         elif q:
-            # 🎯 NOUVEAU: Détection automatique des recherches par zone/arrondissement
-            zone_results = search_gyms_by_zone(q)
-            if zone_results:
-                # Recherche par zone réussie - afficher TOUTES les salles de cette zone
-                results = zone_results
-            else:
-                # Recherche classique par géocodage + rayon
-                geocoded = geocode_address(q)
-                if geocoded:
-                    search_lat = geocoded["lat"]
-                    search_lng = geocoded["lng"]
-                    
-                    # 🆕 PRIORITÉ 1: Google Places API
-                    google_results = search_gyms_google_places(search_lat, search_lng, radius_km)
-                    
-                    # PRIORITÉ 2: Base de données locale
-                    local_results = search_gyms_by_location(search_lat, search_lng, radius_km)
-                    
-                    # Fusionner les résultats (Google Places en priorité)
-                    results = google_results + local_results
-                    
-                    # Dédupliquer par nom + adresse similaire
-                    seen_gyms = set()
-                    unique_results = []
-                    for gym in results:
-                        # Créer une clé unique basée sur nom + début de l'adresse
-                        key = f"{gym['name'].lower()[:30]}_{gym.get('address', '')[:30].lower()}"
-                        if key not in seen_gyms:
-                            seen_gyms.add(key)
-                            unique_results.append(gym)
-                    
-                    results = unique_results
-                    # Trier par distance
-                    results.sort(key=lambda x: x.get("distance_km", 999))
+            # 1. Google Places (source principale)
+            has_google_key = bool(os.environ.get("GOOGLE_PLACES_API_KEY") or os.environ.get("GOOGLE_MAPS_API_KEY"))
+            geocoded = geocode_address(q)
+            search_lat = geocoded["lat"] if geocoded else None
+            search_lng = geocoded["lng"] if geocoded else None
+            
+            if has_google_key:
+                search_query = q.strip() if q else "salle de sport"
+                google_results, google_error = search_gyms_google_places(
+                    search_query,
+                    lat=search_lat,
+                    lng=search_lng,
+                    radius_km=radius_km
+                )
+                if google_results:
+                    # 2. Résultats > 0 → retourner immédiatement (pas de Data ES ni DB)
+                    results = google_results
                 else:
-                    # Recherche par nom dans GYMS_DATABASE si géocodage échoue
+                    # 3. Sinon → fallback Data ES + DB
+                    search_google_error = google_error
+                    zone_results = search_gyms_by_zone(q)
+                    results = list(zone_results)
+                    seen_ids = {g.get("id") for g in results}
+                    q_lower = q.lower()
+                    for gym in GYMS_DATABASE:
+                        if (q_lower in (gym.get("name") or "").lower() or
+                            q_lower in (gym.get("address") or "").lower() or
+                            q_lower in (gym.get("city") or "").lower()):
+                            if gym["id"] not in seen_ids:
+                                seen_ids.add(gym["id"])
+                                results.append(gym.copy())
+                    if search_lat and search_lng:
+                        for g in search_gyms_by_location(search_lat, search_lng, radius_km):
+                            if g.get("id") not in seen_ids:
+                                seen_ids.add(g.get("id"))
+                                results.append(g)
+                    if google_error:
+                        log.warning("[Google Places] query=%s fallback data_es/db (google_error=%s)", q[:80] if q else "?", google_error.get("status") or "?")
+            else:
+                zone_results = search_gyms_by_zone(q)
+                if zone_results:
+                    results = zone_results
+                elif geocoded:
+                    results = search_gyms_by_location(geocoded["lat"], geocoded["lng"], radius_km)
+                else:
+                    results = []
                     matching_gyms = [g for g in GYMS_DATABASE if q.lower() in g["name"].lower() or q.lower() in g["address"].lower()]
                     coach_counts = get_coaches_count_by_gym_ids([g["id"] for g in matching_gyms]) if matching_gyms else {}
                     for gym in matching_gyms:
-                        gym_result = gym.copy()
-                        gym_result["distance_km"] = None
-                        gym_result["coach_count"] = coach_counts.get(gym["id"], 0)
-                        results.append(gym_result)
+                        gr = gym.copy()
+                        gr["distance_km"] = None
+                        gr["coach_count"] = coach_counts.get(gym["id"], 0)
+                        results.append(gr)
+            
+            if results:
+                seen_gyms = set()
+                unique = []
+                for gym in results:
+                    key = f"{gym.get('name', '').lower()[:30]}_{gym.get('address', '')[:30].lower()}"
+                    if key not in seen_gyms:
+                        seen_gyms.add(key)
+                        unique.append(gym)
+                results = unique
+                results.sort(key=lambda x: x.get("distance_km", 999))
         
         elif lat is not None and lng is not None:
-            # Recherche par coordonnées
-            search_lat = lat
-            search_lng = lng
-            
-            # 🆕 Combiner Google Places + base locale
-            google_results = search_gyms_google_places(search_lat, search_lng, radius_km)
-            local_results = search_gyms_by_location(search_lat, search_lng, radius_km)
-            
-            # Fusionner et dédupliquer
-            results = google_results + local_results
-            seen_gyms = set()
-            unique_results = []
-            for gym in results:
-                key = f"{gym['name'].lower()[:30]}_{gym.get('address', '')[:30].lower()}"
-                if key not in seen_gyms:
-                    seen_gyms.add(key)
-                    unique_results.append(gym)
-            
-            results = unique_results
-            results.sort(key=lambda x: x.get("distance_km", 999))
+            # 1. Google Places, 2. si résultats > 0 retourner, 3. sinon fallback
+            google_results, google_error = search_gyms_google_places("salle de sport", lat=lat, lng=lng, radius_km=radius_km)
+            if google_results:
+                results = google_results
+            else:
+                results = search_gyms_by_location(lat, lng, radius_km)
+                search_google_error = google_error
+                if google_error:
+                    log.warning("[Google Places] latlng(%.4f,%.4f) fallback data_es/db (google_error=%s)", lat, lng, google_error.get("status") or "?")
+            if results:
+                seen_gyms = set()
+                unique = []
+                for gym in results:
+                    key = f"{gym.get('name', '').lower()[:30]}_{gym.get('address', '')[:30].lower()}"
+                    if key not in seen_gyms:
+                        seen_gyms.add(key)
+                        unique.append(gym)
+                results = unique
+                results.sort(key=lambda x: x.get("distance_km", 999))
         
         else:
             return {
@@ -4977,7 +4997,8 @@ async def search_gyms_by_location_api(
         return {
             "success": True,
             "gyms": results,
-            "count": len(results)
+            "count": len(results),
+            "google_error": search_google_error
         }
         
     except Exception as e:
@@ -5004,11 +5025,11 @@ async def search_gyms_worldwide(q: Optional[str] = Query(None)):
                 "count": 0
             }
         has_key = bool(os.environ.get("GOOGLE_PLACES_API_KEY") or os.environ.get("GOOGLE_MAPS_API_KEY"))
-        if not has_key:
-            # Fallback : salles locales (GYMS_DATABASE) + recherche par zone (Data ES) pour que la recherche fonctionne sans Google
+        
+        def _fallback_data_es_db():
+            """Fallback Data ES + GYMS_DATABASE quand Google renvoie 0 ou erreur."""
             results = []
             q_lower = q_clean.lower()
-            # Mots-clés génériques : afficher des salles de référence
             generic_keywords = ("salle", "gym", "fitness", "sport", "room")
             if any(kw in q_lower for kw in generic_keywords):
                 results = [{
@@ -5027,7 +5048,6 @@ async def search_gyms_worldwide(q: Optional[str] = Query(None)):
                             "address": gym.get("address", ""), "formatted_address": gym.get("address", ""),
                             "city": gym.get("city", ""),
                         })
-            # Ajouter résultats Data ES (ville/code postal) si pas d'erreur
             try:
                 zone_results = search_gyms_by_zone(q_clean)
                 seen_ids = {g["id"] for g in results}
@@ -5041,19 +5061,46 @@ async def search_gyms_worldwide(q: Optional[str] = Query(None)):
                         })
             except Exception as zone_err:
                 log.warning(f"Recherche zone fallback: {zone_err}")
+            return results
+        
+        if not has_key:
+            results = _fallback_data_es_db()
+            log.info(f"source=data_es/db query={q_clean!r} nb_results={len(results)} (Google non configuré)")
             return {
                 "success": True,
                 "gyms": results[:30],
                 "count": len(results),
-                "message": f"{len(results)} salle(s) trouvée(s)" if results else "Aucune salle trouvée. Essayez: Basic-Fit, Paris, Lyon"
+                "message": f"{len(results)} salle(s) trouvée(s)" if results else "Aucune salle trouvée. Essayez: Basic-Fit, Paris, Lyon",
+                "source": "data_es_db",
+                "google_error": None
             }
 
-        results = search_gyms_worldwide_autocomplete(q_clean)
+        # 1. Google Places (source principale)
+        google_results, google_error = search_gyms_google_places(q_clean)
+        
+        if google_results:
+            # 2. Résultats > 0 → retourner immédiatement
+            return {
+                "success": True,
+                "gyms": google_results,
+                "count": len(google_results),
+                "message": f"{len(google_results)} salle(s) trouvée(s)",
+                "source": "google",
+                "google_error": None
+            }
+        
+        # 3. Sinon → fallback Data ES + DB
+        if google_error:
+            log.warning("[Google Places] query=%s fallback data_es/db (google_error=%s)", q_clean[:80] if q_clean else "?", google_error.get("status") or "?")
+        results = _fallback_data_es_db()
+        log.info("[Google Places] query=%s fallback nb_results=%d", q_clean[:80] if q_clean else "?", len(results))
         return {
             "success": True,
             "gyms": results,
             "count": len(results),
-            "message": f"{len(results)} salle(s) trouvée(s)" if results else "Aucune salle trouvée pour cette recherche"
+            "message": f"{len(results)} salle(s) trouvée(s)" if results else "Aucune salle trouvée pour cette recherche",
+            "source": "data_es_db",
+            "google_error": google_error
         }
     except Exception as e:
         log.error(f"Erreur recherche mondiale: {e}")
