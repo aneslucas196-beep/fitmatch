@@ -22,14 +22,23 @@
     <meta name="twitter:image" content="{{ site_url|default('https://fitmatch.fr') }}/static/logo.png">
     <!-- Google Search Console -->
     <meta name="google-site-verification" content="6RLUMpf8WPZRYEqruobA78LZW_pso5reKAZXRZ5QDy0" />
-    <!-- Données structurées Google (Schema.org) -->
+    <!-- Données structurées Google (Schema.org) - logo + sitelinks -->
+    <!-- TODO: Créer static/logo.png (1200x630 px recommandé) pour le logo Organization et les partages sociaux -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Fitmatch",
+      "url": "{{ site_url|default('https://fitmatch.fr') }}",
+      "logo": "{{ site_url|default('https://fitmatch.fr') }}/static/logo.png"
+    }
+    </script>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      "name": "FitMatch",
+      "name": "Fitmatch",
       "url": "{{ site_url|default('https://fitmatch.fr') }}",
-      "description": "Plateforme pour coachs sportifs et fitness",
       "potentialAction": {
         "@type": "SearchAction",
         "target": "{{ site_url|default('https://fitmatch.fr') }}/gyms/finder?q={search_term_string}",
