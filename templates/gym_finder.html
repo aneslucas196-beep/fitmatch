@@ -545,11 +545,20 @@
     }
 
     // Obtenir la clé API depuis le serveur
-    const GOOGLE_API_KEY = "{{ google_maps_api_key }}";
+    const GOOGLE_API_KEY = "{{ google_maps_api_key|default('') }}";
     window.initMap = initMap;
   </script>
 
+  {% if google_maps_api_key %}
   <!-- Charge Maps JS + Places -->
   <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&language=fr&region=FR&callback=initMap" async defer></script>
+  {% else %}
+  <script>
+    (function() {
+      var el = document.getElementById('map');
+      if (el) el.innerHTML = '<div style="padding:40px;text-align:center;color:#856404;background:#fff3cd;border-radius:12px;margin:20px;">Maps non configuré</div>';
+    })();
+  </script>
+  {% endif %}
 </body>
 </html>

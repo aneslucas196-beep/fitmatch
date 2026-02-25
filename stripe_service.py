@@ -43,11 +43,17 @@ async def get_stripe_credentials() -> Dict[str, str]:
 
 def get_stripe_credentials_sync() -> Dict[str, str]:
     """Récupère les credentials Stripe (Render / env)."""
-    publishable_key = os.environ.get("STRIPE_PUBLISHABLE_KEY") or os.environ.get("STRIPE_PUBLIC_KEY")
-    secret_key = os.environ.get("STRIPE_SECRET_KEY")
-    if publishable_key and secret_key:
+    publishable_key = (os.environ.get("STRIPE_PUBLISHABLE_KEY") or os.environ.get("STRIPE_PUBLIC_KEY") or "").strip()
+    secret_key = (os.environ.get("STRIPE_SECRET_KEY") or "").strip()
+    if publishable_key and secret_key and "xxx" not in secret_key.lower():
         return {"publishable_key": publishable_key, "secret_key": secret_key}
-    raise Exception("Clés Stripe non configurées. STRIPE_PUBLISHABLE_KEY et STRIPE_SECRET_KEY requis.")
+    missing = []
+    if not secret_key or "xxx" in secret_key.lower():
+        missing.append("STRIPE_SECRET_KEY")
+    if not publishable_key or "xxx" in publishable_key.lower():
+        missing.append("STRIPE_PUBLISHABLE_KEY")
+    log.warning(f"[Stripe] Variables manquantes ou invalides: {missing} (ne jamais logger les secrets)")
+    raise Exception(f"Clés Stripe non configurées. Manquantes: {missing}")
 
 
 def init_stripe():
@@ -157,7 +163,7 @@ def create_checkout_session(
         )
         return session
     except Exception as e:
-        log.error(f"Erreur stripe.checkout.Session.create: {e}")
+        log.error(f"[Stripe] Erreur checkout.Session.create (contexte: coach abonnement): {type(e).__name__}: {e}")
         raise e
 
 

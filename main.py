@@ -520,8 +520,24 @@ preload_all_translations()
 
 def _is_stripe_configured() -> bool:
     """True si les clés Stripe sont définies et ne sont pas des placeholders (xxx)."""
-    sk = (os.environ.get("STRIPE_SECRET_KEY") or "").strip().lower()
-    return bool(STRIPE_AVAILABLE and sk and "xxx" not in sk)
+    try:
+        from config import get_stripe_configured
+        return bool(STRIPE_AVAILABLE and get_stripe_configured())
+    except Exception:
+        sk = (os.environ.get("STRIPE_SECRET_KEY") or "").strip().lower()
+        return bool(STRIPE_AVAILABLE and sk and "xxx" not in sk)
+
+def _get_stripe_not_configured_response():
+    """Réponse 500 JSON quand Stripe n'est pas configuré."""
+    try:
+        from config import get_stripe_missing
+        missing = get_stripe_missing(required_only=False)
+    except Exception:
+        missing = ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"]
+    return JSONResponse(
+        status_code=500,
+        content={"error": "stripe_not_configured", "missing": missing}
+    )
 
 
 def _get_base_url(request: Request) -> str:
@@ -983,6 +999,11 @@ def _get_csp_nonce(request: Request) -> str:
     return getattr(request.state, "csp_nonce", "")
 templates.env.globals["get_csp_nonce"] = _get_csp_nonce
 templates.env.globals["site_url"] = (settings.SITE_URL or "https://fitmatch.fr").rstrip("/")
+try:
+    from config import get_maps_api_key
+    templates.env.globals["google_maps_api_key"] = get_maps_api_key() or ""
+except Exception:
+    templates.env.globals["google_maps_api_key"] = os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("GOOGLE_PLACES_API_KEY") or ""
 _static_dir = _BASE_DIR / "static"
 _assets_dir = _BASE_DIR / "attached_assets"
 if _static_dir.exists():
@@ -1042,6 +1063,12 @@ def startup_check_database():
         t = threading.Thread(target=_reminders_loop, daemon=True)
         t.start()
         log.info(f"✅ Rappels démarrés (toutes les {REMINDERS_LOOP_INTERVAL}s)")
+        # Log config Stripe / Maps (sans exposer les secrets)
+        try:
+            from config import log_config_at_startup
+            log_config_at_startup(log.info)
+        except Exception:
+            pass
     except Exception as e:
         log.error(f"Erreur au démarrage: {e}")
         import traceback
@@ -1483,8 +1510,12 @@ async def gym_search_page(request: Request):
 
 @app.get("/gyms-map", response_class=HTMLResponse)
 async def gyms_map_page(request: Request, address: str = "", radius_km: int = 25):
-    """Page de recherche de salles avec Google Maps."""
-    google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY", "")
+    """Page de recherche de salles avec Google Maps. Affiche 'Maps non configuré' si clé absente."""
+    try:
+        from config import get_maps_api_key
+        google_maps_api_key = get_maps_api_key() or ""
+    except Exception:
+        google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY") or os.getenv("GOOGLE_PLACES_API_KEY") or ""
     i18n = get_i18n_context(request)
     return templates.TemplateResponse("gyms_map.html", {
         "request": request,
@@ -5474,7 +5505,7 @@ async def search_gyms_near_location(
         }
         
     except Exception as e:
-        log.error(f"Erreur recherche géographique salles: {e}")
+        log.error(f"[Google Maps] Erreur recherche géographique salles (lat={lat}, lng={lng}): {type(e).__name__}: {e}")
         return {
             "success": False,
             "message": "Erreur lors de la recherche géographique",
@@ -5485,19 +5516,11 @@ async def search_gyms_near_location(
 @app.get("/gyms/finder")
 async def gym_finder_page(request: Request, user = Depends(get_current_user)):
     """Page de recherche de salles avec Google Maps integration."""
-    import os
-    
-    google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-    if not google_maps_api_key:
-        # Configuration manquante : page d'erreur avec i18n
-        i18n_err = get_i18n_context(request)
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "error": (i18n_err.get("t") or {}).get("errors", {}).get("config_error") or "Configuration Google Maps manquante. Contactez l'administrateur.",
-            "user": user,
-            **i18n_err
-        }, status_code=500)
-    
+    try:
+        from config import get_maps_api_key
+        google_maps_api_key = get_maps_api_key() or ""
+    except Exception:
+        google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY") or os.getenv("GOOGLE_PLACES_API_KEY") or ""
     i18n = get_i18n_context(request)
     return templates.TemplateResponse("gym_finder.html", {
         "request": request,
@@ -5844,7 +5867,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                         })
                         
                     except Exception as stripe_error:
-                        log.error(f"Erreur Stripe: {stripe_error}")
+                        log.error(f"[Stripe] Erreur paiement séance (coach={coach_email}, client={client_email}): {type(stripe_error).__name__}: {stripe_error}")
                         return JSONResponse({
                             "success": False,
                             "message": "Erreur lors de la création du paiement",
@@ -6747,6 +6770,7 @@ register_payment_routes(app, {
     "get_coach_for_checkout": get_coach_for_checkout,
     "_get_base_url": _get_base_url,
     "_is_stripe_configured": _is_stripe_configured,
+    "_get_stripe_not_configured_response": _get_stripe_not_configured_response,
     "create_or_get_customer": create_or_get_customer,
     "create_checkout_session": create_checkout_session,
     "update_coach_subscription": update_coach_subscription,
@@ -6757,10 +6781,8 @@ register_payment_routes(app, {
 async def api_create_portal_session(request: Request, user = Depends(require_coach_role)):
     """Crée une session du portail de facturation Stripe."""
     if not _is_stripe_configured():
-        return JSONResponse(
-            {"error": "Paiement temporairement indisponible.", "code": "STRIPE_NOT_CONFIGURED"},
-            status_code=503
-        )
+        log.warning("Route Stripe appelée mais Stripe non configuré")
+        return _get_stripe_not_configured_response()
     try:
         coach_email = user.get("email")
         subscription_info = get_coach_subscription_info(coach_email)
@@ -6778,7 +6800,7 @@ async def api_create_portal_session(request: Request, user = Depends(require_coa
         
         return JSONResponse({"url": session.url})
     except Exception as e:
-        log.error(f"Erreur création portal session: {e}")
+        log.error(f"[Stripe] Erreur création portal session (contexte: coach={user.get('email')}): {type(e).__name__}: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/api/stripe/webhook", tags=["stripe"])
@@ -7295,7 +7317,7 @@ async def stripe_webhook(request: Request):
         return JSONResponse({"received": True})
     
     except Exception as e:
-        log.error(f"Erreur webhook Stripe: {e}")
+        log.error(f"[Stripe] Erreur webhook (contexte: traitement événement): {type(e).__name__}: {e}")
         return JSONResponse({"error": str(e)}, status_code=400)
 
 @app.get("/api/coach/subscription-status")

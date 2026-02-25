@@ -1,81 +1,28 @@
 """
-Service de base de données PostgreSQL pour FitMatch
+Service de base de données PostgreSQL pour FitMatch.
+Utilise db_pool pour éviter "MaxClientsInSessionMode: max clients reached" sur Supabase.
 """
 from logger import get_logger
 log = get_logger()
 
 import os
 import json
-import psycopg2
-from psycopg2 import pool
-from psycopg2.extras import RealDictCursor
-from datetime import datetime
 from typing import Optional, Dict, Any, List
+from psycopg2.extras import RealDictCursor
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-# Timeout en secondes (évite de bloquer si Render ne peut pas joindre la DB, ex. port 5432 bloqué)
-_CONNECT_TIMEOUT = int(os.environ.get("DATABASE_CONNECT_TIMEOUT", "10"))
-_MIN_POOL = int(os.environ.get("DB_POOL_MIN", "1"))
-_MAX_POOL = int(os.environ.get("DB_POOL_MAX", "10"))
-
-_db_pool = None
-
-def _get_pool():
-    """Pool de connexions (singleton)."""
-    global _db_pool
-    if _db_pool is None and DATABASE_URL:
-        try:
-            _db_pool = pool.ThreadedConnectionPool(
-                _MIN_POOL, _MAX_POOL,
-                DATABASE_URL,
-                cursor_factory=RealDictCursor,
-                connect_timeout=_CONNECT_TIMEOUT,
-            )
-        except Exception as e:
-            log.error(f"[DB] Erreur creation pool: {e}")
-    return _db_pool
-
-def get_db_connection():
-    """Obtient une connexion à la base de données (depuis le pool si disponible).
-    Sur Render, utiliser l'URL du pooler Supabase (port 6543) pour éviter 'Network is unreachable'.
-    """
-    if not DATABASE_URL:
-        raise Exception("DATABASE_URL non configuré")
-    p = _get_pool()
-    if p:
-        try:
-            return p.getconn()
-        except Exception:
-            pass
-    return psycopg2.connect(
-        DATABASE_URL,
-        cursor_factory=RealDictCursor,
-        connect_timeout=_CONNECT_TIMEOUT,
-    )
-
-def _return_connection(conn):
-    """Rend une connexion au pool."""
-    p = _get_pool()
-    if p:
-        try:
-            p.putconn(conn)
-            return
-        except Exception:
-            pass
-    try:
-        conn.close()
-    except Exception:
-        pass
+from db_pool import get_connection, release_connection
 
 def load_users_from_db() -> Dict[str, Dict]:
     """Charge tous les utilisateurs depuis la base de données."""
+    conn = None
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM users")
-        rows = cur.fetchall()
-        cur.close()
-        _return_connection(conn)
+        conn = get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        try:
+            cur.execute("SELECT * FROM users")
+            rows = cur.fetchall()
+        finally:
+            cur.close()
         
         users = {}
         for row in rows:
@@ -94,16 +41,21 @@ def load_users_from_db() -> Dict[str, Dict]:
     except Exception as e:
         log.error(f"Erreur chargement utilisateurs depuis DB: {e}")
         return {}
+    finally:
+        if conn:
+            release_connection(conn)
 
 def get_user_from_db(email: str) -> Optional[Dict]:
     """Récupère un utilisateur par email."""
+    conn = None
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM users WHERE email = %s", (email,))
-        row = cur.fetchone()
-        cur.close()
-        _return_connection(conn)
+        conn = get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        try:
+            cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+            row = cur.fetchone()
+        finally:
+            cur.close()
         
         if row:
             user_data = dict(row)
@@ -119,12 +71,16 @@ def get_user_from_db(email: str) -> Optional[Dict]:
     except Exception as e:
         log.error(f"Erreur récupération utilisateur {email}: {e}")
         return None
+    finally:
+        if conn:
+            release_connection(conn)
 
 def save_user_to_db(email: str, user_data: Dict) -> bool:
     """Sauvegarde ou met à jour un utilisateur dans la base de données."""
+    conn = None
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
+        conn = get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
         
         specialties = user_data.get('specialties', [])
         if isinstance(specialties, str):
@@ -262,26 +218,33 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
         
         conn.commit()
         cur.close()
-        _return_connection(conn)
         log.info(f"[DB] Utilisateur {email} sauvegarde")
         return True
     except Exception as e:
         log.error(f"Erreur sauvegarde utilisateur {email}: {e}")
         return False
+    finally:
+        if conn:
+            release_connection(conn)
 
 def remove_user_from_db(email: str) -> bool:
     """Supprime un utilisateur de la base de données."""
+    conn = None
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("DELETE FROM users WHERE email = %s", (email,))
-        conn.commit()
-        cur.close()
-        _return_connection(conn)
+        conn = get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        try:
+            cur.execute("DELETE FROM users WHERE email = %s", (email,))
+            conn.commit()
+        finally:
+            cur.close()
         return True
     except Exception as e:
         log.error(f"Erreur suppression utilisateur {email}: {e}")
         return False
+    finally:
+        if conn:
+            release_connection(conn)
 
 def migrate_json_to_db():
     """Migre les utilisateurs de demo_users.json vers la base de données."""
@@ -308,17 +271,22 @@ def migrate_json_to_db():
 
 def user_exists_in_db(email: str) -> bool:
     """Vérifie si un utilisateur existe dans la base de données."""
+    conn = None
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
-        exists = cur.fetchone() is not None
-        cur.close()
-        _return_connection(conn)
+        conn = get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        try:
+            cur.execute("SELECT 1 FROM users WHERE email = %s", (email,))
+            exists = cur.fetchone() is not None
+        finally:
+            cur.close()
         return exists
     except Exception as e:
         log.error(f"Erreur vérification existence {email}: {e}")
         return False
+    finally:
+        if conn:
+            release_connection(conn)
 
 
 def update_stripe_connect_status(
@@ -330,9 +298,10 @@ def update_stripe_connect_status(
     details_submitted: bool = None
 ) -> bool:
     """Met à jour les informations Stripe Connect d'un coach."""
+    conn = None
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
+        conn = get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
         
         updates = []
         values = []
@@ -364,29 +333,32 @@ def update_stripe_connect_status(
         
         conn.commit()
         cur.close()
-        _return_connection(conn)
-
         log.info(f"✅ Stripe Connect mis à jour pour {email}: status={status}")
         return True
     except Exception as e:
         log.error(f"Erreur mise à jour Stripe Connect {email}: {e}")
         return False
+    finally:
+        if conn:
+            release_connection(conn)
 
 
 def get_stripe_connect_info(email: str) -> Optional[Dict]:
     """Récupère les informations Stripe Connect d'un coach."""
+    conn = None
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT stripe_connect_account_id, stripe_connect_status, 
-                   stripe_connect_charges_enabled, stripe_connect_payouts_enabled,
-                   stripe_connect_details_submitted
-            FROM users WHERE email = %s
-        """, (email,))
-        row = cur.fetchone()
-        cur.close()
-        _return_connection(conn)
+        conn = get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        try:
+            cur.execute("""
+                SELECT stripe_connect_account_id, stripe_connect_status, 
+                       stripe_connect_charges_enabled, stripe_connect_payouts_enabled,
+                       stripe_connect_details_submitted
+                FROM users WHERE email = %s
+            """, (email,))
+            row = cur.fetchone()
+        finally:
+            cur.close()
         if row:
             return {
                 "account_id": row.get('stripe_connect_account_id'),
@@ -399,23 +371,31 @@ def get_stripe_connect_info(email: str) -> Optional[Dict]:
     except Exception as e:
         log.error(f"Erreur récupération Stripe Connect {email}: {e}")
         return None
+    finally:
+        if conn:
+            release_connection(conn)
 
 
 def find_coach_by_stripe_connect_account(account_id: str) -> Optional[str]:
     """Trouve l'email d'un coach par son stripe_connect_account_id."""
+    conn = None
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT email FROM users 
-            WHERE stripe_connect_account_id = %s
-        """, (account_id,))
-        row = cur.fetchone()
-        cur.close()
-        _return_connection(conn)
+        conn = get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        try:
+            cur.execute("""
+                SELECT email FROM users 
+                WHERE stripe_connect_account_id = %s
+            """, (account_id,))
+            row = cur.fetchone()
+        finally:
+            cur.close()
         if row:
             return row.get('email')
         return None
     except Exception as e:
         log.error(f"Erreur recherche coach par Connect account {account_id}: {e}")
         return None
+    finally:
+        if conn:
+            release_connection(conn)

@@ -1233,9 +1233,13 @@ def search_gyms_worldwide_autocomplete(query: str) -> List[Dict]:
     try:
         import requests
         
-        api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
+        try:
+            from config import get_maps_api_key
+            api_key = get_maps_api_key()
+        except Exception:
+            api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
         if not api_key:
-            log.info("⚠️ GOOGLE_PLACES_API_KEY / GOOGLE_MAPS_API_KEY non configurée")
+            log.info("⚠️ Google Maps/Places : clé API non configurée (GOOGLE_MAPS_API_KEY ou GOOGLE_PLACES_API_KEY)")
             return []
         
         if len(query.strip()) < 2:
@@ -1325,9 +1329,13 @@ def search_gyms_google_places(lat: float, lng: float, radius_km: int = 25) -> Li
     try:
         import requests
         
-        api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
+        try:
+            from config import get_maps_api_key
+            api_key = get_maps_api_key()
+        except Exception:
+            api_key = os.getenv("GOOGLE_PLACES_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
         if not api_key:
-            log.info("⚠️ GOOGLE_PLACES_API_KEY non configurée")
+            log.info("⚠️ Google Maps/Places : clé API non configurée")
             return []
         
         # Convertir radius_km en mètres (max 50000m pour Places API)

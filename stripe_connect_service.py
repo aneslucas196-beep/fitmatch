@@ -10,8 +10,10 @@ from datetime import datetime
 
 def init_stripe():
     """Initialise Stripe avec la clé secrète."""
-    secret_key = os.environ.get("STRIPE_SECRET_KEY")
-    if not secret_key:
+    secret_key = (os.environ.get("STRIPE_SECRET_KEY") or "").strip()
+    if not secret_key or "xxx" in secret_key.lower():
+        from logger import get_logger
+        get_logger().warning("[Stripe Connect] STRIPE_SECRET_KEY manquant ou invalide (ne jamais logger les secrets)")
         raise Exception("STRIPE_SECRET_KEY non configuré")
     stripe.api_key = secret_key
     return secret_key
@@ -44,6 +46,8 @@ def create_connect_account(coach_email: str, coach_name: str) -> Dict[str, Any]:
             "payouts_enabled": account.payouts_enabled
         }
     except stripe.error.StripeError as e:
+        from logger import get_logger
+        get_logger().error(f"[Stripe Connect] create_connect_account échec (coach={coach_email}): {type(e).__name__}: {e}")
         return {
             "success": False,
             "error": str(e)
@@ -71,6 +75,8 @@ def create_account_link(account_id: str, return_url: str, refresh_url: str) -> D
             "expires_at": account_link.expires_at
         }
     except stripe.error.StripeError as e:
+        from logger import get_logger
+        get_logger().error(f"[Stripe Connect] create_account_link échec (account_id={account_id}): {type(e).__name__}: {e}")
         return {
             "success": False,
             "error": str(e)
@@ -133,6 +139,8 @@ def get_account_status(account_id: str) -> Dict[str, Any]:
             "default_currency": account.default_currency
         }
     except stripe.error.StripeError as e:
+        from logger import get_logger
+        get_logger().error(f"[Stripe Connect] get_account_status échec (account_id={account_id}): {type(e).__name__}: {e}")
         return {
             "success": False,
             "error": str(e)
@@ -154,6 +162,8 @@ def create_login_link(account_id: str) -> Dict[str, Any]:
             "url": login_link.url
         }
     except stripe.error.StripeError as e:
+        from logger import get_logger
+        get_logger().error(f"[Stripe Connect] create_login_link échec (account_id={account_id}): {type(e).__name__}: {e}")
         return {
             "success": False,
             "error": str(e)
@@ -227,6 +237,8 @@ def create_session_payment_checkout(
             "payment_intent": session.payment_intent
         }
     except stripe.error.StripeError as e:
+        from logger import get_logger
+        get_logger().error(f"[Stripe Connect] create_session_payment_checkout échec (coach={coach_email}, booking={booking_id}): {type(e).__name__}: {e}")
         return {
             "success": False,
             "error": str(e)

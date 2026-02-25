@@ -13,6 +13,7 @@ def register_payment_routes(app, deps: dict):
     get_coach_for_checkout = deps["get_coach_for_checkout"]
     _get_base_url = deps["_get_base_url"]
     _is_stripe_configured = deps["_is_stripe_configured"]
+    _get_stripe_not_configured_response = deps.get("_get_stripe_not_configured_response")
     create_or_get_customer = deps["create_or_get_customer"]
     create_checkout_session = deps["create_checkout_session"]
     update_coach_subscription = deps["update_coach_subscription"]
@@ -26,10 +27,12 @@ def register_payment_routes(app, deps: dict):
         try:
             if not _is_stripe_configured():
                 if log:
-                    log.warning("[Stripe] Stripe non configure")
+                    log.warning("[Stripe] Route Stripe appelee mais Stripe non configure")
+                if _get_stripe_not_configured_response:
+                    return _get_stripe_not_configured_response()
                 return JSONResponse(
-                    {"error": "Paiement temporairement indisponible. Les cles Stripe seront configurees prochainement.", "code": "STRIPE_NOT_CONFIGURED"},
-                    status_code=503
+                    {"error": "stripe_not_configured", "missing": ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"]},
+                    status_code=500
                 )
             base_url = _get_base_url(request)
             coach_email = user.get("email")
@@ -97,7 +100,9 @@ def register_payment_routes(app, deps: dict):
                 return JSONResponse({"error": "Coach non authentifie"}, status_code=401)
             coach_email = coach.get("email")
             if not _is_stripe_configured():
-                return JSONResponse({"error": "Stripe non configure"}, status_code=503)
+                if _get_stripe_not_configured_response:
+                    return _get_stripe_not_configured_response()
+                return JSONResponse({"error": "stripe_not_configured", "missing": ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"]}, status_code=500)
             try:
                 body = await request.json()
             except Exception:

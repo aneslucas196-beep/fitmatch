@@ -23,21 +23,21 @@
     <!-- Google Search Console -->
     <meta name="google-site-verification" content="6RLUMpf8WPZRYEqruobA78LZW_pso5reKAZXRZ5QDy0" />
     <!-- Données structurées Google (Schema.org) - logo + sitelinks -->
-    <!-- TODO: Créer static/logo.png (1200x630 px recommandé) pour le logo Organization et les partages sociaux -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Organization",
-      "name": "Fitmatch",
+      "name": "FitMatch",
       "url": "{{ site_url|default('https://fitmatch.fr') }}",
-      "logo": "{{ site_url|default('https://fitmatch.fr') }}/static/logo.png"
+      "logo": "{{ site_url|default('https://fitmatch.fr') }}/static/logo.png",
+      "description": "FitMatch vous aide à trouver le coach sportif idéal et réserver facilement. Coaching, salles partenaires, paiements sécurisés."
     }
     </script>
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      "name": "Fitmatch",
+      "name": "FitMatch",
       "url": "{{ site_url|default('https://fitmatch.fr') }}",
       "potentialAction": {
         "@type": "SearchAction",

@@ -3,7 +3,7 @@ Configuration centralisée FitMatch.
 Charge et valide les variables d'environnement au démarrage.
 """
 import os
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 # Charger .env automatiquement (si présent) pour que les clés soient lues
 try:
@@ -11,6 +11,66 @@ try:
     load_dotenv()
 except Exception:
     pass
+
+# --- Stripe (centralisé) ---
+STRIPE_KEYS = ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY", "STRIPE_PUBLIC_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_PRICE_ID"]
+
+def get_stripe_missing(required_only: bool = True) -> List[str]:
+    """Liste des variables Stripe manquantes. required_only=False inclut WEBHOOK_SECRET et PRICE_ID."""
+    missing = []
+    if not (os.environ.get("STRIPE_SECRET_KEY") or "").strip() or "xxx" in (os.environ.get("STRIPE_SECRET_KEY") or "").lower():
+        missing.append("STRIPE_SECRET_KEY")
+    pk = (os.environ.get("STRIPE_PUBLISHABLE_KEY") or os.environ.get("STRIPE_PUBLIC_KEY") or "").strip()
+    if not pk or "xxx" in pk.lower():
+        missing.append("STRIPE_PUBLISHABLE_KEY")
+    if not required_only:
+        if not (os.environ.get("STRIPE_WEBHOOK_SECRET") or "").strip():
+            missing.append("STRIPE_WEBHOOK_SECRET")
+        # STRIPE_PRICE_ID optionnel (price_data dynamique possible)
+    return missing
+
+def get_stripe_configured() -> bool:
+    """True si les clés Stripe requises sont définies."""
+    return len(get_stripe_missing(required_only=True)) == 0
+
+def get_stripe_config_status() -> Dict[str, Any]:
+    """Statut Stripe pour /api/system/config-check."""
+    missing = get_stripe_missing(required_only=False)
+    return {"configured": get_stripe_configured(), "missing": missing}
+
+# --- Google Maps (centralisé) ---
+def get_maps_api_key() -> Optional[str]:
+    """Clé API Google Maps (GOOGLE_MAPS_API_KEY ou GOOGLE_PLACES_API_KEY)."""
+    key = (os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("GOOGLE_PLACES_API_KEY") or "").strip()
+    return key if key and "xxx" not in key.lower() else None
+
+def get_maps_configured() -> bool:
+    """True si la clé Google Maps est définie."""
+    return get_maps_api_key() is not None
+
+def get_maps_config_status() -> Dict[str, Any]:
+    """Statut Maps pour /api/system/config-check."""
+    key = get_maps_api_key()
+    missing = ["GOOGLE_MAPS_API_KEY"] if not key else []
+    return {"configured": bool(key), "missing": missing}
+
+def log_config_at_startup(log_fn=None):
+    """Log au démarrage les variables manquantes (sans afficher les secrets)."""
+    if log_fn is None:
+        try:
+            from logger import get_logger
+            log_fn = get_logger().info
+        except Exception:
+            return
+    stripe_missing = get_stripe_missing(required_only=False)
+    if stripe_missing:
+        log_fn(f"⚠️ Stripe : variables manquantes ou invalides : {stripe_missing}")
+    else:
+        log_fn("✅ Stripe : configuré")
+    if not get_maps_configured():
+        log_fn("⚠️ Google Maps : GOOGLE_MAPS_API_KEY ou GOOGLE_PLACES_API_KEY non configurée")
+    else:
+        log_fn("✅ Google Maps : configuré")
 
 
 def _split_origins(value: Optional[str], is_production: bool = False) -> List[str]:
@@ -28,8 +88,8 @@ class Settings:
     # Base de données (requis en production)
     DATABASE_URL: Optional[str] = os.environ.get("DATABASE_URL")
 
-    # Stripe
-    STRIPE_PUBLIC_KEY: Optional[str] = os.environ.get("STRIPE_PUBLIC_KEY")
+    # Stripe (centralisé : utiliser get_stripe_* pour vérifications)
+    STRIPE_PUBLIC_KEY: Optional[str] = os.environ.get("STRIPE_PUBLIC_KEY") or os.environ.get("STRIPE_PUBLISHABLE_KEY")
     STRIPE_SECRET_KEY: Optional[str] = os.environ.get("STRIPE_SECRET_KEY")
     STRIPE_WEBHOOK_SECRET: Optional[str] = os.environ.get("STRIPE_WEBHOOK_SECRET")
     # Optionnel : Price ID mensuel (ex: price_xxx) - sinon price_data dynamique

@@ -1,12 +1,29 @@
 """
-Routes système : health, favicon, robots.txt, sitemap.xml, Google Search Console.
+Routes système : health, favicon, robots.txt, sitemap.xml, Google Search Console, config-check.
 """
 import os
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Query
 from fastapi.responses import JSONResponse, Response, FileResponse
 
 # Router pour les endpoints simples (évite les conflits au démarrage)
 router = APIRouter()
+
+
+@router.get("/api/system/config-check", include_in_schema=False)
+async def config_check(secret: str = Query(None, alias="secret")):
+    """
+    Vérifie la configuration Stripe et Google Maps (sans exposer les secrets).
+    Optionnel : ?secret=CRON_SECRET pour protéger en production.
+    """
+    from config import get_stripe_config_status, get_maps_config_status
+    if os.environ.get("ENVIRONMENT", "").lower() in ("production", "prod"):
+        cron_secret = os.environ.get("CRON_SECRET")
+        if cron_secret and secret != cron_secret:
+            return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    return JSONResponse(content={
+        "stripe": get_stripe_config_status(),
+        "maps": get_maps_config_status(),
+    })
 
 
 @router.get("/googlec08eb3bf.html", include_in_schema=False)
