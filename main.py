@@ -3888,10 +3888,12 @@ async def api_coach_verify_email_post(request: Request):
         request.session["user_email"] = email
         request.session["coach_email"] = email
         request.session["is_coach"] = True
-        log.info(f"✅ Email vérifié pour {email}, session créée")
+        log.info(f"Email verifie pour {email}, session creee")
         profile_completed = coach_data.get("profile_completed", False)
         redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-        return RedirectResponse(url=redirect_url, status_code=303)
+        # JSON au lieu de 303 : le navigateur stocke le cookie Set-Cookie avant la redirection
+        # (plus fiable que fetch suivant un 303, qui peut ne pas envoyer le cookie a temps)
+        return JSONResponse({"success": True, "redirect": redirect_url})
     except Exception as e:
         log.error(f"Erreur verify_email: {e}")
         return JSONResponse({"success": False, "error": "Erreur serveur"}, status_code=500)
