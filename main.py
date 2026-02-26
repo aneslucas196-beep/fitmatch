@@ -3867,7 +3867,16 @@ async def api_coach_verify_email_post(request: Request):
             return JSONResponse({"success": False, "error": err or "Code invalide ou expiré"}, status_code=400)
         coach_data = get_demo_user(email)
         if not coach_data:
-            return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=404)
+            new_user = {
+                "email": email,
+                "full_name": "",
+                "role": "coach",
+                "subscription_status": "active",
+                "profile_completed": False,
+            }
+            save_demo_user(email, new_user)
+            coach_data = get_demo_user(email) or new_user
+            log.info(f"✅ Utilisateur coach créé automatiquement: {email}")
         if coach_data.get("role") != "coach":
             return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=404)
         if coach_data.get("subscription_status") != "active":
