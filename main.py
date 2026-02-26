@@ -3068,8 +3068,9 @@ async def coach_portal(request: Request, user = Depends(require_coach_session_or
             # En cas d'erreur, rediriger vers l'onboarding par sécurité
             return RedirectResponse(url="/coach/profile-setup", status_code=302)
     else:
-        # Vérifier si le profil est complété pour les nouveaux utilisateurs
-        if not user.get("profile_completed", False):
+        # Vérifier si le profil est complété (demo_users / DB)
+        profile_completed = coach_data_fresh.get("profile_completed", False) or user.get("profile_completed", False)
+        if not profile_completed:
             return RedirectResponse(url="/coach/profile-setup", status_code=302)
         transformations = []
     
@@ -3407,18 +3408,20 @@ def _wants_json_response(request: Request) -> bool:
 @limiter.limit("10/minute")
 async def api_coach_profile_setup(request: Request):
     """API profile-setup : multipart/form-data. XHR/fetch -> JSON. Submit HTML classique -> RedirectResponse 303."""
+    coach_email = None
     try:
         coach_email = get_session_email(request) or request.session.get("coach_email")
         if not coach_email:
             user = get_coach_from_session_or_cookie(request)
             coach_email = (user or {}).get("email", "").strip().lower()
         if not coach_email:
+            log.warning("[profile-setup] Not authenticated")
             return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
 
         form = await request.form()
-        profile_photo = form.get("profile_photo")
+        profile_photo = form.get("profile_photo") or form.get("photo")
         if hasattr(profile_photo, "file") and profile_photo.file and (getattr(profile_photo, "filename") or "").strip():
-            profile_photo = profile_photo
+            pass
         else:
             profile_photo = None
 
@@ -3445,22 +3448,43 @@ async def api_coach_profile_setup(request: Request):
         selected_gym_ids = _str(form.get("selected_gym_ids"))
         selected_gyms_data = _str(form.get("selected_gyms_data"))
 
+        log.info(f"[profile-setup] coach_email={coach_email} full_name={full_name!r} city={city!r} bio_len={len(bio)} photo_present={profile_photo is not None}")
+
         photo_url = None
         if profile_photo and hasattr(profile_photo, "read"):
             try:
                 contents = await profile_photo.read()
-                if contents and len(contents) > 0:
-                    os.makedirs("uploads", exist_ok=True)
-                    ext = "jpg"
-                    if hasattr(profile_photo, "content_type") and profile_photo.content_type:
-                        if "png" in str(profile_photo.content_type): ext = "png"
-                    filename = f"{uuid.uuid4()}.{ext}"
-                    path = f"uploads/{filename}"
-                    with open(path, "wb") as f:
-                        f.write(contents)
-                    photo_url = f"/uploads/{filename}"
+                if not contents or len(contents) == 0:
+                    log.warning("[profile-setup] Photo file empty")
+                    return JSONResponse({
+                        "success": False,
+                        "error": "PHOTO_UPLOAD_FAILED",
+                        "detail": "Fichier photo vide ou invalide."
+                    }, status_code=400)
+                if len(contents) > 10 * 1024 * 1024:
+                    log.warning("[profile-setup] Photo too large")
+                    return JSONResponse({
+                        "success": False,
+                        "error": "PHOTO_UPLOAD_FAILED",
+                        "detail": "Photo trop volumineuse (max 10 Mo)."
+                    }, status_code=400)
+                os.makedirs("uploads", exist_ok=True)
+                ext = "jpg"
+                if hasattr(profile_photo, "content_type") and profile_photo.content_type and "png" in str(profile_photo.content_type):
+                    ext = "png"
+                filename = f"{uuid.uuid4()}.{ext}"
+                path = f"uploads/{filename}"
+                with open(path, "wb") as f:
+                    f.write(contents)
+                photo_url = f"/uploads/{filename}"
+                log.info(f"[profile-setup] Photo upload OK: {photo_url}")
             except Exception as e:
-                log.warning(f"Upload photo: {e}")
+                log.error(f"[profile-setup] Photo upload FAILED: {e}")
+                return JSONResponse({
+                    "success": False,
+                    "error": "PHOTO_UPLOAD_FAILED",
+                    "detail": str(e) or "Erreur lors de l'upload de la photo."
+                }, status_code=400)
 
         existing = get_demo_user(coach_email) or {}
         profile_slug = existing.get("profile_slug") or generate_unique_slug_for_coach(coach_email, full_name or "Coach")
@@ -3493,14 +3517,24 @@ async def api_coach_profile_setup(request: Request):
             "otp_code": existing.get("otp_code"),
             "otp_expiry": existing.get("otp_expiry"),
         }
-        save_demo_user(coach_email, updated)
+
+        ok = save_demo_user(coach_email, updated)
+        if not ok:
+            log.error(f"[profile-setup] DB save FAILED for {coach_email}")
+            return JSONResponse({
+                "success": False,
+                "error": "DB_UPDATE_FAILED",
+                "detail": "Erreur lors de la sauvegarde en base."
+            }, status_code=500)
+        log.info(f"[profile-setup] OK coach={coach_email} profile_completed=True")
+
         if _wants_json_response(request):
             return JSONResponse({"success": True, "redirect": "/coach/dashboard"})
         return RedirectResponse(url="/coach/dashboard", status_code=303)
     except Exception as e:
-        log.error(f"PROFILE SETUP ERROR: {e}")
+        log.error(f"[profile-setup] ERROR: {e} (coach={coach_email})")
         if _wants_json_response(request):
-            return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+            return JSONResponse({"success": False, "error": str(e), "detail": str(e)}, status_code=500)
         from urllib.parse import quote
         return RedirectResponse(url="/coach/profile-setup?error=" + quote(str(e)[:80]), status_code=303)
 

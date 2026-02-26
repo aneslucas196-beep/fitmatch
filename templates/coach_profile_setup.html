@@ -332,15 +332,20 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(function() { return {}; });
       console.log("profile setup response", data);
 
-      if (res.ok && (data.redirect || data.next || data.redirect_url)) {
-        window.location.assign(data.redirect || data.next || data.redirect_url || "/coach/dashboard");
-      } else if (!res.ok) {
-        alert(data.error || "Erreur lors de la sauvegarde.");
+      if (data && data.success) {
+        window.location.assign(data.redirect || "/coach/dashboard");
       } else {
-        window.location.assign("/coach/dashboard");
+        var msg = (data && (data.detail || data.error)) || "Erreur lors de la sauvegarde.";
+        alert(msg);
+        var errEl = document.getElementById("profile-setup-error");
+        if (errEl) {
+          var span = errEl.querySelector("span.text-sm");
+          if (span) span.textContent = msg;
+          errEl.classList.remove("hidden");
+        }
       }
     } catch (err) {
       console.error("profile setup error:", err);
