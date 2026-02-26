@@ -333,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.location.href = data.redirect;
                     return;
                 }
-                const msg = data.detail || data.error || "Une erreur s'est produite lors de la sauvegarde.";
+                const msg = data.error || data.detail || "Une erreur s'est produite lors de la sauvegarde.";
                 const errEl = document.getElementById('profile-setup-error');
                 if (errEl) {
                     const span = errEl.querySelector('span.text-sm');
