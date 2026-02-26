@@ -20,7 +20,7 @@
         <a href="/" class="inline-flex items-center">
             <span class="text-2xl font-semibold tracking-tight text-slate-900">Fit<span class="text-emerald-500">Match</span></span>
         </a>
-        <a href="/coach/portal" class="text-sm text-slate-600 hover:text-emerald-500 transition">← {{ t.coach_profile.back_to_dashboard|default('Retour au dashboard') }}</a>
+        <a href="/coach/dashboard" class="text-sm text-slate-600 hover:text-emerald-500 transition">← {{ t.coach_profile.back_to_dashboard|default('Retour au dashboard') }}</a>
     </div>
 </header>
 
@@ -266,7 +266,7 @@
                 <!-- Boutons d'action -->
                 <div class="flex justify-between items-center pt-6 border-t border-gray-200">
                     {% if profile_completed %}
-                    <a href="/coach/portal" class="text-gray-600 hover:text-gray-900 font-medium">
+                    <a href="/coach/dashboard" class="text-gray-600 hover:text-gray-900 font-medium">
                         ← {{ t.coach_profile.back_to_dashboard|default('Retour au dashboard') }}
                     </a>
                     {% else %}
@@ -321,20 +321,19 @@ document.addEventListener("DOMContentLoaded", function() {
     const formData = new FormData(form);
 
     try {
-      const response = await fetch("/api/coach/profile-setup", {
+      const res = await fetch("/api/coach/profile-setup", {
         method: "POST",
         body: formData,
         credentials: "include"
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        window.location.href = data.redirect || "/coach/dashboard";
+      if (res.ok) {
+        const data = await res.json();
+        window.location.assign(data.redirect || "/coach/dashboard");
       } else {
+        const data = await res.json().catch(() => ({}));
         alert(data.error || "Erreur lors de la sauvegarde.");
       }
-
     } catch (err) {
       console.error(err);
       alert("Erreur réseau.");
