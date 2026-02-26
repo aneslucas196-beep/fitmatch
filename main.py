@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, Form, HTTPException, Depends, File, UploadFile, Cookie, Query, Response
 import secrets
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -443,10 +444,16 @@ async def add_security_headers(request: Request, call_next):
     return response
 app.include_router(cron_router)
 
-# Configuration CORS (en production : CORS_ORIGINS=https://fitmatch.fr,https://www.fitmatch.fr)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SESSION_SECRET", "dev-secret-key"),
+    same_site="lax",
+    https_only=True
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=["https://fitmatch.fr", "https://www.fitmatch.fr"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
