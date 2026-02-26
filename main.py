@@ -3851,7 +3851,7 @@ async def coach_verify_email_page(request: Request, user = Depends(require_coach
 @app.post("/api/coach/verify-email")
 @limiter.limit("10/minute")
 async def verify_coach_email(request: Request, user = Depends(require_coach_or_pending)):
-    """Vérifie le code OTP envoyé par email."""
+    """Vérifie le code OTP envoyé par email (table email_verifications)."""
     try:
         data = await request.json()
         otp_code = data.get("otp_code", "").strip()
@@ -3860,37 +3860,15 @@ async def verify_coach_email(request: Request, user = Depends(require_coach_or_p
         if not otp_code or len(otp_code) != 6:
             return JSONResponse({"success": False, "error": "Code invalide"}, status_code=400)
         
-        demo_users = load_demo_users()
-        coach_data = demo_users.get(coach_email, {})
-        
-        stored_otp = coach_data.get("otp_code")
-        otp_expiry = coach_data.get("otp_expiry")
-        
-        if not stored_otp:
-            return JSONResponse({"success": False, "error": "Aucun code en attente"}, status_code=400)
-        
-        # Vérifier l'expiration
-        if otp_expiry and isinstance(otp_expiry, str):
-            try:
-                expiry_dt = datetime.fromisoformat(otp_expiry)
-                if datetime.now() > expiry_dt:
-                    return JSONResponse({"success": False, "error": "Code expiré. Demandez un nouveau code."}, status_code=400)
-            except (ValueError, TypeError):
-                pass  # Ignorer si format invalide
-        
-        # Vérifier le code
-        if otp_code != stored_otp:
-            return JSONResponse({"success": False, "error": "Code incorrect"}, status_code=400)
-        
-        # Marquer l'email comme vérifié
-        demo_users[coach_email]["email_verified"] = True
-        demo_users[coach_email]["otp_code"] = None
-        demo_users[coach_email]["otp_expiry"] = None
-        save_demo_users(demo_users)
+        from email_verification_service import verify_email_code
+        ok, err = verify_email_code(coach_email, otp_code)
+        if not ok:
+            return JSONResponse({"success": False, "error": err or "Code invalide ou expiré"}, status_code=400)
         
         log.info(f"✅ Email vérifié pour {coach_email}")
-        
-        return JSONResponse({"success": True, "redirect": "/coach/profile-setup"})
+        profile_completed = user.get("profile_completed", False)
+        redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+        return JSONResponse({"success": True, "redirect": redirect_url})
     except Exception as e:
         log.error(f"Erreur vérification OTP: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
@@ -3898,30 +3876,14 @@ async def verify_coach_email(request: Request, user = Depends(require_coach_or_p
 @app.post("/api/coach/resend-otp")
 @limiter.limit("3/minute")
 async def resend_coach_otp(request: Request, user = Depends(require_coach_or_pending)):
-    """Renvoie un nouveau code OTP par email."""
+    """Renvoie un nouveau code OTP par email (table email_verifications)."""
     try:
-        import random
-        from resend_service import send_otp_email_resend
-        
         coach_email = user.get("email")
-        full_name = user.get("full_name", "Coach")
-        
-        # Générer un nouveau code
-        otp_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-        otp_expiry = (datetime.now() + timedelta(minutes=10)).isoformat()
-        
-        # Sauvegarder
-        demo_users = load_demo_users()
-        if coach_email in demo_users:
-            demo_users[coach_email]["otp_code"] = otp_code
-            demo_users[coach_email]["otp_expiry"] = otp_expiry
-            save_demo_users(demo_users)
-        
-        locale = get_locale_from_request(request)
-        result = send_otp_email_resend(coach_email, otp_code, full_name, lang=locale)
-        log.info(f"📧 Nouveau code OTP envoyé à {coach_email}: {otp_code}")
-        
-        return JSONResponse({"success": True, "message": "Code envoyé"})
+        from email_verification_service import send_email_verification_code
+        ok, err = send_email_verification_code(coach_email)
+        if ok:
+            return JSONResponse({"success": True, "message": "Code envoyé"})
+        return JSONResponse({"success": False, "error": err or "Erreur envoi"}, status_code=400)
     except Exception as e:
         log.error(f"Erreur renvoi OTP: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)

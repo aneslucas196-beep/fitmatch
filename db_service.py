@@ -463,13 +463,13 @@ def upsert_email_verification(email: str, code_hash: str, expires_at) -> bool:
         conn = get_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
-            INSERT INTO email_verifications (email, code_hash, expires_at, verified_at)
-            VALUES (%s, %s, %s, NULL)
+            INSERT INTO public.email_verifications (email, code_hash, expires_at)
+            VALUES (%s, %s, %s)
             ON CONFLICT (email) DO UPDATE SET
                 code_hash = EXCLUDED.code_hash,
                 expires_at = EXCLUDED.expires_at,
                 verified_at = NULL,
-                created_at = CURRENT_TIMESTAMP
+                created_at = NOW()
         """, (email.strip().lower(), code_hash, expires_at))
         conn.commit()
         cur.close()
@@ -483,18 +483,25 @@ def upsert_email_verification(email: str, code_hash: str, expires_at) -> bool:
 
 
 def get_email_verification(email: str) -> Optional[Dict]:
-    """Récupère la ligne email_verifications pour un email."""
+    """Récupère la ligne email_verifications pour un email (non expiré, plus récent)."""
     conn = None
     try:
         conn = get_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute(
-            "SELECT * FROM email_verifications WHERE email = %s",
-            (email.strip().lower(),)
-        )
+        cur.execute("""
+            SELECT *
+            FROM public.email_verifications
+            WHERE email = %s
+            AND expires_at > NOW()
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (email.strip().lower(),))
         row = cur.fetchone()
         cur.close()
-        return dict(row) if row else None
+        record = dict(row) if row else None
+        log.info(f"OTP lookup email: {email}")
+        log.info(f"OTP record found: {record}")
+        return record
     except Exception as e:
         log.error(f"Erreur get email_verification {email}: {e}")
         return None
@@ -504,13 +511,13 @@ def get_email_verification(email: str) -> Optional[Dict]:
 
 
 def set_email_verified(email: str) -> bool:
-    """Marque verified_at = now pour cet email."""
+    """Marque verified_at = NOW() pour cet email."""
     conn = None
     try:
         conn = get_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute(
-            "UPDATE email_verifications SET verified_at = CURRENT_TIMESTAMP WHERE email = %s",
+            "UPDATE public.email_verifications SET verified_at = NOW() WHERE email = %s",
             (email.strip().lower(),)
         )
         conn.commit()
@@ -525,6 +532,23 @@ def set_email_verified(email: str) -> bool:
 
 
 def is_email_verified_in_db(email: str) -> bool:
-    """Vérifie si email_verifications.verified_at existe pour cet email."""
-    row = get_email_verification(email)
-    return row is not None and row.get("verified_at") is not None
+    """Vérifie si email_verifications.verified_at existe pour cet email (dernière entrée)."""
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT verified_at FROM public.email_verifications
+            WHERE email = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (email.strip().lower(),))
+        row = cur.fetchone()
+        cur.close()
+        return row is not None and row.get("verified_at") is not None
+    except Exception as e:
+        log.error(f"Erreur is_email_verified_in_db {email}: {e}")
+        return False
+    finally:
+        if conn:
+            release_connection(conn)

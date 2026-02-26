@@ -67,8 +67,9 @@ def send_email_verification_code(email: str) -> Tuple[bool, Optional[str]]:
 
 def verify_email_code(email: str, code: str) -> Tuple[bool, Optional[str]]:
     """
-    Vérifie le code saisi. Si OK: set verified_at, retourne (True, None).
+    Vérifie le code saisi. Si OK: UPDATE verified_at, retourne (True, None).
     Sinon: (False, message_erreur).
+    Hash: hashed_input = sha256(code + salt), compare avec code_hash stocké.
     """
     email = (email or "").strip().lower()
     code = (code or "").strip()
@@ -89,19 +90,9 @@ def verify_email_code(email: str, code: str) -> Tuple[bool, Optional[str]]:
     if row.get("verified_at"):
         return True, None  # déjà vérifié
 
-    expires_at = row.get("expires_at")
-    if expires_at:
-        try:
-            expiry = expires_at if isinstance(expires_at, datetime) else datetime.fromisoformat(str(expires_at).replace("Z", "+00:00"))
-            now = datetime.now(timezone.utc)
-            if hasattr(expiry, "tzinfo") and expiry.tzinfo is None:
-                expiry = expiry.replace(tzinfo=timezone.utc)
-            if now > expiry:
-                return False, "Code invalide ou expiré"
-        except (ValueError, TypeError):
-            pass
-
-    if not _verify_code_hash(code, row.get("code_hash", "")):
+    # hashed_input = sha256(code + salt), compare avec code_hash stocké
+    stored_hash = row.get("code_hash", "")
+    if not _verify_code_hash(code, stored_hash):
         return False, "Code invalide ou expiré"
 
     set_email_verified(email)
