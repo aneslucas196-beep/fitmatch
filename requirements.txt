@@ -20,4 +20,4 @@ slowapi==0.1.9
 pytest>=7.0.0
 python-dotenv>=1.0.0
 # Optionnel : sentry-sdk[fastapi] pour monitoring (SENTRY_DSN)
-itsdangerous
+itsdangerous  # obligatoire pour SessionMiddleware Starlette

@@ -68,6 +68,9 @@
                     {{ t.verify_email.payment_success|default('Paiement réussi ! Saisissez le code reçu par email pour accéder à votre portail.') }}
                 </div>
                 {% endif %}
+                {% if error %}
+                <div class="mb-4 text-center text-red-600 text-sm bg-red-50 rounded-lg p-3">{{ error }}</div>
+                {% endif %}
                 
                 <p class="text-slate-600 text-center mb-6">
                     {{ t.verify_email.enter_code|default('Entrez le code à 6 chiffres reçu par email.') }}
@@ -185,18 +188,22 @@
             loadingIcon.classList.remove('hidden');
 
             try {
-                const response = await fetch('/verify-email', {
+                const response = await fetch('/api/coach/verify-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ email, code: otp })
                 });
 
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
 
                 if (data.success && data.redirect) {
-                    window.location.href = data.redirect;
+                    window.location.href = data.redirect || '/coach/profile-setup';
                 } else {
-                    errorMessage.textContent = data.error || i18n.incorrectCode;
+                    let msg = data.error || i18n.incorrectCode;
+                    if (response.status === 404) msg = 'Compte non trouvé';
+                    else if (response.status === 400) msg = data.error || 'Code invalide ou expiré';
+                    errorMessage.textContent = msg;
                     errorMessage.classList.remove('hidden');
                     inputs.forEach(i => {
                         i.classList.add('error');
@@ -218,9 +225,10 @@
             resendBtn.textContent = i18n.sending;
 
             try {
-                const response = await fetch('/verify-email/resend', {
+                const response = await fetch('/api/coach/verify-email/resend', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ email: emailInput.value.trim() })
                 });
 

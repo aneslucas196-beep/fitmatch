@@ -446,10 +446,15 @@ app.include_router(cron_router)
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.getenv("SESSION_SECRET", "dev-secret-key"),
+    secret_key=os.getenv("SESSION_SECRET_KEY", os.getenv("SESSION_SECRET", "change-me")),
     same_site="lax",
     https_only=True
 )
+
+
+def get_session_email(request: Request) -> Optional[str]:
+    """Retourne l'email stocké en session (après OTP verify)."""
+    return request.session.get("user_email")
 
 app.add_middleware(
     CORSMiddleware,
@@ -1368,6 +1373,29 @@ def require_active_subscription(user = Depends(require_coach_role)):
         detail="Abonnement requis",
         headers={"Location": "/coach/subscription"}
     )
+
+
+def get_coach_from_session_or_cookie(request: Request) -> Optional[Dict]:
+    """Retourne le coach si session (user_email) ou cookie (session_token) valide."""
+    session_email = get_session_email(request)
+    if session_email:
+        user_data = get_demo_user(session_email)
+        if user_data and user_data.get("role") == "coach":
+            user_data["email"] = session_email
+            user_data["_access_token"] = f"session_{session_email}"
+            return user_data
+    user = get_current_user(request.cookies.get("session_token"))
+    if user and user.get("role") == "coach":
+        return user
+    return None
+
+
+def require_coach_session_or_cookie(request: Request) -> Dict:
+    """Dépendance : coach connecté via session OTP ou cookie."""
+    user = get_coach_from_session_or_cookie(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentification requise")
+    return user
 
 # Routes publiques
 @app.get("/", response_class=HTMLResponse)
@@ -2962,7 +2990,7 @@ async def coach_login_submit(
 
 # Routes protégées - Espace Coach
 @app.get("/coach/portal", response_class=HTMLResponse)
-async def coach_portal(request: Request, user = Depends(require_coach_role)):
+async def coach_portal(request: Request, user = Depends(require_coach_session_or_cookie)):
     """Dashboard coach - avec vérification du profil complété, abonnement et email (verified_at)."""
     
     # Charger les données fraîches depuis le fichier JSON
@@ -2973,16 +3001,19 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
     subscription_status = coach_data_fresh.get("subscription_status", "")
     log.info(f"🔍 Portal check: email={coach_email}, subscription_status='{subscription_status}'")
     
-    # Vérifier email_verifications.verified_at (obligatoire après paiement)
-    try:
-        from utils import use_database
-        if use_database():
-            from email_verification_service import is_email_verified
-            if not is_email_verified(coach_email):
+    if not get_session_email(request):
+        try:
+            from utils import use_database
+            if use_database():
+                from email_verification_service import is_email_verified
+                if not is_email_verified(coach_email):
+                    from urllib.parse import quote
+                    return RedirectResponse(url=f"/coach/verify-email?email={quote(coach_email)}", status_code=303)
+            elif not demo_users.get(coach_email, {}).get("email_verified", False):
                 from urllib.parse import quote
-                return RedirectResponse(url=f"/verify-email?email={quote(coach_email)}", status_code=303)
-    except Exception as e:
-        log.warning(f"Check verified_at: {e}")
+                return RedirectResponse(url=f"/coach/verify-email?email={quote(coach_email)}", status_code=303)
+        except Exception as e:
+            log.warning(f"Check verified_at: {e}")
     
     if subscription_status in ["blocked", "cancelled", "past_due"]:
         return RedirectResponse(url="/coach/subscription", status_code=302)
@@ -3031,7 +3062,7 @@ async def coach_portal(request: Request, user = Depends(require_coach_role)):
 @app.post("/coach/portal")
 async def coach_portal_update(
     request: Request,
-    user = Depends(require_coach_role),
+    user = Depends(require_coach_session_or_cookie),
     full_name: str = Form(...),
     bio: str = Form(""),
     city: str = Form(""),
@@ -3070,15 +3101,27 @@ async def coach_portal_update(
 
 # Route onboarding coach
 @app.get("/coach/profile-setup", response_class=HTMLResponse)
-async def coach_profile_setup_get(request: Request, user = Depends(require_coach_role)):
-    """Page d'onboarding/configuration du profil coach."""
-    
-    # Vérifier si l'email est vérifié
+async def coach_profile_setup_get(request: Request, user = Depends(require_coach_session_or_cookie)):
+    """Page d'onboarding/configuration du profil coach. Accepte session OTP ou cookie."""
     coach_email = user.get("email")
-    demo_users = load_demo_users()
-    coach_data_check = demo_users.get(coach_email, {})
-    if not coach_data_check.get("email_verified", False):
-        return RedirectResponse(url="/coach/verify-email", status_code=303)
+    if not get_session_email(request):
+        demo_users = load_demo_users()
+        coach_data_check = demo_users.get(coach_email, {})
+        verified = False
+        try:
+            from utils import use_database
+            if use_database():
+                from email_verification_service import is_email_verified
+                verified = is_email_verified(coach_email)
+            if not verified:
+                verified = coach_data_check.get("email_verified", False)
+            if not verified:
+                from urllib.parse import quote
+                return RedirectResponse(url=f"/coach/verify-email?email={quote(coach_email)}", status_code=303)
+        except Exception:
+            if not coach_data_check.get("email_verified", False):
+                from urllib.parse import quote
+                return RedirectResponse(url=f"/coach/verify-email?email={quote(coach_email)}", status_code=303)
     
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
     coach_data = None
@@ -3122,7 +3165,7 @@ async def coach_profile_setup_post(
     selected_gym_ids: Optional[str] = Form(""),
     selected_gyms_data: Optional[str] = Form(""),
     profile_photo: Optional[UploadFile] = File(None),
-    user = Depends(require_coach_role)
+    user = Depends(require_coach_session_or_cookie)
 ):
     """Traitement du formulaire d'onboarding coach."""
     
@@ -3316,7 +3359,7 @@ async def coach_profile_setup_post(
 @app.post("/coach/specialties")
 async def coach_specialties_update(
     request: Request,
-    user = Depends(require_coach_role),
+    user = Depends(require_coach_session_or_cookie),
     specialties: List[str] = Form([])
 ):
     """Mise à jour des spécialités du coach."""
@@ -3332,7 +3375,7 @@ async def coach_specialties_update(
 @app.post("/coach/transformations")
 async def coach_transformations_add(
     request: Request,
-    user = Depends(require_coach_role),
+    user = Depends(require_coach_session_or_cookie),
     title: str = Form(...),
     description: str = Form(""),
     duration_weeks: Optional[int] = Form(None),
@@ -3753,64 +3796,96 @@ async def coach_subscription_page(
     })
 
 # ======================================
-# ROUTES /verify-email (post-paiement Stripe, OTP DB)
+# ROUTES verify-email (post-paiement Stripe, OTP DB)
 # ======================================
 
 @app.get("/verify-email", response_class=HTMLResponse)
-async def verify_email_page(
+async def verify_email_redirect(
     request: Request,
     email: Optional[str] = Query(None),
     payment: Optional[str] = Query(None),
 ):
-    """Page de saisie du code OTP après paiement. Email en query param."""
+    """Redirige vers /coach/verify-email (alias pour compatibilité)."""
+    from urllib.parse import quote
+    params = []
+    if email:
+        params.append(f"email={quote(email)}")
+    if payment:
+        params.append(f"payment={payment}")
+    qs = "&".join(params)
+    url = f"/coach/verify-email?{qs}" if qs else "/coach/verify-email"
+    return RedirectResponse(url=url, status_code=302)
+
+
+@app.get("/coach/verify-email", response_class=HTMLResponse)
+async def coach_verify_email_page(
+    request: Request,
+    email: Optional[str] = Query(None),
+    payment: Optional[str] = Query(None),
+    error: Optional[str] = Query(None),
+):
+    """Page de saisie du code OTP après paiement. PUBLIC, pas d'auth. Email en query."""
+    if not email:
+        email = get_session_email(request)
+    email_val = (email or "").strip().lower()
+    payment_success = payment == "success"
     i18n = get_i18n_context(request)
     locale = get_locale_from_request(request)
     translations = get_translations(locale)
-    email_val = (email or "").strip().lower()
-    payment_success = payment == "success"
     return templates.TemplateResponse("verify_email_subscription.html", {
         "request": request,
         "email": email_val,
         "payment_success": payment_success,
+        "error": error,
         "t": translations,
         "locale": locale,
         "csp_nonce": getattr(request.state, "csp_nonce", ""),
     })
 
 
-@app.post("/verify-email")
+@app.get("/api/coach/verify-email")
+async def api_coach_verify_email_get():
+    """API uniquement en POST. GET retourne 405."""
+    return JSONResponse({"detail": "Method Not Allowed"}, status_code=405)
+
+
+@app.post("/api/coach/verify-email")
 @limiter.limit("10/minute")
-async def verify_email_submit(request: Request):
-    """Vérifie le code OTP, crée la session, redirige vers /coach/portal."""
+async def api_coach_verify_email_post(request: Request):
+    """Vérifie le code OTP, crée la session (request.session), retourne JSON. PUBLIC, pas d'auth."""
     try:
         data = await request.json()
         email = (data.get("email") or "").strip().lower()
-        code = (data.get("code") or "").strip()
+        code = (data.get("code") or data.get("otp_code") or "").strip()
         if not email or not code:
             return JSONResponse({"success": False, "error": "Code invalide ou expiré"}, status_code=400)
+        if len(code) != 6:
+            return JSONResponse({"success": False, "error": "Code invalide"}, status_code=400)
         from email_verification_service import verify_email_code
         ok, err = verify_email_code(email, code)
         if not ok:
             return JSONResponse({"success": False, "error": err or "Code invalide ou expiré"}, status_code=400)
-        # Vérifier que c'est bien un coach avec abonnement actif
         coach_data = get_demo_user(email)
-        if not coach_data or coach_data.get("role") != "coach":
-            return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=400)
+        if not coach_data:
+            return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=404)
+        if coach_data.get("role") != "coach":
+            return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=404)
         if coach_data.get("subscription_status") != "active":
             return JSONResponse({"success": False, "error": "Abonnement non actif"}, status_code=400)
-        # Créer la session et rediriger
-        response = JSONResponse({"success": True, "redirect": "/coach/portal"})
-        _set_session_cookie(response, email, request)
-        return response
+        request.session["user_email"] = email
+        log.info(f"✅ Email vérifié pour {email}, session créée")
+        profile_completed = coach_data.get("profile_completed", False)
+        redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+        return JSONResponse({"success": True, "redirect": redirect_url})
     except Exception as e:
         log.error(f"Erreur verify_email: {e}")
         return JSONResponse({"success": False, "error": "Erreur serveur"}, status_code=500)
 
 
-@app.post("/verify-email/resend")
+@app.post("/api/coach/verify-email/resend")
 @limiter.limit("3/minute")
-async def verify_email_resend(request: Request):
-    """Renvoye un nouveau code OTP par email."""
+async def api_coach_verify_email_resend(request: Request):
+    """Renvoye un nouveau code OTP. PUBLIC, pas d'auth."""
     try:
         data = await request.json()
         email = (data.get("email") or "").strip().lower()
@@ -3826,95 +3901,11 @@ async def verify_email_resend(request: Request):
         return JSONResponse({"success": False, "error": "Erreur serveur"}, status_code=500)
 
 
-# ======================================
-# ROUTE VERIFICATION EMAIL COACH (legacy, session requise)
-# ======================================
-
-@app.get("/coach/verify-email", response_class=HTMLResponse)
-async def coach_verify_email_page(request: Request, user = Depends(require_coach_or_pending), error: Optional[str] = Query(None)):
-    """Page de vérification de l'email du coach après paiement."""
-    coach_email = user.get("email")
-    
-    # Vérifier si l'email est déjà vérifié (email_verifications.verified_at)
-    try:
-        from utils import use_database
-        if use_database():
-            from email_verification_service import is_email_verified
-            if is_email_verified(coach_email):
-                profile_completed = user.get("profile_completed", False)
-                redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-                return RedirectResponse(url=redirect_url, status_code=303)
-    except Exception:
-        pass
-    demo_users = load_demo_users()
-    coach_data = demo_users.get(coach_email, {})
-    if coach_data.get("email_verified", False):
-        profile_completed = user.get("profile_completed", False)
-        redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-        return RedirectResponse(url=redirect_url, status_code=303)
-    
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
-    return templates.TemplateResponse("coach_verify_email.html", {
-        "request": request,
-        "coach": user,
-        "email": coach_email,
-        "error": error,
-        "t": translations,
-        "locale": locale
-    })
-
-@app.post("/api/coach/verify-email")
-@limiter.limit("10/minute")
-async def verify_coach_email(request: Request, user = Depends(require_coach_or_pending)):
-    """Vérifie le code OTP envoyé par email (table email_verifications). Accepte form POST ou JSON."""
-    try:
-        content_type = (request.headers.get("content-type") or "").lower()
-        is_form = "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type
-        if is_form:
-            form = await request.form()
-            otp_code = (form.get("code") or "").strip()
-        else:
-            data = await request.json()
-            otp_code = (data.get("otp_code") or data.get("code") or "").strip()
-        coach_email = user.get("email")
-        
-        if not otp_code or len(otp_code) != 6:
-            if is_form:
-                return RedirectResponse(url="/coach/verify-email?error=Code+invalide", status_code=303)
-            return JSONResponse({"success": False, "error": "Code invalide"}, status_code=400)
-        
-        from email_verification_service import verify_email_code
-        ok, err = verify_email_code(coach_email, otp_code)
-        if not ok:
-            if is_form:
-                return RedirectResponse(url="/coach/verify-email?error=Code+invalide+ou+expiré", status_code=303)
-            return JSONResponse({"success": False, "error": err or "Code invalide ou expiré"}, status_code=400)
-        
-        log.info(f"✅ Email vérifié pour {coach_email}")
-        profile_completed = user.get("profile_completed", False)
-        redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-        response = RedirectResponse(url=redirect_url, status_code=303)
-        _set_session_cookie(response, coach_email, request)
-        return response
-    except Exception as e:
-        log.error(f"Erreur vérification OTP: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-
 @app.post("/api/coach/resend-otp")
 @limiter.limit("3/minute")
-async def resend_coach_otp(request: Request, user = Depends(require_coach_or_pending)):
-    """Renvoie un nouveau code OTP par email (table email_verifications)."""
-    try:
-        coach_email = user.get("email")
-        from email_verification_service import send_email_verification_code
-        ok, err = send_email_verification_code(coach_email)
-        if ok:
-            return JSONResponse({"success": True, "message": "Code envoyé"})
-        return JSONResponse({"success": False, "error": err or "Erreur envoi"}, status_code=400)
-    except Exception as e:
-        log.error(f"Erreur renvoi OTP: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+async def resend_coach_otp(request: Request):
+    """Alias pour /api/coach/verify-email/resend (compatibilité)."""
+    return await api_coach_verify_email_resend(request)
 
 # ======================================
 # ROUTE PUBLIQUE - PROFIL DU COACH
