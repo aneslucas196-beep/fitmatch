@@ -3396,10 +3396,17 @@ async def coach_profile_setup_post(
     })
 
 
+def _wants_json_response(request: Request) -> bool:
+    """True si la requête vient d'un fetch/XHR (Accept: application/json ou X-Requested-With)."""
+    accept = (request.headers.get("accept") or "").lower()
+    xrw = (request.headers.get("x-requested-with") or "").lower()
+    return "application/json" in accept or xrw == "xmlhttprequest"
+
+
 @app.post("/api/coach/profile-setup")
 @limiter.limit("10/minute")
 async def api_coach_profile_setup(request: Request):
-    """API profile-setup : multipart/form-data, tous les champs optionnels. Retourne {success, redirect} ou {success:false, error}."""
+    """API profile-setup : multipart/form-data. XHR/fetch -> JSON. Submit HTML classique -> RedirectResponse 303."""
     try:
         coach_email = get_session_email(request) or request.session.get("coach_email")
         if not coach_email:
@@ -3487,10 +3494,15 @@ async def api_coach_profile_setup(request: Request):
             "otp_expiry": existing.get("otp_expiry"),
         }
         save_demo_user(coach_email, updated)
-        return JSONResponse({"success": True, "redirect": "/coach/dashboard"})
+        if _wants_json_response(request):
+            return JSONResponse({"success": True, "redirect": "/coach/dashboard"})
+        return RedirectResponse(url="/coach/dashboard", status_code=303)
     except Exception as e:
         log.error(f"PROFILE SETUP ERROR: {e}")
-        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+        if _wants_json_response(request):
+            return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+        from urllib.parse import quote
+        return RedirectResponse(url="/coach/profile-setup?error=" + quote(str(e)[:80]), status_code=303)
 
 
 @app.post("/coach/specialties")

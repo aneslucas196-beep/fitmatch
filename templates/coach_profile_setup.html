@@ -63,7 +63,7 @@
             </div>
             {% endif %}
 
-            <form id="coachProfileForm" class="space-y-8" enctype="multipart/form-data">
+            <form id="coachProfileForm" action="/api/coach/profile-setup" method="POST" class="space-y-8" enctype="multipart/form-data">
                 
                 <!-- Section 1: Informations de base -->
                 <div class="border-b border-gray-200 pb-8">
@@ -317,6 +317,7 @@ document.addEventListener("DOMContentLoaded", function() {
   form.addEventListener("submit", async function(e) {
     e.preventDefault();
     e.stopPropagation();
+    console.log("profile setup submit fired");
 
     const formData = new FormData(form);
 
@@ -324,18 +325,25 @@ document.addEventListener("DOMContentLoaded", function() {
       const res = await fetch("/api/coach/profile-setup", {
         method: "POST",
         body: formData,
-        credentials: "include"
+        credentials: "include",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Accept": "application/json"
+        }
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        window.location.assign(data.redirect || "/coach/dashboard");
-      } else {
-        const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({}));
+      console.log("profile setup response", data);
+
+      if (res.ok && (data.redirect || data.next || data.redirect_url)) {
+        window.location.assign(data.redirect || data.next || data.redirect_url || "/coach/dashboard");
+      } else if (!res.ok) {
         alert(data.error || "Erreur lors de la sauvegarde.");
+      } else {
+        window.location.assign("/coach/dashboard");
       }
     } catch (err) {
-      console.error(err);
+      console.error("profile setup error:", err);
       alert("Erreur réseau.");
     }
   });
