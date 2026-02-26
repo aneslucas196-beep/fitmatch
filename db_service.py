@@ -275,6 +275,11 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
         return True
     except Exception as e:
         log.error(f"Erreur sauvegarde utilisateur {email}: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         return False
     finally:
         if conn:
@@ -294,6 +299,11 @@ def remove_user_from_db(email: str) -> bool:
         return True
     except Exception as e:
         log.error(f"Erreur suppression utilisateur {email}: {e}")
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         return False
     finally:
         if conn:

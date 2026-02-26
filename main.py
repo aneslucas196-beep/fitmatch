@@ -3188,6 +3188,20 @@ async def coach_profile_setup_post(
     user_supabase = get_supabase_client_for_user(user.get("_access_token"))
     error_message = None
     success_message = None
+    profile_completed_before = user.get("profile_completed", False)
+    
+    # Photo obligatoire lors de la première complétion du profil
+    if not profile_completed_before and not (profile_photo and profile_photo.filename):
+        error_message = "Photo de profil obligatoire"
+        i18n_context = get_i18n_context(request)
+        return templates.TemplateResponse("coach_profile_setup.html", {
+            "request": request,
+            "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km},
+            "profile_completed": False,
+            "error_message": error_message,
+            "user": user,
+            **i18n_context
+        }, status_code=400)
     
     try:
         # Gérer l'upload de la photo de profil
@@ -3281,9 +3295,9 @@ async def coach_profile_setup_post(
             # Mettre à jour l'utilisateur et sauvegarder dans le stockage persistant
             from utils import save_demo_user
             session_token = user.get("_access_token", "")
-            user_email = None
+            user_email = user.get("email", "").strip().lower() or None
             
-            if session_token.startswith("demo_"):
+            if not user_email and session_token.startswith("demo_"):
                 from utils import load_demo_users
                 from auth_utils import get_email_from_session_token
                 user_email = get_email_from_session_token(session_token, load_demo_users)
@@ -3371,6 +3385,105 @@ async def coach_profile_setup_post(
         "user": user,
         **i18n_context
     })
+
+
+@app.post("/api/coach/profile-setup")
+@limiter.limit("10/minute")
+async def api_coach_profile_setup(
+    request: Request,
+    full_name: str = Form(...),
+    bio: str = Form(...),
+    city: str = Form(...),
+    instagram_url: Optional[str] = Form(""),
+    price_from: Optional[int] = Form(None),
+    radius_km: int = Form(25),
+    specialties: List[str] = Form([]),
+    selected_gym_ids: Optional[str] = Form(""),
+    selected_gyms_data: Optional[str] = Form(""),
+    profile_photo: Optional[UploadFile] = File(None),
+    user = Depends(require_coach_session_or_cookie)
+):
+    """API profile-setup : multipart/form-data, retourne JSON {success, redirect} ou {success:false, detail}."""
+    profile_completed_before = user.get("profile_completed", False)
+    if not profile_completed_before and not (profile_photo and profile_photo.filename):
+        return JSONResponse(
+            {"success": False, "detail": "Photo de profil obligatoire"},
+            status_code=400
+        )
+    user_supabase = get_supabase_client_for_user(user.get("_access_token"))
+    try:
+        profile_photo_url = None
+        if profile_photo and profile_photo.filename:
+            try:
+                photo_content = await profile_photo.read()
+                user_id = user.get("id", user.get("email", "demo_user"))
+                if user_supabase:
+                    original_content, thumb_content, filename = process_image_for_upload(photo_content, str(user_id))
+                    profile_photo_url = await upload_to_supabase_storage(user_supabase, original_content, f"profile_{filename}")
+                    if not profile_photo_url:
+                        return JSONResponse({"success": False, "detail": "Erreur lors de l'upload de la photo."}, status_code=400)
+                else:
+                    import os
+                    os.makedirs("attached_assets/profile_photos", exist_ok=True)
+                    original_content, thumb_content, filename = process_image_for_upload(photo_content, str(user_id))
+                    local_path = f"attached_assets/profile_photos/{filename.replace('/', '_')}"
+                    with open(local_path, "wb") as f:
+                        f.write(original_content)
+                    profile_photo_url = f"/attached_assets/profile_photos/{filename.replace('/', '_')}"
+            except Exception as e:
+                log.error(f"Erreur upload photo: {e}")
+                return JSONResponse({"success": False, "detail": f"Erreur lors du traitement de la photo: {str(e)}"}, status_code=400)
+        if user_supabase:
+            profile_data = {
+                "full_name": full_name.strip(), "bio": bio.strip(), "city": city.strip(),
+                "instagram_url": instagram_url.strip() or None, "price_from": price_from,
+                "radius_km": radius_km, "profile_completed": True
+            }
+            if profile_photo_url:
+                profile_data["profile_photo_url"] = profile_photo_url
+            user_id = user.get("id", user.get("email", "demo_user"))
+            profile_response = user_supabase.table("profiles").update(profile_data).eq("user_id", user_id).execute()
+            if not profile_response.data:
+                return JSONResponse({"success": False, "detail": "Erreur lors de la mise à jour du profil."}, status_code=400)
+            if specialties:
+                user_supabase.table("coach_specialties").delete().eq("coach_id", user_id).execute()
+                user_supabase.table("coach_specialties").insert([{"coach_id": user_id, "specialty": s} for s in specialties]).execute()
+            if selected_gym_ids and selected_gym_ids.strip():
+                gym_ids = [g.strip() for g in selected_gym_ids.split(",") if g.strip()]
+                if gym_ids:
+                    user_supabase.table("coach_gyms").delete().eq("coach_id", user_id).execute()
+                    user_supabase.table("coach_gyms").insert([{"coach_id": user_id, "gym_id": gid} for gid in gym_ids]).execute()
+            return JSONResponse({"success": True, "redirect": "/coach/portal"})
+        user_email = user.get("email", "").strip().lower() or None
+        if not user_email:
+            session_token = user.get("_access_token", "")
+            if session_token.startswith("demo_"):
+                from auth_utils import get_email_from_session_token
+                user_email = get_email_from_session_token(session_token, load_demo_users)
+        if not user_email:
+            return JSONResponse({"success": False, "detail": "Session invalide. Veuillez vous reconnecter."}, status_code=401)
+        existing_user = get_demo_user(user_email) or {}
+        profile_slug = existing_user.get("profile_slug") or generate_unique_slug_for_coach(user_email, full_name)
+        updated_user = {
+            "id": user.get("id", user_email), "email": user_email, "role": user.get("role", "coach"),
+            "profile_completed": True, "profile_slug": profile_slug,
+            "full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url,
+            "price_from": price_from, "radius_km": radius_km, "specialties": specialties,
+            "selected_gym_ids": selected_gym_ids, "selected_gyms_data": selected_gyms_data,
+            "profile_photo_url": profile_photo_url or existing_user.get("profile_photo_url"),
+            "password": existing_user.get("password"), "gender": existing_user.get("gender"),
+            "country_code": existing_user.get("country_code"), "coach_gender_preference": existing_user.get("coach_gender_preference"),
+            "selected_gyms": existing_user.get("selected_gyms"), "subscription_status": existing_user.get("subscription_status"),
+            "email_verified": existing_user.get("email_verified"), "stripe_customer_id": existing_user.get("stripe_customer_id"),
+            "stripe_subscription_id": existing_user.get("stripe_subscription_id"), "subscription_period_end": existing_user.get("subscription_period_end"),
+            "otp_code": existing_user.get("otp_code"), "otp_expiry": existing_user.get("otp_expiry")
+        }
+        save_demo_user(user_email, updated_user)
+        return JSONResponse({"success": True, "redirect": "/coach/portal"})
+    except Exception as e:
+        log.error(f"Erreur api profile-setup: {e}")
+        return JSONResponse({"success": False, "detail": "Une erreur s'est produite lors de la sauvegarde."}, status_code=500)
+
 
 @app.post("/coach/specialties")
 async def coach_specialties_update(
