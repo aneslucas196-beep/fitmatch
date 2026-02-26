@@ -63,7 +63,7 @@
             </div>
             {% endif %}
 
-            <form id="profile-setup-form" class="space-y-8">
+            <form id="profile-form" class="space-y-8">
                 
                 <!-- Section 1: Informations de base -->
                 <div class="border-b border-gray-200 pb-8">
@@ -310,49 +310,35 @@ try {
 }
 {% endif %}
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener("DOMContentLoaded", function() {
     // ========================================
     // SOUMISSION VIA FETCH (FormData + credentials)
     // ========================================
-    const form = document.getElementById('profile-setup-form');
-    const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
-    
-    if (form) {
-        form.addEventListener('submit', async function(e) {
+    const formEl = document.getElementById("profile-form");
+    if (formEl) {
+        formEl.addEventListener("submit", async function(e) {
             e.preventDefault();
-            if (submitBtn) submitBtn.disabled = true;
+            const form = e.target;
             const formData = new FormData(form);
             try {
-                const res = await fetch('/api/coach/profile-setup', {
-                    method: 'POST',
+                const response = await fetch("/api/coach/profile-setup", {
+                    method: "POST",
                     body: formData,
-                    credentials: 'include'
+                    credentials: "include"
                 });
-                const data = await res.json().catch(() => ({}));
-                if (data.success && data.redirect) {
-                    window.location.href = data.redirect;
-                    return;
-                }
-                const msg = data.error || data.detail || "Une erreur s'est produite lors de la sauvegarde.";
-                const errEl = document.getElementById('profile-setup-error');
-                if (errEl) {
-                    const span = errEl.querySelector('span.text-sm');
-                    if (span) span.textContent = msg;
-                    errEl.classList.remove('hidden');
+                const data = await response.json();
+                if (data.success) {
+                    window.location.href = data.redirect || "/coach/dashboard";
+                } else {
+                    alert(data.error || "Erreur lors de la sauvegarde.");
                 }
             } catch (err) {
-                const errEl = document.getElementById('profile-setup-error');
-                if (errEl) {
-                    const span = errEl.querySelector('span.text-sm');
-                    if (span) span.textContent = "Erreur de connexion. Réessayez.";
-                    errEl.classList.remove('hidden');
-                }
-            } finally {
-                if (submitBtn) submitBtn.disabled = false;
+                console.error("Profile setup error:", err);
+                alert("Erreur réseau.");
             }
         });
     }
-    
+
     // ========================================
     // APERÇU DE LA PHOTO DE PROFIL
     // ========================================
