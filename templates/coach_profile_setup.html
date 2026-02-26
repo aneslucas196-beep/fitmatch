@@ -63,7 +63,7 @@
             </div>
             {% endif %}
 
-            <form id="profile-form" class="space-y-8">
+            <form id="coachProfileForm" class="space-y-8" enctype="multipart/form-data">
                 
                 <!-- Section 1: Informations de base -->
                 <div class="border-b border-gray-200 pb-8">
@@ -311,36 +311,38 @@ try {
 {% endif %}
 
 document.addEventListener("DOMContentLoaded", function() {
-    // ========================================
-    // SOUMISSION VIA FETCH (FormData + credentials)
-    // ========================================
-    const formEl = document.getElementById("profile-form");
-    if (formEl) {
-        formEl.addEventListener("submit", async function(e) {
-            e.preventDefault();
-            const form = e.target;
-            const formData = new FormData(form);
-            try {
-                const response = await fetch("/api/coach/profile-setup", {
-                    method: "POST",
-                    body: formData,
-                    credentials: "include"
-                });
-                const data = await response.json();
-                if (data.success) {
-                    window.location.href = data.redirect || "/coach/dashboard";
-                } else {
-                    alert(data.error || "Erreur lors de la sauvegarde.");
-                }
-            } catch (err) {
-                console.error("Profile setup error:", err);
-                alert("Erreur réseau.");
-            }
-        });
-    }
+  const form = document.getElementById("coachProfileForm");
+  if (!form) return;
 
-    // ========================================
-    // APERÇU DE LA PHOTO DE PROFIL
+  form.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch("/api/coach/profile-setup", {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        window.location.href = data.redirect || "/coach/dashboard";
+      } else {
+        alert(data.error || "Erreur lors de la sauvegarde.");
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Erreur réseau.");
+    }
+  });
+
+  // ========================================
+  // APERÇU DE LA PHOTO DE PROFIL
     // ========================================
     const photoInput = document.getElementById('profile_photo');
     const photoPreview = document.getElementById('profile-photo-preview');
