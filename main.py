@@ -1379,14 +1379,27 @@ def require_active_subscription(user = Depends(require_coach_role)):
 
 
 def get_coach_from_session_or_cookie(request: Request) -> Optional[Dict]:
-    """Retourne le coach si session (user_email) ou cookie (session_token) valide."""
+    """Retourne le coach si session Starlette (cookie session) OU session_token valide."""
+    # 1) Priorité : session Starlette (OTP vérifié) - cookie "session" avec user_email + is_coach
     session_email = get_session_email(request)
-    if session_email:
+    is_coach = request.session.get("is_coach") is True
+    if session_email and is_coach:
         user_data = get_demo_user(session_email)
         if user_data and user_data.get("role") == "coach":
             user_data["email"] = session_email
             user_data["_access_token"] = f"session_{session_email}"
             return user_data
+        # Session valide mais user absent du cache DB : accepter quand même (créé après OTP)
+        base = dict(user_data) if user_data else {}
+        base.update({
+            "email": session_email,
+            "role": "coach",
+            "profile_completed": base.get("profile_completed", False),
+            "subscription_status": base.get("subscription_status", "active"),
+            "_access_token": f"session_{session_email}",
+        })
+        return base
+    # 2) Fallback : cookie session_token (login classique)
     user = get_current_user(request.cookies.get("session_token"))
     if user and user.get("role") == "coach":
         return user
@@ -3884,16 +3897,18 @@ async def api_coach_verify_email_post(request: Request):
             return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=404)
         if coach_data.get("subscription_status") != "active":
             return JSONResponse({"success": False, "error": "Abonnement non actif"}, status_code=400)
-        # Session serveur : requis pour que /coach/portal et /coach/profile-setup reconnaissent l'utilisateur
+        # Session serveur (cookie "session") : requis pour get_session_email
         request.session["user_email"] = email
         request.session["coach_email"] = email
         request.session["is_coach"] = True
         log.info(f"Email verifie pour {email}, session creee")
         profile_completed = coach_data.get("profile_completed", False)
         redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-        # JSON au lieu de 303 : le navigateur stocke le cookie Set-Cookie avant la redirection
-        # (plus fiable que fetch suivant un 303, qui peut ne pas envoyer le cookie a temps)
-        return JSONResponse({"success": True, "redirect": redirect_url})
+        # JSON + cookies : session (SessionMiddleware) ET session_token (fallback pour get_current_user)
+        # Certains navigateurs/proxies ne transmettent pas correctement "session" -> session_token assure l'auth
+        resp = JSONResponse({"success": True, "redirect": redirect_url})
+        _set_session_cookie(resp, email, request)
+        return resp
     except Exception as e:
         log.error(f"Erreur verify_email: {e}")
         return JSONResponse({"success": False, "error": "Erreur serveur"}, status_code=500)
