@@ -68,26 +68,19 @@
                     {{ t.verify_email.enter_code|default('Enter the 6-digit code received by email to continue your registration.') }}
                 </p>
 
-                <form id="otpForm" class="space-y-6">
-                    <div class="flex justify-center gap-2 sm:gap-3" id="otpInputs">
-                        <input type="text" maxlength="1" class="otp-input" data-index="0" inputmode="numeric" pattern="[0-9]" autocomplete="one-time-code">
-                        <input type="text" maxlength="1" class="otp-input" data-index="1" inputmode="numeric" pattern="[0-9]">
-                        <input type="text" maxlength="1" class="otp-input" data-index="2" inputmode="numeric" pattern="[0-9]">
-                        <input type="text" maxlength="1" class="otp-input" data-index="3" inputmode="numeric" pattern="[0-9]">
-                        <input type="text" maxlength="1" class="otp-input" data-index="4" inputmode="numeric" pattern="[0-9]">
-                        <input type="text" maxlength="1" class="otp-input" data-index="5" inputmode="numeric" pattern="[0-9]">
-                    </div>
+                {% if error %}
+                <div class="mb-4 text-center text-red-600 text-sm bg-red-50 rounded-lg p-3">{{ error }}</div>
+                {% endif %}
 
-                    <div id="errorMessage" class="hidden text-center text-red-600 text-sm bg-red-50 rounded-lg p-3"></div>
-
-                    <button type="submit" id="verifyBtn" class="w-full py-3 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                        <span>{{ t.verify_email.verify_btn|default('Verify') }}</span>
-                        <svg class="w-5 h-5 hidden animate-spin" id="loadingIcon" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                <form method="POST" action="/api/coach/verify-email" class="space-y-6">
+                    <input type="hidden" name="email" value="{{ email }}">
+                    <input name="code" maxlength="6" placeholder="Code" class="w-full py-3 px-4 border border-slate-200 rounded-xl text-center text-lg font-semibold" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
+                    <button type="submit" class="w-full py-3 bg-emerald-500 text-white font-semibold rounded-xl hover:bg-emerald-600 transition">
+                        {{ t.verify_email.verify_btn|default('Vérifier') }}
                     </button>
                 </form>
+
+                <div id="errorMessage" class="hidden text-center text-red-600 text-sm bg-red-50 rounded-lg p-3 mt-4"></div>
 
                 <div class="mt-6 text-center">
                     <p class="text-slate-500 text-sm mb-2">{{ t.verify_email.not_received|default("Didn't receive the code?") }}</p>
@@ -110,100 +103,15 @@
 
     <script nonce="{{ csp_nonce }}">
         const i18n = {
-            enterDigits: '{{ t.verify_email.enter_digits|default("Enter the 6 digits of the code") }}',
-            incorrectCode: '{{ t.verify_email.incorrect_code|default("Incorrect code") }}',
-            connectionError: '{{ t.verify_email.connection_error|default("Connection error. Please try again.") }}',
             sending: '{{ t.verify_email.sending|default("Sending...") }}',
             sendError: '{{ t.verify_email.send_error|default("Error sending code") }}',
-            resendCode: '{{ t.verify_email.resend_code|default("Resend code") }}'
+            resendCode: '{{ t.verify_email.resend_code|default("Resend code") }}',
+            connectionError: '{{ t.verify_email.connection_error|default("Connection error. Please try again.") }}'
         };
 
-        const inputs = document.querySelectorAll('.otp-input');
-        const form = document.getElementById('otpForm');
-        const errorMessage = document.getElementById('errorMessage');
-        const verifyBtn = document.getElementById('verifyBtn');
-        const loadingIcon = document.getElementById('loadingIcon');
         const resendBtn = document.getElementById('resendBtn');
         const resendSuccess = document.getElementById('resendSuccess');
-
-        inputs.forEach((input, index) => {
-            input.addEventListener('input', (e) => {
-                const value = e.target.value.replace(/[^0-9]/g, '');
-                e.target.value = value;
-                
-                if (value && index < inputs.length - 1) {
-                    inputs[index + 1].focus();
-                }
-                
-                inputs.forEach(i => i.classList.remove('error'));
-                errorMessage.classList.add('hidden');
-            });
-
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                    inputs[index - 1].focus();
-                }
-            });
-
-            input.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
-                pastedData.split('').forEach((char, i) => {
-                    if (inputs[i]) {
-                        inputs[i].value = char;
-                    }
-                });
-                if (pastedData.length === 6) {
-                    inputs[5].focus();
-                }
-            });
-        });
-
-        inputs[0].focus();
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const otp = Array.from(inputs).map(i => i.value).join('');
-            
-            if (otp.length !== 6) {
-                errorMessage.textContent = i18n.enterDigits;
-                errorMessage.classList.remove('hidden');
-                inputs.forEach(i => i.classList.add('error'));
-                return;
-            }
-
-            verifyBtn.disabled = true;
-            loadingIcon.classList.remove('hidden');
-
-            try {
-                const response = await fetch('/api/coach/verify-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ otp_code: otp })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    window.location.href = data.redirect || '/coach/profile-setup';
-                } else {
-                    errorMessage.textContent = data.error || i18n.incorrectCode;
-                    errorMessage.classList.remove('hidden');
-                    inputs.forEach(i => {
-                        i.classList.add('error');
-                        i.value = '';
-                    });
-                    inputs[0].focus();
-                }
-            } catch (error) {
-                errorMessage.textContent = i18n.connectionError;
-                errorMessage.classList.remove('hidden');
-            } finally {
-                verifyBtn.disabled = false;
-                loadingIcon.classList.add('hidden');
-            }
-        });
+        const errorMessage = document.getElementById('errorMessage');
 
         resendBtn.addEventListener('click', async () => {
             resendBtn.disabled = true;

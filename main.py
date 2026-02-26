@@ -3831,16 +3831,24 @@ async def verify_email_resend(request: Request):
 # ======================================
 
 @app.get("/coach/verify-email", response_class=HTMLResponse)
-async def coach_verify_email_page(request: Request, user = Depends(require_coach_or_pending)):
+async def coach_verify_email_page(request: Request, user = Depends(require_coach_or_pending), error: Optional[str] = Query(None)):
     """Page de vérification de l'email du coach après paiement."""
     coach_email = user.get("email")
     
-    # Vérifier si l'email est déjà vérifié
+    # Vérifier si l'email est déjà vérifié (email_verifications.verified_at)
+    try:
+        from utils import use_database
+        if use_database():
+            from email_verification_service import is_email_verified
+            if is_email_verified(coach_email):
+                profile_completed = user.get("profile_completed", False)
+                redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+                return RedirectResponse(url=redirect_url, status_code=303)
+    except Exception:
+        pass
     demo_users = load_demo_users()
     coach_data = demo_users.get(coach_email, {})
-    
     if coach_data.get("email_verified", False):
-        # Email déjà vérifié, rediriger vers profile-setup ou portal
         profile_completed = user.get("profile_completed", False)
         redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
         return RedirectResponse(url=redirect_url, status_code=303)
@@ -3851,6 +3859,7 @@ async def coach_verify_email_page(request: Request, user = Depends(require_coach
         "request": request,
         "coach": user,
         "email": coach_email,
+        "error": error,
         "t": translations,
         "locale": locale
     })
@@ -3858,24 +3867,36 @@ async def coach_verify_email_page(request: Request, user = Depends(require_coach
 @app.post("/api/coach/verify-email")
 @limiter.limit("10/minute")
 async def verify_coach_email(request: Request, user = Depends(require_coach_or_pending)):
-    """Vérifie le code OTP envoyé par email (table email_verifications)."""
+    """Vérifie le code OTP envoyé par email (table email_verifications). Accepte form POST ou JSON."""
     try:
-        data = await request.json()
-        otp_code = data.get("otp_code", "").strip()
+        content_type = (request.headers.get("content-type") or "").lower()
+        is_form = "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type
+        if is_form:
+            form = await request.form()
+            otp_code = (form.get("code") or "").strip()
+        else:
+            data = await request.json()
+            otp_code = (data.get("otp_code") or data.get("code") or "").strip()
         coach_email = user.get("email")
         
         if not otp_code or len(otp_code) != 6:
+            if is_form:
+                return RedirectResponse(url="/coach/verify-email?error=Code+invalide", status_code=303)
             return JSONResponse({"success": False, "error": "Code invalide"}, status_code=400)
         
         from email_verification_service import verify_email_code
         ok, err = verify_email_code(coach_email, otp_code)
         if not ok:
+            if is_form:
+                return RedirectResponse(url="/coach/verify-email?error=Code+invalide+ou+expiré", status_code=303)
             return JSONResponse({"success": False, "error": err or "Code invalide ou expiré"}, status_code=400)
         
         log.info(f"✅ Email vérifié pour {coach_email}")
         profile_completed = user.get("profile_completed", False)
         redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-        return JSONResponse({"success": True, "redirect": redirect_url})
+        response = RedirectResponse(url=redirect_url, status_code=303)
+        _set_session_cookie(response, coach_email, request)
+        return response
     except Exception as e:
         log.error(f"Erreur vérification OTP: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
