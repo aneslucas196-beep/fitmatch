@@ -195,6 +195,10 @@
                     body: JSON.stringify({ email, code: otp })
                 });
 
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    return;
+                }
                 const data = await response.json().catch(() => ({}));
 
                 if (data.success && data.redirect) {

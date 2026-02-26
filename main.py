@@ -444,17 +444,20 @@ async def add_security_headers(request: Request, call_next):
     return response
 app.include_router(cron_router)
 
+# https_only=False en dev (localhost HTTP) pour que le cookie session soit stocké
+_site_url = (os.getenv("SITE_URL") or "").lower()
+_session_https = os.getenv("SESSION_HTTPS_ONLY", "1" if "https://" in _site_url or os.getenv("RENDER") else "0")
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET_KEY", os.getenv("SESSION_SECRET", "change-me")),
     same_site="lax",
-    https_only=True
+    https_only=(_session_https.lower() in ("1", "true", "yes"))
 )
 
 
 def get_session_email(request: Request) -> Optional[str]:
     """Retourne l'email stocké en session (après OTP verify)."""
-    return request.session.get("user_email")
+    return request.session.get("user_email") or request.session.get("coach_email")
 
 app.add_middleware(
     CORSMiddleware,
@@ -3881,11 +3884,14 @@ async def api_coach_verify_email_post(request: Request):
             return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=404)
         if coach_data.get("subscription_status") != "active":
             return JSONResponse({"success": False, "error": "Abonnement non actif"}, status_code=400)
+        # Session serveur : requis pour que /coach/portal et /coach/profile-setup reconnaissent l'utilisateur
         request.session["user_email"] = email
+        request.session["coach_email"] = email
+        request.session["is_coach"] = True
         log.info(f"✅ Email vérifié pour {email}, session créée")
         profile_completed = coach_data.get("profile_completed", False)
         redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-        return JSONResponse({"success": True, "redirect": redirect_url})
+        return RedirectResponse(url=redirect_url, status_code=303)
     except Exception as e:
         log.error(f"Erreur verify_email: {e}")
         return JSONResponse({"success": False, "error": "Erreur serveur"}, status_code=500)
