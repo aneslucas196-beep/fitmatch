@@ -3224,7 +3224,7 @@ async def coach_profile_setup_post(
         i18n_context = get_i18n_context(request)
         return templates.TemplateResponse("coach_profile_setup.html", {
             "request": request,
-            "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km},
+            "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km, "specialties": specialties},
             "profile_completed": False,
             "error_message": error_message,
             "user": user,
@@ -3325,12 +3325,17 @@ async def coach_profile_setup_post(
             session_token = user.get("_access_token", "")
             user_email = user.get("email", "").strip().lower() or None
             
-            if not user_email and session_token.startswith("demo_"):
-                from utils import load_demo_users
-                from auth_utils import get_email_from_session_token
-                user_email = get_email_from_session_token(session_token, load_demo_users)
-                if user_email:
-                    log.info(f"[OK] Email extrait du token: {user_email}")
+            if not user_email and (session_token.startswith("demo_") or session_token.startswith("session_")):
+                if session_token.startswith("session_"):
+                    user_email = session_token.replace("session_", "", 1).strip().lower() or None
+                    if user_email:
+                        log.info(f"[OK] Email extrait du token session: {user_email}")
+                else:
+                    from utils import load_demo_users
+                    from auth_utils import get_email_from_session_token
+                    user_email = get_email_from_session_token(session_token, load_demo_users)
+                    if user_email:
+                        log.info(f"[OK] Email extrait du token: {user_email}")
             
             if not user_email:
                 log.error(f" Impossible d'identifier l'utilisateur (token invalide ou expiré)")
@@ -3338,7 +3343,7 @@ async def coach_profile_setup_post(
                 i18n_context = get_i18n_context(request)
                 return templates.TemplateResponse("coach_profile_setup.html", {
                     "request": request,
-                    "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km},
+                    "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km, "specialties": specialties},
                     "profile_completed": False,
                     "error_message": error_message,
                     "user": user,
@@ -3380,8 +3385,8 @@ async def coach_profile_setup_post(
                 "country_code": existing_user.get("country_code"),
                 "coach_gender_preference": existing_user.get("coach_gender_preference"),
                 "selected_gyms": existing_user.get("selected_gyms"),
-                # ✅ PRÉSERVER les données d'abonnement et vérification
-                "subscription_status": existing_user.get("subscription_status"),
+                # ✅ PRÉSERVER les données d'abonnement et vérification (actif par défaut après finalisation)
+                "subscription_status": existing_user.get("subscription_status") or "active",
                 "email_verified": existing_user.get("email_verified"),
                 "stripe_customer_id": existing_user.get("stripe_customer_id"),
                 "stripe_subscription_id": existing_user.get("stripe_subscription_id"),
@@ -3409,7 +3414,7 @@ async def coach_profile_setup_post(
     i18n_context = get_i18n_context(request)
     return templates.TemplateResponse("coach_profile_setup.html", {
         "request": request,
-        "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km},
+        "coach": {"full_name": full_name, "bio": bio, "city": city, "instagram_url": instagram_url, "price_from": price_from, "radius_km": radius_km, "specialties": specialties},
         "profile_completed": False,
         "error_message": error_message,
         "user": user,

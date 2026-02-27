@@ -201,7 +201,7 @@
                         {% for specialty in ['musculation', 'cardio', 'yoga', 'crossfit', 'pilates', 'nutrition'] %}
                         <label class="flex items-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition">
                             <input type="checkbox" name="specialties" value="{{ specialty }}"
-                                   {% if coach and specialty in coach.specialties %}checked{% endif %}
+                                   {% if coach and coach.specialties and specialty in coach.specialties %}checked{% endif %}
                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3">
                             <div class="flex items-center">
                                 {% if specialty == 'musculation' %}

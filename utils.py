@@ -144,7 +144,8 @@ def get_supabase_client_for_user(access_token: str):
         log.error("❌ Token d'accès invalide ou manquant")
         return None
     
-    if access_token.startswith("demo_") or access_token == "demo_token":
+    # Tokens OTP/demo (session_email, demo_token) : pas de client Supabase
+    if access_token.startswith("demo_") or access_token.startswith("session_") or access_token == "demo_token":
         return None
     
     url = os.getenv("SUPABASE_URL")

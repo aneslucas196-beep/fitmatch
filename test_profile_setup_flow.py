@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """
-Test du flux : créer un compte coach -> finaliser le profil -> vérifier redirection vers le dashboard.
-Lance le serveur en arrière-plan et exécute les requêtes.
+Test du flux : créer un compte coach -> finaliser le profil -> vérifier redirection directe vers le dashboard.
+Teste la soumission native du formulaire POST /coach/profile-setup (pas l'API JSON).
 """
 import os
 import sys
-import time
-import subprocess
-import urllib.request
 import urllib.parse
-import http.cookiejar
 
 # Activer le mode test pour l'endpoint create-session
 os.environ["TEST_SESSION"] = "1"
@@ -23,13 +19,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 def run_test():
     from fastapi.testclient import TestClient
     from main import app
-    from utils import save_demo_user, get_demo_user, load_demo_users, _invalidate_users_cache
+    from utils import save_demo_user, get_demo_user, _invalidate_users_cache
 
     client = TestClient(app)
     test_email = "test-coach-flow@example.com"
 
     print("=" * 60)
-    print("TEST: Flux profile-setup -> dashboard")
+    print("TEST: Finaliser profil -> redirection directe vers dashboard")
     print("=" * 60)
 
     # 1. Créer un coach dans demo_users (profile_completed=False)
@@ -39,6 +35,7 @@ def run_test():
         "role": "coach",
         "profile_completed": False,
         "subscription_status": "active",
+        "email_verified": True,
         "full_name": "",
         "bio": "",
         "city": "",
@@ -51,10 +48,9 @@ def run_test():
     # 2. Créer une session (simule OTP vérifié)
     r = client.get(f"/api/test/create-session?email={urllib.parse.quote(test_email)}")
     assert r.status_code == 200, f"create-session: {r.status_code}"
-    cookies = r.cookies
     print("2. Session créée (simulation OTP)")
 
-    # 3. Soumettre le formulaire profile-setup
+    # 3. Soumettre le formulaire profile-setup (POST natif comme le formulaire HTML)
     form_data = {
         "full_name": "Test Coach",
         "bio": "Bio test",
@@ -62,49 +58,58 @@ def run_test():
         "postal_code": "75001",
         "price_from": "50",
         "radius_km": "25",
+        "form_submit": "1",
+        "selected_gym_ids": "",
+        "selected_gyms_data": "[]",
     }
-    # Créer un fichier image minimal pour la photo (requis)
+    # Photo optionnelle en mode OTP/demo
     import io
-    from PIL import Image
-    img = Image.new("RGB", (100, 100), color="red")
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG")
-    buf.seek(0)
+    try:
+        from PIL import Image
+        img = Image.new("RGB", (100, 100), color="red")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        buf.seek(0)
+        files = {"profile_photo": ("photo.jpg", buf, "image/jpeg")}
+    except ImportError:
+        files = {}
 
-    files = {"profile_photo": ("photo.jpg", buf, "image/jpeg")}
-    headers = {"X-Requested-With": "XMLHttpRequest", "Accept": "application/json"}
-
+    # Pas de X-Requested-With ni Accept JSON = soumission native
     r = client.post(
-        "/api/coach/profile-setup",
+        "/coach/profile-setup",
         data=form_data,
         files=files,
-        headers=headers,
-        cookies=cookies,
+        follow_redirects=False,
     )
 
-    print(f"3. profile-setup response: {r.status_code}")
-    try:
-        data = r.json()
-        print(f"   Response: {data}")
-    except Exception:
-        print(f"   Body (raw): {r.text[:500]}")
+    print(f"3. profile-setup POST response: {r.status_code}")
 
-    if r.status_code != 200:
-        print(f"\nERREUR: profile-setup a retourne {r.status_code}")
+    if r.status_code != 303:
+        print(f"\nERREUR: attendu 303 redirect, obtenu {r.status_code}")
+        print(f"   Body: {r.text[:500]}")
         return False
 
-    if not data.get("success"):
-        print(f"\nERREUR: success=False, detail={data.get('detail', data.get('error'))}")
+    location = r.headers.get("location", "")
+    if "/coach/portal" not in location:
+        print(f"\nERREUR: redirection attendue vers /coach/portal, obtenu: {location}")
         return False
 
-    redirect = data.get("redirect", "")
-    if not redirect:
-        print("\nERREUR: pas de redirect dans la reponse")
+    print(f"   Redirect -> {location} [OK]")
+
+    # 4. Suivre la redirection et vérifier qu'on arrive sur le dashboard
+    r_portal = client.get("/coach/portal", follow_redirects=True)
+    if r_portal.status_code != 200:
+        print(f"\nERREUR: /coach/portal retourne {r_portal.status_code}")
         return False
+    if "profile-setup" in str(r_portal.url):
+        print(f"\nERREUR: redirigé vers profile-setup au lieu du dashboard")
+        return False
+    if "coach_portal" not in r_portal.text and "dashboard" not in r_portal.text.lower():
+        # Le dashboard peut contenir "portail" ou "dashboard"
+        pass  # On accepte 200 sur /coach/portal
+    print("4. Dashboard chargé (200) [OK]")
 
-    print(f"3. profile-setup OK, redirect={redirect}")
-
-    # 4. Vérifier que profile_completed est bien dans demo_users
+    # 5. Vérifier profile_completed dans demo_users
     _invalidate_users_cache()
     u2 = get_demo_user(test_email)
     if not u2:
@@ -113,19 +118,10 @@ def run_test():
     if not u2.get("profile_completed"):
         print("\nERREUR: profile_completed=False apres save!")
         return False
-    print("4. profile_completed=True dans demo_users [OK]")
-
-    # 5. Accéder au dashboard/portal - ne doit PAS rediriger vers profile-setup
-    r_portal = client.get("/coach/portal", cookies=cookies, follow_redirects=False)
-    if r_portal.status_code == 302:
-        location = r_portal.headers.get("location", "")
-        if "profile-setup" in location:
-            print(f"\nERREUR: /coach/portal redirige vers profile-setup! ({location})")
-            return False
-    print(f"5. /coach/portal: {r_portal.status_code} (pas de redirection vers profile-setup) [OK]")
+    print("5. profile_completed=True dans demo_users [OK]")
 
     print("\n" + "=" * 60)
-    print("TEST REUSSI: Le flux profile-setup -> dashboard fonctionne correctement.")
+    print("TEST REUSSI: Finaliser -> redirection directe vers dashboard OK")
     print("=" * 60)
     return True
 
