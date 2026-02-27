@@ -3490,51 +3490,8 @@ async def api_coach_profile_setup(request: Request):
         existing = get_demo_user(coach_email) or {}
         profile_slug = existing.get("profile_slug") or generate_unique_slug_for_coach(coach_email, full_name or "Coach")
 
-        db_updated = False
-        if supabase_anon:
-            update_data = {
-                "full_name": full_name or existing.get("full_name", ""),
-                "city": city or existing.get("city", ""),
-                "postal_code": postal_code or existing.get("postal_code", ""),
-                "bio": bio or existing.get("bio", ""),
-                "profile_completed": True,
-            }
-            if photo_url:
-                update_data["profile_photo_url"] = photo_url
-            try:
-                response = supabase_anon.table("coaches").update(update_data).eq("email", coach_email).execute()
-                print("SUPABASE UPDATE RESPONSE:", response)
-                log.info(f"[profile-setup] SUPABASE UPDATE RESPONSE: {response}")
-                if not response.data:
-                    return JSONResponse(
-                        status_code=400,
-                        content={
-                            "success": False,
-                            "error": "DB_UPDATE_FAILED",
-                            "detail": str(response)
-                        }
-                    )
-                db_updated = True
-            except Exception as supabase_err:
-                import traceback
-                err_detail = traceback.format_exc()
-                print("PROFILE UPDATE ERROR:")
-                print(err_detail)
-                log.error(f"[profile-setup] Supabase coaches update FAILED: {err_detail}")
-                try:
-                    response = supabase_anon.table("users").update(update_data).eq("email", coach_email).execute()
-                    print("SUPABASE users UPDATE RESPONSE:", response)
-                    log.info(f"[profile-setup] SUPABASE users UPDATE RESPONSE: {response}")
-                    if not response.data:
-                        return JSONResponse(status_code=400, content={"success": False, "error": "DB_UPDATE_FAILED", "detail": str(response)})
-                    db_updated = True
-                except Exception as users_err:
-                    import traceback as tb2
-                    print("PROFILE UPDATE ERROR (users fallback):")
-                    print(tb2.format_exc())
-                    log.error(f"[profile-setup] Supabase users update FAILED: {tb2.format_exc()}")
-                    return JSONResponse(status_code=500, content={"success": False, "error": "PROFILE_SAVE_EXCEPTION", "detail": str(supabase_err) or str(users_err)})
-
+        # Note: La table "coaches" n'existe pas dans Supabase. On utilise uniquement save_demo_user
+        # (PostgreSQL users ou demo_users_fallback.json) pour le flux OTP/post-paiement.
         updated = {
             "id": existing.get("id", coach_email),
             "email": coach_email,

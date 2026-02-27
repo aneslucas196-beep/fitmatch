@@ -348,12 +348,13 @@ document.addEventListener("DOMContentLoaded", function() {
       if (data && data.success) {
         window.location.assign(data.redirect || "/coach/dashboard");
       } else {
-        var msg = (data && (data.detail || data.error)) || "Erreur lors de la sauvegarde.";
+        var detail = data && data.detail;
+        var msg = (typeof detail === "object" && detail && detail.message) ? detail.message : (detail || data.error || "Erreur lors de la sauvegarde.");
         alert(msg);
         var errEl = document.getElementById("profile-setup-error");
         if (errEl) {
           var span = errEl.querySelector("span.text-sm");
-          if (span) span.textContent = msg;
+          if (span) span.textContent = String(msg);
           errEl.classList.remove("hidden");
         }
       }
