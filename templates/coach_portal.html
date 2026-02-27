@@ -78,7 +78,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
     <div class="max-w-7xl mx-auto px-6 py-8 space-y-8">
 
         <!-- Résumé rapide - Top Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div id="dashboard-stats" class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <!-- Réservations semaine -->
             <div class="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl shadow-xl p-6 border-l-4 border-orange-500">
                 <div class="flex items-center">
@@ -88,7 +88,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-bookings">12</h3>
+                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-bookings">0</h3>
                         <p class="text-gray-600 text-sm">{{ t.coach_portal.sessions_this_week|default('Séances cette semaine') }}</p>
                     </div>
                 </div>
@@ -103,7 +103,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-revenue">€720</h3>
+                        <h3 class="text-2xl font-bold text-gray-900" id="weekly-revenue">0€</h3>
                         <p class="text-gray-600 text-sm">{{ t.coach_portal.weekly_revenue|default('Revenus semaine') }}</p>
                     </div>
                 </div>
@@ -118,7 +118,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-900" id="active-clients">28</h3>
+                        <h3 class="text-2xl font-bold text-gray-900" id="active-clients">0</h3>
                         <p class="text-gray-600 text-sm">{{ t.coach_portal.active_clients|default('Clients actifs') }}</p>
                     </div>
                 </div>
@@ -133,7 +133,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-2xl font-bold text-red-600" id="notifications-count">3</h3>
+                        <h3 class="text-2xl font-bold text-red-600" id="notifications-count">0</h3>
                         <p class="text-gray-600 text-sm">{{ t.coach_portal.notifications|default('Notifications') }}</p>
                     </div>
                 </div>
@@ -168,8 +168,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             <p id="stripe-status-message" class="text-sm text-gray-600">{{ t.coach_portal.loading|default('Chargement...') }}</p>
                         </div>
                     </div>
-                    <button id="stripe-connect-btn" 
-                            id="stripe-connect-trigger"
+                    <button id="stripe-connect-btn"
                             class="hidden bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition font-medium flex items-center">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
@@ -258,8 +257,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             {{ 'Paiement désactivé' if coach.payment_mode == 'disabled' or not coach.payment_mode else 'Paiement obligatoire' }}
                         </span>
                     </div>
-                    <button id="save-payment-mode" 
-                            id="save-payment-mode-trigger"
+                    <button id="save-payment-mode"
                             class="hidden bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition font-medium">
                         {{ t.coach_portal.save|default('Enregistrer') }}
                     </button>
@@ -368,8 +366,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                     </div>
                     
                     <!-- Bouton copier -->
-                    <button type="button" id="copy-share-link-btn" 
-                            id="copyBtn"
+                    <button type="button" id="copyBtn"
                             class="w-full bg-gray-900 text-white py-3 px-4 rounded-lg hover:bg-gray-800 transition flex items-center justify-center mb-3">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
@@ -405,7 +402,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                     </div>
                     
                     <!-- Voir mon profil public -->
-                    <a href="/reserver/{{ coach.slug or coach.full_name.split()[0]|lower if coach.full_name else 'coach' }}" 
+                    <a href="/reserver/{{ coach.slug or coach.profile_slug or (coach.full_name.split()[0]|lower if coach.full_name else 'coach') }}" 
                        target="_blank"
                        class="mt-3 w-full bg-white border-2 border-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition flex items-center justify-center text-sm">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -528,7 +525,7 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
                             {{ t.coach_portal.manage_my_profile|default('Gérer mon profil') }}
                         </a>
                         
-                        <button class="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-purple-600 hover:to-purple-700 transition flex items-center">
+                        <button type="button" id="view-stats-btn" class="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-purple-600 hover:to-purple-700 transition flex items-center">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                             </svg>
@@ -699,7 +696,7 @@ let sessionDuration = {{ coach.session_duration or 60 }};
 
 async function loadSessionDuration() {
     try {
-        const response = await fetch(`/api/coach/session-duration?coach_email=${encodeURIComponent(COACH_EMAIL)}`);
+        const response = await fetch(`/api/coach/session-duration?coach_email=${encodeURIComponent(COACH_EMAIL)}`, { credentials: 'include' });
         const data = await response.json();
         if (data.success && data.duration) {
             sessionDuration = data.duration;
@@ -730,7 +727,8 @@ async function setSessionDuration(minutes) {
             body: JSON.stringify({
                 coach_email: COACH_EMAIL,
                 duration: minutes
-            })
+            }),
+            credentials: 'include'
         });
         const data = await response.json();
         if (data.success) {
@@ -790,7 +788,7 @@ async function loadWorkingHours() {
     if (!COACH_EMAIL) return;
     
     try {
-        const response = await fetch(`/api/coach/working-hours?coach_email=${encodeURIComponent(COACH_EMAIL)}`);
+        const response = await fetch(`/api/coach/working-hours?coach_email=${encodeURIComponent(COACH_EMAIL)}`, { credentials: 'include' });
         const data = await response.json();
         if (data && Object.keys(data).length > 0) {
             workingHoursData = data;
@@ -826,7 +824,8 @@ async function saveAvailability() {
             body: JSON.stringify({
                 coach_email: COACH_EMAIL,
                 working_hours: workingHoursData
-            })
+            }),
+            credentials: 'include'
         });
         
         const data = await response.json();
@@ -857,7 +856,8 @@ async function removeAvailability(dayName) {
             body: JSON.stringify({
                 coach_email: COACH_EMAIL,
                 working_hours: workingHoursData
-            })
+            }),
+            credentials: 'include'
         });
         
         const data = await response.json();
@@ -934,7 +934,7 @@ async function loadUnavailability() {
     if (!COACH_EMAIL) return;
     
     try {
-        const response = await fetch(`/api/coach/unavailability?coach_email=${encodeURIComponent(COACH_EMAIL)}`);
+        const response = await fetch(`/api/coach/unavailability?coach_email=${encodeURIComponent(COACH_EMAIL)}`, { credentials: 'include' });
         unavailabilityData = await response.json();
         renderUnavailabilityList();
     } catch (error) {
@@ -962,7 +962,8 @@ async function addUnavailability() {
                 type: type,
                 date: date,
                 time: type === 'slot' ? time : null
-            })
+            }),
+            credentials: 'include'
         });
         
         const data = await response.json();
@@ -994,7 +995,8 @@ async function removeUnavailability(type, date, time = null) {
                 type: type,
                 date: date,
                 time: time
-            })
+            }),
+            credentials: 'include'
         });
         
         const data = await response.json();
@@ -1115,7 +1117,8 @@ async function toggleDayAvailability(dateStr, isCurrentlyBlocked) {
                 action: action,
                 type: 'day',
                 date: dateStr
-            })
+            }),
+            credentials: 'include'
         });
         
         const data = await response.json();
@@ -1142,7 +1145,7 @@ async function loadBookingsFromAPI() {
     }
     
     try {
-        const response = await fetch(`/api/coach/bookings?coach_email=${encodeURIComponent(COACH_EMAIL)}`);
+        const response = await fetch(`/api/coach/bookings?coach_email=${encodeURIComponent(COACH_EMAIL)}`, { credentials: 'include' });
         const data = await response.json();
         
         if (data.success) {
@@ -1154,8 +1157,14 @@ async function loadBookingsFromAPI() {
             console.log("📊 Réservations chargées:", realBookings);
             
             // Mettre à jour les compteurs
-            document.getElementById('notifications-count').textContent = realBookings.pending.length;
-            document.getElementById('weekly-bookings').textContent = realBookings.pending.length + realBookings.confirmed.length;
+            const notifEl = document.getElementById('notifications-count');
+            const weeklyBookEl = document.getElementById('weekly-bookings');
+            const revenueEl = document.getElementById('weekly-revenue');
+            const clientsEl = document.getElementById('active-clients');
+            if (notifEl) notifEl.textContent = realBookings.pending.length;
+            if (weeklyBookEl) weeklyBookEl.textContent = data.weekly_sessions !== undefined ? data.weekly_sessions : (realBookings.pending.length + realBookings.confirmed.length);
+            if (revenueEl) revenueEl.textContent = (data.weekly_revenue !== undefined ? data.weekly_revenue : 0) + '€';
+            if (clientsEl) clientsEl.textContent = data.active_clients !== undefined ? data.active_clients : 0;
         }
     } catch (error) {
         console.error("❌ Erreur chargement réservations:", error);
@@ -1203,11 +1212,11 @@ async function deleteBooking(bookingId) {
         const response = await fetch('/api/coach/bookings/delete', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            credentials: 'include',
             body: JSON.stringify({
                 coach_email: COACH_EMAIL,
                 booking_id: bookingId
-            })
+            }),
+            credentials: 'include'
         });
         
         const data = await response.json();
@@ -1302,6 +1311,60 @@ function setupEventListeners() {
             respondToBooking(btn.getAttribute('data-booking-id'), btn.getAttribute('data-respond'));
         }
     });
+
+    // Bouton copier lien
+    const copyBtn = document.getElementById('copyBtn');
+    if (copyBtn) copyBtn.addEventListener('click', copyShareLink);
+
+    // Mode de paiement : clic sur les cartes
+    document.querySelectorAll('.payment-mode-card').forEach(function(card) {
+        card.addEventListener('click', function() { selectPaymentMode(card.dataset.paymentMode); });
+    });
+    const savePaymentBtn = document.getElementById('save-payment-mode');
+    if (savePaymentBtn) savePaymentBtn.addEventListener('click', savePaymentMode);
+
+    // Stripe Connect
+    const stripeBtn = document.getElementById('stripe-connect-btn');
+    if (stripeBtn) stripeBtn.addEventListener('click', startStripeConnect);
+
+    // Boutons partage social
+    document.querySelectorAll('[data-share]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const s = btn.dataset.share;
+            if (s === 'whatsapp') shareOnWhatsApp();
+            else if (s === 'instagram') shareOnInstagram();
+            else if (s === 'facebook') shareOnFacebook();
+            else if (s === 'twitter') shareOnTwitter();
+        });
+    });
+
+    // Bouton Voir les stats
+    const viewStatsBtn = document.getElementById('view-stats-btn');
+    if (viewStatsBtn) {
+        viewStatsBtn.addEventListener('click', function() {
+            document.getElementById('dashboard-stats').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+
+    // Modal disponibilités : bouton Valider -> saveAvailability
+    const saveAvailBtn = document.getElementById('save-availability-btn');
+    if (saveAvailBtn) saveAvailBtn.addEventListener('click', saveAvailability);
+
+    // Fermer modales
+    document.querySelectorAll('.close-avail-modal-btn').forEach(function(btn) {
+        btn.addEventListener('click', closeAvailabilityModalNew);
+    });
+    document.querySelectorAll('.close-unavail-modal-btn').forEach(function(btn) {
+        btn.addEventListener('click', closeUnavailabilityModal);
+    });
+
+    // Ouvrir modal indisponibilités
+    const openUnavailBtn = document.getElementById('open-unavailability-btn');
+    if (openUnavailBtn) openUnavailBtn.addEventListener('click', openUnavailabilityModal);
+
+    // Ouvrir modal disponibilités (bouton sidebar)
+    const openAvailBtn = document.getElementById('open-availability-btn');
+    if (openAvailBtn) openAvailBtn.addEventListener('click', openAvailabilityModal);
 }
 
 function setCalendarView(view) {
@@ -1386,9 +1449,10 @@ function generateWeekCalendar() {
                     ? 'bg-green-500 text-white border-green-600' 
                     : 'bg-orange-400 text-white border-orange-500';
                 const statusIcon = booking.status === 'confirmed' ? '✓' : '⏳';
+                const clientLabel = booking.client_name || booking.client_email || 'Client';
                 html += `<div class="p-1 ${statusColor} border rounded-sm cursor-pointer hover:opacity-90 ${hourClass}" 
-                    title="${booking.client_name} - ${booking.time} - ${booking.status === 'confirmed' ? 'Confirmée' : 'En attente'}">
-                    <div class="text-xs font-bold truncate">${statusIcon} ${booking.client_name}</div>
+                    title="${clientLabel} - ${booking.time} - ${booking.status === 'confirmed' ? 'Confirmée' : 'En attente'}">
+                    <div class="text-xs font-bold truncate">${statusIcon} ${clientLabel}</div>
                 </div>`;
             } else {
                 html += `<div class="p-1 border-r border-gray-100 hover:bg-blue-50 cursor-pointer ${hourClass}" title="Disponible"></div>`;
@@ -1452,9 +1516,10 @@ function generateMonthCalendar() {
                     ? 'bg-green-500 text-white' 
                     : 'bg-orange-400 text-white';
                 const statusIcon = booking.status === 'confirmed' ? '✓' : '⏳';
+                const clientLabel = booking.client_name || booking.client_email || 'Client';
                 html += `<div class="text-xs p-1 mb-1 rounded ${statusColor} truncate font-medium" 
-                    title="${booking.client_name} - ${booking.time} - ${booking.status === 'confirmed' ? 'Confirmée' : 'En attente'}">
-                    ${statusIcon} ${booking.time} ${booking.client_name}
+                    title="${clientLabel} - ${booking.time} - ${booking.status === 'confirmed' ? 'Confirmée' : 'En attente'}">
+                    ${statusIcon} ${booking.time} ${clientLabel}
                 </div>`;
             });
             
@@ -1503,10 +1568,11 @@ function loadUpcomingBookings() {
         const dateObj = new Date(booking.date);
         const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
         
+        const clientLabel = booking.client_name || booking.client_email || 'Client';
         return `
             <div class="border ${bgColor} rounded-lg p-4 hover:shadow-md transition relative">
                 <div class="flex justify-between items-start mb-2">
-                    <h4 class="font-semibold text-gray-900">${booking.client_name}</h4>
+                    <h4 class="font-semibold text-gray-900">${clientLabel}</h4>
                     <div class="flex items-center gap-2">
                         <span class="${statusColor} text-xs font-medium">${statusIcon} ${statusText}</span>
                         <button type="button" data-action="delete-booking" data-booking-id="${booking.id}" 
@@ -1521,8 +1587,8 @@ function loadUpcomingBookings() {
                 <div class="text-sm text-gray-600 space-y-1">
                     <p>📅 ${dateStr}</p>
                     <p>⏰ ${booking.time}</p>
-                    <p>📍 ${booking.gym_name}</p>
-                    <p>💰 ${booking.price}€</p>
+                    <p>📍 ${booking.gym_name || '-'}</p>
+                    <p>💰 ${booking.price || booking.amount || '-'}€</p>
                 </div>
                 ${isPending ? `
                     <div class="mt-3 flex gap-2">
@@ -1570,14 +1636,15 @@ function loadNotifications() {
         const dateObj = new Date(booking.date);
         const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
         
+        const clientLabel = booking.client_name || booking.client_email || 'Client';
         return `
             <div class="border border-orange-200 bg-orange-50 rounded-lg p-3">
                 <div class="flex justify-between items-start">
-                    <p class="text-sm text-gray-900 font-medium">🔔 ${booking.client_name}</p>
+                    <p class="text-sm text-gray-900 font-medium">🔔 ${clientLabel}</p>
                     <span class="text-orange-500 text-xs">En attente</span>
                 </div>
                 <p class="text-xs text-gray-600 mt-1">${dateStr} à ${booking.time}</p>
-                <p class="text-xs text-gray-500 mt-1">📍 ${booking.gym_name}</p>
+                <p class="text-xs text-gray-500 mt-1">📍 ${booking.gym_name || '-'}</p>
                 <div class="mt-2 flex gap-2">
                     <button type="button" data-action="respond-booking" data-booking-id="${booking.id}" data-respond="confirm" 
                             class="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700">
@@ -1624,8 +1691,9 @@ function formatDate(date) {
 }
 
 // ===== Fonctions de partage du profil =====
-const coachSlug = "{{ coach.slug or coach.full_name.split()[0]|lower if coach.full_name else 'coach' }}";
-const shareUrl = "https://fitmatch.fr/reserver/" + coachSlug;
+const coachSlug = "{{ coach.slug or coach.profile_slug or (coach.full_name.split()[0]|lower if coach.full_name else 'coach') }}";
+const siteBaseUrl = "{{ site_url|default('https://fitmatch.fr') }}".replace(/\/$/, '');
+const shareUrl = siteBaseUrl + "/reserver/" + coachSlug;
 
 // Initialiser le lien de partage et mettre à jour le localStorage avec les données du coach
 document.addEventListener('DOMContentLoaded', function() {
@@ -1735,7 +1803,8 @@ async function savePaymentMode() {
         const response = await fetch('/api/coach/payment-mode', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ payment_mode: selectedPaymentMode })
+            body: JSON.stringify({ payment_mode: selectedPaymentMode }),
+            credentials: 'include'
         });
         
         const data = await response.json();
@@ -1775,12 +1844,13 @@ let stripeConnectStatus = { connected: false, charges_enabled: false };
 
 async function loadStripeConnectStatus() {
     try {
-        const response = await fetch('/api/coach/stripe-connect/status');
-        const data = await response.json();
+        const response = await fetch('/api/coach/stripe-connect/status', { credentials: 'include' });
+        const data = response.ok ? await response.json() : { connected: false, status: 'error', message: 'Erreur de chargement' };
         stripeConnectStatus = data;
         updateStripeConnectUI(data);
     } catch (error) {
         console.error('Erreur chargement statut Stripe:', error);
+        updateStripeConnectUI({ connected: false, status: 'error', message: 'Erreur de connexion' });
     }
 }
 
@@ -1823,7 +1893,8 @@ async function startStripeConnect() {
     try {
         const response = await fetch('/api/coach/stripe-connect/onboard', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
         });
         
         const data = await response.json();
@@ -1846,7 +1917,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStripeConnectStatus();
     
     if (new URLSearchParams(window.location.search).get('stripe_connected')) {
-        fetch('/api/coach/stripe-connect/sync', { method: 'POST' })
+        fetch('/api/coach/stripe-connect/sync', { method: 'POST', credentials: 'include' })
             .then(() => loadStripeConnectStatus())
             .then(() => {
                 const toast = document.createElement('div');

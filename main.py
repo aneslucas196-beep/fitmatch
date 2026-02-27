@@ -3081,8 +3081,18 @@ async def coach_portal(request: Request, user = Depends(require_coach_session_or
             return RedirectResponse(url="/coach/profile-setup", status_code=302)
         transformations = []
     
-    # Inclure payment_mode depuis demo_users pour que le bloc "Mode de Paiement" s'affiche correctement
-    coach_for_template = {**user, "payment_mode": coach_data_fresh.get("payment_mode", "disabled")}
+    # Inclure payment_mode, slug (profile_slug) depuis demo_users pour le dashboard
+    coach_slug = coach_data_fresh.get("profile_slug") or (user.get("profile_slug") or "")
+    if not coach_slug and user.get("full_name"):
+        coach_slug = generate_slug((user.get("full_name") or "Coach").split()[0]) if (user.get("full_name") or "").strip() else "coach"
+    if not coach_slug:
+        coach_slug = "coach"
+    coach_for_template = {
+        **user,
+        "payment_mode": coach_data_fresh.get("payment_mode", "disabled"),
+        "slug": coach_slug,
+        "profile_slug": coach_slug,
+    }
 
     i18n = get_i18n_context(request)
     return templates.TemplateResponse("coach_portal.html", {
@@ -4642,7 +4652,7 @@ async def get_coach_pricing(coach_email: str):
 async def set_coach_payment_mode(request: Request, user = Depends(require_coach_role)):
     """Definit le mode de paiement d'un coach (disabled ou required)."""
     try:
-        from db_service import get_stripe_connect_info
+        from stripe_connect_facade import get_stripe_connect_info
         
         data = await request.json()
         payment_mode = data.get("payment_mode")
@@ -4737,7 +4747,7 @@ async def get_coach_payment_mode(coach_id: str):
 async def get_stripe_connect_status(user = Depends(require_coach_role)):
     """Récupère le statut Stripe Connect d'un coach."""
     try:
-        from db_service import get_stripe_connect_info
+        from stripe_connect_facade import get_stripe_connect_info
         from stripe_connect_service import get_account_status
         
         coach_email = user.get("email")
@@ -4778,7 +4788,7 @@ async def get_stripe_connect_status(user = Depends(require_coach_role)):
 async def start_stripe_connect_onboarding(request: Request, user = Depends(require_coach_role)):
     """Démarre l'onboarding Stripe Connect pour un coach."""
     try:
-        from db_service import get_stripe_connect_info, update_stripe_connect_status
+        from stripe_connect_facade import get_stripe_connect_info, update_stripe_connect_status
         from stripe_connect_service import create_connect_account, create_account_link
         
         coach_email = user.get("email")
@@ -4828,7 +4838,7 @@ async def start_stripe_connect_onboarding(request: Request, user = Depends(requi
 async def refresh_stripe_connect_onboarding(request: Request, user = Depends(require_coach_role)):
     """Génère un nouveau lien d'onboarding si l'ancien a expiré."""
     try:
-        from db_service import get_stripe_connect_info
+        from stripe_connect_facade import get_stripe_connect_info
         from stripe_connect_service import create_account_link
         
         coach_email = user.get("email")
@@ -4858,7 +4868,7 @@ async def refresh_stripe_connect_onboarding(request: Request, user = Depends(req
 async def sync_stripe_connect_status(user = Depends(require_coach_role)):
     """Synchronise le statut Stripe Connect après le retour de l'onboarding."""
     try:
-        from db_service import get_stripe_connect_info, update_stripe_connect_status
+        from stripe_connect_facade import get_stripe_connect_info, update_stripe_connect_status
         from stripe_connect_service import get_account_status
         
         coach_email = user.get("email")
@@ -6300,7 +6310,7 @@ async def confirm_booking(request: Request, body: ConfirmBookingRequest):
                 # Créer une session Stripe Checkout pour le paiement de la séance
                 if STRIPE_AVAILABLE:
                     try:
-                        from db_service import get_stripe_connect_info
+                        from stripe_connect_facade import get_stripe_connect_info
                         from stripe_connect_service import create_session_payment_checkout
                         
                         # Vérifier que le coach a un compte Stripe Connect actif
@@ -6629,6 +6639,33 @@ async def get_coach_bookings(
         total_rejected = len(rejected_bookings)
         confirmed_page = confirmed_bookings[offset:offset + limit]
         rejected_page = rejected_bookings[offset:offset + limit]
+
+        # Stats dashboard : revenus semaine, clients actifs
+        now = datetime.now()
+        week_start = now - timedelta(days=now.weekday())
+        week_end = week_start + timedelta(days=7)
+        weekly_revenue = 0
+        weekly_sessions = 0
+        active_clients = set()
+        price_default = coach_data.get("price_from") or coach_data.get("session_price") or 40
+        for b in pending_bookings + confirmed_bookings:
+            client_email = (b.get("client_email") or "").strip()
+            if client_email:
+                active_clients.add(client_email.lower())
+            dt_str = b.get("date") or b.get("datetime") or b.get("confirmed_at") or ""
+            if dt_str:
+                try:
+                    if "T" in dt_str:
+                        dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+                    else:
+                        dt = datetime.strptime(dt_str[:10], "%Y-%m-%d")
+                    if week_start <= dt < week_end:
+                        weekly_sessions += 1
+                        p = b.get("price") or b.get("amount") or price_default
+                        weekly_revenue += int(p) if isinstance(p, (int, float)) else int(float(str(p).replace("€", "").strip() or price_default))
+                except Exception:
+                    pass
+
         return JSONResponse({
             "success": True,
             "pending": pending_bookings,
@@ -6637,7 +6674,10 @@ async def get_coach_bookings(
             "total_confirmed": total_confirmed,
             "total_rejected": total_rejected,
             "limit": limit,
-            "offset": offset
+            "offset": offset,
+            "weekly_revenue": weekly_revenue,
+            "weekly_sessions": weekly_sessions,
+            "active_clients": len(active_clients)
         })
     except Exception as e:
         log.error(f"Erreur récupération réservations coach: {e}")
