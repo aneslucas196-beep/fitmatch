@@ -3438,6 +3438,7 @@ async def api_coach_profile_setup(request: Request):
         full_name = _str(form.get("full_name"))
         bio = _str(form.get("bio"))
         city = _str(form.get("city"))
+        postal_code = _str(form.get("postal_code"))
         instagram_url = _str(form.get("instagram_url")) or None
         price_from = _int(form.get("price_from")) or _int(form.get("price")) or 50
         radius_km = _int(form.get("radius_km")) or 25
@@ -3488,6 +3489,52 @@ async def api_coach_profile_setup(request: Request):
 
         existing = get_demo_user(coach_email) or {}
         profile_slug = existing.get("profile_slug") or generate_unique_slug_for_coach(coach_email, full_name or "Coach")
+
+        db_updated = False
+        if supabase_anon:
+            update_data = {
+                "full_name": full_name or existing.get("full_name", ""),
+                "city": city or existing.get("city", ""),
+                "postal_code": postal_code or existing.get("postal_code", ""),
+                "bio": bio or existing.get("bio", ""),
+                "profile_completed": True,
+            }
+            if photo_url:
+                update_data["profile_photo_url"] = photo_url
+            try:
+                response = supabase_anon.table("coaches").update(update_data).eq("email", coach_email).execute()
+                print("SUPABASE UPDATE RESPONSE:", response)
+                log.info(f"[profile-setup] SUPABASE UPDATE RESPONSE: {response}")
+                if not response.data:
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "success": False,
+                            "error": "DB_UPDATE_FAILED",
+                            "detail": str(response)
+                        }
+                    )
+                db_updated = True
+            except Exception as supabase_err:
+                import traceback
+                err_detail = traceback.format_exc()
+                print("PROFILE UPDATE ERROR:")
+                print(err_detail)
+                log.error(f"[profile-setup] Supabase coaches update FAILED: {err_detail}")
+                try:
+                    response = supabase_anon.table("users").update(update_data).eq("email", coach_email).execute()
+                    print("SUPABASE users UPDATE RESPONSE:", response)
+                    log.info(f"[profile-setup] SUPABASE users UPDATE RESPONSE: {response}")
+                    if not response.data:
+                        return JSONResponse(status_code=400, content={"success": False, "error": "DB_UPDATE_FAILED", "detail": str(response)})
+                    db_updated = True
+                except Exception as users_err:
+                    import traceback as tb2
+                    print("PROFILE UPDATE ERROR (users fallback):")
+                    print(tb2.format_exc())
+                    log.error(f"[profile-setup] Supabase users update FAILED: {tb2.format_exc()}")
+                    return JSONResponse(status_code=500, content={"success": False, "error": "PROFILE_SAVE_EXCEPTION", "detail": str(supabase_err) or str(users_err)})
+
         updated = {
             "id": existing.get("id", coach_email),
             "email": coach_email,
@@ -3497,6 +3544,7 @@ async def api_coach_profile_setup(request: Request):
             "full_name": full_name or existing.get("full_name", ""),
             "bio": bio or existing.get("bio", ""),
             "city": city or existing.get("city", ""),
+            "postal_code": postal_code or existing.get("postal_code", ""),
             "instagram_url": instagram_url or existing.get("instagram_url"),
             "price_from": price_from or existing.get("price_from", 50),
             "radius_km": radius_km or existing.get("radius_km", 25),
@@ -3518,14 +3566,30 @@ async def api_coach_profile_setup(request: Request):
             "otp_expiry": existing.get("otp_expiry"),
         }
 
-        ok = save_demo_user(coach_email, updated)
-        if not ok:
-            log.error(f"[profile-setup] DB save FAILED for {coach_email}")
-            return JSONResponse({
-                "success": False,
-                "error": "DB_UPDATE_FAILED",
-                "detail": "Erreur lors de la sauvegarde en base."
-            }, status_code=500)
+        if not db_updated:
+            try:
+                ok = save_demo_user(coach_email, updated)
+                if not ok:
+                    log.error(f"[profile-setup] save_demo_user FAILED for {coach_email}")
+                    return JSONResponse({
+                        "success": False,
+                        "error": "DB_UPDATE_FAILED",
+                        "detail": "Erreur lors de la sauvegarde (save_demo_user a retourne False)."
+                    }, status_code=500)
+            except Exception as db_err:
+                import traceback
+                err_detail = traceback.format_exc()
+                print("PROFILE UPDATE ERROR:")
+                print(err_detail)
+                log.error(f"[profile-setup] PROFILE UPDATE ERROR:\n{err_detail}")
+                return JSONResponse(
+                    status_code=500,
+                    content={
+                        "success": False,
+                        "error": "PROFILE_SAVE_EXCEPTION",
+                        "detail": str(db_err)
+                    }
+                )
         log.info(f"[profile-setup] OK coach={coach_email} profile_completed=True")
 
         if _wants_json_response(request):
