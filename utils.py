@@ -1656,7 +1656,7 @@ def load_demo_users() -> Dict:
         return dict(_demo_users_fallback)
 
 def save_demo_user(email: str, user_data: Dict) -> bool:
-    """Sauvegarde un utilisateur (PostgreSQL ou, si DB inaccessible, fichier fallback)."""
+    """Sauvegarde un utilisateur (PostgreSQL ou, si DB inaccessible/échec, fichier fallback)."""
     serialized_data = serialize_for_json(user_data)
     if use_database():
         try:
@@ -1664,13 +1664,16 @@ def save_demo_user(email: str, user_data: Dict) -> bool:
             ok = save_user_to_db(email, serialized_data)
             if ok:
                 _invalidate_users_cache()
-            return ok
+                return True
+            # DB a retourné False (ex: erreur SQL) -> fallback fichier
+            log.warning(f"Sauvegarde DB échouée pour {email}, fallback fichier")
         except Exception as e:
             try:
                 from logger import get_logger
                 get_logger().error("Erreur sauvegarde %s: %s", email, e)
             except Exception:
                 pass
+            log.warning(f"Exception sauvegarde DB pour {email}, fallback fichier: {e}")
     global _demo_users_fallback, _demo_users_file_loaded
     _ensure_fallback_loaded()
     _demo_users_fallback[email] = serialized_data
