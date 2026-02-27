@@ -1,0 +1,32 @@
+{
+  "test-coach-flow@example.com": {
+    "id": "test-coach-flow@example.com",
+    "email": "test-coach-flow@example.com",
+    "role": "coach",
+    "profile_completed": true,
+    "profile_slug": "test",
+    "full_name": "Test Coach",
+    "bio": "Bio test",
+    "city": "Paris",
+    "postal_code": "75001",
+    "instagram_url": null,
+    "price_from": 50,
+    "radius_km": 25,
+    "specialties": [],
+    "selected_gym_ids": "",
+    "selected_gyms_data": "",
+    "profile_photo_url": "/uploads/30b51468-1d45-479e-9955-66df58085478.jpg",
+    "password": null,
+    "gender": null,
+    "country_code": null,
+    "coach_gender_preference": null,
+    "selected_gyms": null,
+    "subscription_status": "active",
+    "email_verified": null,
+    "stripe_customer_id": null,
+    "stripe_subscription_id": null,
+    "subscription_period_end": null,
+    "otp_code": null,
+    "otp_expiry": null
+  }
+}

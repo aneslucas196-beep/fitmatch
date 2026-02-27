@@ -3566,30 +3566,30 @@ async def api_coach_profile_setup(request: Request):
             "otp_expiry": existing.get("otp_expiry"),
         }
 
-        if not db_updated:
-            try:
-                ok = save_demo_user(coach_email, updated)
-                if not ok:
-                    log.error(f"[profile-setup] save_demo_user FAILED for {coach_email}")
-                    return JSONResponse({
-                        "success": False,
-                        "error": "DB_UPDATE_FAILED",
-                        "detail": "Erreur lors de la sauvegarde (save_demo_user a retourne False)."
-                    }, status_code=500)
-            except Exception as db_err:
-                import traceback
-                err_detail = traceback.format_exc()
-                print("PROFILE UPDATE ERROR:")
-                print(err_detail)
-                log.error(f"[profile-setup] PROFILE UPDATE ERROR:\n{err_detail}")
-                return JSONResponse(
-                    status_code=500,
-                    content={
-                        "success": False,
-                        "error": "PROFILE_SAVE_EXCEPTION",
-                        "detail": str(db_err)
-                    }
-                )
+        # Toujours mettre à jour demo_users : le portail lit profile_completed depuis get_demo_user()
+        try:
+            ok = save_demo_user(coach_email, updated)
+            if not ok:
+                log.error(f"[profile-setup] save_demo_user FAILED for {coach_email}")
+                return JSONResponse({
+                    "success": False,
+                    "error": "DB_UPDATE_FAILED",
+                    "detail": "Erreur lors de la sauvegarde (save_demo_user a retourne False)."
+                }, status_code=500)
+        except Exception as db_err:
+            import traceback
+            err_detail = traceback.format_exc()
+            print("PROFILE UPDATE ERROR:")
+            print(err_detail)
+            log.error(f"[profile-setup] PROFILE UPDATE ERROR:\n{err_detail}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": "PROFILE_SAVE_EXCEPTION",
+                    "detail": str(db_err)
+                }
+            )
         log.info(f"[profile-setup] OK coach={coach_email} profile_completed=True")
 
         if _wants_json_response(request):
@@ -3601,6 +3601,23 @@ async def api_coach_profile_setup(request: Request):
             return JSONResponse({"success": False, "error": str(e), "detail": str(e)}, status_code=500)
         from urllib.parse import quote
         return RedirectResponse(url="/coach/profile-setup?error=" + quote(str(e)[:80]), status_code=303)
+
+
+# Endpoint de test : crée une session coach (uniquement si TEST_SESSION=1)
+@app.get("/api/test/create-session")
+async def test_create_session(request: Request, email: str = Query(...)):
+    """Crée une session coach pour les tests. Nécessite TEST_SESSION=1."""
+    if os.environ.get("TEST_SESSION") != "1":
+        raise HTTPException(status_code=404, detail="Not found")
+    email = email.strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email requis")
+    request.session["user_email"] = email
+    request.session["coach_email"] = email
+    request.session["is_coach"] = True
+    resp = JSONResponse({"ok": True, "email": email})
+    _set_session_cookie(resp, email, request)
+    return resp
 
 
 @app.post("/coach/specialties")
