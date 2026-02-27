@@ -342,11 +342,12 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       });
 
+      var redirectTo = res.headers.get("X-Redirect-To");
       const data = await res.json().catch(function() { return {}; });
       console.log("profile setup response", data);
 
-      if (data && data.success) {
-        window.location.assign(data.redirect || "/coach/dashboard");
+      if ((data && data.success) || (res.ok && redirectTo)) {
+        window.location.replace(redirectTo || data.redirect || "/coach/dashboard");
       } else {
         var detail = data && data.detail;
         var msg = (typeof detail === "object" && detail && detail.message) ? detail.message : (detail || data.error || "Erreur lors de la sauvegarde.");

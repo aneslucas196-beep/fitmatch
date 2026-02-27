@@ -1389,14 +1389,16 @@ def get_coach_from_session_or_cookie(request: Request) -> Optional[Dict]:
     is_coach = request.session.get("is_coach") is True
     if session_email and is_coach:
         user_data = get_demo_user(session_email)
-        # Priorité session (profile_completed après finalisation) > DB/fichier
+        # Priorité session (profile_completed, subscription_status après finalisation) > DB/fichier
         profile_completed = request.session.get("profile_completed")
         if profile_completed is None:
             profile_completed = (user_data or {}).get("profile_completed", False)
+        sub_status = request.session.get("subscription_status") or (user_data or {}).get("subscription_status", "active")
         if user_data and user_data.get("role") == "coach":
             user_data["email"] = session_email
             user_data["_access_token"] = f"session_{session_email}"
             user_data["profile_completed"] = profile_completed
+            user_data["subscription_status"] = sub_status
             return user_data
         # Session valide mais user absent du cache DB : accepter quand même (créé après OTP)
         base = dict(user_data) if user_data else {}
@@ -1404,7 +1406,7 @@ def get_coach_from_session_or_cookie(request: Request) -> Optional[Dict]:
             "email": session_email,
             "role": "coach",
             "profile_completed": profile_completed,
-            "subscription_status": base.get("subscription_status", "active"),
+            "subscription_status": sub_status,
             "_access_token": f"session_{session_email}",
         })
         return base
@@ -3023,12 +3025,12 @@ async def coach_dashboard_redirect(request: Request, user=Depends(require_coach_
 async def coach_portal(request: Request, user = Depends(require_coach_session_or_cookie)):
     """Dashboard coach - avec vérification du profil complété, abonnement et email (verified_at)."""
     
-    # Charger les données fraîches depuis le fichier JSON
+    # Charger les données fraîches depuis le fichier JSON (ou session si multi-instances)
     coach_email = user.get("email")
     demo_users = load_demo_users()
     coach_data_fresh = demo_users.get(coach_email, {})
-    
-    subscription_status = coach_data_fresh.get("subscription_status", "")
+
+    subscription_status = coach_data_fresh.get("subscription_status") or user.get("subscription_status", "") or "active"
     log.info(f"🔍 Portal check: email={coach_email}, subscription_status='{subscription_status}'")
     
     if not get_session_email(request):
@@ -3555,12 +3557,15 @@ async def api_coach_profile_setup(request: Request):
         log.info(f"[profile-setup] OK coach={coach_email} profile_completed=True")
 
         # Stocker dans la session (cookie) pour que le portail reconnaisse profile_completed
-        # même si get_demo_user échoue (ex: multi-instances Render, fichier non partagé)
         request.session["profile_completed"] = True
 
+        redirect_url = "/coach/dashboard"
         if _wants_json_response(request):
-            return JSONResponse({"success": True, "redirect": "/coach/dashboard"})
-        return RedirectResponse(url="/coach/dashboard", status_code=303)
+            resp = JSONResponse({"success": True, "redirect": redirect_url})
+            # Forcer la redirection côté client via header (fallback si window.location échoue)
+            resp.headers["X-Redirect-To"] = redirect_url
+            return resp
+        return RedirectResponse(url=redirect_url, status_code=303)
     except Exception as e:
         log.error(f"[profile-setup] ERROR: {e} (coach={coach_email})")
         if _wants_json_response(request):
@@ -4106,15 +4111,20 @@ async def api_coach_verify_email_post(request: Request):
             }
             save_demo_user(email, new_user)
             coach_data = get_demo_user(email) or new_user
-            log.info(f"✅ Utilisateur coach créé automatiquement: {email}")
+            log.info(f"Utilisateur coach cree automatiquement: {email}")
         if coach_data.get("role") != "coach":
             return JSONResponse({"success": False, "error": "Compte non trouvé"}, status_code=404)
-        if coach_data.get("subscription_status") != "active":
-            return JSONResponse({"success": False, "error": "Abonnement non actif"}, status_code=400)
+        # OTP verifié = paiement effectué : accepter et activer l'abonnement si besoin
+        sub_status = coach_data.get("subscription_status", "")
+        if sub_status not in ("active", "trialing"):
+            coach_data["subscription_status"] = "active"
+            save_demo_user(email, coach_data)
+            log.info(f"Abonnement active pour {email} apres verification OTP")
         # Session serveur (cookie "session") : requis pour get_session_email
         request.session["user_email"] = email
         request.session["coach_email"] = email
         request.session["is_coach"] = True
+        request.session["subscription_status"] = "active"
         log.info(f"Email verifie pour {email}, session creee")
         profile_completed = coach_data.get("profile_completed", False)
         redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
