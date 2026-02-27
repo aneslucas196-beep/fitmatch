@@ -3218,8 +3218,8 @@ async def coach_profile_setup_post(
     success_message = None
     profile_completed_before = user.get("profile_completed", False)
     
-    # Photo obligatoire lors de la première complétion du profil
-    if not profile_completed_before and not (profile_photo and profile_photo.filename):
+    # Photo obligatoire uniquement en mode Supabase ; en mode OTP/demo, optionnelle
+    if user_supabase and not profile_completed_before and not (profile_photo and profile_photo.filename):
         error_message = "Photo de profil obligatoire"
         i18n_context = get_i18n_context(request)
         return templates.TemplateResponse("coach_profile_setup.html", {
@@ -3307,7 +3307,7 @@ async def coach_profile_setup_post(
                         gym_data = [{"coach_id": user_id, "gym_id": gym_id} for gym_id in gym_ids]
                         user_supabase.table("coach_gyms").insert(gym_data).execute()
                 
-                # Redirection vers le dashboard après succès
+                request.session["profile_completed"] = True
                 return RedirectResponse(url="/coach/portal", status_code=303)
             else:
                 error_message = "Erreur lors de la mise à jour du profil."
@@ -3394,9 +3394,11 @@ async def coach_profile_setup_post(
             
             # Sauvegarder les modifications dans le stockage persistant
             save_demo_user(user_email, updated_user)
-            log.info(f"✅ Profil coach sauvegardé avec profile_completed=True")
-            
-            # Redirection vers le dashboard après succès
+            log.info(f"Profil coach sauvegarde avec profile_completed=True")
+            # Session pour que le portail reconnaisse profile_completed (multi-instances)
+            request.session["profile_completed"] = True
+            request.session["subscription_status"] = "active"
+            # Redirection vers le dashboard apres succes
             return RedirectResponse(url="/coach/portal", status_code=303)
             
     except Exception as e:
