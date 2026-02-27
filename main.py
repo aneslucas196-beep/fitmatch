@@ -1389,16 +1389,21 @@ def get_coach_from_session_or_cookie(request: Request) -> Optional[Dict]:
     is_coach = request.session.get("is_coach") is True
     if session_email and is_coach:
         user_data = get_demo_user(session_email)
+        # Priorité session (profile_completed après finalisation) > DB/fichier
+        profile_completed = request.session.get("profile_completed")
+        if profile_completed is None:
+            profile_completed = (user_data or {}).get("profile_completed", False)
         if user_data and user_data.get("role") == "coach":
             user_data["email"] = session_email
             user_data["_access_token"] = f"session_{session_email}"
+            user_data["profile_completed"] = profile_completed
             return user_data
         # Session valide mais user absent du cache DB : accepter quand même (créé après OTP)
         base = dict(user_data) if user_data else {}
         base.update({
             "email": session_email,
             "role": "coach",
-            "profile_completed": base.get("profile_completed", False),
+            "profile_completed": profile_completed,
             "subscription_status": base.get("subscription_status", "active"),
             "_access_token": f"session_{session_email}",
         })
@@ -3548,6 +3553,10 @@ async def api_coach_profile_setup(request: Request):
                 }
             )
         log.info(f"[profile-setup] OK coach={coach_email} profile_completed=True")
+
+        # Stocker dans la session (cookie) pour que le portail reconnaisse profile_completed
+        # même si get_demo_user échoue (ex: multi-instances Render, fichier non partagé)
+        request.session["profile_completed"] = True
 
         if _wants_json_response(request):
             return JSONResponse({"success": True, "redirect": "/coach/dashboard"})
