@@ -3176,12 +3176,23 @@ async def coach_profile_setup_get(request: Request, user = Depends(require_coach
         profile_completed = user.get("profile_completed", False)
         log.info(f"🔧 Chargement des données du profil pour {user.get('email', 'coach')}")
     
+    error_param = request.query_params.get("error", "")
+    error_messages = {
+        "photo_vide": "Fichier photo vide ou invalide.",
+        "photo_trop_grande": "Photo trop volumineuse (max 10 Mo).",
+        "upload_photo": "Erreur lors de l'upload de la photo.",
+        "sauvegarde": "Erreur lors de la sauvegarde. Veuillez réessayer.",
+        "session_expired": "Session expirée. Veuillez vous reconnecter.",
+    }
+    error_message = error_messages.get(error_param, error_param) if error_param else None
+
     i18n_context = get_i18n_context(request)
     return templates.TemplateResponse("coach_profile_setup.html", {
         "request": request,
         "coach": coach_data,
         "profile_completed": profile_completed,
         "user": user,
+        "error_message": error_message,
         **i18n_context
     })
 
@@ -3404,8 +3415,12 @@ async def coach_profile_setup_post(
     })
 
 
-def _wants_json_response(request: Request) -> bool:
-    """True si la requête vient d'un fetch/XHR (Accept: application/json ou X-Requested-With)."""
+def _wants_json_response(request: Request, form_data=None) -> bool:
+    """True si la requête vient d'un fetch/XHR. form_submit=1 (soumission native) force RedirectResponse."""
+    if form_data is not None:
+        val = form_data.get("form_submit") if hasattr(form_data, "get") else None
+        if val == "1" or val == 1:
+            return False
     accept = (request.headers.get("accept") or "").lower()
     xrw = (request.headers.get("x-requested-with") or "").lower()
     return "application/json" in accept or xrw == "xmlhttprequest"
@@ -3416,16 +3431,19 @@ def _wants_json_response(request: Request) -> bool:
 async def api_coach_profile_setup(request: Request):
     """API profile-setup : multipart/form-data. XHR/fetch -> JSON. Submit HTML classique -> RedirectResponse 303."""
     coach_email = None
+    form = None
     try:
+        form = await request.form()
         coach_email = get_session_email(request) or request.session.get("coach_email")
         if not coach_email:
             user = get_coach_from_session_or_cookie(request)
             coach_email = (user or {}).get("email", "").strip().lower()
         if not coach_email:
             log.warning("[profile-setup] Not authenticated")
-            return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+            if _wants_json_response(request, form):
+                return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+            return RedirectResponse(url="/coach-login?error=session_expired", status_code=303)
 
-        form = await request.form()
         profile_photo = form.get("profile_photo") or form.get("photo")
         if hasattr(profile_photo, "file") and profile_photo.file and (getattr(profile_photo, "filename") or "").strip():
             pass
@@ -3464,18 +3482,14 @@ async def api_coach_profile_setup(request: Request):
                 contents = await profile_photo.read()
                 if not contents or len(contents) == 0:
                     log.warning("[profile-setup] Photo file empty")
-                    return JSONResponse({
-                        "success": False,
-                        "error": "PHOTO_UPLOAD_FAILED",
-                        "detail": "Fichier photo vide ou invalide."
-                    }, status_code=400)
+                    if _wants_json_response(request, form):
+                        return JSONResponse({"success": False, "error": "PHOTO_UPLOAD_FAILED", "detail": "Fichier photo vide ou invalide."}, status_code=400)
+                    return RedirectResponse(url="/coach/profile-setup?error=photo_vide", status_code=303)
                 if len(contents) > 10 * 1024 * 1024:
                     log.warning("[profile-setup] Photo too large")
-                    return JSONResponse({
-                        "success": False,
-                        "error": "PHOTO_UPLOAD_FAILED",
-                        "detail": "Photo trop volumineuse (max 10 Mo)."
-                    }, status_code=400)
+                    if _wants_json_response(request, form):
+                        return JSONResponse({"success": False, "error": "PHOTO_UPLOAD_FAILED", "detail": "Photo trop volumineuse (max 10 Mo)."}, status_code=400)
+                    return RedirectResponse(url="/coach/profile-setup?error=photo_trop_grande", status_code=303)
                 os.makedirs("uploads", exist_ok=True)
                 ext = "jpg"
                 if hasattr(profile_photo, "content_type") and profile_photo.content_type and "png" in str(profile_photo.content_type):
@@ -3488,11 +3502,9 @@ async def api_coach_profile_setup(request: Request):
                 log.info(f"[profile-setup] Photo upload OK: {photo_url}")
             except Exception as e:
                 log.error(f"[profile-setup] Photo upload FAILED: {e}")
-                return JSONResponse({
-                    "success": False,
-                    "error": "PHOTO_UPLOAD_FAILED",
-                    "detail": str(e) or "Erreur lors de l'upload de la photo."
-                }, status_code=400)
+                if _wants_json_response(request, form):
+                    return JSONResponse({"success": False, "error": "PHOTO_UPLOAD_FAILED", "detail": str(e) or "Erreur lors de l'upload de la photo."}, status_code=400)
+                return RedirectResponse(url="/coach/profile-setup?error=upload_photo", status_code=303)
 
         existing = get_demo_user(coach_email) or {}
         profile_slug = existing.get("profile_slug") or generate_unique_slug_for_coach(coach_email, full_name or "Coach")
@@ -3535,40 +3547,32 @@ async def api_coach_profile_setup(request: Request):
             ok = save_demo_user(coach_email, updated)
             if not ok:
                 log.error(f"[profile-setup] save_demo_user FAILED for {coach_email}")
-                return JSONResponse({
-                    "success": False,
-                    "error": "DB_UPDATE_FAILED",
-                    "detail": "Erreur lors de la sauvegarde (save_demo_user a retourne False)."
-                }, status_code=500)
+                if _wants_json_response(request, form):
+                    return JSONResponse({"success": False, "error": "DB_UPDATE_FAILED", "detail": "Erreur lors de la sauvegarde."}, status_code=500)
+                return RedirectResponse(url="/coach/profile-setup?error=sauvegarde", status_code=303)
         except Exception as db_err:
             import traceback
             err_detail = traceback.format_exc()
             print("PROFILE UPDATE ERROR:")
             print(err_detail)
             log.error(f"[profile-setup] PROFILE UPDATE ERROR:\n{err_detail}")
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "success": False,
-                    "error": "PROFILE_SAVE_EXCEPTION",
-                    "detail": str(db_err)
-                }
-            )
+            if _wants_json_response(request, form):
+                return JSONResponse(status_code=500, content={"success": False, "error": "PROFILE_SAVE_EXCEPTION", "detail": str(db_err)})
+            return RedirectResponse(url="/coach/profile-setup?error=sauvegarde", status_code=303)
         log.info(f"[profile-setup] OK coach={coach_email} profile_completed=True")
 
         # Stocker dans la session (cookie) pour que le portail reconnaisse profile_completed
         request.session["profile_completed"] = True
 
-        redirect_url = "/coach/dashboard"
-        if _wants_json_response(request):
+        redirect_url = "/coach/portal"
+        if _wants_json_response(request, form):
             resp = JSONResponse({"success": True, "redirect": redirect_url})
-            # Forcer la redirection côté client via header (fallback si window.location échoue)
             resp.headers["X-Redirect-To"] = redirect_url
             return resp
         return RedirectResponse(url=redirect_url, status_code=303)
     except Exception as e:
         log.error(f"[profile-setup] ERROR: {e} (coach={coach_email})")
-        if _wants_json_response(request):
+        if _wants_json_response(request, form):
             return JSONResponse({"success": False, "error": str(e), "detail": str(e)}, status_code=500)
         from urllib.parse import quote
         return RedirectResponse(url="/coach/profile-setup?error=" + quote(str(e)[:80]), status_code=303)

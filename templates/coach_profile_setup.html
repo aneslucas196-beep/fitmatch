@@ -267,6 +267,7 @@
                         </div>
                     </div>
                     
+                    <input type="hidden" name="form_submit" value="1">
                     <!-- Input hidden pour stocker les IDs des salles sélectionnées -->
                     <input type="hidden" name="selected_gym_ids" id="selected_gym_ids" value="">
                     <!-- Input hidden pour stocker les détails complets des salles (JSON) -->
@@ -324,45 +325,10 @@ document.addEventListener("DOMContentLoaded", function() {
   const form = document.getElementById("coachProfileForm");
   if (!form) return;
 
-  form.addEventListener("submit", async function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log("profile setup submit fired");
-
-    const formData = new FormData(form);
-
-    try {
-      const res = await fetch("/api/coach/profile-setup", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-          "Accept": "application/json"
-        }
-      });
-
-      var redirectTo = res.headers.get("X-Redirect-To");
-      const data = await res.json().catch(function() { return {}; });
-      console.log("profile setup response", data);
-
-      if ((data && data.success) || (res.ok && redirectTo)) {
-        window.location.replace(redirectTo || data.redirect || "/coach/dashboard");
-      } else {
-        var detail = data && data.detail;
-        var msg = (typeof detail === "object" && detail && detail.message) ? detail.message : (detail || data.error || "Erreur lors de la sauvegarde.");
-        alert(msg);
-        var errEl = document.getElementById("profile-setup-error");
-        if (errEl) {
-          var span = errEl.querySelector("span.text-sm");
-          if (span) span.textContent = String(msg);
-          errEl.classList.remove("hidden");
-        }
-      }
-    } catch (err) {
-      console.error("profile setup error:", err);
-      alert("Erreur réseau.");
-    }
+  form.addEventListener("submit", function(e) {
+    updateSelectedGymsList();
+    var btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
   });
 
   // ========================================
