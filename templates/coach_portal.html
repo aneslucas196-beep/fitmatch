@@ -1711,7 +1711,7 @@ function formatDate(date) {
 // ===== Fonctions de partage du profil =====
 const coachSlug = "{{ coach.slug or coach.profile_slug or (coach.full_name.split()[0]|lower if coach.full_name else 'coach') }}";
 const siteBaseUrl = "{{ site_url|default('https://fitmatch.fr') }}".replace(/\/$/, '');
-let shareUrl = (typeof window !== 'undefined' && window.location.origin ? window.location.origin : siteBaseUrl).replace(/\/$/, '') + "/reserver/" + coachSlug;
+let shareUrl = (typeof window !== 'undefined' && window.location.origin ? window.location.origin : siteBaseUrl).replace(/\/$/, '') + "/reserver/" + coachSlug + "/book";
 
 // Initialiser le lien de partage et mettre à jour le localStorage avec les données du coach
 document.addEventListener('DOMContentLoaded', function() {

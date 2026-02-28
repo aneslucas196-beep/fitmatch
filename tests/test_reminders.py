@@ -8,14 +8,14 @@ from fastapi.testclient import TestClient
 
 
 def test_reminders_process_endpoint_returns_json(client: TestClient):
-    """GET /api/reminders_process doit retourner 200 et JSON avec status et result."""
+    """GET /api/reminders_process doit retourner 200 et JSON avec success et reminders_sent."""
     r = client.get("/api/reminders_process")
     assert r.status_code == 200
     data = r.json()
-    assert "status" in data
-    assert data["status"] in ("ok", "error")
-    if data["status"] == "ok":
-        assert "result" in data
+    assert "success" in data
+    assert data["success"] in (True, False)
+    if data["success"]:
+        assert "reminders_sent" in data
 
 
 def test_schedule_booking_reminders_24h_and_2h():

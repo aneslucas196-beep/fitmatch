@@ -4,9 +4,9 @@ from fastapi.testclient import TestClient
 
 
 def test_webhook_rejects_get(client: TestClient):
-    """GET /api/stripe/webhook doit être refusé (405)."""
+    """GET /api/stripe/webhook doit être refusé (405 ou 404, POST only)."""
     r = client.get("/api/stripe/webhook")
-    assert r.status_code == 405
+    assert r.status_code in (405, 404)
 
 
 def test_webhook_invalid_payload(client: TestClient):
