@@ -2542,7 +2542,8 @@ async def login_submit(
         return _login_error()
     
     try:
-        if not result.get("success") and result.get("mode") not in ("invalid_credentials", "email_not_confirmed"):
+        # Fallback table users : coachs inscrits via formulaire coach sont dans users, pas dans Supabase Auth
+        if not result.get("success"):
             cached_user = get_demo_user(email)
             if cached_user:
                 stored_password = cached_user.get("password", "").strip()
