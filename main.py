@@ -2888,9 +2888,16 @@ async def coach_login_submit(
     csrf_token: Optional[str] = Form(None),
 ):
     """Traitement de la connexion/inscription coach."""
-    if not _verify_csrf(request, csrf_token or request.headers.get(CSRF_HEADER_NAME)):
-        return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
-    email = email.lower().strip()
+    i18n = get_i18n_context(request)
+    try:
+        if not _verify_csrf(request, csrf_token or request.headers.get(CSRF_HEADER_NAME)):
+            return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
+        email = email.lower().strip()
+    except Exception as e:
+        log.error(f"Erreur coach-login (csrf/email): {e}")
+        return templates.TemplateResponse("coach_login.html", {
+            "request": request, "error": "Erreur de validation. Veuillez réessayer.", "tab": "login", **i18n
+        }, status_code=400)
     
     if action == "signup":
         # Inscription coach
@@ -2958,81 +2965,82 @@ async def coach_login_submit(
     else:
         # Connexion coach
         user_found = None
-        
-        # Vérifier les utilisateurs inscrits
-        cached_user = get_demo_user(email)
-        if cached_user:
-            stored_password = cached_user.get("password", "").strip()
-            if stored_password and verify_password(password.strip(), stored_password):
-                # Vérifier que c'est bien un coach
-                if cached_user.get("role") == "coach":
-                    user_found = cached_user
-                else:
-                    i18n = get_i18n_context(request)
-                    return templates.TemplateResponse("coach_login.html", {
-                        "request": request,
-                        "error": "Ce compte n'est pas un compte coach. Utilisez la connexion client.",
-                        "tab": "login",
-                        **i18n
-                    }, status_code=401)
-        
-        if user_found:
-            from auth_utils import generate_session_token
-            unique_token = generate_session_token(email)
+        try:
+            # Vérifier les utilisateurs inscrits
+            cached_user = get_demo_user(email)
+            if cached_user:
+                stored_password = cached_user.get("password", "").strip()
+                if stored_password and verify_password(password.strip(), stored_password):
+                    # Vérifier que c'est bien un coach
+                    if cached_user.get("role") == "coach":
+                        user_found = cached_user
+                    else:
+                        return templates.TemplateResponse("coach_login.html", {
+                            "request": request,
+                            "error": "Ce compte n'est pas un compte coach. Utilisez la connexion client.",
+                            "tab": "login",
+                            **i18n
+                        }, status_code=401)
             
-            # Auto-upgrade grandfathered accounts (created before OTP/subscription system)
-            # Only target truly legacy records: profile_completed=true AND subscription_status is null/None/empty
-            profile_completed = user_found.get("profile_completed", False)
-            subscription_status = user_found.get("subscription_status")
-            email_verified = user_found.get("email_verified")
-            
-            # Only upgrade if subscription_status is explicitly null/None/empty (not other valid states like "trialing")
-            is_legacy_account = profile_completed and (subscription_status is None or subscription_status == "")
-            
-            if is_legacy_account:
-                log.info(f"🔄 Auto-upgrading grandfathered coach account: {email}")
-                # Update only the specific user, not the entire file
-                updated_user = get_demo_user(email)
-                if updated_user:
-                    updated_user["subscription_status"] = "active"
-                    # Only set email_verified if it's missing/null (not already set)
-                    if email_verified is None or email_verified == "":
-                        updated_user["email_verified"] = True
-                    save_demo_user(email, updated_user)
-                    user_found["subscription_status"] = "active"
-                    if email_verified is None or email_verified == "":
-                        user_found["email_verified"] = True
-                    subscription_status = "active"
-                    log.info(f"✅ Grandfathered coach upgraded: {email}")
+            if user_found:
+                from auth_utils import generate_session_token
+                unique_token = generate_session_token(email)
+                
+                # Auto-upgrade grandfathered accounts (created before OTP/subscription system)
+                profile_completed = user_found.get("profile_completed", False)
+                subscription_status = user_found.get("subscription_status")
+                email_verified = user_found.get("email_verified")
+                is_legacy_account = profile_completed and (subscription_status is None or subscription_status == "")
+                
+                if is_legacy_account:
+                    log.info(f"Auto-upgrading grandfathered coach account: {email}")
+                    updated_user = get_demo_user(email)
+                    if updated_user:
+                        updated_user["subscription_status"] = "active"
+                        if email_verified is None or email_verified == "":
+                            updated_user["email_verified"] = True
+                        save_demo_user(email, updated_user)
+                        user_found["subscription_status"] = "active"
+                        if email_verified is None or email_verified == "":
+                            user_found["email_verified"] = True
+                        subscription_status = "active"
 
-            # Mettre à jour la langue du coach si absente (pour les e-mails dans la bonne langue)
-            if not user_found.get("lang"):
-                coach_locale = get_locale_from_request(request)
-                if coach_locale:
-                    u = get_demo_user(email)
-                    if u:
-                        u["lang"] = coach_locale
-                        save_demo_user(email, u)
-                        user_found["lang"] = coach_locale
-            
-            # Si le coach n'a pas encore payé → page offre coach (landing + choix abonnement)
-            if subscription_status == "pending_payment":
-                pay_token = _create_signup_token(email)
-                base = _get_base_url(request)
-                redirect_url = f"{base.rstrip('/')}/coach/offre?token={pay_token}"
+                if not user_found.get("lang"):
+                    coach_locale = get_locale_from_request(request)
+                    if coach_locale:
+                        u = get_demo_user(email)
+                        if u:
+                            u["lang"] = coach_locale
+                            save_demo_user(email, u)
+                            user_found["lang"] = coach_locale
+                
+                if subscription_status == "pending_payment":
+                    pay_token = _create_signup_token(email)
+                    base = _get_base_url(request)
+                    redirect_url = f"{base.rstrip('/')}/coach/offre?token={pay_token}"
+                else:
+                    redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
+                response = RedirectResponse(url=redirect_url, status_code=302)
+                _set_session_cookie(response, email, request)
+                return response
             else:
-                redirect_url = "/coach/portal" if profile_completed else "/coach/profile-setup"
-            response = RedirectResponse(url=redirect_url, status_code=302)
-            _set_session_cookie(response, email, request)
-            return response
-        else:
-            i18n = get_i18n_context(request)
+                return templates.TemplateResponse("coach_login.html", {
+                    "request": request,
+                    "error": "Email ou mot de passe incorrect.",
+                    "tab": "login",
+                    **i18n
+                }, status_code=401)
+        except Exception as e:
+            log.error(f"Erreur connexion coach {email}: {e}")
+            import traceback
+            traceback.print_exc()
             return templates.TemplateResponse("coach_login.html", {
                 "request": request,
-                "error": "Email ou mot de passe incorrect.",
+                "error": "Erreur de connexion. Veuillez réessayer ou contacter le support si le problème persiste.",
                 "tab": "login",
+                "email": email,
                 **i18n
-            }, status_code=401)
+            }, status_code=500)
 
 # Déconnexion coach
 @app.get("/coach-logout")
