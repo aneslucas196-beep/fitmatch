@@ -2452,10 +2452,22 @@ async def login_submit(
     csrf_token: Optional[str] = Form(None),
 ):
     """Traitement de la connexion."""
-    if not _verify_csrf(request, csrf_token or request.headers.get(CSRF_HEADER_NAME)):
-        return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
-    # Normaliser l'email en lowercase
-    email = email.lower().strip()
+    def _login_error(msg: str = "Erreur de connexion. Veuillez réessayer."):
+        try:
+            i18n = get_i18n_context(request)
+        except Exception:
+            i18n = {"locale": "fr", "t": {}, "text_direction": "ltr", "available_languages": []}
+        return templates.TemplateResponse("login.html", {"request": request, "error": msg, "email": email, **i18n}, status_code=200)
+    
+    try:
+        if not _verify_csrf(request, csrf_token or request.headers.get(CSRF_HEADER_NAME)):
+            return JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
+        email = email.lower().strip()
+    except Exception as e:
+        log.error(f"Login erreur initiale: {e}")
+        import traceback
+        traceback.print_exc()
+        return _login_error()
     
     if not supabase_anon:
         user_found = None
@@ -2505,7 +2517,12 @@ async def login_submit(
             }, status_code=401)
     
     # Mode Supabase - utiliser le nouveau service avec vérification d'email confirmé
-    i18n = get_i18n_context(request)
+    try:
+        i18n = get_i18n_context(request)
+    except Exception as e:
+        log.error(f"Login get_i18n_context: {e}")
+        i18n = {"locale": "fr", "t": {}, "text_direction": "ltr", "available_languages": []}
+    
     try:
         result = sign_in_with_email_password(email, password)
     except Exception as e:
@@ -2522,78 +2539,94 @@ async def login_submit(
                 response = RedirectResponse(url=redirect_url, status_code=303)
                 response.set_cookie(key="session_token", value=generate_session_token(email), httponly=True, secure=os.environ.get("REPLIT_DEPLOYMENT") == "1", samesite="lax")
                 return response
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Erreur de connexion. Veuillez réessayer.", "email": email, **i18n}, status_code=500)
+        return _login_error()
     
-    if not result.get("success") and result.get("mode") not in ("invalid_credentials", "email_not_confirmed"):
-        # Erreur réseau/config : fallback sur table users
-        cached_user = get_demo_user(email)
-        if cached_user:
-            stored_password = cached_user.get("password", "").strip()
-            if stored_password and verify_password(password.strip(), stored_password):
-                role = cached_user.get("role", "client")
-                redirect_url = "/coach/portal" if role == "coach" else "/client/home"
-                from auth_utils import generate_session_token
+    try:
+        if not result.get("success") and result.get("mode") not in ("invalid_credentials", "email_not_confirmed"):
+            cached_user = get_demo_user(email)
+            if cached_user:
+                stored_password = cached_user.get("password", "").strip()
+                if stored_password and verify_password(password.strip(), stored_password):
+                    role = cached_user.get("role", "client")
+                    redirect_url = "/coach/portal" if role == "coach" else "/client/home"
+                    from auth_utils import generate_session_token
+                    response = RedirectResponse(url=redirect_url, status_code=303)
+                    response.set_cookie(key="session_token", value=generate_session_token(email), httponly=True, secure=os.environ.get("REPLIT_DEPLOYMENT") == "1", samesite="lax")
+                    return response
+        
+        if result.get("success"):
+            try:
+                user_id = result.get("user") and getattr(result["user"], "id", None)
+                session = result.get("session")
+                access_token = session.access_token if session else None
+                if not user_id or not access_token:
+                    raise ValueError("Session ou user manquant")
+                user_supabase = get_supabase_client_for_user(access_token)
+                profile = get_user_profile(user_supabase, user_id) if user_supabase else None
+                user_role = (profile or {}).get("role")
+                
+                if user_role == "coach":
+                    redirect_url = "/coach/portal"
+                elif user_role == "client":
+                    redirect_url = "/client/home"
+                else:
+                    redirect_url = "/coach/portal"
+                
+                log.info(f"✅ Redirection vers {redirect_url} pour utilisateur rôle: {user_role or 'inconnu'}")
+                
                 response = RedirectResponse(url=redirect_url, status_code=303)
-                response.set_cookie(key="session_token", value=generate_session_token(email), httponly=True, secure=os.environ.get("REPLIT_DEPLOYMENT") == "1", samesite="lax")
+                response.set_cookie(
+                    key="session_token",
+                    value=access_token,
+                    httponly=True,
+                    secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
+                    samesite="lax",
+                    max_age=3600 * 24 * 7
+                )
                 return response
-    
-    if result.get("success"):
-        # Connexion réussie - récupérer le profil (table profiles avec id ou user_id = auth user id)
-        user_id = result["user"].id
-        user_supabase = get_supabase_client_for_user(result["session"].access_token)
-        profile = get_user_profile(user_supabase, user_id) if user_supabase else None
-        user_role = (profile or {}).get("role")
-        
-        if user_role == "coach":
-            redirect_url = "/coach/portal"
-        elif user_role == "client":
-            redirect_url = "/client/home"
+            except Exception as e:
+                log.error(f"Login post-auth erreur: {e}")
+                import traceback
+                traceback.print_exc()
+                return templates.TemplateResponse("login.html", {
+                    "request": request,
+                    "error": "Erreur de connexion. Veuillez réessayer.",
+                    "email": email,
+                    **i18n
+                }, status_code=200)
         else:
-            redirect_url = "/coach/portal"
-        
-        log.info(f"✅ Redirection vers {redirect_url} pour utilisateur rôle: {user_role or 'inconnu'}")
-        
-        response = RedirectResponse(url=redirect_url, status_code=303)
-        response.set_cookie(
-            key="session_token",
-            value=result["session"].access_token,
-            httponly=True,
-            secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
-            samesite="lax",
-            max_age=3600 * 24 * 7
-        )
-        return response
-    else:
-        # Gérer les différents types d'erreurs
-        error_message = result.get("error", "Erreur de connexion")
-        
-        i18n = get_i18n_context(request)
-        if result.get("mode") == "email_not_confirmed":
-            # Email non confirmé - proposer de renvoyer l'email
-            return templates.TemplateResponse("login.html", {
-                "request": request,
-                "error": "Email non confirmé. Vérifiez votre boîte mail ou renvoyez l'email de confirmation.",
-                "email": email,
-                "show_resend": True,
-                **i18n
-            }, status_code=401)
-        elif result.get("mode") == "invalid_credentials":
-            # Identifiants incorrects
-            return templates.TemplateResponse("login.html", {
-                "request": request,
-                "error": "Email ou mot de passe incorrect.",
-                "email": email,
-                **i18n
-            }, status_code=401)
-        else:
-            # Autre erreur
-            log.info(f"💥 Erreur connexion: {error_message}")
-            return templates.TemplateResponse("login.html", {
-                "request": request,
-                "error": "Erreur de connexion. Veuillez réessayer.",
-                "email": email,
-                **i18n
-            }, status_code=401)
+            # Gérer les différents types d'erreurs
+            error_message = result.get("error", "Erreur de connexion")
+            
+            i18n = get_i18n_context(request)
+            if result.get("mode") == "email_not_confirmed":
+                return templates.TemplateResponse("login.html", {
+                    "request": request,
+                    "error": "Email non confirmé. Vérifiez votre boîte mail ou renvoyez l'email de confirmation.",
+                    "email": email,
+                    "show_resend": True,
+                    **i18n
+                }, status_code=401)
+            elif result.get("mode") == "invalid_credentials":
+                return templates.TemplateResponse("login.html", {
+                    "request": request,
+                    "error": "Email ou mot de passe incorrect.",
+                    "email": email,
+                    **i18n
+                }, status_code=401)
+            else:
+                log.info(f"💥 Erreur connexion: {error_message}")
+                return templates.TemplateResponse("login.html", {
+                    "request": request,
+                    "error": "Erreur de connexion. Veuillez réessayer.",
+                    "email": email,
+                    **i18n
+                }, status_code=401)
+    except Exception as e:
+        log.error(f"Login erreur non gérée: {e}")
+        import traceback
+        traceback.print_exc()
+        return _login_error()
 
 @app.post("/auth/resend-confirmation")
 async def resend_confirmation(

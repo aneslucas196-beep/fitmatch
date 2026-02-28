@@ -161,18 +161,20 @@ def get_supabase_client_for_user(access_token: str):
         return None
         
     try:
-        # Créer un nouveau client avec le token utilisateur
         client = create_client(url, key)
-        
-        # Validation du token avant de l'utiliser
-        if access_token and len(access_token) > 20:  # JWT minimal length check
-            # Définir le token d'authentification pour respecter les politiques RLS
-            client.postgrest.auth(access_token)
-            log.info(f"✅ Client authentifié créé avec succès")
-            return client
-        else:
-            log.error(f"❌ Format de token d'accès invalide")
+        if not access_token or len(access_token) <= 20:
+            log.error("❌ Format de token d'accès invalide")
             return None
+        try:
+            client.postgrest.auth(access_token)
+        except Exception as auth_err:
+            log.debug(f"postgrest.auth échoué, essai set_session: {auth_err}")
+            try:
+                if hasattr(client.auth, "set_session"):
+                    client.auth.set_session(access_token=access_token, refresh_token="")
+            except Exception as set_err:
+                log.warning(f"set_session échoué: {set_err}")
+        return client
     except Exception as e:
         log.error(f"❌ Erreur création client authentifié: {e}")
         return None
