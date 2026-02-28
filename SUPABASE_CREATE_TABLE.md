@@ -58,8 +58,19 @@ CREATE TABLE IF NOT EXISTS users (
     stripe_connect_charges_enabled BOOLEAN DEFAULT false,
     stripe_connect_payouts_enabled BOOLEAN DEFAULT false,
     stripe_connect_details_submitted BOOLEAN DEFAULT false,
-    lang TEXT
+    lang TEXT,
+    working_hours TEXT
 );
+```
+
+---
+
+## Si la table existe déjà (migration working_hours)
+
+Exécutez uniquement ceci pour ajouter la colonne `working_hours` :
+
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS working_hours TEXT;
 ```
 
 ---

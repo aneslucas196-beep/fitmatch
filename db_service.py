@@ -131,6 +131,10 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
             except Exception:
                 unavailable_slots = []
         
+        working_hours = user_data.get('working_hours')
+        if working_hours is not None and not isinstance(working_hours, str):
+            working_hours = json.dumps(working_hours) if working_hours else None
+        
         # Colonne password peut ne pas exister (ex: Supabase auth.users séparé)
         # Essayer avec password, puis sans si "column does not exist"
         sql_with_pwd = """
@@ -142,11 +146,11 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
                 subscription_status, stripe_customer_id, stripe_subscription_id,
                 subscription_period_end, otp_code, otp_expiry,
                 pending_bookings, confirmed_bookings, rejected_bookings,
-                unavailable_days, unavailable_slots, payment_mode, session_duration, updated_at
+                unavailable_days, unavailable_slots, payment_mode, session_duration, working_hours, updated_at
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
             )
             ON CONFLICT (email) DO UPDATE SET
                 password = COALESCE(EXCLUDED.password, users.password),
@@ -181,6 +185,7 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
                 unavailable_slots = COALESCE(EXCLUDED.unavailable_slots, users.unavailable_slots),
                 payment_mode = COALESCE(EXCLUDED.payment_mode, users.payment_mode),
                 session_duration = COALESCE(EXCLUDED.session_duration, users.session_duration),
+                working_hours = COALESCE(EXCLUDED.working_hours, users.working_hours),
                 updated_at = CURRENT_TIMESTAMP
         """
         sql_no_pwd = """
@@ -192,11 +197,11 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
                 subscription_status, stripe_customer_id, stripe_subscription_id,
                 subscription_period_end, otp_code, otp_expiry,
                 pending_bookings, confirmed_bookings, rejected_bookings,
-                unavailable_days, unavailable_slots, payment_mode, session_duration, updated_at
+                unavailable_days, unavailable_slots, payment_mode, session_duration, working_hours, updated_at
             ) VALUES (
                 %s, %s, %s, %s, %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
             )
             ON CONFLICT (email) DO UPDATE SET
                 full_name = COALESCE(EXCLUDED.full_name, users.full_name),
@@ -230,6 +235,7 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
                 unavailable_slots = COALESCE(EXCLUDED.unavailable_slots, users.unavailable_slots),
                 payment_mode = COALESCE(EXCLUDED.payment_mode, users.payment_mode),
                 session_duration = COALESCE(EXCLUDED.session_duration, users.session_duration),
+                working_hours = COALESCE(EXCLUDED.working_hours, users.working_hours),
                 updated_at = CURRENT_TIMESTAMP
         """
         vals_with_pwd = (
@@ -244,7 +250,8 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
             user_data.get('otp_code'), user_data.get('otp_expiry'),
             json.dumps(pending_bookings), json.dumps(confirmed_bookings), json.dumps(rejected_bookings),
             json.dumps(unavailable_days), json.dumps(unavailable_slots),
-            user_data.get('payment_mode', 'disabled'), user_data.get('session_duration', 60)
+            user_data.get('payment_mode', 'disabled'), user_data.get('session_duration', 60),
+            working_hours
         )
         vals_no_pwd = (
             email, user_data.get('full_name'), user_data.get('role', 'client'),
@@ -258,7 +265,8 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
             user_data.get('otp_code'), user_data.get('otp_expiry'),
             json.dumps(pending_bookings), json.dumps(confirmed_bookings), json.dumps(rejected_bookings),
             json.dumps(unavailable_days), json.dumps(unavailable_slots),
-            user_data.get('payment_mode', 'disabled'), user_data.get('session_duration', 60)
+            user_data.get('payment_mode', 'disabled'), user_data.get('session_duration', 60),
+            working_hours
         )
         try:
             cur.execute(sql_with_pwd, vals_with_pwd)
@@ -266,6 +274,10 @@ def save_user_to_db(email: str, user_data: Dict) -> bool:
             err_msg = str(e1).lower()
             if "password" in err_msg and ("does not exist" in err_msg or "column" in err_msg):
                 cur.execute(sql_no_pwd, vals_no_pwd)
+            elif "working_hours" in err_msg and ("does not exist" in err_msg or "column" in err_msg):
+                log.warning("Colonne working_hours absente. Exécutez migrations/003_add_working_hours.sql sur Supabase.")
+                sql_fb = sql_with_pwd.replace(", working_hours, updated_at", ", updated_at").replace(" %s, %s, CURRENT_TIMESTAMP", " %s, CURRENT_TIMESTAMP").replace("working_hours = COALESCE(EXCLUDED.working_hours, users.working_hours),\n                ", "")
+                cur.execute(sql_fb, vals_with_pwd[:-1])
             else:
                 raise
         

@@ -4463,7 +4463,14 @@ async def get_availability(coach_id: str, from_date: str = Query(..., alias="fro
             "saturday": {"enabled": True, "start": "08:00", "end": "23:00"},
             "sunday": {"enabled": True, "start": "08:00", "end": "23:00"}
         }
-        working_hours = coach_data.get("working_hours", default_hours) if coach_data else default_hours
+        wh_raw = coach_data.get("working_hours", default_hours) if coach_data else default_hours
+        if isinstance(wh_raw, str):
+            try:
+                working_hours = json.loads(wh_raw) if wh_raw else default_hours
+            except Exception:
+                working_hours = default_hours
+        else:
+            working_hours = wh_raw if isinstance(wh_raw, dict) else default_hours
         
         availability = []
         current = from_dt.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -4599,7 +4606,13 @@ async def get_coach_working_hours(coach_email: str):
             "sunday": {"enabled": True, "start": "08:00", "end": "23:00"}
         }
         
-        return coach_data.get("working_hours", default_hours)
+        wh = coach_data.get("working_hours", default_hours)
+        if isinstance(wh, str):
+            try:
+                wh = json.loads(wh) if wh else default_hours
+            except Exception:
+                wh = default_hours
+        return wh if isinstance(wh, dict) else default_hours
     except Exception as e:
         log.info(f"Erreur: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -4620,8 +4633,9 @@ async def set_coach_working_hours(request: Request, user=Depends(require_coach_s
         if coach_email not in demo_users:
             return JSONResponse(status_code=404, content={"error": "Coach not found"})
         
-        demo_users[coach_email]["working_hours"] = working_hours
-        save_demo_users(demo_users)
+        coach_data = demo_users[coach_email]
+        coach_data["working_hours"] = working_hours
+        save_demo_user(coach_email, coach_data)
         
         return {"success": True, "working_hours": working_hours}
         
@@ -4990,7 +5004,14 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
             "saturday": {"enabled": True, "start": "08:00", "end": "23:00"},
             "sunday": {"enabled": True, "start": "08:00", "end": "23:00"}
         }
-        working_hours = coach_data.get("working_hours", default_hours)
+        wh_raw = coach_data.get("working_hours", default_hours)
+        if isinstance(wh_raw, str):
+            try:
+                working_hours = json.loads(wh_raw) if wh_raw else default_hours
+            except Exception:
+                working_hours = default_hours
+        else:
+            working_hours = wh_raw if isinstance(wh_raw, dict) else default_hours
         
         # Filtrer par période
         from_dt = datetime.fromisoformat(from_date.replace('Z', '+00:00'))

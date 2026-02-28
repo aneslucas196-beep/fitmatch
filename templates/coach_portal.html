@@ -1338,7 +1338,7 @@ function setupEventListeners() {
 
     // Bouton copier lien
     const copyBtn = document.getElementById('copyBtn');
-    if (copyBtn) copyBtn.addEventListener('click', copyShareLink);
+    if (copyBtn) copyBtn.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); copyShareLink(e); return false; });
 
     // Mode de paiement : clic sur les cartes
     document.querySelectorAll('.payment-mode-card').forEach(function(card) {
@@ -1353,7 +1353,9 @@ function setupEventListeners() {
 
     // Boutons partage social
     document.querySelectorAll('[data-share]').forEach(function(btn) {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             const s = btn.dataset.share;
             if (s === 'whatsapp') shareOnWhatsApp();
             else if (s === 'instagram') shareOnInstagram();
@@ -1709,7 +1711,7 @@ function formatDate(date) {
 // ===== Fonctions de partage du profil =====
 const coachSlug = "{{ coach.slug or coach.profile_slug or (coach.full_name.split()[0]|lower if coach.full_name else 'coach') }}";
 const siteBaseUrl = "{{ site_url|default('https://fitmatch.fr') }}".replace(/\/$/, '');
-const shareUrl = siteBaseUrl + "/reserver/" + coachSlug;
+let shareUrl = (typeof window !== 'undefined' && window.location.origin ? window.location.origin : siteBaseUrl).replace(/\/$/, '') + "/reserver/" + coachSlug;
 
 // Initialiser le lien de partage et mettre à jour le localStorage avec les données du coach
 document.addEventListener('DOMContentLoaded', function() {
@@ -1736,12 +1738,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function copyShareLink() {
+function copyShareLink(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
     const linkInput = document.getElementById('shareLink');
     const copyBtn = document.getElementById('copyBtn');
     const copyText = document.getElementById('copyText');
+    const textToCopy = (linkInput && linkInput.value) || shareUrl;
+    if (!textToCopy) { showToast('Lien non disponible', 'error'); return; }
     
-    navigator.clipboard.writeText(linkInput.value).then(() => {
+    navigator.clipboard.writeText(textToCopy).then(() => {
         copyText.textContent = 'Copié !';
         copyBtn.classList.remove('bg-gray-900', 'hover:bg-gray-800');
         copyBtn.classList.add('bg-green-600', 'hover:bg-green-700');
@@ -1752,9 +1757,9 @@ function copyShareLink() {
             copyBtn.classList.add('bg-gray-900', 'hover:bg-gray-800');
         }, 2000);
     }).catch(() => {
-        linkInput.select();
-        document.execCommand('copy');
-        copyText.textContent = 'Copié !';
+        if (linkInput) { linkInput.select(); document.execCommand('copy'); }
+        if (copyText) copyText.textContent = 'Copié !';
+        showToast('Lien copié !');
     });
 }
 
