@@ -3019,8 +3019,12 @@ async def coach_login_submit(
         # Connexion coach
         user_found = None
         try:
-            # Vérifier les utilisateurs inscrits
-            cached_user = get_demo_user(email)
+            cached_user = None
+            try:
+                cached_user = get_demo_user(email)
+            except Exception as db_err:
+                log.warning(f"get_demo_user coach {email}: {db_err}")
+            
             if cached_user:
                 stored_password = cached_user.get("password", "").strip()
                 if stored_password and verify_password(password.strip(), stored_password):
@@ -3046,26 +3050,32 @@ async def coach_login_submit(
                 is_legacy_account = profile_completed and (subscription_status is None or subscription_status == "")
                 
                 if is_legacy_account:
-                    log.info(f"Auto-upgrading grandfathered coach account: {email}")
-                    updated_user = get_demo_user(email)
-                    if updated_user:
-                        updated_user["subscription_status"] = "active"
-                        if email_verified is None or email_verified == "":
-                            updated_user["email_verified"] = True
-                        save_demo_user(email, updated_user)
-                        user_found["subscription_status"] = "active"
-                        if email_verified is None or email_verified == "":
-                            user_found["email_verified"] = True
-                        subscription_status = "active"
+                    try:
+                        log.info(f"Auto-upgrading grandfathered coach account: {email}")
+                        updated_user = get_demo_user(email)
+                        if updated_user:
+                            updated_user["subscription_status"] = "active"
+                            if email_verified is None or email_verified == "":
+                                updated_user["email_verified"] = True
+                            save_demo_user(email, updated_user)
+                            user_found["subscription_status"] = "active"
+                            if email_verified is None or email_verified == "":
+                                user_found["email_verified"] = True
+                            subscription_status = "active"
+                    except Exception as up_err:
+                        log.warning(f"Auto-upgrade coach {email}: {up_err}")
 
                 if not user_found.get("lang"):
-                    coach_locale = get_locale_from_request(request)
-                    if coach_locale:
-                        u = get_demo_user(email)
-                        if u:
-                            u["lang"] = coach_locale
-                            save_demo_user(email, u)
-                            user_found["lang"] = coach_locale
+                    try:
+                        coach_locale = get_locale_from_request(request)
+                        if coach_locale:
+                            u = get_demo_user(email)
+                            if u:
+                                u["lang"] = coach_locale
+                                save_demo_user(email, u)
+                                user_found["lang"] = coach_locale
+                    except Exception as lang_err:
+                        log.warning(f"Update lang coach {email}: {lang_err}")
                 
                 if subscription_status == "pending_payment":
                     pay_token = _create_signup_token(email)
@@ -3079,21 +3089,25 @@ async def coach_login_submit(
             else:
                 # Fallback Supabase Auth : si le coach n'est pas dans users (inscrit via Auth)
                 if supabase_anon:
-                    result = sign_in_with_email_password(email, password)
-                    if result.get("success"):
-                        user_id = result["user"].id
-                        profile = get_user_profile(get_supabase_client_for_user(result["session"].access_token), user_id)
-                        if profile and profile.get("role") == "coach":
-                            response = RedirectResponse(url="/coach/portal", status_code=302)
-                            response.set_cookie(
-                                key="session_token",
-                                value=result["session"].access_token,
-                                httponly=True,
-                                secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
-                                samesite="lax",
-                                max_age=3600 * 24 * 7
-                            )
-                            return response
+                    try:
+                        result = sign_in_with_email_password(email, password)
+                        if result.get("success"):
+                            user_id = result["user"].id
+                            user_sb = get_supabase_client_for_user(result["session"].access_token)
+                            profile = get_user_profile(user_sb, user_id) if user_sb else None
+                            if profile and profile.get("role") == "coach":
+                                response = RedirectResponse(url="/coach/portal", status_code=302)
+                                response.set_cookie(
+                                    key="session_token",
+                                    value=result["session"].access_token,
+                                    httponly=True,
+                                    secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
+                                    samesite="lax",
+                                    max_age=3600 * 24 * 7
+                                )
+                                return response
+                    except Exception as sb_err:
+                        log.warning(f"Fallback Supabase coach {email}: {sb_err}")
                 return templates.TemplateResponse("coach_login.html", {
                     "request": request,
                     "error": "Email ou mot de passe incorrect.",
