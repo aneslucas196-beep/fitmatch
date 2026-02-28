@@ -2505,8 +2505,24 @@ async def login_submit(
             }, status_code=401)
     
     # Mode Supabase - utiliser le nouveau service avec vérification d'email confirmé
-    # Fallback : si Supabase échoue, essayer la table users (coachs inscrits via formulaire coach)
-    result = sign_in_with_email_password(email, password)
+    i18n = get_i18n_context(request)
+    try:
+        result = sign_in_with_email_password(email, password)
+    except Exception as e:
+        log.error(f"Erreur sign_in Supabase: {e}")
+        import traceback
+        traceback.print_exc()
+        cached_user = get_demo_user(email)
+        if cached_user:
+            stored_password = cached_user.get("password", "").strip()
+            if stored_password and verify_password(password.strip(), stored_password):
+                role = cached_user.get("role", "client")
+                redirect_url = "/coach/portal" if role == "coach" else "/client/home"
+                from auth_utils import generate_session_token
+                response = RedirectResponse(url=redirect_url, status_code=303)
+                response.set_cookie(key="session_token", value=generate_session_token(email), httponly=True, secure=os.environ.get("REPLIT_DEPLOYMENT") == "1", samesite="lax")
+                return response
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Erreur de connexion. Veuillez réessayer.", "email": email, **i18n}, status_code=500)
     
     if not result.get("success") and result.get("mode") not in ("invalid_credentials", "email_not_confirmed"):
         # Erreur réseau/config : fallback sur table users
@@ -2517,47 +2533,34 @@ async def login_submit(
                 role = cached_user.get("role", "client")
                 redirect_url = "/coach/portal" if role == "coach" else "/client/home"
                 from auth_utils import generate_session_token
-                unique_token = generate_session_token(email)
                 response = RedirectResponse(url=redirect_url, status_code=303)
-                response.set_cookie(
-                    key="session_token",
-                    value=unique_token,
-                    httponly=True,
-                    secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
-                    samesite="lax"
-                )
+                response.set_cookie(key="session_token", value=generate_session_token(email), httponly=True, secure=os.environ.get("REPLIT_DEPLOYMENT") == "1", samesite="lax")
                 return response
     
     if result.get("success"):
-        # Connexion réussie - récupérer le profil pour rediriger vers le bon portail
+        # Connexion réussie - récupérer le profil (table profiles avec id ou user_id = auth user id)
         user_id = result["user"].id
-        profile_result = get_user_role(user_id)
+        user_supabase = get_supabase_client_for_user(result["session"].access_token)
+        profile = get_user_profile(user_supabase, user_id) if user_supabase else None
+        user_role = (profile or {}).get("role")
         
-        # Déterminer l'URL de redirection selon le rôle
-        if profile_result.get("success"):
-            user_role = profile_result.get("role")
-            if user_role == "coach":
-                redirect_url = "/coach/portal"
-            elif user_role == "client":
-                redirect_url = "/client/home"
-            else:
-                # Fallback en cas de rôle non reconnu
-                redirect_url = "/coach/portal"
+        if user_role == "coach":
+            redirect_url = "/coach/portal"
+        elif user_role == "client":
+            redirect_url = "/client/home"
         else:
-            # Fallback si impossible de récupérer le profil
             redirect_url = "/coach/portal"
         
-        log.info(f"✅ Redirection vers {redirect_url} pour utilisateur rôle: {profile_result.get('role', 'inconnu')}")
+        log.info(f"✅ Redirection vers {redirect_url} pour utilisateur rôle: {user_role or 'inconnu'}")
         
         response = RedirectResponse(url=redirect_url, status_code=303)
-        # Cookie HttpOnly sécurisé
         response.set_cookie(
             key="session_token",
             value=result["session"].access_token,
             httponly=True,
             secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
             samesite="lax",
-            max_age=3600 * 24 * 7  # 7 jours
+            max_age=3600 * 24 * 7
         )
         return response
     else:

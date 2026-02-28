@@ -260,9 +260,17 @@ def resend_confirmation_email(supabase_client, email: str) -> bool:
         return False
 
 def get_user_profile(supabase_client, user_id: str) -> Optional[Dict]:
-    """Récupère le profil d'un utilisateur."""
+    """Récupère le profil d'un utilisateur (table profiles : id ou user_id = auth user id)."""
+    if not supabase_client or not user_id:
+        return None
     try:
         response = supabase_client.table("profiles").select("*").eq("id", user_id).single().execute()
+        if response.data:
+            return response.data
+    except Exception as e:
+        log.debug(f"Profil par id échoué, essai user_id: {e}")
+    try:
+        response = supabase_client.table("profiles").select("*").eq("user_id", user_id).single().execute()
         return response.data
     except Exception as e:
         log.error(f"Erreur récupération profil: {e}")
