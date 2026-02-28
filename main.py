@@ -2505,7 +2505,28 @@ async def login_submit(
             }, status_code=401)
     
     # Mode Supabase - utiliser le nouveau service avec vérification d'email confirmé
+    # Fallback : si Supabase échoue, essayer la table users (coachs inscrits via formulaire coach)
     result = sign_in_with_email_password(email, password)
+    
+    if not result.get("success") and result.get("mode") not in ("invalid_credentials", "email_not_confirmed"):
+        # Erreur réseau/config : fallback sur table users
+        cached_user = get_demo_user(email)
+        if cached_user:
+            stored_password = cached_user.get("password", "").strip()
+            if stored_password and verify_password(password.strip(), stored_password):
+                role = cached_user.get("role", "client")
+                redirect_url = "/coach/portal" if role == "coach" else "/client/home"
+                from auth_utils import generate_session_token
+                unique_token = generate_session_token(email)
+                response = RedirectResponse(url=redirect_url, status_code=303)
+                response.set_cookie(
+                    key="session_token",
+                    value=unique_token,
+                    httponly=True,
+                    secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
+                    samesite="lax"
+                )
+                return response
     
     if result.get("success"):
         # Connexion réussie - récupérer le profil pour rediriger vers le bon portail
@@ -3024,6 +3045,23 @@ async def coach_login_submit(
                 _set_session_cookie(response, email, request)
                 return response
             else:
+                # Fallback Supabase Auth : si le coach n'est pas dans users (inscrit via Auth)
+                if supabase_anon:
+                    result = sign_in_with_email_password(email, password)
+                    if result.get("success"):
+                        user_id = result["user"].id
+                        profile = get_user_profile(get_supabase_client_for_user(result["session"].access_token), user_id)
+                        if profile and profile.get("role") == "coach":
+                            response = RedirectResponse(url="/coach/portal", status_code=302)
+                            response.set_cookie(
+                                key="session_token",
+                                value=result["session"].access_token,
+                                httponly=True,
+                                secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
+                                samesite="lax",
+                                max_age=3600 * 24 * 7
+                            )
+                            return response
                 return templates.TemplateResponse("coach_login.html", {
                     "request": request,
                     "error": "Email ou mot de passe incorrect.",
