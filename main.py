@@ -2516,45 +2516,40 @@ async def login_submit(
                 **i18n
             }, status_code=401)
     
-    # Mode Supabase - utiliser le nouveau service avec vérification d'email confirmé
+    # Mode Supabase - PRIORITÉ table users (coachs inscrits via formulaire) AVANT Supabase Auth
     try:
         i18n = get_i18n_context(request)
     except Exception as e:
         log.error(f"Login get_i18n_context: {e}")
         i18n = {"locale": "fr", "t": {}, "text_direction": "ltr", "available_languages": []}
     
+    # 1. Toujours vérifier la table users en premier (coachs, comptes legacy)
+    try:
+        cached_user = get_demo_user(email)
+        if cached_user:
+            stored_password = (cached_user.get("password") or "").strip()
+            if stored_password and verify_password(password.strip(), stored_password):
+                role = cached_user.get("role", "client")
+                redirect_url = "/coach/portal" if role == "coach" else "/client/home"
+                from auth_utils import generate_session_token
+                response = RedirectResponse(url=redirect_url, status_code=303)
+                use_secure = os.environ.get("REPLIT_DEPLOYMENT") == "1" or (_get_base_url(request) or "").lower().startswith("https")
+                response.set_cookie(key="session_token", value=generate_session_token(email), httponly=True, secure=use_secure, samesite="lax")
+                log.info(f"✅ Connexion via table users: {email[:5]}... → {redirect_url}")
+                return response
+    except Exception as e:
+        log.warning(f"Login get_demo_user/verify: {e}")
+    
+    # 2. Sinon essayer Supabase Auth (clients inscrits via Auth)
     try:
         result = sign_in_with_email_password(email, password)
     except Exception as e:
         log.error(f"Erreur sign_in Supabase: {e}")
         import traceback
         traceback.print_exc()
-        cached_user = get_demo_user(email)
-        if cached_user:
-            stored_password = cached_user.get("password", "").strip()
-            if stored_password and verify_password(password.strip(), stored_password):
-                role = cached_user.get("role", "client")
-                redirect_url = "/coach/portal" if role == "coach" else "/client/home"
-                from auth_utils import generate_session_token
-                response = RedirectResponse(url=redirect_url, status_code=303)
-                response.set_cookie(key="session_token", value=generate_session_token(email), httponly=True, secure=os.environ.get("REPLIT_DEPLOYMENT") == "1", samesite="lax")
-                return response
         return _login_error()
     
     try:
-        # Fallback table users : coachs inscrits via formulaire coach sont dans users, pas dans Supabase Auth
-        if not result.get("success"):
-            cached_user = get_demo_user(email)
-            if cached_user:
-                stored_password = cached_user.get("password", "").strip()
-                if stored_password and verify_password(password.strip(), stored_password):
-                    role = cached_user.get("role", "client")
-                    redirect_url = "/coach/portal" if role == "coach" else "/client/home"
-                    from auth_utils import generate_session_token
-                    response = RedirectResponse(url=redirect_url, status_code=303)
-                    response.set_cookie(key="session_token", value=generate_session_token(email), httponly=True, secure=os.environ.get("REPLIT_DEPLOYMENT") == "1", samesite="lax")
-                    return response
-        
         if result.get("success"):
             try:
                 user_id = result.get("user") and getattr(result["user"], "id", None)
