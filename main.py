@@ -1366,21 +1366,6 @@ def require_coach_or_pending(user = Depends(require_auth)):
         )
     return user
 
-def require_active_subscription(user = Depends(require_coach_role)):
-    """Middleware pour routes nécessitant un abonnement actif."""
-    subscription_status = user.get("subscription_status", "")
-    
-    # Autoriser si abonnement actif
-    if subscription_status == "active":
-        return user
-    
-    # Sinon rediriger vers la page d'abonnement
-    raise HTTPException(
-        status_code=303,
-        detail="Abonnement requis",
-        headers={"Location": "/coach/subscription"}
-    )
-
 
 def get_coach_from_session_or_cookie(request: Request) -> Optional[Dict]:
     """Retourne le coach si session Starlette (cookie session) OU session_token valide."""
@@ -1423,6 +1408,23 @@ def require_coach_session_or_cookie(request: Request) -> Dict:
     if not user:
         raise HTTPException(status_code=401, detail="Authentification requise")
     return user
+
+
+def require_active_subscription(user = Depends(require_coach_session_or_cookie)):
+    """Middleware pour routes nécessitant un abonnement actif."""
+    subscription_status = user.get("subscription_status", "")
+    
+    # Autoriser si abonnement actif
+    if subscription_status == "active":
+        return user
+    
+    # Sinon rediriger vers la page d'abonnement
+    raise HTTPException(
+        status_code=303,
+        detail="Abonnement requis",
+        headers={"Location": "/coach/subscription"}
+    )
+
 
 # Routes publiques
 @app.get("/", response_class=HTMLResponse)
@@ -2734,6 +2736,19 @@ async def api_forgot_password(request: Request):
         log.error(f"Erreur forgot-password: {e}")
         return {"success": True}
 
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request, from_page: Optional[str] = Query(None, alias="from")):
+    """Page pour demander un lien de réinitialisation de mot de passe."""
+    i18n = get_i18n_context(request)
+    back_url = "/coach-login" if from_page == "coach" else "/login"
+    return templates.TemplateResponse("forgot_password.html", {
+        "request": request,
+        "back_url": back_url,
+        **i18n
+    })
+
+
 @app.get("/reset-password", response_class=HTMLResponse)
 async def reset_password_page(request: Request, token: str = ""):
     """Page de réinitialisation du mot de passe."""
@@ -2818,12 +2833,16 @@ async def api_reset_password(request: Request):
             "role": role
         })
         
+        base = _get_base_url(request)
+        use_secure = os.environ.get("REPLIT_DEPLOYMENT") == "1" or (base or "").lower().startswith("https") or os.environ.get("RENDER")
         response.set_cookie(
             key="session_token",
             value=session_token,
+            path="/",
             httponly=True,
-            secure=os.environ.get("REPLIT_DEPLOYMENT") == "1",
-            samesite="lax"
+            secure=use_secure,
+            samesite="lax",
+            max_age=86400 * 30,
         )
         
         return response
@@ -4502,7 +4521,7 @@ async def get_coach_unavailability(coach_email: str):
         return {"unavailable_days": [], "unavailable_slots": []}
 
 @app.post("/api/coach/unavailability")
-async def set_coach_unavailability(request: Request, user=Depends(require_coach_role)):
+async def set_coach_unavailability(request: Request, user=Depends(require_coach_session_or_cookie)):
     """Ajoute ou supprime des indisponibilités pour un coach."""
     try:
         data = await request.json()
@@ -4586,7 +4605,7 @@ async def get_coach_working_hours(coach_email: str):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/api/coach/working-hours")
-async def set_coach_working_hours(request: Request, user=Depends(require_coach_role)):
+async def set_coach_working_hours(request: Request, user=Depends(require_coach_session_or_cookie)):
     """Définit les horaires de travail d'un coach."""
     try:
         data = await request.json()
@@ -4623,7 +4642,7 @@ async def get_coach_session_duration(coach_email: str):
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 @app.post("/api/coach/session-duration")
-async def set_coach_session_duration(request: Request, user=Depends(require_coach_role)):
+async def set_coach_session_duration(request: Request, user=Depends(require_coach_session_or_cookie)):
     """Définit la durée de séance d'un coach."""
     try:
         data = await request.json()
@@ -4668,7 +4687,7 @@ async def get_coach_pricing(coach_email: str):
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 @app.post("/api/coach/payment-mode")
-async def set_coach_payment_mode(request: Request, user = Depends(require_coach_role)):
+async def set_coach_payment_mode(request: Request, user = Depends(require_coach_session_or_cookie)):
     """Definit le mode de paiement d'un coach (disabled ou required)."""
     try:
         from stripe_connect_facade import get_stripe_connect_info
@@ -4763,7 +4782,7 @@ async def get_coach_payment_mode(coach_id: str):
 
 
 @app.get("/api/coach/stripe-connect/status")
-async def get_stripe_connect_status(user = Depends(require_coach_role)):
+async def get_stripe_connect_status(user = Depends(require_coach_session_or_cookie)):
     """Récupère le statut Stripe Connect d'un coach."""
     try:
         from stripe_connect_facade import get_stripe_connect_info
@@ -4804,7 +4823,7 @@ async def get_stripe_connect_status(user = Depends(require_coach_role)):
 
 
 @app.post("/api/coach/stripe-connect/onboard")
-async def start_stripe_connect_onboarding(request: Request, user = Depends(require_coach_role)):
+async def start_stripe_connect_onboarding(request: Request, user = Depends(require_coach_session_or_cookie)):
     """Démarre l'onboarding Stripe Connect pour un coach."""
     try:
         from stripe_connect_facade import get_stripe_connect_info, update_stripe_connect_status
@@ -4854,7 +4873,7 @@ async def start_stripe_connect_onboarding(request: Request, user = Depends(requi
 
 
 @app.get("/api/coach/stripe-connect/refresh")
-async def refresh_stripe_connect_onboarding(request: Request, user = Depends(require_coach_role)):
+async def refresh_stripe_connect_onboarding(request: Request, user = Depends(require_coach_session_or_cookie)):
     """Génère un nouveau lien d'onboarding si l'ancien a expiré."""
     try:
         from stripe_connect_facade import get_stripe_connect_info
@@ -4884,7 +4903,7 @@ async def refresh_stripe_connect_onboarding(request: Request, user = Depends(req
 
 
 @app.post("/api/coach/stripe-connect/sync")
-async def sync_stripe_connect_status(user = Depends(require_coach_role)):
+async def sync_stripe_connect_status(user = Depends(require_coach_session_or_cookie)):
     """Synchronise le statut Stripe Connect après le retour de l'onboarding."""
     try:
         from stripe_connect_facade import get_stripe_connect_info, update_stripe_connect_status
@@ -5125,10 +5144,10 @@ async def create_booking(request: Request):
 # ======================================
 
 @app.get("/api/coach/gyms")
-async def get_coach_gym_locations(user = Depends(require_coach_role)):
+async def get_coach_gym_locations(user = Depends(require_coach_session_or_cookie)):
     """Récupère les lieux de coaching d'un coach."""
     try:
-        coach_id = str(user["id"])
+        coach_id = str(user.get("id") or user.get("email", ""))
         gym_relations = get_coach_gyms(coach_id)
         
         return {
@@ -5147,7 +5166,7 @@ async def get_coach_gym_locations(user = Depends(require_coach_role)):
 @app.post("/api/coach/gyms")
 async def add_coach_gym_location(
     request: Request,
-    user = Depends(require_coach_role)
+    user = Depends(require_coach_session_or_cookie)
 ):
     """
     Ajoute un lieu de coaching pour un coach.
@@ -5156,7 +5175,7 @@ async def add_coach_gym_location(
     2. Nouveau : {"gym_data": {...}} -> salle pré-sélectionnée avec toutes les infos
     """
     try:
-        coach_id = str(user["id"])
+        coach_id = str(user.get("id") or user.get("email", ""))
         
         # Récupérer les données JSON de la requête
         data = await request.json()
@@ -5230,11 +5249,11 @@ async def add_coach_gym_location(
 @app.delete("/api/coach/gyms/{gym_id}")
 async def remove_coach_gym_location(
     gym_id: str,
-    user = Depends(require_coach_role)
+    user = Depends(require_coach_session_or_cookie)
 ):
     """Supprime un lieu de coaching d'un coach."""
     try:
-        coach_id = str(user["id"])
+        coach_id = str(user.get("id") or user.get("email", ""))
         
         success = remove_coach_gym(coach_id, gym_id)
         
@@ -6643,7 +6662,7 @@ async def reservation_cancelled(request: Request):
 
 @app.get("/api/coach/bookings")
 async def get_coach_bookings(
-    user=Depends(require_coach_role),
+    user=Depends(require_coach_session_or_cookie),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0)
 ):
@@ -6778,7 +6797,7 @@ async def get_client_bookings(
 
 
 @app.post("/api/coach/bookings/respond")
-async def respond_to_booking(body: CoachBookingRequest, user=Depends(require_coach_role)):
+async def respond_to_booking(body: CoachBookingRequest, user=Depends(require_coach_session_or_cookie)):
     """Le coach confirme ou refuse une réservation (coach connecté uniquement)."""
     try:
         import json
@@ -6939,7 +6958,7 @@ async def respond_to_booking(body: CoachBookingRequest, user=Depends(require_coa
 
 
 @app.post("/api/coach/bookings/delete")
-async def delete_booking(body: DeleteBookingRequest, user=Depends(require_coach_role)):
+async def delete_booking(body: DeleteBookingRequest, user=Depends(require_coach_session_or_cookie)):
     """Le coach supprime une réservation (coach connecté uniquement)."""
     try:
         import json
@@ -7353,7 +7372,7 @@ register_payment_routes(app, {
 })
 
 @app.post("/api/stripe/create-portal-session")
-async def api_create_portal_session(request: Request, user = Depends(require_coach_role)):
+async def api_create_portal_session(request: Request, user = Depends(require_coach_session_or_cookie)):
     """Crée une session du portail de facturation Stripe."""
     if not _is_stripe_configured():
         log.warning("Route Stripe appelée mais Stripe non configuré")
@@ -7537,7 +7556,7 @@ app.add_api_route(
 )
 
 @app.get("/api/coach/subscription-status")
-async def api_coach_subscription_status(request: Request, user = Depends(require_coach_role)):
+async def api_coach_subscription_status(request: Request, user = Depends(require_coach_session_or_cookie)):
     """Récupère le statut d'abonnement du coach connecté."""
     try:
         coach_email = user.get("email")

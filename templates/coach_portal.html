@@ -1166,8 +1166,8 @@ async function loadBookingsFromAPI() {
     try {
         const response = await fetch(`/api/coach/bookings`, { credentials: 'include' });
         if (response.status === 401) {
-            showToast('Session expirée. Veuillez vous reconnecter.', 'error');
-            setTimeout(() => { window.location.href = '/coach-login'; }, 1500);
+            // La page a pu se charger donc on est authentifié - un 401 ici est probablement une erreur réseau ou API
+            showToast('Erreur de chargement des réservations. Veuillez réessayer.', 'error');
             return;
         }
         const data = await response.json();
