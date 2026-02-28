@@ -16,10 +16,11 @@
 
 <!-- Header Simple -->
 <header class="fixed inset-x-0 top-0 z-50 bg-white border-b border-slate-200">
-    <div class="max-w-6xl mx-auto flex items-center px-6 py-4">
+    <div class="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
         <a href="/" class="inline-flex items-center">
             <span class="text-2xl font-semibold tracking-tight text-slate-900">Fit<span class="text-emerald-500">Match</span></span>
         </a>
+        <a href="/coach-logout" class="text-sm text-red-600 hover:text-red-700 font-medium">{{ t.coach_portal.logout|default('Déconnexion') }}</a>
     </div>
 </header>
 
@@ -668,6 +669,16 @@ if (new URLSearchParams(window.location.search).get('password_changed')) {
 </div>
 
 <script nonce="{{ csp_nonce }}">
+// Toast de notification
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 font-medium text-white';
+    toast.className += type === 'error' ? ' bg-red-500' : ' bg-emerald-500';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
 // Variables globales
 let currentWeekStart = new Date();
 let isWeekView = true;
@@ -735,13 +746,13 @@ async function setSessionDuration(minutes) {
             sessionDuration = minutes;
             updateDurationButtons();
             updateCalendarDisplay();
-            console.log('✅ Durée de séance mise à jour:', minutes, 'min');
+            showToast('Durée de séance mise à jour : ' + minutes + ' min');
         } else {
-            alert('Erreur lors de la sauvegarde');
+            showToast('Erreur lors de la sauvegarde', 'error');
         }
     } catch (error) {
         console.error("Erreur sauvegarde durée:", error);
-        alert('Erreur lors de la sauvegarde');
+        showToast('Erreur lors de la sauvegarde', 'error');
     }
 }
 
@@ -805,7 +816,7 @@ async function saveAvailability() {
     const endTime = document.getElementById('end-time').value;
     
     if (!startTime || !endTime) {
-        alert('Veuillez sélectionner les heures');
+        showToast('Veuillez sélectionner les heures', 'error');
         return;
     }
     
@@ -832,12 +843,13 @@ async function saveAvailability() {
         if (data.success) {
             renderAvailabilitySchedule();
             closeAvailabilityModalNew();
+            showToast('Disponibilités enregistrées');
         } else {
-            alert('Erreur lors de la sauvegarde');
+            showToast('Erreur lors de la sauvegarde', 'error');
         }
     } catch (error) {
         console.error("Erreur sauvegarde:", error);
-        alert('Erreur de connexion');
+        showToast('Erreur de connexion', 'error');
     }
 }
 
@@ -913,7 +925,10 @@ function openUnavailabilityModal() {
     document.getElementById('unavailability-modal').classList.remove('hidden');
     // Mettre la date d'aujourd'hui par défaut
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('unavail-date').value = today;
+    const dateInput = document.getElementById('unavail-date');
+    if (dateInput) dateInput.value = today;
+    // Afficher/masquer le champ heure selon le type
+    toggleUnavailType();
 }
 
 function closeUnavailabilityModal() {
@@ -945,10 +960,14 @@ async function loadUnavailability() {
 async function addUnavailability() {
     const type = document.getElementById('unavail-type').value;
     const date = document.getElementById('unavail-date').value;
-    const time = document.getElementById('unavail-time').value;
+    const time = document.getElementById('unavail-time') ? document.getElementById('unavail-time').value : '';
     
     if (!date) {
-        alert('Veuillez sélectionner une date');
+        showToast('Veuillez sélectionner une date', 'error');
+        return;
+    }
+    if (type === 'slot' && (!time || time.trim() === '')) {
+        showToast('Veuillez sélectionner une heure pour le créneau', 'error');
         return;
     }
     
@@ -972,13 +991,13 @@ async function addUnavailability() {
             unavailabilityData = data;
             renderUnavailabilityList();
             closeUnavailabilityModal();
-            alert('Indisponibilité ajoutée !');
+            showToast('Indisponibilité ajoutée');
         } else {
-            alert('Erreur: ' + (data.error || 'Une erreur est survenue'));
+            showToast(data.error || 'Une erreur est survenue', 'error');
         }
     } catch (error) {
         console.error("❌ Erreur ajout indisponibilité:", error);
-        alert('Une erreur est survenue');
+        showToast('Une erreur est survenue', 'error');
     }
 }
 
@@ -1127,11 +1146,11 @@ async function toggleDayAvailability(dateStr, isCurrentlyBlocked) {
             unavailabilityData = data;
             renderUnavailabilityList();
         } else {
-            alert('Erreur: ' + (data.error || 'Une erreur est survenue'));
+            showToast(data.error || 'Une erreur est survenue', 'error');
         }
     } catch (error) {
         console.error("❌ Erreur toggle:", error);
-        alert('Une erreur est survenue');
+        showToast('Une erreur est survenue', 'error');
     }
 }
 
@@ -1145,13 +1164,18 @@ async function loadBookingsFromAPI() {
     }
     
     try {
-        const response = await fetch(`/api/coach/bookings?coach_email=${encodeURIComponent(COACH_EMAIL)}`, { credentials: 'include' });
+        const response = await fetch(`/api/coach/bookings`, { credentials: 'include' });
+        if (response.status === 401) {
+            showToast('Session expirée. Veuillez vous reconnecter.', 'error');
+            setTimeout(() => { window.location.href = '/coach-login'; }, 1500);
+            return;
+        }
         const data = await response.json();
         
         if (data.success) {
             realBookings = {
-                pending: data.pending || [],
-                confirmed: data.confirmed || [],
+                pending: (data.pending || []).map(b => ({ ...b, status: 'pending' })),
+                confirmed: (data.confirmed || []).map(b => ({ ...b, status: b.status || 'confirmed' })),
                 rejected: data.rejected || []
             };
             console.log("📊 Réservations chargées:", realBookings);
@@ -1188,17 +1212,17 @@ async function respondToBooking(bookingId, action) {
         const data = await response.json();
         
         if (data.success) {
-            alert(data.message);
+            showToast(data.message || 'Réservation mise à jour');
             // Recharger les données
             await loadBookingsFromAPI();
             loadUpcomingBookings();
             loadNotifications();
         } else {
-            alert("Erreur: " + data.error);
+            showToast("Erreur: " + data.error, 'error');
         }
     } catch (error) {
         console.error("❌ Erreur réponse réservation:", error);
-        alert("Une erreur est survenue");
+        showToast("Une erreur est survenue", 'error');
     }
 }
 
@@ -1227,11 +1251,11 @@ async function deleteBooking(bookingId) {
             loadUpcomingBookings();
             loadNotifications();
         } else {
-            alert("Erreur: " + data.error);
+            showToast("Erreur: " + data.error, 'error');
         }
     } catch (error) {
         console.error("❌ Erreur suppression réservation:", error);
-        alert("Une erreur est survenue");
+        showToast("Une erreur est survenue", 'error');
     }
 }
 
@@ -1362,9 +1386,21 @@ function setupEventListeners() {
     const openUnavailBtn = document.getElementById('open-unavailability-btn');
     if (openUnavailBtn) openUnavailBtn.addEventListener('click', openUnavailabilityModal);
 
+    // Bouton Bloquer dans modal indisponibilités
+    const addUnavailBtn = document.getElementById('add-unavailability-btn');
+    if (addUnavailBtn) addUnavailBtn.addEventListener('click', addUnavailability);
+
     // Ouvrir modal disponibilités (bouton sidebar)
     const openAvailBtn = document.getElementById('open-availability-btn');
     if (openAvailBtn) openAvailBtn.addEventListener('click', openAvailabilityModal);
+
+    // Boutons durée de séance (30, 60, 90, 120 min)
+    document.querySelectorAll('.duration-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const mins = parseInt(btn.getAttribute('data-duration'), 10);
+            if (!isNaN(mins)) setSessionDuration(mins);
+        });
+    });
 }
 
 function setCalendarView(view) {
@@ -1660,28 +1696,8 @@ function loadNotifications() {
     }).join('');
 }
 
-function addAvailability() {
-    const day = document.getElementById('day-select').value;
-    const startTime = document.getElementById('start-time').value;
-    const endTime = document.getElementById('end-time').value;
-    
-    // Here you would make an API call to save the availability
-    console.log('Adding availability:', { day, startTime, endTime });
-    
-    // Close modal
-    document.getElementById('availability-modal').classList.add('hidden');
-    
-    // Show success message
-    alert('Disponibilité ajoutée avec succès!');
-    
-    // Refresh calendar
-    updateCalendarDisplay();
-}
-
 function initializeCalendar() {
-    // Initial calendar setup
-    console.log('Calendar initialized');
-}
+    }
 
 function formatDate(date) {
     return date.toLocaleDateString('fr-FR', { 
@@ -1750,7 +1766,7 @@ function shareOnWhatsApp() {
 function shareOnInstagram() {
     // Instagram ne supporte pas le partage direct, on copie le lien et on ouvre Instagram
     navigator.clipboard.writeText(shareUrl).then(() => {
-        alert("Lien copié ! Colle-le dans ta bio ou story Instagram 📸");
+        showToast("Lien copié ! Colle-le dans ta bio ou story Instagram 📸");
         window.open("https://www.instagram.com/fitmatch.fr/?utm_source=ig_web_button_share_sheet", "_blank");
     });
 }
@@ -1816,24 +1832,15 @@ async function savePaymentMode() {
             const statusText = document.getElementById('current-payment-mode');
             statusText.textContent = selectedPaymentMode === 'disabled' ? 'Paiement désactivé' : 'Paiement obligatoire';
             statusText.className = selectedPaymentMode === 'disabled' ? 'font-bold text-gray-600' : 'font-bold text-emerald-600';
-            
-            const toast = document.createElement('div');
-            toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium';
-            toast.textContent = 'Mode de paiement mis a jour';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2000);
+            showToast('Mode de paiement mis à jour');
         } else if (data.need_stripe_connect) {
-            const toast = document.createElement('div');
-            toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium';
-            toast.textContent = 'Connectez d\'abord votre compte bancaire Stripe';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            showToast('Connectez d\'abord votre compte bancaire Stripe', 'error');
             selectPaymentMode(originalPaymentMode);
         } else {
-            alert('Erreur: ' + (data.error || 'Erreur inconnue'));
+            showToast(data.error || 'Erreur inconnue', 'error');
         }
     } catch (error) {
-        alert('Erreur de connexion');
+        showToast('Erreur de connexion', 'error');
     }
     
     saveBtn.textContent = 'Enregistrer';
@@ -1855,12 +1862,14 @@ async function loadStripeConnectStatus() {
 }
 
 function updateStripeConnectUI(status) {
+    if (!status || typeof status !== 'object') return;
     const banner = document.getElementById('stripe-connect-banner');
     const icon = document.getElementById('stripe-status-icon');
     const title = document.getElementById('stripe-status-title');
     const message = document.getElementById('stripe-status-message');
     const btn = document.getElementById('stripe-connect-btn');
     const btnText = document.getElementById('stripe-btn-text');
+    if (!banner || !icon || !title || !message || !btn) return;
     
     if (status.charges_enabled) {
         banner.className = 'mb-6 p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50';
@@ -1902,13 +1911,13 @@ async function startStripeConnect() {
         if (data.success && data.onboarding_url) {
             window.location.href = data.onboarding_url;
         } else {
-            alert('Erreur: ' + (data.error || 'Impossible de demarrer la connexion Stripe'));
+            showToast(data.error || 'Impossible de démarrer la connexion Stripe', 'error');
             btn.disabled = false;
             btn.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg><span id="stripe-btn-text">Connecter mon compte</span>';
         }
     } catch (error) {
         console.error('Erreur:', error);
-        alert('Erreur de connexion');
+        showToast('Erreur de connexion', 'error');
         btn.disabled = false;
     }
 }
@@ -1920,11 +1929,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/api/coach/stripe-connect/sync', { method: 'POST', credentials: 'include' })
             .then(() => loadStripeConnectStatus())
             .then(() => {
-                const toast = document.createElement('div');
-                toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 font-medium';
-                toast.textContent = 'Configuration Stripe terminee';
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 3000);
+                showToast('Configuration Stripe terminée');
                 window.history.replaceState({}, document.title, window.location.pathname);
             });
     }

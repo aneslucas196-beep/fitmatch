@@ -28,6 +28,6 @@ def test_coach_bookings_unauthorized(client: TestClient):
 
 
 def test_booking_availability(client: TestClient):
-    """GET /api/bookings/availability avec params valides."""
-    r = client.get("/api/bookings/availability?coach_id=test&date=2026-03-01")
+    """GET /api/bookings/availability avec params valides (from, to requis)."""
+    r = client.get("/api/bookings/availability?coach_id=test&from=2026-03-01T00:00:00&to=2026-03-07T23:59:59")
     assert r.status_code in (200, 400, 404, 500)

@@ -3015,6 +3015,19 @@ async def coach_login_submit(
                 **i18n
             }, status_code=401)
 
+# Déconnexion coach
+@app.get("/coach-logout")
+async def coach_logout(request: Request):
+    """Déconnexion coach : vide la session et supprime le cookie."""
+    response = RedirectResponse(url="/coach-login", status_code=303)
+    response.delete_cookie("session_token")
+    if hasattr(request, "session") and request.session:
+        try:
+            request.session.clear()
+        except Exception:
+            pass
+    return response
+
 # Routes protégées - Espace Coach
 @app.get("/coach/dashboard", response_class=HTMLResponse)
 async def coach_dashboard_redirect(request: Request, user=Depends(require_coach_session_or_cookie)):
@@ -3863,10 +3876,9 @@ async def booking_by_slug(request: Request, slug: str):
             gyms = json.loads(coach.get("selected_gyms_data"))
         except Exception:
             pass
-    # Identifiant stable pour les appels API (availability, bookings)
-    if not coach.get("id"):
-        coach = dict(coach)
-        coach["id"] = (coach.get("email") or "").replace("@", "_").replace(".", "_") or coach.get("profile_slug", slug)
+    # Identifiant stable pour les appels API (availability, bookings) - priorité au slug pour /reserver/{slug}/book
+    coach = dict(coach)
+    coach["id"] = coach.get("profile_slug") or slug or (coach.get("email") or "").replace("@", "_").replace(".", "_")
     return templates.TemplateResponse("booking.html", {"request": request, "coach": coach, "gyms": gyms, "slug": slug, **i18n_book})
 
 # ======================================
@@ -4326,21 +4338,24 @@ async def booking_page(request: Request, coach_id: str):
     if not coach.get("photo"):
         coach["photo"] = coach.get("profile_photo_url", "/static/default-avatar.jpg")
     
-    # Parser les données des salles si c'est une string JSON
-    if coach.get("selected_gyms_data") and isinstance(coach["selected_gyms_data"], str):
+    # Parser les données des salles pour le template
+    gyms = []
+    if coach.get("selected_gyms_data"):
         try:
             import json
-            coach["gyms"] = json.loads(coach["selected_gyms_data"])
+            gyms_data = coach["selected_gyms_data"]
+            gyms = json.loads(gyms_data) if isinstance(gyms_data, str) else gyms_data
         except Exception:
-            coach["gyms"] = []
-    elif not coach.get("gyms"):
-        coach["gyms"] = []
+            pass
+    if not gyms and coach.get("gyms"):
+        gyms = coach["gyms"]
     
-    locale = get_locale_from_request(request)
-    translations = get_translations(locale)
+    i18n_book = get_i18n_context(request)
     return templates.TemplateResponse("booking.html", {
         "request": request,
-        "coach": coach
+        "coach": coach,
+        "gyms": gyms,
+        **i18n_book
     })
 
 @app.get("/reservation", response_class=HTMLResponse)
@@ -4400,12 +4415,13 @@ async def get_availability(coach_id: str, from_date: str = Query(..., alias="fro
         
         for email, user_data in demo_users.items():
             encoded_email = email.replace("@", "_").replace(".", "_")
-            user_slug = user_data.get("slug", "")
+            user_slug = user_data.get("slug", "") or user_data.get("profile_slug", "")
             if user_data.get("role") == "coach" and (
                 str(user_data.get("id")) == coach_id or 
                 user_data.get("email") == coach_id or 
                 encoded_email == coach_id or
-                user_slug == coach_id
+                user_slug == coach_id or
+                str(coach_id).lower() == str(user_slug).lower()
             ):
                 coach_email = email
                 coach_data = user_data
@@ -4486,11 +4502,11 @@ async def get_coach_unavailability(coach_email: str):
         return {"unavailable_days": [], "unavailable_slots": []}
 
 @app.post("/api/coach/unavailability")
-async def set_coach_unavailability(request: Request):
+async def set_coach_unavailability(request: Request, user=Depends(require_coach_role)):
     """Ajoute ou supprime des indisponibilités pour un coach."""
     try:
         data = await request.json()
-        coach_email = data.get("coach_email")
+        coach_email = user.get("email") or data.get("coach_email")
         action = data.get("action")  # "add" ou "remove"
         unavailable_type = data.get("type")  # "day" ou "slot"
         date = data.get("date")  # Format: "2025-12-05"
@@ -4533,9 +4549,8 @@ async def set_coach_unavailability(request: Request):
                     if not (s.get("date") == date and s.get("time") == time)
                 ]
         
-        # Sauvegarder
-        demo_users[coach_email] = coach_data
-        save_demo_users(demo_users)
+        # Sauvegarder (utiliser save_demo_user pour une mise à jour atomique)
+        save_demo_user(coach_email, coach_data)
         
         return {
             "success": True,
@@ -4571,11 +4586,11 @@ async def get_coach_working_hours(coach_email: str):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.post("/api/coach/working-hours")
-async def set_coach_working_hours(request: Request):
+async def set_coach_working_hours(request: Request, user=Depends(require_coach_role)):
     """Définit les horaires de travail d'un coach."""
     try:
         data = await request.json()
-        coach_email = data.get("coach_email")
+        coach_email = user.get("email") or data.get("coach_email")
         working_hours = data.get("working_hours")
         
         if not coach_email or not working_hours:
@@ -4608,13 +4623,17 @@ async def get_coach_session_duration(coach_email: str):
         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
 
 @app.post("/api/coach/session-duration")
-async def set_coach_session_duration(request: Request):
+async def set_coach_session_duration(request: Request, user=Depends(require_coach_role)):
     """Définit la durée de séance d'un coach."""
     try:
         data = await request.json()
-        coach_email = data.get("coach_email")
+        coach_email = user.get("email") or data.get("coach_email")
         duration = data.get("duration")
         
+        try:
+            duration = int(duration) if duration is not None else None
+        except (TypeError, ValueError):
+            duration = None
         if not coach_email or duration not in [30, 60, 90, 120]:
             return JSONResponse(status_code=400, content={"success": False, "error": "Données invalides"})
         
@@ -4918,12 +4937,13 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
         coach_email = None
         for email, user_data in demo_users.items():
             encoded_email = email.replace("@", "_").replace(".", "_")
-            user_slug = user_data.get("slug", "")
+            user_slug = user_data.get("slug", "") or user_data.get("profile_slug", "")
             if user_data.get("role") == "coach" and (
                 str(user_data.get("id")) == coach_id or 
                 user_data.get("email") == coach_id or 
                 encoded_email == coach_id or
-                user_slug == coach_id
+                user_slug == coach_id or
+                str(coach_id).lower() == str(user_slug).lower()
             ):
                 coach_email = email
                 break
@@ -4960,13 +4980,15 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
         filtered_bookings = []
         
         # Ajouter les réservations pending
+        session_dur = coach_data.get("session_duration", 60)
         for booking in pending_bookings:
             booking_date = booking.get("date", "")
             booking_time = booking.get("time", "")
             if booking_date and booking_time:
                 try:
                     booking_start = datetime.fromisoformat(f"{booking_date}T{booking_time}:00")
-                    booking_end = booking_start + timedelta(hours=1)
+                    dur_mins = int(booking.get("duration", session_dur)) if str(booking.get("duration", session_dur)).isdigit() else session_dur
+                    booking_end = booking_start + timedelta(minutes=dur_mins)
                     if from_dt.date() <= booking_start.date() <= to_dt.date():
                         filtered_bookings.append({
                             "start": booking_start.isoformat(),
@@ -4984,7 +5006,8 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
             if booking_date and booking_time:
                 try:
                     booking_start = datetime.fromisoformat(f"{booking_date}T{booking_time}:00")
-                    booking_end = booking_start + timedelta(hours=1)
+                    dur_mins = int(booking.get("duration", session_dur)) if str(booking.get("duration", session_dur)).isdigit() else session_dur
+                    booking_end = booking_start + timedelta(minutes=dur_mins)
                     if from_dt.date() <= booking_start.date() <= to_dt.date():
                         filtered_bookings.append({
                             "start": booking_start.isoformat(),
@@ -4995,16 +5018,17 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
                 except Exception:
                     pass
         
+        slot_mins = coach_data.get("session_duration", 60)
         # Ajouter les jours complets indisponibles (bloquer tous les créneaux de la journée)
         for date_str in unavailable_days:
             try:
                 # Parser la date (format: "2025-12-05")
                 day_date = datetime.strptime(date_str, "%Y-%m-%d")
                 if from_dt.replace(tzinfo=None).date() <= day_date.date() <= to_dt.replace(tzinfo=None).date():
-                    # Bloquer toute la journée (10h-00h)
+                    # Bloquer toute la journée (créneaux selon session_duration du coach)
                     for hour in range(10, 24):
                         slot_start = day_date.replace(hour=hour, minute=0)
-                        slot_end = slot_start + timedelta(hours=1)
+                        slot_end = slot_start + timedelta(minutes=slot_mins)
                         filtered_bookings.append({
                             "start": slot_start.isoformat(),
                             "end": slot_end.isoformat(),
@@ -5022,7 +5046,7 @@ async def get_bookings(coach_id: str, from_date: str = Query(..., alias="from"),
             if slot_date and slot_time:
                 try:
                     slot_start = datetime.fromisoformat(f"{slot_date}T{slot_time}:00")
-                    slot_end = slot_start + timedelta(hours=1)
+                    slot_end = slot_start + timedelta(minutes=slot_mins)
                     if from_dt.date() <= slot_start.date() <= to_dt.date():
                         filtered_bookings.append({
                             "start": slot_start.isoformat(),
